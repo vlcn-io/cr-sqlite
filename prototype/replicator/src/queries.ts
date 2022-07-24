@@ -106,11 +106,6 @@ export default {
     const valueSlots = deltas.map(
       (d) => "(" + columnNames.map((c) => "?").join(",") + ")"
     );
-    console.log(
-      `INSERT INTO "${patchTableName(table)}" (${columnNames.join(
-        ","
-      )}) VALUES ${valueSlots.join(",")}`
-    );
     return [
       `INSERT INTO "${patchTableName(table)}" (${columnNames.join(
         ","

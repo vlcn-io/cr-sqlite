@@ -162,6 +162,51 @@ test("Discovering deltas between diverging datasets", () => {
   delete syncedRowA[0].crr_update_src;
   delete syncedRowB[0].crr_update_src;
   expect(syncedRowA).toEqual(syncedRowB);
+
+  // now that b is up to date with a, see if we can merge b to c to bring all
+  // peers together
+
+  // What are the deltas from B based on C's clock?
+  bcDeltas = all(dbB, queries.deltaPrimaryKeys("todo", cClock));
+  // A's clock was replicated to B so the delta is also based on A's clock when
+  // going b->c
+  expect(bcDeltas).toEqual(expected);
+
+  // get the patch to update C to B's state
+  let patchCtoB = all(dbB, queries.deltas(table, "id", cClock));
+  // patch db C up to B's state
+  run(dbC, queries.patch(table, patchCtoB));
+
+  let syncedRowC = all(dbB, [`SELECT * FROM todo_crr WHERE id = 1`, []]);
+  expect(syncedRowC[0].crr_update_src).toBe(1n);
+  delete syncedRowC[0].crr_update_src;
+  expect(syncedRowA).toEqual(syncedRowC);
+
+  // get all clocks now that all are synced.
+  [aClock, bClock, cClock] = dbs
+    .map((d) => all(d, queries.currentClock(table)))
+    .map(clock.collapse);
+  expect(aClock).toEqual(bClock);
+  expect(bClock).toEqual(cClock);
+
+  // recompute deltas in all directions. There should be no deltas.
+  [abDeltas, bcDeltas, acDeltas, baDeltas, cbDeltas, caDeltas] = [
+    all(dbA, queries.deltaPrimaryKeys(table, bClock)),
+    all(dbB, queries.deltaPrimaryKeys(table, cClock)),
+    all(dbA, queries.deltaPrimaryKeys(table, cClock)),
+    all(dbB, queries.deltaPrimaryKeys(table, aClock)),
+    all(dbC, queries.deltaPrimaryKeys(table, bClock)),
+    all(dbC, queries.deltaPrimaryKeys(table, aClock)),
+  ];
+
+  expect(
+    abDeltas.length +
+      bcDeltas.length +
+      acDeltas.length +
+      baDeltas.length +
+      cbDeltas.length +
+      caDeltas.length
+  ).toBe(0);
 });
 
 function run(db: DB, q: [string, any[]]) {

@@ -36,12 +36,12 @@ BEGIN
     "crr_cl" = CASE WHEN "crr_cl" % 2 = 0 THEN "crr_cl" + 1 ELSE "crr_cl" END,
     "crr_update_src" = 0;
   
-  INSERT INTO "todo_vector_clocks" ("vc_peerId", "vc_version", "vc_todoId")
+  INSERT INTO "todo_crr_clocks" ("siteId", "version", "id")
     VALUES (
       (SELECT "id" FROM "crr_peer_id"),
       (SELECT "version" FROM "crr_db_version"),
       NEW."id"
     )
-    ON CONFLICT ("vc_peerId", "vc_todoId") DO UPDATE SET
-      "vc_version" = EXCLUDED."vc_version";
+    ON CONFLICT ("siteId", "id") DO UPDATE SET
+      "version" = EXCLUDED."version";
 END;

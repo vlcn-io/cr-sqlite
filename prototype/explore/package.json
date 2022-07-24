@@ -14,8 +14,7 @@
   "dependencies": {
     "@databases/escape-identifier": "^1.0.3",
     "@databases/sql": "^3.2.0",
-    "@databases/sqlite": "^3.0.0",
-    "sqlite3": "github:juanrgm/node-sqlite3"
+    "@databases/sqlite": "^3.0.0"
   },
   "devDependencies": {
     "@babel/core": "^7.18.9",

@@ -5,7 +5,7 @@ BEGIN
 
   UPDATE "todo_crr" SET "crr_cl" = "crr_cl" + 1, "crr_update_src" = 0 WHERE "id" = OLD."id";
 
-  UPDATE "todo_vector_clocks" SET
-    "vc_version" = (SELECT "version" FROM "crr_db_version")
-  WHERE "vc_peerId" = (SELECT "id" FROM "crr_peer_id") AND "vc_todoId" = OLD."id";
+  UPDATE "todo_crr_clocks" SET
+    "version" = (SELECT "version" FROM "crr_db_version")
+  WHERE "siteId" = (SELECT "id" FROM "siteId") AND "id" = OLD."id";
 END;

@@ -47,30 +47,30 @@ export default {
   ) {
     return `SELECT "${clockTableName(
       table
-    )}"."primaryKey" as primaryKey, json_group_object("siteId", "version") as clock FROM ${clockTableName(
+    )}"."id", json_group_object("siteId", "version") as crr_clock FROM ${clockTableName(
       table
     )} LEFT JOIN json_each(${JSON.stringify(fromClock)}) as provided_clock ON
     provided_clock."key" = "${clockTableName(table)}"."siteId"
     JOIN "${crrTableName(table)}" ON "${crrTableName(
       table
-    )}"."${primaryKeyField}" = ${clockTableName(table)}."primaryKey"
+    )}"."${primaryKeyField}" = ${clockTableName(table)}."id"
     WHERE provided_clock."value" < "${clockTableName(
       table
     )}"."version" OR provided_clock."key" IS NULL
-    GROUP BY "${clockTableName(table)}"."primaryKey"`;
+    GROUP BY "${clockTableName(table)}"."id"`;
   },
 
   deltaPrimaryKeys(table: string, fromClock: Clock, opts: { limit: number }) {
     return `SELECT "${clockTableName(
       table
-    )}"."primaryKey" as primaryKey, json_group_object("siteId", "version") as clock FROM ${clockTableName(
+    )}"."id" as primaryKey, json_group_object("siteId", "version") as crr_clock FROM ${clockTableName(
       table
     )} LEFT JOIN json_each(${JSON.stringify(fromClock)}) as provided_clock ON
     provided_clock."key" = "${clockTableName(table)}"."siteId"
     WHERE provided_clock."value" < "${clockTableName(
       table
     )}"."version" OR provided_clock."key" IS NULL
-    GROUP BY "${clockTableName(table)}"."primaryKey"`;
+    GROUP BY "${clockTableName(table)}"."id"`;
   },
 
   /**
@@ -81,7 +81,7 @@ export default {
   patch<
     T extends {
       crr_cl: number;
-      vector_clock: string;
+      crr_clock: string;
     }
   >(table: string, deltas: T[]): [string, T[]] {
     if (deltas.length === 0) {
@@ -101,13 +101,13 @@ export default {
 };
 
 function clockTableName(baseTable: string): string {
-  return baseTable + "_vector_clocks";
+  return baseTable + "_crr_clocks";
 }
 
-function crrTableName(table: string) {
-  return table + "_crr";
+function crrTableName(baseTable: string) {
+  return baseTable + "_crr";
 }
 
-function patchTableName(table: string) {
-  return table + "_patch";
+function patchTableName(baseTable: string) {
+  return baseTable + "_patch";
 }

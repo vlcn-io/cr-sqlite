@@ -69,11 +69,11 @@ BEGIN
     END,
     "crr_update_src" = 1;
 
-  INSERT INTO "todo_vector_clocks" (
-    "vc_peerId",
-    "vc_version",
-    "vc_todoId"
-  ) SELECT "key" as "vc_peerId", "value" as "vc_version", NEW."id" FROM json_each(NEW.vector_clock) WHERE true
-  ON CONFLICT ("vc_peerId", "vc_todoId") DO UPDATE SET
-    "vc_version" = CASE WHEN EXCLUDED."vc_version" > "vc_version" THEN EXCLUDED."vc_version" ELSE "vc_version" END;
+  INSERT INTO "todo_crr_clocks" (
+    "siteId",
+    "version",
+    "id"
+  ) SELECT "key" as "siteId", "value" as "version", NEW."id" FROM json_each(NEW.crr_clock) WHERE true
+  ON CONFLICT ("siteId", "id") DO UPDATE SET
+    "version" = CASE WHEN EXCLUDED."version" > "version" THEN EXCLUDED."version" ELSE "version" END;
 END;

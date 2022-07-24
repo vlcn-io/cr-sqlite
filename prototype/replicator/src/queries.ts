@@ -14,10 +14,13 @@ type Clock = { [key: SiteId]: Version };
  * related to the fetching and merging of remote changes.
  */
 export default {
-  currentClock(table: string): string {
-    return `SELECT siteId, max("version") as version FROM "${clockTableName(
-      table
-    )}" GROUP BY "siteId"`;
+  currentClock(table: string): [string, []] {
+    return [
+      `SELECT siteId, max("version") as version FROM "${clockTableName(
+        table
+      )}" GROUP BY "siteId"`,
+      [],
+    ];
   },
 
   clockAt(
@@ -43,34 +46,46 @@ export default {
     table: string,
     primaryKeyField: string,
     fromClock: Clock,
-    opts: { limit: number }
-  ) {
-    return `SELECT "${clockTableName(
-      table
-    )}"."id", json_group_object("siteId", "version") as crr_clock FROM ${clockTableName(
-      table
-    )} LEFT JOIN json_each(${JSON.stringify(fromClock)}) as provided_clock ON
+    opts?: { limit: number }
+  ): [string, [string]] {
+    return [
+      `SELECT "${crrTableName(
+        table
+      )}".*, json_group_object("siteId", "version") as crr_clock FROM ${clockTableName(
+        table
+      )} LEFT JOIN json_each(?) as provided_clock ON
     provided_clock."key" = "${clockTableName(table)}"."siteId"
     JOIN "${crrTableName(table)}" ON "${crrTableName(
-      table
-    )}"."${primaryKeyField}" = ${clockTableName(table)}."id"
+        table
+      )}"."${primaryKeyField}" = ${clockTableName(table)}."id"
     WHERE provided_clock."value" < "${clockTableName(
       table
-    )}"."version" OR provided_clock."key" IS NULL
-    GROUP BY "${clockTableName(table)}"."id"`;
+    )}"."version" OR provided_clock."key" IS NULL GROUP BY "${clockTableName(
+        table
+      )}"."id"`,
+      [JSON.stringify(fromClock)],
+    ];
   },
 
-  deltaPrimaryKeys(table: string, fromClock: Clock, opts: { limit: number }) {
-    return `SELECT "${clockTableName(
-      table
-    )}"."id" as primaryKey, json_group_object("siteId", "version") as crr_clock FROM ${clockTableName(
-      table
-    )} LEFT JOIN json_each(${JSON.stringify(fromClock)}) as provided_clock ON
+  deltaPrimaryKeys(
+    table: string,
+    fromClock: Clock,
+    opts?: { limit: number }
+  ): [string, [string]] {
+    return [
+      `SELECT "${clockTableName(
+        table
+      )}"."id", json_group_object("siteId", "version") as crr_clock FROM ${clockTableName(
+        table
+      )} LEFT JOIN json_each(?) as provided_clock ON
     provided_clock."key" = "${clockTableName(table)}"."siteId"
     WHERE provided_clock."value" < "${clockTableName(
       table
-    )}"."version" OR provided_clock."key" IS NULL
-    GROUP BY "${clockTableName(table)}"."id"`;
+    )}"."version" OR provided_clock."key" IS NULL GROUP BY "${clockTableName(
+        table
+      )}"."id"`,
+      [JSON.stringify(fromClock)],
+    ];
   },
 
   /**
@@ -87,9 +102,16 @@ export default {
     if (deltas.length === 0) {
       throw new Error("Delta length is 0, nothing to patch");
     }
-    const columnNames = Object.keys(deltas[0]).map((k) => '"' + k + '"');
+    const columnNames = Object.keys(deltas[0])
+      .filter((k) => k != "crr_update_src")
+      .map((k) => '"' + k + '"');
     const valueSlots = deltas.map(
       (d) => "(" + columnNames.map((c) => "?").join(",") + ")"
+    );
+    console.log(
+      `INSERT INTO "${patchTableName(table)}" (${columnNames.join(
+        ","
+      )}) VALUES ${valueSlots.join(",")}`
     );
     return [
       `INSERT INTO "${patchTableName(table)}" (${columnNames.join(

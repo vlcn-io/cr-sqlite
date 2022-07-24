@@ -7,6 +7,8 @@ export default function setupDb(file?: string): DB {
   // { verbose: console.log }
   const db = new Database(file ?? ":memory:") as DB;
 
+  db.defaultSafeIntegers();
+
   runfile(db, "crr_db_version.sqlite.sql");
   runfile(db, "crr_site_id.sqlite.sql");
   runfile(db, "prime_version.sqlite.sql");

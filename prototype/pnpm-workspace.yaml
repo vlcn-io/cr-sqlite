@@ -1,0 +1,4 @@
+packages:
+  - "explore"
+  - "migrator"
+  - "replicator"

@@ -145,11 +145,9 @@ test("Discovering deltas between diverging datasets", () => {
   expect(abDeltas).toEqual(expected);
   expect(acDeltas).toEqual(expected);
 
-  console.log(all(dbA, ["SELECT id FROM todo_patch", []]));
   // Get the patch.
   let patchBtoA = all(dbA, queries.deltas(table, "id", bClock));
 
-  console.log(all(dbA, ["SELECT * FROM todo_patch", []]));
   run(dbB, queries.patch(table, patchBtoA));
 
   let [syncedRowA, syncedRowB] = [
@@ -158,8 +156,8 @@ test("Discovering deltas between diverging datasets", () => {
   ];
 
   // update_src should be different
-  expect(syncedRowA[0].crr_update_src).toBe(0); // local write
-  expect(syncedRowB[0].crr_update_src).toBe(1); // remote merge
+  expect(syncedRowA[0].crr_update_src).toBe(0n); // local write
+  expect(syncedRowB[0].crr_update_src).toBe(1n); // remote merge
   // everything else should be exactly the same
   delete syncedRowA[0].crr_update_src;
   delete syncedRowB[0].crr_update_src;

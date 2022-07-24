@@ -98,13 +98,11 @@ export default {
       crr_cl: number;
       crr_clock: string;
     }
-  >(table: string, deltas: T[]): [string, T[]] {
+  >(table: string, deltas: T[]): [string, any[]] {
     if (deltas.length === 0) {
       throw new Error("Delta length is 0, nothing to patch");
     }
-    const columnNames = Object.keys(deltas[0])
-      .filter((k) => k != "crr_update_src")
-      .map((k) => '"' + k + '"');
+    const columnNames = Object.keys(deltas[0]).map((k) => '"' + k + '"');
     const valueSlots = deltas.map(
       (d) => "(" + columnNames.map((c) => "?").join(",") + ")"
     );
@@ -117,7 +115,7 @@ export default {
       `INSERT INTO "${patchTableName(table)}" (${columnNames.join(
         ","
       )}) VALUES ${valueSlots.join(",")}`,
-      deltas,
+      [deltas.flatMap((d) => Object.values(d))],
     ];
   },
 };

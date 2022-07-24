@@ -1,0 +1,1 @@
+Proof of concept in typescript.

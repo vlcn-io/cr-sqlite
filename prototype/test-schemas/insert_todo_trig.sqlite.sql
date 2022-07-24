@@ -38,7 +38,7 @@ BEGIN
   
   INSERT INTO "todo_crr_clocks" ("siteId", "version", "id")
     VALUES (
-      (SELECT "id" FROM "crr_peer_id"),
+      (SELECT "id" FROM "crr_site_id"),
       (SELECT "version" FROM "crr_db_version"),
       NEW."id"
     )

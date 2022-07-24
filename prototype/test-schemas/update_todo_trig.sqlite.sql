@@ -16,5 +16,5 @@ BEGIN
 
   UPDATE "todo_crr_clocks" SET
     "version" = (SELECT "version" FROM "crr_db_version")
-  WHERE "siteId" = (SELECT "id" FROM "crr_peer_id") AND "id" = NEW."id";
+  WHERE "siteId" = (SELECT "id" FROM "crr_site_id") AND "id" = NEW."id";
 END;

@@ -4,6 +4,7 @@ import { Database as DB } from "better-sqlite3";
 import * as fs from "fs";
 
 export default function setupDb(file?: string): DB {
+  // { verbose: console.log }
   const db = new Database(file ?? ":memory:") as DB;
 
   runfile(db, "crr_db_version.sqlite.sql");

@@ -88,20 +88,20 @@ Things to support in the future
 
 ## Deltas
 
-Deltas between databases are calculated by each database keeping a [version vector](https://en.wikipedia.org/wiki/Version_vector) on each database.
+Deltas between databases are calculated by each database keeping a [version vector](https://en.wikipedia.org/wiki/Version_vector).
 
 Every row in the database is associated with a copy of the version vector. This copy is a snapshot of the value of the vector at the time the most recent write was made to the row.
 
 If DB-A wants changes from DB-B,
 - DB-A sends its version vector to DB-B
-- DB-B finds all rows for which _any_ element in the snapshot vectors is _greater_ than the corresponding element in the provided vector or for which the provided vector is missing an entry (https://github.com/tantaman/conflict-free-sqlite/blob/main/prototype/replicator/src/queries.ts#L59-L63)
+- DB-B finds all rows for which _any_ element in the row's snapshot vector is _greater_ than the corresponding element in the provided vector or for which the provided vector is missing an entry (https://github.com/tantaman/conflict-free-sqlite/blob/main/prototype/replicator/src/queries.ts#L59-L63)
 - DB-B sends these rows to DB-A
 - DB-A applys the changes
 - DB-A now has all of DB-B's updates
 
 This algorithm requires causal delivery of message during the time which two peers decide to sync.
 
-# (WIP) Implementation
+# Implementation
 
 `cfsqlite` is currently implemented as a set of views, triggers, and conflict free base tables.
 
@@ -113,11 +113,11 @@ https://github.com/tantaman/conflict-free-sqlite/tree/main/prototype/test-schema
 
 # Perf
 
-`cfsqlite` is currently 2-3x slower than base `sqlite`. I believe we can get perf to be near identical -- the current bottlenecks are:
-1. The current database clock value is stored in a table
-2. The site id of the database is stored in a table
+`cfsqlite` is currently 2-3x slower than base `sqlite`. I believe we can get perf to be near identical. The current bottlenecks are:
+1. The current database clock value is stored in a table and must be touched every write
+2. The site id of the database is stored in a table and queried every write
 
-We can move both of these values out of the table and into a variable in-memory. Preliminary tests show that doing this results in near identical perf to `sqlite`.
+We can move both of these values out of their tables and into a variable in-memory. Preliminary tests show that doing this results in near identical perf to `sqlite`.
 
 # Future
 

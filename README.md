@@ -23,6 +23,10 @@ pnpm build
 node
 ```
 
+# Auto-Migrate
+
+Auto-migration of an existing sqlite db to be conflict free is not yet implemented. This will live in the `migrator` package.
+
 # Prior Art
 
 ## [1] Towards a General Database Management System of Conflict-Free Replicated Relations

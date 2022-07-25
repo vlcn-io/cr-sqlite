@@ -8,7 +8,7 @@ This project implements [CRDTs](https://crdt.tech/) and [CRRs](https://hal.inria
 
 # Demo
 
-
+[![Watch](https://img.youtube.com/vi/TKOGItt04OA/maxresdefault.jpg)](https://youtu.be/TKOGItt04OA)
 
 # Prior Art
 

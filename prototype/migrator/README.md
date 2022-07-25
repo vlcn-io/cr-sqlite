@@ -9,7 +9,9 @@ Caveats:
 
 ---
 
-Basic idea:
+notes to self:
+
+implementation skecth:
 
 1. Open db
 2. get insert statements

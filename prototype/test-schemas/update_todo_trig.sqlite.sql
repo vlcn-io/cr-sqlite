@@ -14,7 +14,13 @@ BEGIN
     "crr_update_src" = 0
   WHERE "id" = NEW."id";
 
-  UPDATE "todo_crr_clocks" SET
-    "version" = (SELECT "version" FROM "crr_db_version")
-  WHERE "siteId" = (SELECT "id" FROM "crr_site_id") AND "id" = NEW."id";
+
+  INSERT INTO "todo_crr_clocks" ("siteId", "version", "id")
+    VALUES (
+      (SELECT "id" FROM "crr_site_id"),
+      (SELECT "version" FROM "crr_db_version"),
+      NEW."id"
+    )
+    ON CONFLICT ("siteId", "id") DO UPDATE SET
+      "version" = EXCLUDED."version";
 END;

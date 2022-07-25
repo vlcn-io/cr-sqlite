@@ -84,7 +84,23 @@ If DB-A wants changes from DB-B,
 
 This algorithm requires causal delivery of message during the time which two peers decide to sync.
 
-# Implementation
+# (WIP) Implementation
+
+`cfsqlite` is currently implemented as a set of views, triggers, and conflict free base tables.
+
+The views match an application's existing database schema so little to no changes need be made to existing applications.
+
+Whenever the application tries to write to a view, we intercept that write and write it to the conflict free base tables instead.
+
+https://github.com/tantaman/conflict-free-sqlite/tree/main/prototype/test-schemas
+
+# Perf
+
+`cfsqlite` is currently 2-3x slower than base `sqlite`. I believe we can get perf to be near identical -- the current bottlenecks are:
+1. The current database clock value is stored in a table
+2. The site id of the database is stored in a table
+
+We can move both of these values out of the table and into a variable in-memory. Preliminary tests show that doing this results in near identical perf to `sqlite`.
 
 # Example Use Case
 Say we have a databse schema called "Animal App." Alice, Bob and Billy all have local copies of "Animal App" on their devices. They start their day at a hostel with all of their devices synced. They then part ways, backpacking into the wilderness each with their own copy of the db.

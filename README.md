@@ -77,7 +77,7 @@ Every row in the database is associated with a copy of the version vector. This 
 
 If DB-A wants changes from DB-B,
 - DB-A sends its version vector to DB-B
-- DB-B finds all rows for which _any_ element in the snapshot vectors is _greater_ than the corresponding element in the provided vector or for which the provided vector is missing an entry
+- DB-B finds all rows for which _any_ element in the snapshot vectors is _greater_ than the corresponding element in the provided vector or for which the provided vector is missing an entry (https://github.com/tantaman/conflict-free-sqlite/blob/main/prototype/replicator/src/queries.ts#L59-L63)
 - DB-B sends these rows to DB-A
 - DB-A applys the changes
 - DB-A now has all of DB-B's updates

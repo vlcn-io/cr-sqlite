@@ -1,12 +1,14 @@
 {
-  "name": "@aphro/crsqlite-replicator",
+  "name": "@aphro/cfsqlite-replicator",
   "version": "0.0.1",
   "description": "",
   "main": "lib/index.js",
   "type": "module",
   "scripts": {
+    "build": "tsc --build",
     "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js",
-    "watch": "tsc --build --watch"
+    "watch": "tsc --build --watch",
+    "deep-clean": "rm -rf ./bin || true && rm tsconfig.tsbuildinfo || true"
   },
   "keywords": [],
   "author": "",

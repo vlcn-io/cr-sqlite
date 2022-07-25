@@ -11,8 +11,10 @@ let dbC: DB;
 let dbs: DB[];
 
 beforeAll(() => {
-  [dbA, dbB, dbC] = [setupDb(), setupDb(), setupDb()];
-  dbs = [dbA, dbB, dbC];
+  dbs = [dbA, dbB, dbC] = [setupDb(), setupDb(), setupDb()];
+});
+afterAll(() => {
+  dbs.forEach((db) => db.close());
 });
 
 let id = 0;

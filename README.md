@@ -26,7 +26,7 @@ https://hal.inria.fr/hal-02983557/document
 `cfsqlite` improves upon [2] in the following ways --
 
 - [2] is implemented in a specific ORM. `cfsqlite` runs at the db layer and allows existing applications to interface with the db as normal.
-- [2] keeps a queue of all writes. This queue is drained when those writes are merged. This means that [2] can only sync changes to a single centralized node. `cfsqlite` keeps a logical clock at each database. If a new database comes online it sends its logical clock to a peer. That peer can then reconstruct the missing history.
+- [2] keeps a queue of all writes. This queue is drained when those writes are merged. This means that [2] can only sync changes to a single centralized node. `cfsqlite` keeps a logical clock at each database. If a new database comes online it sends its logical clock to a peer. That peer can compute what changes are missing from the clock.
 
 ## [3] CRDTs for Mortals
 https://www.youtube.com/watch?v=DEcwa68f-jY

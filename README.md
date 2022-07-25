@@ -33,7 +33,7 @@ https://www.youtube.com/watch?v=DEcwa68f-jY
 
 `cfsqlite` improves upon [3] in the following ways --
 
-- [3] isn't really relational it all. It saves all data in a single table and is more-or-less 
+- [3] isn't really relational it all. It saves all data in a single table and is using sqlite as a key-value store. As such, it cannot work with your existing database schema. `cfsqlite` builds around your existing schemas.
 
 ## Other
 
@@ -54,6 +54,37 @@ These projects helped improve my understanding of CRDTs on this journey --
 
 
 Note: prior art [1] & [2] claim to support foreign key and uniqueness constraints. I believe their approach is unsound and results in update loops and have not incoroprated it into `cfsqlite`. If I'm wrong, I'll gladly fold their approach in.
+
+# Architecture
+
+## Tables
+
+Tables are modeled as [GSets](https://en.wikipedia.org/wiki/Conflict-free_replicated_data_type#G-Set_(Grow-only_Set)) where each item has a [causal length](https://munin.uit.no/bitstream/handle/10037/19591/article.pdf?sequence=2). You can call this a "CLSet". This allows us to keep all rows as well as track deletes so your application will not see deleted rows.
+
+## Rows
+
+Rows are currently modeled as [LWWW maps](https://bartoszsypytkowski.com/crdt-map/#crdtmapwithlastwritewinsupdates). I.e., each column in a row is a [LWW Register](https://bartoszsypytkowski.com/operation-based-crdts-registers-and-sets/#lastwritewinsregister).
+
+Things to support in the future
+- counter columns
+- MVR (multi-value register) columns
+
+## Deltas
+
+Deltas between databases are calculated by each database keeping a [version vector](https://en.wikipedia.org/wiki/Version_vector) on each database.
+
+Every row in the database is associated with a copy of the version vector. This copy is a snapshot of the value of the vector at the time the most recent write was made to the row.
+
+If DB-A wants changes from DB-B,
+- DB-A sends its version vector to DB-B
+- DB-B finds all rows for which _any_ element in the snapshot vectors is _greater_ than the corresponding element in the provided vector or for which the provided vector is missing an entry
+- DB-B sends these rows to DB-A
+- DB-A applys the changes
+- DB-A now has all of DB-B's updates
+
+This algorithm requires causal delivery of message during the time which two peers decide to sync.
+
+# Implementation
 
 # Example Use Case
 Say we have a databse schema called "Animal App." Alice, Bob and Billy all have local copies of "Animal App" on their devices. They start their day at a hostel with all of their devices synced. They then part ways, backpacking into the wilderness each with their own copy of the db.

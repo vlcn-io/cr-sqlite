@@ -102,6 +102,12 @@ https://github.com/tantaman/conflict-free-sqlite/tree/main/prototype/test-schema
 
 We can move both of these values out of the table and into a variable in-memory. Preliminary tests show that doing this results in near identical perf to `sqlite`.
 
+# Future
+
+- Sharing & Privacy -- in a real-world collaborative scenario, you may not want to share your entire database with other peers. Thus, in addition to clock information, we must keep visibility information to use when computing deltas and doing replication.
+- Byzantine fault tolerance -- `cfsqlite` currently assumes friendly actors. We need to guard against malicious updates.
+- Subselects -- peers may want to sync subsets of the database even if they have access to the entire thing. Compute deltas but only send those deltas that fall into the peer's provided query.
+
 # Example Use Case
 Say we have a databse schema called "Animal App." Alice, Bob and Billy all have local copies of "Animal App" on their devices. They start their day at a hostel with all of their devices synced. They then part ways, backpacking into the wilderness each with their own copy of the db.
 

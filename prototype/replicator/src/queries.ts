@@ -1,13 +1,11 @@
+import { Clock } from "./clock.js";
+
 export type DeltaOptions = {
   // Fetch the first N deltas rather than all deltas.
   // This lets sites incrementally bring themselves up to date
   // rather than all in one shot.
   limit: number;
 };
-
-type SiteId = string;
-type Version = string;
-type Clock = { [key: SiteId]: Version };
 
 /**
  * A set of functions to construct queries

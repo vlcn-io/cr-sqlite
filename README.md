@@ -2,13 +2,26 @@
 
 [SQLite](https://www.sqlite.org/index.html) is a foundation of offline, local-first and edge deployed software. Wouldn't it be great, however, if we could merge two or more SQLite databases together and not run into any conflicts?
 
-This project implements [CRDTs](https://crdt.tech/) and [CRRs](https://hal.inria.fr/hal-02983557/document) in `SQLite`, allowing databases that share a common schema to merge their state together.
+This project implements [CRDTs](https://crdt.tech/) and [CRRs](https://hal.inria.fr/hal-02983557/document) in `SQLite`, allowing databases that share a common schema to merge their state together. Merges can happen between an arbitrary number of peers and all peers will eventually converge to the same state.
 
 `cfsqlite` works by adding metadata tables and triggers around your existing database schema. This means that you do not have to change your schema in order to get conflict resolution support -- with a few caveats around uniqueness constraints and foreign keys. See [Schema Design for CRDTs & Eventual Consistency](#schema-design-for-crdts--eventual-consistency).
 
 # Demo
 
+Currently there is this demo video --
+
 [![Watch](https://img.youtube.com/vi/TKOGItt04OA/maxresdefault.jpg)](https://youtu.be/TKOGItt04OA)
+
+I'm working on a demo application. You can, of course, check out the repo and repeat what occurs in the video to play with this locally.
+
+```
+git clone conflict-free-sqlite
+cd conflict-free-sqlite/prototype
+pnpm install
+cd demo-env
+pnpm build
+node
+```
 
 # Prior Art
 

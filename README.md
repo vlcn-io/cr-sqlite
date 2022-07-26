@@ -6,13 +6,11 @@ This project implements [CRDTs](https://crdt.tech/) and [CRRs](https://hal.inria
 
 `cfsqlite` works by adding metadata tables and triggers around your existing database schema. This means that you do not have to change your schema in order to get conflict resolution support -- with a few caveats around uniqueness constraints and foreign keys. See [Schema Design for CRDTs & Eventual Consistency](#schema-design-for-crdts--eventual-consistency).
 
-# Demo
+# Overview
 
-Currently there is this demo video --
+[![loom](https://cdn.loom.com/sessions/thumbnails/0934f93364d340e0ba658146a974edb4-with-play.gif)](https://www.loom.com/share/0934f93364d340e0ba658146a974edb4)
 
-[![Watch](https://img.youtube.com/vi/TKOGItt04OA/maxresdefault.jpg)](https://youtu.be/TKOGItt04OA)
-
-I'm working on a demo application. You can, of course, check out the repo and repeat what occurs in the video to play with this locally.
+I'm working on a demo application. You can, of course, check out the repo and repeat what occurs in [this video](https://youtu.be/TKOGItt04OA) to play with this locally.
 
 ```
 git clone conflict-free-sqlite

@@ -107,6 +107,7 @@ The views match an application's existing database schema so little to no change
 
 Whenever sqlite tries to write to a view, we intercept that write and write it to the conflict free base tables instead. This allows you to issue arbitrarily complex writes (e.g. UPDATE x WHERE condition) as `SQLite` will resolve the impacted rows via its query engine.
 
+You can view a set of manually constructed view and triggers here:
 https://github.com/tantaman/conflict-free-sqlite/tree/main/prototype/test-schemas
 
 # Perf

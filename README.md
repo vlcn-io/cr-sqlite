@@ -21,9 +21,16 @@ pnpm build
 node
 ```
 
+This is a proof of concept at the moment. You can view a conflict DB in action in the `__tests__` folder of the `replicator` package: https://github.com/tantaman/conflict-free-sqlite/blob/main/prototype/replicator/src/__tests__/merge-random-2.test.ts
+
 # Auto-Migrate
 
-Auto-migration of an existing sqlite db to be conflict free is not yet implemented. This will live in the `migrator` package.
+Auto-migration of an existing sqlite db to be conflict free is not yet implemented. This will live in the `migrator` package. A manual migration of a database of `todos` can be seen here: https://github.com/tantaman/conflict-free-sqlite/tree/main/prototype/test-schemas
+
+In the future the steps to using `cfsqlite` will be:
+1. Run [`migrator`](https://github.com/tantaman/conflict-free-sqlite/tree/main/prototype/migrator) to migrate an existing DB to a conflict-free schema
+2. Pull in the [`replicator`](https://github.com/tantaman/conflict-free-sqlite/tree/main/prototype/replicator) API for your target language
+3. Connect the replicator to peer databases
 
 # Prior Art
 

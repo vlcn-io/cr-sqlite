@@ -5,6 +5,7 @@ import { Database as DB } from "better-sqlite3";
 import chalk from "chalk";
 import { nanoid } from "nanoid";
 import gatherTables from "./gatherTables.js";
+import migrateTableSchemas from "./migrateTableSchema.js";
 
 const crrSchemaVersion = 1;
 
@@ -65,6 +66,14 @@ function runMigrationSteps(srcDb: DB, destDb: DB, tables?: string[]) {
     )
   );
   tablesToMigrate.forEach((t) => console.log(`\t${t}`));
+  migrateTableSchemas(srcDb, destDb, tablesToMigrate);
+
+  console.log(
+    chalk.magenta(
+      "\nFinished creating table schemas. Now copying over the data."
+    )
+  );
+  // migrateData(srcDb, destDb, tablesToMigrate);
 }
 
 function createCommonTables(db: DB) {

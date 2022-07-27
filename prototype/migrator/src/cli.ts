@@ -2,6 +2,8 @@
 
 import commandLineArgs from "command-line-args";
 import commandLineUsage from "command-line-usage";
+import migrate from "./migrate.js";
+import chalk from "chalk";
 
 async function run() {
   const mainDefinitions = [{ name: "migrate", defaultOption: true }];
@@ -11,7 +13,7 @@ async function run() {
   });
   const argv = mainOptions._unknown || [];
 
-  if (mainOptions.gen !== "migrate") {
+  if (mainOptions.migrate !== "migrate") {
     print_general_usage();
     return;
   }
@@ -20,6 +22,7 @@ async function run() {
     { name: "src", alias: "s", defaultOption: true },
     { name: "dest", alias: "d" },
     { name: "tables", alias: "t", multiple: true },
+    { name: "overwrite", alias: "o" },
   ];
 
   const migrateOptions = commandLineArgs(migrateDefitions, { argv });
@@ -31,6 +34,21 @@ async function run() {
   ) {
     print_migrate_help();
     return;
+  }
+
+  try {
+    migrate(
+      migrateOptions.src,
+      migrateOptions.dest,
+      migrateOptions.tables,
+      migrateOptions.overwrite
+    );
+  } catch (e) {
+    if (e.type === "invariant") {
+      console.log(chalk.red(e.message));
+      return;
+    }
+    throw e;
   }
 }
 
@@ -95,6 +113,12 @@ function print_migrate_help() {
           type: String,
           typeLabel: "{underline table} ...",
           alias: "t",
+        },
+        {
+          name: "overwrite",
+          description: "allow overwriting the dest file if it exists",
+          type: Boolean,
+          alias: "o",
         },
       ],
     },

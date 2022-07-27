@@ -1,6 +1,6 @@
 // @ts-ignore -- @types/better-sqlite3 is incorect on export
 import Database from "better-sqlite3";
-import { clock, Clock, queries } from "@aphro/cfsqlite-replicator";
+import { clock, Clock, queries } from "@cfsql/replicator";
 import { Database as DB } from "better-sqlite3";
 import * as fs from "fs";
 

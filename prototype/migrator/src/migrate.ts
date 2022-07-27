@@ -4,6 +4,7 @@ import Database from "better-sqlite3";
 import { Database as DB } from "better-sqlite3";
 import chalk from "chalk";
 import { nanoid } from "nanoid";
+import gatherTables from "./gatherTables.js";
 
 const crrSchemaVersion = 1;
 
@@ -44,15 +45,26 @@ export default function migrate(
     };
   }
 
-  runMigrationSteps(new Database(src) as DB, new Database(dest) as DB);
+  runMigrationSteps(new Database(src) as DB, new Database(dest) as DB, tables);
 }
 
-function runMigrationSteps(srcDb: DB, destDb: DB) {
+function runMigrationSteps(srcDb: DB, destDb: DB, tables?: string[]) {
   console.log(chalk.green("Creating common tables..."));
   createCommonTables(destDb);
 
   console.log(chalk.green("Populating common tables..."));
   populateCommonTables(destDb);
+
+  // TODO: allow the user to specify a schema to migrate rather than just `main`
+  const tablesToMigrate = gatherTables(srcDb, tables);
+  console.log(
+    chalk.green(
+      "Migrating",
+      chalk.underline.yellow(tablesToMigrate.length),
+      "tables..."
+    )
+  );
+  tablesToMigrate.forEach((t) => console.log(`\t${t}`));
 }
 
 function createCommonTables(db: DB) {

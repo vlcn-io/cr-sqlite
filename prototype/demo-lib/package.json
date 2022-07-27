@@ -1,5 +1,5 @@
 {
-  "name": "@aphro/cfsqlite-demolib",
+  "name": "@cfsql/demolib",
   "version": "0.0.1",
   "description": "",
   "main": "lib/index.js",
@@ -14,7 +14,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@aphro/cfsqlite-replicator": "workspace:*",
+    "@cfsql/replicator": "workspace:*",
     "better-sqlite3": "^7.6.2"
   },
   "devDependencies": {

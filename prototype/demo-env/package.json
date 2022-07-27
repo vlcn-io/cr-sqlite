@@ -1,5 +1,5 @@
 {
-  "name": "@aphro/cfsqlite-demoenv",
+  "name": "@cfsql/demoenv",
   "version": "0.0.1",
   "description": "",
   "main": "lib/index.js",
@@ -14,7 +14,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@aphro/cfsqlite-demolib": "workspace:*",
+    "@cfsql/demolib": "workspace:*",
     "nanoid": "^4.0.0"
   },
   "devDependencies": {

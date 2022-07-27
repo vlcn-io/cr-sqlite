@@ -2,13 +2,35 @@
 
 [SQLite](https://www.sqlite.org/index.html) is a foundation of offline, local-first and edge deployed software. Wouldn't it be great, however, if we could merge two or more SQLite databases together and not run into any conflicts?
 
-This project implements [CRDTs](https://crdt.tech/) and [CRRs](https://hal.inria.fr/hal-02983557/document) in `SQLite`, allowing databses that share a common schema to merge their state together. This scales to an arbitrary number of peers and merges between peers can happen in any order.
+This project implements [CRDTs](https://crdt.tech/) and [CRRs](https://hal.inria.fr/hal-02983557/document) in `SQLite`, allowing databases that share a common schema to merge their state together. Merges can happen between an arbitrary number of peers and all peers will eventually converge to the same state.
 
 `cfsqlite` works by adding metadata tables and triggers around your existing database schema. This means that you do not have to change your schema in order to get conflict resolution support -- with a few caveats around uniqueness constraints and foreign keys. See [Schema Design for CRDTs & Eventual Consistency](#schema-design-for-crdts--eventual-consistency).
 
-# Demo
+# Overview
 
-[![Watch](https://img.youtube.com/vi/TKOGItt04OA/maxresdefault.jpg)](https://youtu.be/TKOGItt04OA)
+[![loom](https://cdn.loom.com/sessions/thumbnails/0934f93364d340e0ba658146a974edb4-with-play.gif)](https://www.loom.com/share/0934f93364d340e0ba658146a974edb4)
+
+I'm working on a demo application. You can, of course, check out the repo and repeat what occurs in [this video](https://youtu.be/TKOGItt04OA) to play with this locally.
+
+```
+git clone conflict-free-sqlite
+cd conflict-free-sqlite/prototype
+pnpm install
+cd demo-env
+pnpm build
+node
+```
+
+You can view a conflict-free DB in action in the `__tests__` folder of the `replicator` package: https://github.com/tantaman/conflict-free-sqlite/blob/main/prototype/replicator/src/__tests__/merge-random-2.test.ts
+
+# Auto-Migrate
+
+Auto-migration of an existing sqlite db to be conflict free is not yet implemented. This will live in the `migrator` package. A manual migration of a database of `todos` can be seen here: https://github.com/tantaman/conflict-free-sqlite/tree/main/prototype/test-schemas
+
+In the future the steps to using `cfsqlite` will be:
+1. Run [`migrator`](https://github.com/tantaman/conflict-free-sqlite/tree/main/prototype/migrator) to migrate an existing DB to a conflict-free schema
+2. Pull in the [`replicator`](https://github.com/tantaman/conflict-free-sqlite/tree/main/prototype/replicator) API for your target language
+3. Connect the replicator to peer databases
 
 # Prior Art
 
@@ -26,7 +48,7 @@ https://hal.inria.fr/hal-02983557/document
 `cfsqlite` improves upon [2] in the following ways --
 
 - [2] is implemented in a specific ORM. `cfsqlite` runs at the db layer and allows existing applications to interface with the db as normal.
-- [2] keeps a queue of all writes. This queue is drained when those writes are merged. This means that [2] can only sync changes to a single centralized node. `cfsqlite` keeps a logical clock at each database. If a new database comes online it sends its logical clock to a peer. That peer can then reconstruct the missing history.
+- [2] keeps a queue of all writes. This queue is drained when those writes are merged. This means that [2] can only sync changes to a single centralized node. `cfsqlite` keeps a logical clock at each database. If a new database comes online it sends its logical clock to a peer. That peer can compute what changes are missing from the clock.
 
 ## [3] CRDTs for Mortals
 https://www.youtube.com/watch?v=DEcwa68f-jY
@@ -71,13 +93,13 @@ Things to support in the future
 
 ## Deltas
 
-Deltas between databases are calculated by each database keeping a [version vector](https://en.wikipedia.org/wiki/Version_vector) on each database.
+Deltas between databases are calculated by each database keeping a [version vector](https://en.wikipedia.org/wiki/Version_vector).
 
 Every row in the database is associated with a copy of the version vector. This copy is a snapshot of the value of the vector at the time the most recent write was made to the row.
 
 If DB-A wants changes from DB-B,
 - DB-A sends its version vector to DB-B
-- DB-B finds all rows for which _any_ element in the snapshot vectors is _greater_ than the corresponding element in the provided vector or for which the provided vector is missing an entry
+- DB-B finds all rows for which _any_ element in the row's snapshot vector is _greater_ than the corresponding element in the provided vector or for which the provided vector is missing an entry (https://github.com/tantaman/conflict-free-sqlite/blob/main/prototype/replicator/src/queries.ts#L59-L63)
 - DB-B sends these rows to DB-A
 - DB-A applys the changes
 - DB-A now has all of DB-B's updates
@@ -85,6 +107,29 @@ If DB-A wants changes from DB-B,
 This algorithm requires causal delivery of message during the time which two peers decide to sync.
 
 # Implementation
+
+`cfsqlite` is currently implemented as a set of views, triggers, and conflict free base tables.
+
+The views match an application's existing database schema so little to no changes need be made to existing applications.
+
+Whenever sqlite tries to write to a view, we intercept that write and write it to the conflict free base tables instead. This allows you to issue arbitrarily complex writes (e.g. UPDATE x WHERE condition) as `SQLite` will resolve the impacted rows via its query engine.
+
+You can view a set of manually constructed view and triggers here:
+https://github.com/tantaman/conflict-free-sqlite/tree/main/prototype/test-schemas
+
+# Perf
+
+`cfsqlite` is currently 2-3x slower than base `sqlite`. I believe we can get perf to be near identical. The current bottlenecks are:
+1. The current database clock value is stored in a table and must be touched every write
+2. The site id of the database is stored in a table and queried every write
+
+We can move both of these values out of their tables and into a variable in-memory. Preliminary tests show that doing this results in near identical perf to `sqlite`.
+
+# Future
+
+- Sharing & Privacy -- in a real-world collaborative scenario, you may not want to share your entire database with other peers. Thus, in addition to clock information, we must keep visibility information to use when computing deltas and doing replication.
+- Byzantine fault tolerance -- `cfsqlite` currently assumes friendly actors. We need to guard against malicious updates.
+- Subselects -- peers may want to sync subsets of the database even if they have access to the entire thing. Compute deltas but only send those deltas that fall into the peer's provided query.
 
 # Example Use Case
 Say we have a databse schema called "Animal App." Alice, Bob and Billy all have local copies of "Animal App" on their devices. They start their day at a hostel with all of their devices synced. They then part ways, backpacking into the wilderness each with their own copy of the db.

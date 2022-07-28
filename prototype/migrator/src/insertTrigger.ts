@@ -65,6 +65,7 @@ function conflictResolution(tableName: string, columns: TableInfo): string {
     "crr_update_src" = 0`;
 }
 
+// TODO: have type system enforce pks are not here
 function conflictSets(columns: TableInfo): string {
   const notPks = tableInfoFn.nonPks(columns);
   return notPks

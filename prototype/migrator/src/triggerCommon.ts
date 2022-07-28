@@ -4,9 +4,10 @@ export const updateVersion =
   'UPDATE "crr_db_version" SET "version" = "version" + 1;';
 
 export const updateClocks = (tableName: string, pks: TableInfo) => {
-  return `INSERT INTO "${tableName}_crr_clocks" ("siteId", "version", ${pks
-    .map((k) => `"${k.name}"`)
-    .join(", ")})
+  return `INSERT INTO "${tableName}_crr_clocks" (
+    "siteId",
+    "version",
+    ${pks.map((k) => `"${k.name}"`).join(",\n")})
   VALUES (
     (SELECT "id" FROM "crr_site_id"),
     (SELECT "version" FROM "crr_db_version"),

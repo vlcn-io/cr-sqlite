@@ -120,13 +120,15 @@ function createCrrSchemasFor(
     .run();
 
   console.log(chalk.green("Creating patch view for", chalk.blue(tableName)));
-  dest.prepare(
-    `CREATE VIEW
+  dest
+    .prepare(
+      `CREATE VIEW
       IF NOT EXISTS "${tableName}_patch" AS SELECT
         "${tableName}_crr".*,
         '{"fake": 1}' as crr_clock
       FROM "${tableName}_crr"`
-  );
+    )
+    .run();
 
   console.log(chalk.green("Creating triggers for", chalk.blue(tableName)));
   createTriggers(dest, tableName, columnsWithVersionColumns);

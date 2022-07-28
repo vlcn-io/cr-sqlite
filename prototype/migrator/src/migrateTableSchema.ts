@@ -3,6 +3,7 @@ import chalk from "chalk";
 import { ColumnInfo, TableInfo } from "./tableInfo.js";
 import tableInfoFn from "./tableInfo.js";
 import createTriggers from "./createTriggers.js";
+import { augmentPksIfNone } from "./triggerCommon.js";
 
 // https://www.sqlite.org/pragma.html#pragma_index_info
 type IndexListEntry = {
@@ -89,14 +90,18 @@ function createCrrSchemasFor(
       .run();
   });
 
+  const augmentedPks = augmentPksIfNone(pks);
   console.log(chalk.green("Creating Clock table for", chalk.blue(tableName)));
   dest
     .prepare(
-      `CREATE TABLE IF NOT EXISTS "${tableName}_crr_clocks" (
-    "id" integer NOT NULL,
+      `
+  CREATE TABLE IF NOT EXISTS "${tableName}_crr_clocks" (
     "siteId" integer NOT NULL,
     "version" integer NOT NULL,
-    PRIMARY KEY ("siteId", "id")
+    ${augmentedPks.map(getColumnDefinition).join(",\n")},
+    PRIMARY KEY ("siteId", ${augmentedPks
+      .map((pk) => `"${pk.name}"`)
+      .join(", ")})
   )`
     )
     .run();

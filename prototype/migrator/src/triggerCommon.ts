@@ -4,11 +4,13 @@ export const updateVersion =
   'UPDATE "crr_db_version" SET "version" = "version" + 1;';
 
 export const updateClocks = (tableName: string, pks: TableInfo) => {
-  return `INSERT INTO "${tableName}_crr_clocks" ("siteId", "version", "id")
+  return `INSERT INTO "${tableName}_crr_clocks" ("siteId", "version", ${pks
+    .map((k) => `"${k.name}"`)
+    .join(", ")})
   VALUES (
     (SELECT "id" FROM "crr_site_id"),
     (SELECT "version" FROM "crr_db_version"),
-    ${pks.map((k) => `NEW."${k.name}"`).join(" || '~!~' || ")}
+    ${pks.map((k) => `NEW."${k.name}"`).join(",\n")}
   )
   ON CONFLICT ("siteId", "id") DO UPDATE SET
     "version" = EXCLUDED."version";`;

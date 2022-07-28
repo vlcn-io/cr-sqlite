@@ -6,6 +6,7 @@ import chalk from "chalk";
 import { nanoid } from "nanoid";
 import gatherTables from "./gatherTables.js";
 import migrateTableSchemas from "./migrateTableSchema.js";
+import copyData from "./copyData.js";
 
 const crrSchemaVersion = 1;
 
@@ -17,6 +18,7 @@ const crrSchemaVersion = 1;
  * then making every table conflict free.
  *
  * TODO: migrate must somehow track if is being run against a db that was previously migrated...
+ * TODO: alert on fk constraints being dropped
  *
  * @param sourceDbFile
  * @param destDbFile
@@ -46,7 +48,11 @@ export default function migrate(
     };
   }
 
-  runMigrationSteps(new Database(src) as DB, new Database(dest) as DB, tables);
+  const srcDb = new Database(src) as DB;
+  srcDb.defaultSafeIntegers();
+  const destDb = new Database(dest) as DB;
+  destDb.defaultSafeIntegers();
+  runMigrationSteps(srcDb, destDb, tables);
 }
 
 function runMigrationSteps(srcDb: DB, destDb: DB, tables?: string[]) {
@@ -73,7 +79,7 @@ function runMigrationSteps(srcDb: DB, destDb: DB, tables?: string[]) {
       "\nFinished creating table schemas. Now copying over the data."
     )
   );
-  // migrateData(srcDb, destDb, tablesToMigrate);
+  tablesToMigrate.forEach((t) => copyData(srcDb, destDb, t));
 }
 
 function createCommonTables(db: DB) {

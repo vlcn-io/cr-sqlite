@@ -18,6 +18,10 @@ export default {
     return tableInfo.filter((c) => c.pk === 0);
   },
 
+  baseColumns(tableInfo: TableInfo) {
+    return tableInfo.filter((c) => c.versionOf == null);
+  },
+
   withVersionColumns(tableInfo: TableInfo): TableInfo {
     const ret: TableInfo = [];
     for (const c of tableInfo) {

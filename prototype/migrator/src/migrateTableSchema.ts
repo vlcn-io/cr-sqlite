@@ -2,7 +2,7 @@ import { Database as DB } from "better-sqlite3";
 import chalk from "chalk";
 import { ColumnInfo, TableInfo } from "./tableInfo.js";
 import tableInfoFn from "./tableInfo.js";
-import createTriggers from "./triggers.js";
+import createTriggers from "./createTriggers.js";
 
 // https://www.sqlite.org/pragma.html#pragma_index_info
 type IndexListEntry = {
@@ -44,12 +44,14 @@ function createCrrSchemasFor(
   dest
     .prepare(
       `CREATE TABLE IF NOT EXISTS "${tableName}_crr" (
-    ${columnsWithVersionColumns.map(getColumnDefinition).join(",\n")}${
-        pks.length > 0
-          ? `,
+    ${columnsWithVersionColumns.map(getColumnDefinition).join(",\n")},
+    "crr_cl" INTEGER DEFAULT 1,
+    "crr_update_src" INTEGER DEFAULT 0${
+      pks.length > 0
+        ? `,
     PRIMARY KEY (${pks.map((k) => `"${k.name}"`).join(",")})`
-          : ""
-      }
+        : ""
+    }
   )`
     )
     .run();

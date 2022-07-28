@@ -3,6 +3,7 @@ import tableInfoFn from "./tableInfo.js";
 
 // TODO: we can make this much smarter and faster
 export default function copyData(src: DB, dest: DB, table: string) {
+  console.log(`\tcopying ${table}`);
   const tableInfo = src.pragma(`table_info(${table})`);
   const pks = tableInfoFn.pks(tableInfo);
 

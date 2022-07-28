@@ -13,7 +13,9 @@ export const updateClocks = (tableName: string, pks: TableInfo) => {
     (SELECT "version" FROM "crr_db_version"),
     ${pks.map((k) => `NEW."${k.name}"`).join(",\n")}
   )
-  ON CONFLICT ("siteId", "id") DO UPDATE SET
+  ON CONFLICT ("siteId", ${pks
+    .map((k) => `"${k.name}"`)
+    .join(", ")}) DO UPDATE SET
     "version" = EXCLUDED."version";`;
 };
 

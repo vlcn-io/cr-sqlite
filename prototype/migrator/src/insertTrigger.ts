@@ -1,14 +1,19 @@
 import { Database as DB } from "better-sqlite3";
 import chalk from "chalk";
 import tableInfoFn, { TableInfo } from "./tableInfo.js";
+import {
+  augmentPksIfNone,
+  updateClocks,
+  updateVersion,
+} from "./triggerCommon.js";
 
 export default function createInsertTrigger(
   db: DB,
   tableName: string,
   columns: TableInfo
 ) {
-  let pks = tableInfoFn.pks(columns);
-  if (pks.length === 0) {
+  let pks = augmentPksIfNone(tableInfoFn.pks(columns));
+  if (pks.length === 1 && pks[0].name === "rowid") {
     // TODO: provide a similar warning for auto-increment primary keys
     console.log(
       chalk.yellow(
@@ -32,7 +37,7 @@ export default function createInsertTrigger(
 CREATE TRIGGER IF NOT EXISTS "${tableName}_insert_trig"
   INSTEAD OF INSERT ON "${tableName}"
 BEGIN
-  UPDATE "crr_db_version" SET "version" = "version" + 1;
+  ${updateVersion}
 
   INSERT INTO "${tableName}_crr" (
     ${baseColumns.map((c) => '"' + c.name + '"').join(",\n")}
@@ -40,14 +45,7 @@ BEGIN
     .map((c) => `NEW."${c.name}"`)
     .join(",\n")}) ${conflictResolution(tableName, columns)};
 
-  INSERT INTO "${tableName}_crr_clocks" ("siteId", "version", "id")
-    VALUES (
-      (SELECT "id" FROM "crr_site_id"),
-      (SELECT "version" FROM "crr_db_version"),
-      ${pks.map((k) => `NEW."${k.name}"`).join(" || '~!~' || ")}
-    )
-    ON CONFLICT ("siteId", "id") DO UPDATE SET
-      "version" = EXCLUDED."version";
+  ${updateClocks(tableName, pks)}
 END;
 `;
   db.prepare(q).run();

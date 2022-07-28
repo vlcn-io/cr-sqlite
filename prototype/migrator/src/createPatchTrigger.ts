@@ -40,7 +40,6 @@ export default function createPatchTrigger(
       "version" = CASE WHEN EXCLUDED."version" > "version" THEN EXCLUDED."version" ELSE "version" END;
   END;
       `;
-  console.log(q);
   db.prepare(q).run();
 }
 

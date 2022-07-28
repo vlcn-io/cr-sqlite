@@ -22,7 +22,7 @@ async function run() {
     { name: "src", alias: "s", defaultOption: true },
     { name: "dest", alias: "d" },
     { name: "tables", alias: "t", multiple: true },
-    { name: "overwrite", alias: "o" },
+    { name: "overwrite", alias: "w", type: Boolean },
   ];
 
   const migrateOptions = commandLineArgs(migrateDefitions, { argv });
@@ -36,6 +36,7 @@ async function run() {
     return;
   }
 
+  console.log(migrateOptions);
   try {
     migrate(
       migrateOptions.src,
@@ -118,7 +119,7 @@ function print_migrate_help() {
           name: "overwrite",
           description: "allow overwriting the dest file if it exists",
           type: Boolean,
-          alias: "o",
+          alias: "w",
         },
       ],
     },

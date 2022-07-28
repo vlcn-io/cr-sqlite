@@ -21,12 +21,12 @@ export function augmentPksIfNone(pks: TableInfo): TableInfo {
   if (pks.length === 0) {
     return [
       {
-        cid: 0,
+        cid: 0n,
         name: "rowid",
         type: "integer",
-        notnull: 1,
+        notnull: 1n,
         dflt_value: 1,
-        pk: 1,
+        pk: 1n,
       },
     ];
   }

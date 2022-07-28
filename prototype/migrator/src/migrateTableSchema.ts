@@ -109,9 +109,9 @@ function createCrrSchemasFor(
   console.log(chalk.green("Creating view for", chalk.blue(tableName)));
   dest
     .prepare(
-      `CREATE VIEW IF NOT EXISTS "${tableName}" AS SELECT ${tableInfo
-        .map((t) => `"${t.name}"`)
-        .join(",\n")}
+      `CREATE VIEW IF NOT EXISTS "${tableName}" AS SELECT ${
+        pks.length === 0 ? "rowid,\n" : ""
+      }${tableInfo.map((t) => `"${t.name}"`).join(",\n")}
       FROM
         "${tableName}_crr"
       WHERE
@@ -136,7 +136,7 @@ function createCrrSchemasFor(
 
 function getColumnDefinition(columnInfo: ColumnInfo): string {
   return `"${columnInfo.name}" ${columnInfo.type}${
-    columnInfo.notnull === 1 ? " NOT NULL" : ""
+    columnInfo.notnull === 1n ? " NOT NULL" : ""
   }${
     columnInfo.dflt_value !== null ? ` DEFAULT '${columnInfo.dflt_value}'` : ""
   }`;

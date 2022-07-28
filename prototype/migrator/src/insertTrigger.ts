@@ -22,12 +22,12 @@ export default function createInsertTrigger(
     );
     pks = [
       {
-        cid: 0,
+        cid: 0n,
         name: "rowid",
         type: "integer",
-        notnull: 1,
+        notnull: 1n,
         dflt_value: 1,
-        pk: 1,
+        pk: 1n,
       },
     ];
   }

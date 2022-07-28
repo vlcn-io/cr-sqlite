@@ -34,7 +34,7 @@ export default function migrate(
     if (!overwrite) {
       throw {
         type: "invariant",
-        msg: `${dest} already exists. Please remove it or re-run with the --overwrite option.`,
+        message: `${dest} already exists. Please remove it or re-run with the --overwrite option.`,
       };
     } else {
       fs.unlinkSync(dest);
@@ -44,7 +44,7 @@ export default function migrate(
   if (src !== ":memory:" && !fs.existsSync(src)) {
     throw {
       type: "invariant",
-      msg: `source database ${src} does not exist.`,
+      message: `source database ${src} does not exist.`,
     };
   }
 

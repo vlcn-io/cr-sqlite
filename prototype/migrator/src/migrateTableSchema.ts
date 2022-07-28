@@ -1,15 +1,8 @@
 import { Database as DB } from "better-sqlite3";
 import chalk from "chalk";
-
-type ColumnInfo = {
-  cid: number; // column id (order)
-  name: string; // column name
-  type: string; // data type (if any)
-  notnull: number; // 0 no, 1 yes
-  dflt_value: any; // default value for the column
-  pk: number; // primary key. 0 no, 1 yes
-};
-type TableInfo = ColumnInfo[];
+import { ColumnInfo, TableInfo } from "./tableInfo.js";
+import tableInfoFn from "./tableInfo.js";
+import createTriggers from "./triggers.js";
 
 // https://www.sqlite.org/pragma.html#pragma_index_info
 type IndexListEntry = {
@@ -46,16 +39,28 @@ function createCrrSchemasFor(
   console.log("\n");
   console.log(chalk.green("Creating LWW table for", chalk.blue(tableName)));
 
+  const pks = tableInfoFn.pks(tableInfo);
+  const columnsWithVersionColumns = tableInfoFn.withVersionColumns(tableInfo);
   dest
     .prepare(
       `CREATE TABLE IF NOT EXISTS "${tableName}_crr" (
-    ${tableInfo.flatMap(getColumnDefinition).join(",\n")}
+    ${columnsWithVersionColumns.map(getColumnDefinition).join(",\n")}${
+        pks.length > 0
+          ? `,
+    PRIMARY KEY (${pks.map((k) => `"${k.name}"`).join(",")})`
+          : ""
+      }
   )`
     )
     .run();
 
   console.log(`\tCreating indices`);
   indexList.forEach((index) => {
+    // We create primary keys in the table creation statement.
+    if (index.origin === "pk") {
+      return;
+    }
+
     const indexInfo = src.pragma(`index_info("${index.name}")`);
     if (index.unique === 1 && index.origin != "pk") {
       console.log(
@@ -65,7 +70,7 @@ function createCrrSchemasFor(
       );
       console.log(
         chalk.yellow(
-          `Converted ${tableName}.${index.name} to a non-unique index`
+          `Converting ${tableName}.${index.name} to a non-unique index`
         )
       );
     }
@@ -117,30 +122,13 @@ function createCrrSchemasFor(
   );
 
   console.log(chalk.green("Creating triggers for", chalk.blue(tableName)));
-  // createInsertTrigger();
-  // createUpdateTrigger();
-  // createDeleteTrigger();
-  // createPatchTrigger();
+  createTriggers(dest, tableName, columnsWithVersionColumns);
 }
 
-function getColumnDefinition(columnInfo: ColumnInfo): string[] {
-  if (columnInfo.pk === 1) {
-    return [
-      `"${columnInfo.name}" ${columnInfo.type}${
-        columnInfo.notnull === 1 ? " NOT NULL" : ""
-      }${
-        columnInfo.dflt_value !== null
-          ? ` DEFAULT '${columnInfo.dflt_value}'`
-          : ""
-      } PRIMARY KEY`,
-    ];
-  }
-  return [
-    `"${columnInfo.name}" ${columnInfo.type}${
-      columnInfo.notnull === 1 ? " NOT NULL" : ""
-    }${
-      columnInfo.dflt_value !== null ? ` DEFAULT ${columnInfo.dflt_value}` : ""
-    }`,
-    `"${columnInfo.name}_v" INTEGER DEFAULT 0`,
-  ];
+function getColumnDefinition(columnInfo: ColumnInfo): string {
+  return `"${columnInfo.name}" ${columnInfo.type}${
+    columnInfo.notnull === 1 ? " NOT NULL" : ""
+  }${
+    columnInfo.dflt_value !== null ? ` DEFAULT '${columnInfo.dflt_value}'` : ""
+  }`;
 }

@@ -95,7 +95,7 @@ th {
 td {
   background: black;
   animation-name: animate1;
-  animation-duration: 1s;
+  animation-duration: 2s;
 }
 
 @keyframes animate1 {
@@ -105,4 +105,16 @@ td {
   100% {
     background-color: black;
   }
+}
+
+.live {
+  position: absolute;
+  z-index: 20;
+  top: 0px;
+  background: green;
+  /* padding: 0px; */
+  /* overflow: scroll; */
+  max-height: 250px;
+  overflow: auto;
+  max-width: 720px;
 }

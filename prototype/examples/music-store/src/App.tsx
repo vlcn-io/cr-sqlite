@@ -4,6 +4,18 @@ import { createSignal, For, onCleanup, onMount, Show } from "solid-js";
 const prompt = "sql> ";
 const [commands, setCommands] = createSignal<string[]>([]);
 
+const colors = [
+  "green",
+  "blue",
+  "cyan",
+  "yellow",
+  "purple",
+  "red",
+  "gold",
+  "brown",
+];
+
+let numLive = 0;
 export default function App({ db, notifier }: { db: DB; notifier: Notifier }) {
   return <Term db={db} notifier={notifier} />;
 }
@@ -64,11 +76,14 @@ function DBResult({
     cmd = parsed;
     const [result, setResult] = createSignal(db.exec(cmd)[0]);
 
+    let myLiveId = 0;
     if (isLive) {
+      myLiveId = numLive++;
       const disposable = notifier.on((tables) => {
         // technically we can optimize and not re-run if we don't care about the tables
         const newResult = db.exec(cmd)[0];
         const oldResult = result();
+        let hadChange = false;
 
         // we do this so Solid doesn't re-render identeical rows
         // I wish `for` allowed us to pass a comparator.
@@ -78,10 +93,14 @@ function DBResult({
 
           if (arrayEquals(oldRow, newRow)) {
             newResult.values[i] = oldRow;
+          } else {
+            hadChange = true;
           }
         }
 
-        setResult(newResult);
+        if (hadChange) {
+          setResult(newResult);
+        }
       });
       onCleanup(disposable);
     }
@@ -90,26 +109,37 @@ function DBResult({
 
     return (
       <Show when={result() != null} fallback={<div></div>}>
-        <table>
-          <thead>
-            <tr>
-              {result().columns.map((c) => (
-                <th>{c}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            <For each={result().values}>
-              {(v) => (
-                <tr>
-                  {v.map((c) => (
-                    <td>{c}</td>
-                  ))}
-                </tr>
-              )}
-            </For>
-          </tbody>
-        </table>
+        <div
+          class={isLive ? "live" : ""}
+          style={{
+            "z-index": myLiveId,
+            top: 0,
+            left: myLiveId * 450 + "px",
+            background: colors[myLiveId % colors.length],
+          }}
+        >
+          {isLive ? "live: " + cmd : ""}
+          <table>
+            <thead>
+              <tr>
+                {result().columns.map((c) => (
+                  <th>{c}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              <For each={result().values}>
+                {(v) => (
+                  <tr>
+                    {v.map((c) => (
+                      <td>{c}</td>
+                    ))}
+                  </tr>
+                )}
+              </For>
+            </tbody>
+          </table>
+        </div>
       </Show>
     );
   } catch (e) {

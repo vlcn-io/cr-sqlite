@@ -21,7 +21,7 @@ BEGIN
   ${updateVersion}
 
   UPDATE "${tableName}_crr" SET "crr_cl" = "crr_cl" + 1, "crr_update_src" = 0 WHERE ${pks
-      .map((pk) => `"${pk}" = OLD."${pk}"`)
+      .map((pk) => `"${pk.name}" = OLD."${pk.name}"`)
       .join(" AND ")};
 
   ${updateClocks(tableName, pks)}

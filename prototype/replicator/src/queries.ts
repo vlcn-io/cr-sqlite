@@ -111,6 +111,26 @@ export default {
       [deltas.flatMap((d) => Object.values(d))],
     ];
   },
+
+  patchArray(
+    table: string,
+    columns: string[],
+    deltas: any[][]
+  ): [string, any[]] {
+    if (deltas.length === 0) {
+      throw new Error("Delta length is 0, nothing to patch");
+    }
+    const columnNames = columns.map((c) => '"' + c + '"');
+    const valueSlots = deltas.map(
+      (d) => "(" + columnNames.map((c) => "?").join(",") + ")"
+    );
+    return [
+      `INSERT INTO "${patchTableName(table)}" (${columnNames.join(
+        ","
+      )}) VALUES ${valueSlots.join(",")}`,
+      [deltas.flatMap((d) => d)],
+    ];
+  },
 };
 
 function clockTableName(baseTable: string): string {

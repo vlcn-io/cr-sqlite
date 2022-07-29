@@ -5,7 +5,7 @@ import { queries, clock } from "@cfsql/replicator";
 const syncedTables = [
   "playlist",
   "track",
-  "playlisttrack",
+  // "playlisttrack", <-- todo: need to support compount primary keys in delta gathering.
   "artist",
   "customer",
   "employee",
@@ -91,7 +91,6 @@ export default class PeerConnections {
   }
 
   getUpdatesFrom(peerId: string) {
-    console.log("wtf");
     const conn = this.peers.get(peerId);
     if (!conn) {
       throw new Error(`No connection to ${peerId}`);
@@ -130,7 +129,7 @@ export default class PeerConnections {
         data = {};
       }
 
-      this.#processMessage(conn.peer, data as Message);
+      this.#processMessage(conn, data as Message);
     });
 
     conn.on("close", () => {
@@ -153,26 +152,58 @@ export default class PeerConnections {
     }
   }
 
-  #processMessage(peer: string, m: Message) {
+  #processMessage(conn: DataConnection, m: Message) {
     console.log(m);
     switch (m.type) {
       case "ask-state":
-        this.#provideState(peer, m);
+        this.#provideState(conn, m);
         break;
       case "provide-state":
-        this.#receiveState(peer, m);
+        this.#receiveState(conn, m);
         break;
       case "version-update":
-        this.versions.set(peer, m.count);
+        this.versions.set(conn.peer, m.count);
         break;
     }
   }
 
-  #provideState(peer: string, m: AskState) {
+  #provideState(conn: DataConnection, m: AskState) {
     // someone asked us to provide state
+
+    const slices: ProvideState["slices"] = [];
+    m.slices.forEach((slice) => {
+      // TODO: handle this number/string mismatch on clock
+      const q = queries.deltas(slice.table, "id", slice.clock as any);
+      const res = this.db.exec(q[0], q[1])[0];
+      if (res == null) {
+        return null;
+      }
+      if (res.values == null || res.values.length == 0) {
+        return null;
+      }
+
+      slices.push({
+        table: slice.table,
+        columns: res[0].columns,
+        rows: res.values,
+      });
+    });
+
+    const msg = {
+      type: "provide-state",
+      slices,
+    };
+
+    if (slices.length === 0) {
+      console.log("No slices to send");
+      return;
+    }
+
+    console.log("sending", msg);
+    conn.send(msg);
   }
 
-  #receiveState(peer: string, m: ProvideState) {
+  #receiveState(peer: DataConnection, m: ProvideState) {
     // someone provided us with state
   }
 }
@@ -188,20 +219,17 @@ type Message =
 type AskState = {
   type: "ask-state";
   // we currently break down the ask to individual tables
-  slices: [
-    {
-      table: string;
-      clock: { [key: string]: number };
-    }
-  ];
+  slices: {
+    table: string;
+    clock: { [key: string]: number };
+  }[];
 };
 
 type ProvideState = {
   type: "provide-state";
-  slices: [
-    {
-      table: string;
-      rows: any[];
-    }
-  ];
+  slices: {
+    table: string;
+    columns: string[];
+    rows: any[];
+  }[];
 };

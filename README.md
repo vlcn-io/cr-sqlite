@@ -10,27 +10,18 @@ This project implements [CRDTs](https://crdt.tech/) and [CRRs](https://hal.inria
 
 [![loom](https://cdn.loom.com/sessions/thumbnails/0934f93364d340e0ba658146a974edb4-with-play.gif)](https://www.loom.com/share/0934f93364d340e0ba658146a974edb4)
 
-I'm working on a demo application. You can, of course, check out the repo and repeat what occurs in [this video](https://youtu.be/TKOGItt04OA) to play with this locally.
-
-```
-git clone conflict-free-sqlite
-cd conflict-free-sqlite/prototype
-pnpm install
-cd demo-env
-pnpm build
-node
-```
+I'm working on a demo application to show how to use cfsqlite in practice. This will live in `examples/music-app`.
 
 You can view a conflict-free DB in action in the `__tests__` folder of the `replicator` package: https://github.com/tantaman/conflict-free-sqlite/blob/main/prototype/replicator/src/__tests__/merge-random-2.test.ts
 
 # Auto-Migrate
 
-Auto-migration of an existing sqlite db to be conflict free is not yet implemented. This will live in the `migrator` package. A manual migration of a database of `todos` can be seen here: https://github.com/tantaman/conflict-free-sqlite/tree/main/prototype/test-schemas
+A script to migrate existing `sqlite` dbs to be conflict free lives in the `migrator` package. 
 
-In the future the steps to using `cfsqlite` will be:
-1. Run [`migrator`](https://github.com/tantaman/conflict-free-sqlite/tree/main/prototype/migrator) to migrate an existing DB to a conflict-free schema
-2. Pull in the [`replicator`](https://github.com/tantaman/conflict-free-sqlite/tree/main/prototype/replicator) API for your target language
-3. Connect the replicator to peer databases
+An example of the results this migration can be seen in the `chinook` package.
+
+- chinook.db represents the [standard chinook dataset](https://github.com/lerocha/chinook-database)
+- chinook-crr.db is that dataset after being migrated to a conflict free schema
 
 # Prior Art
 

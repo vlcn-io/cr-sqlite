@@ -39,6 +39,22 @@ body {
   padding: 40px;
 }
 
+.input {
+  display: flex;
+}
+
+.input > .prompt {
+}
+
+.input > form {
+  flex-grow: 1;
+  display: inline-block;
+  margin-block-end: 0;
+  position: relative;
+  top: -4px;
+  left: 12px;
+}
+
 .term input {
   border: 0;
   background: inherit;
@@ -47,12 +63,10 @@ body {
   color: white;
   font: 1.3rem Inconsolata, monospace;
   height: 2rem;
-}
-
-.term form {
-  display: inline-block;
+  padding: 0;
+  width: 100%;
 }
 
 .term > div {
-  margin-top: 5px;
+  margin-bottom: 5px;
 }

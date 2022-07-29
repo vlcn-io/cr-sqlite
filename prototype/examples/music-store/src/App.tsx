@@ -4,7 +4,7 @@ import { createSignal, For, onCleanup, onMount, Show } from "solid-js";
 const prompt = "sql> ";
 const [commands, setCommands] = createSignal<string[]>([]);
 
-const colors = ["green", "blue", "magenta", "orange", "purple", "red", "brown"];
+const colors = ["green", "magenta", "orange", "purple", "red", "brown", "blue"];
 
 let numLive = 0;
 export default function App({ db, notifier }: { db: DB; notifier: Notifier }) {
@@ -109,8 +109,12 @@ function DBResult({
             isLive
               ? {
                   "z-index": myLiveId,
-                  top: 0,
-                  left: myLiveId * 450 + "px",
+                  top:
+                    Math.floor((myLiveId * 750) / window.innerWidth) * 250 +
+                    "px",
+                  left:
+                    floorToInterval((myLiveId * 750) % window.innerWidth, 750) +
+                    "px",
                   background: colors[myLiveId % colors.length],
                 }
               : {}
@@ -256,4 +260,8 @@ function arrayEquals(a, b) {
     a.length === b.length &&
     a.every((val, index) => val === b[index])
   );
+}
+
+function floorToInterval(x, i) {
+  return x - (x % i);
 }

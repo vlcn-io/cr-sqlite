@@ -7,8 +7,10 @@ import App from "./App";
 import PeerConnections from "./PeerConnections";
 
 // Generate our own uuid so we can initialize the db and p2p network in parallel
-const siteId = sessionStorage.getItem("siteId") || nanoid();
-sessionStorage.setItem("siteId", siteId);
+// actually cannot do session storage since db is wiped every refresh. Clocks would run backwards if we kept it.
+// sessionStorage.getItem("siteId") ||
+const siteId = nanoid();
+// sessionStorage.setItem("siteId", siteId);
 const me = new Peer(siteId);
 
 initDb(siteId).then(createUI);

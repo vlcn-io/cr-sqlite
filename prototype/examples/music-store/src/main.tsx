@@ -18,7 +18,7 @@ initDb(siteId).then(createUI);
 function createUI([db, notifier]: [DB, Notifier]) {
   (window as any).db = db;
 
-  const connections = new PeerConnections(db, notifier, me);
+  const connections = new PeerConnections(db, notifier, me, siteId);
   render(
     () => <App db={db} notifier={notifier} connections={connections} />,
     nullthrows(document.getElementById("app"))

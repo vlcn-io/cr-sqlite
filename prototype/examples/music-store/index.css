@@ -123,3 +123,18 @@ pre {
   color: grey;
   white-space: pre-wrap;
 }
+
+.p2p {
+  position: absolute;
+  right: 0;
+  font-size: 1em;
+  color: green;
+  background: #111;
+  padding: 10px;
+  border-radius: 5px 0px 0px 5px;
+  z-index: 900;
+}
+
+p {
+  margin: 0px;
+}

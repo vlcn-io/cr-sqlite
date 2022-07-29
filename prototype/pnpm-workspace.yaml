@@ -1,5 +1,4 @@
 packages:
   - "migrator"
   - "replicator"
-  - "demo-lib"
-  - "demo-env"
+  - "examples/music-app"

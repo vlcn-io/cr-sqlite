@@ -113,8 +113,6 @@ export default class PeerConnections {
     );
   }
 
-  pushUpdatesTo(peerId: string) {}
-
   // allow user to choose when to sync? May be better for demo purposes.
   #enableSync(conn: DataConnection) {
     this.peers.set(conn.peer, conn);
@@ -205,6 +203,10 @@ export default class PeerConnections {
 
   #receiveState(peer: DataConnection, m: ProvideState) {
     // someone provided us with state
+    m.slices.forEach((slice) => {
+      const q = queries.patchArray(slice.table, slice.columns, slice.rows);
+      this.db.run(q[0], q[1]);
+    });
   }
 }
 
@@ -230,6 +232,6 @@ type ProvideState = {
   slices: {
     table: string;
     columns: string[];
-    rows: any[];
+    rows: any[][];
   }[];
 };

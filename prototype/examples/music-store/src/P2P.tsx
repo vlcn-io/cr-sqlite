@@ -68,14 +68,7 @@ export default function P2P({ connections }: { connections: PeerConnections }) {
                     connections.getUpdatesFrom(p);
                   }}
                 >
-                  Pull
-                </span>
-                <span
-                  class="btn"
-                  title="push your changes to this peer"
-                  onClick={() => connections.pushUpdatesTo(p)}
-                >
-                  Push
+                  Pull Changes
                 </span>
               </div>
             </li>

@@ -2,7 +2,7 @@ import initSqlJs from "sql.js";
 export type Notifier = typeof notifier;
 export type DB = {
   exec(q: string, bindings?: any): [{ columns: string[]; values: any[][] }];
-  run(q: string): void;
+  run(q: string, bindings?: any): void;
   prepare(q: string): any;
 };
 

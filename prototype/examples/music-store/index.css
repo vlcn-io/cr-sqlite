@@ -118,3 +118,7 @@ tr {
   overflow: auto;
   max-width: 750px;
 }
+
+pre {
+  color: grey;
+}

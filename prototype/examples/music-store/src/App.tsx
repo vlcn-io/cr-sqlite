@@ -5,6 +5,18 @@ const prompt = "sql> ";
 const [commands, setCommands] = createSignal<string[]>([]);
 
 const colors = ["green", "magenta", "orange", "purple", "red", "brown", "blue"];
+const help = `Trying running .tables to see what tables are available.
+
+  SELECT * FROM table LIMIT 10; to preview a table's contents.
+
+  Prefix queries with \`LIVE\` to run a live query that is updated whenever the queried table's contents change.
+
+  Example:
+  LIVE SELECT * FROM track ORDER BY id DESC LIMIT 10;
+
+  Then insert or update a row here (or on a connected peer! Or on a disconnected peer then re-connect them!) and see the live query result change.
+
+select, insert, update, delete, .table & .schema operations are supported in this browser.`;
 
 let numLive = 0;
 export default function App({ db, notifier }: { db: DB; notifier: Notifier }) {
@@ -26,6 +38,7 @@ function Output({ db, notifier }: { db: DB; notifier: Notifier }) {
       <For each={commands()}>
         {(cmd, i) => <Cell cmd={cmd} db={db} notifier={notifier} />}
       </For>
+      <pre>{help}</pre>
     </div>
   );
 }
@@ -200,19 +213,7 @@ function assertAllowed(cmd: string) {
     cmd.startsWith("live");
 
   if (!allowed) {
-    throw new Error(
-      `Trying running .tables to see what tables are available.
-
-      select * from table limit 10; to preview a table's contents.
-
-      Prefix queries with \`live\` to run a live query that is updated whenever the queried table's contents change.
-      E.g.,
-      LIVE SELECT * FROM track ORDER BY id DESC LIMIT 10;
-
-      Then insert or update a row here (or on a connected peer! Or on a disconnected peer then re-connect them!) and see the live query result change.
-
-      select, insert, update, delete, .table & .schema operations are supported in this browser.`
-    );
+    throw new Error(help);
   }
 }
 

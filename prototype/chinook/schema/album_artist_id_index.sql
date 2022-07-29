@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS album_artist_id ON album (artistId);

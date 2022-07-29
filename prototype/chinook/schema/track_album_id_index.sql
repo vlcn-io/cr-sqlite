@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS track_album_id ON track (albumId);

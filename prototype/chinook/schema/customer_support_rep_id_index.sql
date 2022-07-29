@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS customer_support_rep_id ON customer (supportRepId);

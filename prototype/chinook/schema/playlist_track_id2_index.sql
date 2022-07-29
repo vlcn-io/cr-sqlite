@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS playlist_track_id2 ON playlisttrack (id2);

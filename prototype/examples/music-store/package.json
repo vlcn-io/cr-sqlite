@@ -18,11 +18,15 @@
     "@cfsql/replicator": "workspace:*",
     "nanoid": "^4.0.0",
     "peerjs": "^1.4.6",
+    "solid-js": "^1.4.8",
     "sql.js": "^1.7.0"
   },
   "devDependencies": {
+    "@babel/core": "^7.18.9",
+    "babel-preset-solid": "^1.4.8",
     "typescript": "^4.7.4",
     "vite": "^3.0.4",
+    "vite-plugin-solid": "^2.3.0",
     "vitest": "^0.19.1"
   },
   "jest": {

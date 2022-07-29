@@ -1,5 +1,9 @@
 // vite.config.js
-export default {
+import { defineConfig } from "vite";
+import solidPlugin from "vite-plugin-solid";
+
+export default defineConfig({
+  plugins: [solidPlugin()],
   server: {
     fs: {
       strict: false,
@@ -9,4 +13,4 @@ export default {
     //   "Cross-Origin-Embedder-Policy": "require-corp",
     // },
   },
-};
+});

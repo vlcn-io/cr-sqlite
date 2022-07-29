@@ -1,5 +1,10 @@
 import initSqlJs from "sql.js";
 export type Notifier = typeof notifier;
+export type DB = {
+  exec(q: string): any;
+  run(q: string): void;
+  prepare(q: string): any;
+};
 
 export default async function initDb(
   siteId: string

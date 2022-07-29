@@ -3,7 +3,11 @@ import { TableInfo } from "./tableInfo";
 export const updateVersion =
   'UPDATE "crr_db_version" SET "version" = "version" + 1;';
 
-export const updateClocks = (tableName: string, pks: TableInfo) => {
+export const updateClocks = (
+  tableName: string,
+  pks: TableInfo,
+  prefix: string = "NEW"
+) => {
   return `INSERT INTO "${tableName}_crr_clocks" (
     "siteId",
     "version",
@@ -11,7 +15,7 @@ export const updateClocks = (tableName: string, pks: TableInfo) => {
   VALUES (
     (SELECT "id" FROM "crr_site_id"),
     (SELECT "version" FROM "crr_db_version"),
-    ${pks.map((k) => `NEW."${k.name}"`).join(",\n")}
+    ${pks.map((k) => `${prefix}."${k.name}"`).join(",\n")}
   )
   ON CONFLICT ("siteId", ${pks
     .map((k) => `"${k.name}"`)

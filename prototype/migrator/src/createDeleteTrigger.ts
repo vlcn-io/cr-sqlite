@@ -24,7 +24,7 @@ BEGIN
       .map((pk) => `"${pk.name}" = OLD."${pk.name}"`)
       .join(" AND ")};
 
-  ${updateClocks(tableName, pks)}
+  ${updateClocks(tableName, pks, "OLD")}
 END;
   `
   ).run();

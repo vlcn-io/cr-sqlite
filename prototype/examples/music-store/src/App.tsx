@@ -65,14 +65,17 @@ function DBResult({
   try {
     const [isLive, parsed] = parseCmd(cmd);
     cmd = parsed;
-    const [result, setResult] = createSignal(db.exec(cmd)[0]);
+    const [result, setResult] = createSignal(
+      db.exec(cmd)[0] || { values: [], columns: [] }
+    );
 
     let myLiveId = 0;
     if (isLive) {
       myLiveId = numLive++;
       const disposable = notifier.on((tables) => {
         // technically we can optimize and not re-run if we don't care about the tables
-        const newResult = db.exec(cmd)[0];
+        console.log("live execing " + cmd);
+        const newResult = db.exec(cmd)[0] || { values: [], columns: [] };
         const oldResult = result();
         let hadChange = false;
 
@@ -89,7 +92,7 @@ function DBResult({
           }
         }
 
-        if (hadChange) {
+        if (hadChange || newResult.values.length != oldResult.values.length) {
           setResult(newResult);
         }
       });

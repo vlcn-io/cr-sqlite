@@ -43,6 +43,8 @@ body {
   display: flex;
   position: absolute;
   bottom: 40px;
+  left: 40px;
+  right: 40px;
 }
 
 .input > form {

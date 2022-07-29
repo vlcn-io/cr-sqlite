@@ -1,5 +1,5 @@
 import { DB, Notifier } from "./createDb";
-import { createSignal, For } from "solid-js";
+import { createSignal, For, Show } from "solid-js";
 
 const prompt = "sql> ";
 const [commands, setCommands] = createSignal<string[]>([]);
@@ -60,37 +60,34 @@ function DBResult({
 }) {
   console.log("execing " + cmd);
   try {
-    assertAllowed(cmd);
-    const result = db.exec(cmd);
+    const [isLive, parsed] = parseCmd(cmd);
+    cmd = parsed;
+    const [result, setResult] = createSignal(db.exec(cmd));
     // also do our subscribing if the cmd is a select.
     // `result` would need to be a signal updatable by notifier.
-    const r = result[0];
-    if (r == null) {
-      return <div>[]</div>;
-    }
-
-    const { columns, values } = r;
 
     // is a for component usable for nested arrays?
     return (
-      <table>
-        <thead>
-          <tr>
-            {columns.map((c) => (
-              <th>{c}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {values.map((v) => (
+      <Show when={result()[0] != null} fallback={<div>[]</div>}>
+        <table>
+          <thead>
             <tr>
-              {v.map((c) => (
-                <td>{c}</td>
+              {result()[0].columns.map((c) => (
+                <th>{c}</th>
               ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {result()[0].values.map((v) => (
+              <tr>
+                {v.map((c) => (
+                  <td>{c}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </Show>
     );
   } catch (e) {
     return <div>{e.message}</div>;
@@ -144,4 +141,19 @@ function assertAllowed(cmd: string) {
 
 function isSelect(cmd: string) {
   return cmd.trim().toLowerCase().startsWith("select");
+}
+
+function parseCmd(cmd: string): [boolean, string] {
+  const normalized = cmd.trim().toLowerCase();
+  if (normalized.startsWith("live")) {
+    const baseCmd = cmd.substring("live".length).trim();
+    if (!baseCmd.toLowerCase().startsWith("select")) {
+      throw new Error("live queries can only be select queries");
+    }
+    assertAllowed(baseCmd);
+    return [true, baseCmd];
+  }
+
+  assertAllowed(cmd);
+  return [false, cmd];
 }

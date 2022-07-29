@@ -121,4 +121,5 @@ tr {
 
 pre {
   color: grey;
+  white-space: pre-wrap;
 }

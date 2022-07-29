@@ -1,5 +1,8 @@
 import { DB, Notifier } from "./createDb";
 import { createSignal, For, onCleanup, onMount, Show } from "solid-js";
+import Peer from "peerjs";
+import P2P from "./P2P";
+import PeerConnections from "./PeerConnections";
 
 const prompt = "sql> ";
 const [commands, setCommands] = createSignal<string[]>([]);
@@ -16,11 +19,25 @@ const help = `Trying running .tables to see what tables are available.
 
   Then insert or update a row here (or on a connected peer! Or on a disconnected peer then re-connect them!) and see the live query result change.
 
-select, insert, update, delete, .table & .schema operations are supported in this browser.`;
+select, insert, update, delete, .table & .schema operations are supported in this browser.
+\`clear\` clears all results.`;
 
 let numLive = 0;
-export default function App({ db, notifier }: { db: DB; notifier: Notifier }) {
-  return <Term db={db} notifier={notifier} />;
+export default function App({
+  db,
+  notifier,
+  connections,
+}: {
+  db: DB;
+  notifier: Notifier;
+  connections: PeerConnections;
+}) {
+  return (
+    <div>
+      <P2P connections={connections} />
+      <Term db={db} notifier={notifier} />
+    </div>
+  );
 }
 
 function Term({ db, notifier }: { db: DB; notifier: Notifier }) {
@@ -129,6 +146,9 @@ function DBResult({
                     floorToInterval((myLiveId * 750) % window.innerWidth, 750) +
                     "px",
                   background: colors[myLiveId % colors.length],
+                  "border-bottom": `2px solid ${
+                    colors[myLiveId % colors.length]
+                  }`,
                 }
               : {}
           }
@@ -171,7 +191,13 @@ function Input() {
   const [cmd, setCmd] = createSignal("");
   function processCommand(e) {
     e.preventDefault();
-    setCommands((prev) => [cmd(), ...prev]);
+    const c = cmd();
+    if (c.trim().toLowerCase() === "clear") {
+      setCommands([]);
+    } else {
+      setCommands((prev) => [c, ...prev]);
+    }
+
     setCmd("");
     cmdPtr = 0;
     return false;

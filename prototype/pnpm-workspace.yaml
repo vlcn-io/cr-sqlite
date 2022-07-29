@@ -1,4 +1,4 @@
 packages:
   - "migrator"
   - "replicator"
-  - "examples/music-app"
+  - "examples/music-store"

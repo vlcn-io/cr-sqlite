@@ -2,7 +2,7 @@
   "name": "@cfsql/music-app",
   "version": "0.0.1",
   "description": "",
-  "main": "dist/index.js",
+  "main": "dist/main.js",
   "type": "module",
   "scripts": {
     "build": "tsc --noEmit",
@@ -11,10 +11,11 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "GPL",
   "dependencies": {
     "@cfsql/replicator": "workspace:*",
-    "nanoid": "^4.0.0"
+    "nanoid": "^4.0.0",
+    "wa-sqlite": "github:rhashimoto/wa-sqlite#buildless"
   },
   "devDependencies": {
     "@types/node": "^17.0.45",

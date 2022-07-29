@@ -74,7 +74,6 @@ function DBResult({
     // also do our subscribing if the cmd is a select.
     // `result` would need to be a signal updatable by notifier.
 
-    // is a for component usable for nested arrays?
     return (
       <Show when={result()[0] != null} fallback={<div></div>}>
         <table>
@@ -86,19 +85,23 @@ function DBResult({
             </tr>
           </thead>
           <tbody>
-            {result()[0].values.map((v) => (
-              <tr>
-                {v.map((c) => (
-                  <td>{c}</td>
-                ))}
-              </tr>
-            ))}
+            <For each={result()[0].values}>
+              {(v) => (
+                <tr>
+                  <For each={v}>{(c) => <td>{c}</td>}</For>
+                </tr>
+              )}
+            </For>
           </tbody>
         </table>
       </Show>
     );
   } catch (e) {
-    return <div>{e.message}</div>;
+    return (
+      <div>
+        <pre>{e.message}</pre>
+      </div>
+    );
   }
 }
 
@@ -150,7 +153,17 @@ function assertAllowed(cmd: string) {
 
   if (!allowed) {
     throw new Error(
-      "Only select / insert / update / delete queries may be run."
+      `Trying running .tables to see what tables are available.
+
+      select * from table; to see a table's contents.
+
+      Prefix queries with \`live\` to run a live query that is updated whenever the queried table's contents change.
+      E.g.,
+      LIVE SELECT * FROM track ORDER BY id DESC LIMIT 10;
+
+      Then insert or update a row on this compute (or a connected peer!) and see the live query result change.
+
+      select, insert, update, delete, .table & .schema operations are supported in this browser.`
     );
   }
 }

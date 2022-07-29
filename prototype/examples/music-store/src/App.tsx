@@ -94,12 +94,14 @@ function DBResult({
   }
 }
 
+let cmdPtr = 0;
 function Input() {
   const [cmd, setCmd] = createSignal("");
   function processCommand(e) {
     e.preventDefault();
     setCommands((prev) => [cmd(), ...prev]);
     setCmd("");
+    cmdPtr = 0;
     return false;
   }
 
@@ -110,6 +112,11 @@ function Input() {
         <input
           type="text"
           onChange={(e) => setCmd((e.target as any).value)}
+          onKeyDown={(e) =>
+            e.key === "ArrowUp"
+              ? setCmd(commands()[cmdPtr++ % commands().length])
+              : null
+          }
           value={cmd()}
           autofocus
         ></input>
@@ -120,7 +127,7 @@ function Input() {
 
 // Prevent people from bricking themselves. If they do, whatever. The DB is ephemeral.
 function assertAllowed(cmd: string) {
-  if (cmd.split(";").length > 1) {
+  if (cmd.split(";").filter((s) => s.trim() != "").length > 1) {
     throw new Error("Multiple queries per line are not allowed.");
   }
 
@@ -130,6 +137,7 @@ function assertAllowed(cmd: string) {
     cmd.startsWith("update") ||
     cmd.startsWith("select") ||
     cmd.startsWith("delete") ||
+    cmd.startsWith(".") ||
     cmd.startsWith("live");
 
   if (!allowed) {
@@ -154,6 +162,24 @@ function parseCmd(cmd: string): [boolean, string] {
     return [true, baseCmd];
   }
 
+  if (cmd.startsWith(".")) {
+    const dotCmd = cmd.substring(0, 7);
+    cmd = dotCommands[dotCmd](cmd.split(" ")[1]);
+    console.log(cmd);
+  }
+
   assertAllowed(cmd);
   return [false, cmd];
 }
+
+const dotCommands = {
+  ".tables": () => `SELECT 
+  name
+FROM 
+  sqlite_schema
+WHERE 
+  type ='view' AND 
+  name NOT LIKE 'sqlite_%' AND
+  name NOT LIKE '%_patch'`,
+  ".schema": (t) => `SELECT sql FROM sqlite_schema WHERE name = '${t}'`,
+};

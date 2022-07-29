@@ -92,7 +92,7 @@ th {
   padding: 4px;
 }
 
-td {
+tr {
   background: black;
   animation-name: animate1;
   animation-duration: 2s;

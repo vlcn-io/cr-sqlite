@@ -4,16 +4,7 @@ import { createSignal, For, onCleanup, onMount, Show } from "solid-js";
 const prompt = "sql> ";
 const [commands, setCommands] = createSignal<string[]>([]);
 
-const colors = [
-  "green",
-  "blue",
-  "cyan",
-  "yellow",
-  "purple",
-  "red",
-  "gold",
-  "brown",
-];
+const colors = ["green", "blue", "magenta", "orange", "purple", "red", "brown"];
 
 let numLive = 0;
 export default function App({ db, notifier }: { db: DB; notifier: Notifier }) {
@@ -111,12 +102,16 @@ function DBResult({
       <Show when={result() != null} fallback={<div></div>}>
         <div
           class={isLive ? "live" : ""}
-          style={{
-            "z-index": myLiveId,
-            top: 0,
-            left: myLiveId * 450 + "px",
-            background: colors[myLiveId % colors.length],
-          }}
+          style={
+            isLive
+              ? {
+                  "z-index": myLiveId,
+                  top: 0,
+                  left: myLiveId * 450 + "px",
+                  background: colors[myLiveId % colors.length],
+                }
+              : {}
+          }
         >
           {isLive ? "live: " + cmd : ""}
           <table>

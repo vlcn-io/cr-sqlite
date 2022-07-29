@@ -41,9 +41,8 @@ body {
 
 .input {
   display: flex;
-}
-
-.input > .prompt {
+  position: absolute;
+  bottom: 40px;
 }
 
 .input > form {
@@ -67,6 +66,26 @@ body {
   width: 100%;
 }
 
-.term > div {
+.output > div {
   margin-bottom: 5px;
+}
+
+.output {
+  position: absolute;
+  top: 40px;
+  bottom: 80px;
+  left: 40px;
+  right: 40px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column-reverse;
+}
+
+table {
+  margin-top: 10px;
+}
+
+th {
+  outline: 1px solid white;
+  padding: 4px;
 }

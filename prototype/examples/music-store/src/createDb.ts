@@ -1,5 +1,9 @@
 import initSqlJs from "sql.js";
-export default async function initDb(): Promise<[any, typeof notifier]> {
+export type Notifier = typeof notifier;
+
+export default async function initDb(
+  siteId: string
+): Promise<[any, typeof notifier]> {
   const sqlPromise = initSqlJs({
     locateFile: (file) => `/${file}`,
   });
@@ -7,13 +11,11 @@ export default async function initDb(): Promise<[any, typeof notifier]> {
   const [SQL, buf] = await Promise.all([sqlPromise, dataPromise]);
   const db = new SQL.Database(new Uint8Array(buf));
 
+  db.run(`UPDATE "crr_site_id" SET id = '${siteId}' WHERE "invariant" = 0`);
+
   enableReactivity(db);
 
   return [db, notifier];
-  // register a custom function to the db to act as callback
-  // e.g., https://github.com/sql-js/sql.js/issues/234
-  // register triggers to invoke said callback
-  //
 }
 
 const callbacks: Set<(ts: Set<string>) => void> = new Set();

@@ -3,7 +3,11 @@ import * as SQLite from "wa-sqlite";
 import { IDBBatchAtomicVFS } from "./wa-sqlite/vfs/IDBBatchAtomicVFS.js";
 
 async function hello() {
-  const module = await SQLiteAsyncESMFactory();
+  const module = await SQLiteAsyncESMFactory({
+    locateFile() {
+      return "/wa-sqlite-async.wasm";
+    },
+  });
   const sqlite3 = SQLite.Factory(module);
   sqlite3.vfs_register(
     new IDBBatchAtomicVFS("idb-batch-atomic", { durability: "relaxed" })

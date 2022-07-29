@@ -5,9 +5,11 @@
   "main": "dist/main.js",
   "type": "module",
   "scripts": {
-    "build": "tsc --noEmit",
-    "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js",
-    "deep-clean": "rm -rf ./bin || true && rm tsconfig.tsbuildinfo || true"
+    "start": "vite",
+    "build": "vite build",
+    "test:unit": "vitest",
+    "tsc": "tsc --noEmit",
+    "deep-clean": "rm -rf ./dist || true && rm tsconfig.tsbuildinfo || true"
   },
   "keywords": [],
   "author": "",
@@ -19,7 +21,9 @@
   },
   "devDependencies": {
     "@types/node": "^17.0.45",
-    "typescript": "^4.7.4"
+    "typescript": "^4.7.4",
+    "vite": "^3.0.4",
+    "vitest": "^0.19.1"
   },
   "jest": {
     "testMatch": [

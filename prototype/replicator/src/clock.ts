@@ -9,4 +9,11 @@ export default {
       return l;
     }, {});
   },
+
+  collapseArray(c: string[][]) {
+    return c.reduce((l, r) => {
+      l[r[0]] = r[1].toString();
+      return l;
+    }, {});
+  },
 };

@@ -59,6 +59,25 @@ export default function P2P({ connections }: { connections: PeerConnections }) {
               }}
             >
               {p}
+              <div style={{ color: "white" }}>
+                Sync:
+                <span
+                  class="btn"
+                  title="pull changes in from this peer"
+                  onClick={() => {
+                    connections.getUpdatesFrom(p);
+                  }}
+                >
+                  Pull
+                </span>
+                <span
+                  class="btn"
+                  title="push your changes to this peer"
+                  onClick={() => connections.pushUpdatesTo(p)}
+                >
+                  Push
+                </span>
+              </div>
             </li>
           )}
         </For>

@@ -138,3 +138,13 @@ pre {
 p {
   margin: 0px;
 }
+
+.btn {
+  padding: 5px;
+  background: #444;
+  margin-top: 10px;
+  line-height: 50px;
+  border-radius: 10px;
+  margin-left: 10px;
+  cursor: pointer;
+}

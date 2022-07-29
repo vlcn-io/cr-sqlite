@@ -1,0 +1,58 @@
+body {
+  margin: 0;
+  background-color: black;
+  height: 100vh;
+  color: #ddd;
+  font: 1.3rem Inconsolata, monospace;
+}
+
+/* body::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(black, 0.15),
+    rgba(black, 0.15) 1px,
+    transparent 1px,
+    transparent 2px
+  );
+} */
+
+::selection {
+  background: #0080ff;
+  text-shadow: none;
+}
+
+.fullsize {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+#app {
+  padding: 40px;
+}
+
+.term input {
+  border: 0;
+  background: inherit;
+  outline: none;
+  height: 1.3rem;
+  color: white;
+  font: 1.3rem Inconsolata, monospace;
+  height: 2rem;
+}
+
+.term form {
+  display: inline-block;
+}
+
+.term > div {
+  margin-top: 5px;
+}

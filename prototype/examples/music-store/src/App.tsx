@@ -62,12 +62,26 @@ function DBResult({
   try {
     const [isLive, parsed] = parseCmd(cmd);
     cmd = parsed;
-    const [result, setResult] = createSignal(db.exec(cmd));
+    const [result, setResult] = createSignal(db.exec(cmd)[0]);
 
     if (isLive) {
       const disposable = notifier.on((tables) => {
         // technically we can optimize and not re-run if we don't care about the tables
-        setResult(db.exec(cmd));
+        const newResult = db.exec(cmd)[0];
+        const oldResult = result();
+
+        // we do this so Solid doesn't re-render identeical rows
+        // I wish `for` allowed us to pass a comparator.
+        for (let i = 0; i < newResult.values.length; ++i) {
+          const oldRow = oldResult.values[i];
+          const newRow = newResult.values[i];
+
+          if (arrayEquals(oldRow, newRow)) {
+            newResult.values[i] = oldRow;
+          }
+        }
+
+        setResult(newResult);
       });
       onCleanup(disposable);
     }
@@ -75,20 +89,22 @@ function DBResult({
     // `result` would need to be a signal updatable by notifier.
 
     return (
-      <Show when={result()[0] != null} fallback={<div></div>}>
+      <Show when={result() != null} fallback={<div></div>}>
         <table>
           <thead>
             <tr>
-              {result()[0].columns.map((c) => (
+              {result().columns.map((c) => (
                 <th>{c}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            <For each={result()[0].values}>
+            <For each={result().values}>
               {(v) => (
                 <tr>
-                  <For each={v}>{(c) => <td>{c}</td>}</For>
+                  {v.map((c) => (
+                    <td>{c}</td>
+                  ))}
                 </tr>
               )}
             </For>
@@ -155,13 +171,13 @@ function assertAllowed(cmd: string) {
     throw new Error(
       `Trying running .tables to see what tables are available.
 
-      select * from table; to see a table's contents.
+      select * from table limit 10; to preview a table's contents.
 
       Prefix queries with \`live\` to run a live query that is updated whenever the queried table's contents change.
       E.g.,
       LIVE SELECT * FROM track ORDER BY id DESC LIMIT 10;
 
-      Then insert or update a row on this compute (or a connected peer!) and see the live query result change.
+      Then insert or update a row here (or on a connected peer! Or on a disconnected peer then re-connect them!) and see the live query result change.
 
       select, insert, update, delete, .table & .schema operations are supported in this browser.`
     );
@@ -204,3 +220,12 @@ WHERE
   name NOT LIKE '%_patch'`,
   ".schema": (t) => `SELECT sql FROM sqlite_schema WHERE name = '${t}'`,
 };
+
+function arrayEquals(a, b) {
+  return (
+    Array.isArray(a) &&
+    Array.isArray(b) &&
+    a.length === b.length &&
+    a.every((val, index) => val === b[index])
+  );
+}

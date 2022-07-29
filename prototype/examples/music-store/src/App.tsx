@@ -1,5 +1,5 @@
 import { DB, Notifier } from "./createDb";
-import { createSignal, For, Show } from "solid-js";
+import { createSignal, For, onCleanup, onMount, Show } from "solid-js";
 
 const prompt = "sql> ";
 const [commands, setCommands] = createSignal<string[]>([]);
@@ -63,12 +63,20 @@ function DBResult({
     const [isLive, parsed] = parseCmd(cmd);
     cmd = parsed;
     const [result, setResult] = createSignal(db.exec(cmd));
+
+    if (isLive) {
+      const disposable = notifier.on((tables) => {
+        // technically we can optimize and not re-run if we don't care about the tables
+        setResult(db.exec(cmd));
+      });
+      onCleanup(disposable);
+    }
     // also do our subscribing if the cmd is a select.
     // `result` would need to be a signal updatable by notifier.
 
     // is a for component usable for nested arrays?
     return (
-      <Show when={result()[0] != null} fallback={<div>[]</div>}>
+      <Show when={result()[0] != null} fallback={<div></div>}>
         <table>
           <thead>
             <tr>
@@ -114,7 +122,7 @@ function Input() {
           onChange={(e) => setCmd((e.target as any).value)}
           onKeyDown={(e) =>
             e.key === "ArrowUp"
-              ? setCmd(commands()[cmdPtr++ % commands().length])
+              ? setCmd(commands()[cmdPtr++ % commands().length] || "")
               : null
           }
           value={cmd()}

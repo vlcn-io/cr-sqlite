@@ -91,3 +91,18 @@ th {
   outline: 1px solid white;
   padding: 4px;
 }
+
+td {
+  background: black;
+  animation-name: animate1;
+  animation-duration: 1s;
+}
+
+@keyframes animate1 {
+  0% {
+    background-color: blue;
+  }
+  100% {
+    background-color: black;
+  }
+}

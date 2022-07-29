@@ -17,7 +17,7 @@
   "dependencies": {
     "@cfsql/replicator": "workspace:*",
     "nanoid": "^4.0.0",
-    "wa-sqlite": "github:rhashimoto/wa-sqlite#buildless"
+    "sql.js": "^1.7.0"
   },
   "devDependencies": {
     "@types/node": "^17.0.45",

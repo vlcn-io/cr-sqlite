@@ -112,11 +112,7 @@ export default {
     ];
   },
 
-  patchArray(
-    table: string,
-    columns: string[],
-    deltas: any[][]
-  ): [string, any[]] {
+  patchArray(table: string, columns: string[], deltas: any[]): [string, any[]] {
     if (deltas.length === 0) {
       throw new Error("Delta length is 0, nothing to patch");
     }
@@ -128,7 +124,7 @@ export default {
       `INSERT INTO "${patchTableName(table)}" (${columnNames.join(
         ","
       )}) VALUES ${valueSlots.join(",")}`,
-      [deltas.flatMap((d) => d)],
+      deltas.flatMap((d) => d),
     ];
   },
 };

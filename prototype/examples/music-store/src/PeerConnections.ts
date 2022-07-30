@@ -18,11 +18,10 @@ const syncedTables = [
 
 export default class PeerConnections {
   public readonly peers: Map<string, DataConnection> = new Map();
-  public readonly versions: Map<string, number> = new Map();
+  public readonly versions: Map<string, [number, number]> = new Map();
   public readonly pendingPeers: Set<string> = new Set();
 
   private peerChangeCbs: Set<() => void> = new Set();
-  private versionChangeCbs: Set<() => void> = new Set();
 
   constructor(
     private db: DB,
@@ -51,11 +50,6 @@ export default class PeerConnections {
   onPeersChange(cb: () => void) {
     this.peerChangeCbs.add(cb);
     return () => this.peerChangeCbs.delete(cb);
-  }
-
-  onVersionsChange(cb: () => void) {
-    this.versionChangeCbs.add(cb);
-    return () => this.versionChangeCbs.delete(cb);
   }
 
   add(peerId: string) {
@@ -160,7 +154,13 @@ export default class PeerConnections {
         this.#receiveState(conn, m);
         break;
       case "version-update":
-        this.versions.set(conn.peer, m.count);
+        let prior = this.versions.get(conn.peer);
+        // this is wrong. should be based on our view of that peer's clock
+        if (prior == null) {
+          prior = [15607, 15607];
+        }
+        this.versions.set(conn.peer, [prior[0], m.count]);
+        this.#notifyPeersChanged();
         break;
     }
   }
@@ -182,7 +182,7 @@ export default class PeerConnections {
 
       slices.push({
         table: slice.table,
-        columns: res[0].columns,
+        columns: res.columns,
         rows: res.values,
       });
     });
@@ -198,15 +198,31 @@ export default class PeerConnections {
     }
 
     console.log("sending", msg);
-    conn.send(msg);
+    conn.send(JSON.stringify(msg));
   }
 
   #receiveState(peer: DataConnection, m: ProvideState) {
     // someone provided us with state
     m.slices.forEach((slice) => {
       const q = queries.patchArray(slice.table, slice.columns, slice.rows);
+      console.log(q);
       this.db.run(q[0], q[1]);
+
+      // Need a better way to get max clock val
+      slice.rows.forEach((r) => {
+        const clocks = JSON.parse(r[r.length - 1]);
+        Object.keys(clocks).forEach((p) => {
+          const vs = this.versions.get(p);
+          const seq = parseInt(clocks[p]);
+          if (vs && seq > vs[0]) {
+            vs[0] = seq;
+          } else {
+            this.versions.set(p, [seq, seq]);
+          }
+        });
+      });
     });
+    this.#notifyPeersChanged();
   }
 }
 

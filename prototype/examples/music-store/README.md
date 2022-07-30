@@ -1,3 +1,3 @@
 # Music-App
 
-A music app that exposes raw queries of each UI component, allowing users to explore the inner-workings of replication and conflict resolution.
+Current progress: https://www.loom.com/share/09aa7726f5964e5b8a12ca15652f39b2

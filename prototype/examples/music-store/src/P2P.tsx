@@ -26,12 +26,12 @@ export default function P2P({ connections }: { connections: PeerConnections }) {
     ...connections.peers.keys(),
   ]);
   const [newPeerId, setNewPeerId] = createSignal("");
-  const [versions, setVersions] = createSignal(connections.versions);
+  // const [versions, setVersions] = createSignal(connections.versions);
 
   connections.onPeersChange(() => {
     setPendingPeers([...connections.pendingPeers]);
     setConnectedPeers([...connections.peers.keys()]);
-    setVersions(new Map(connections.versions));
+    // setVersions(new Map(connections.versions));
   });
 
   function addPeer(e) {
@@ -42,11 +42,12 @@ export default function P2P({ connections }: { connections: PeerConnections }) {
   }
 
   function numChangesOn(peerId) {
-    const vs = versions().get(peerId);
-    if (vs == null) {
-      return 0;
-    }
-    return vs[1] - vs[0];
+    return 0;
+    // const vs = versions().get(peerId);
+    // if (vs == null) {
+    //   return 0;
+    // }
+    // return vs[1] - vs[0];
   }
 
   return (
@@ -77,7 +78,7 @@ export default function P2P({ connections }: { connections: PeerConnections }) {
                     connections.getUpdatesFrom(p);
                   }}
                 >
-                  Pull {numChangesOn(p)} Changes
+                  Pull Changes
                 </span>
               </div>
             </li>

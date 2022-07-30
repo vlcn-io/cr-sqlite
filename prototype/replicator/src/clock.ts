@@ -10,7 +10,7 @@ export default {
     }, {});
   },
 
-  collapseArray(c: string[][]) {
+  collapseArray(c: string[][]): { [key: string]: number } {
     return c.reduce((l, r) => {
       l[r[0]] = r[1].toString();
       return l;

@@ -25,6 +25,10 @@ export default function createPatchTrigger(
       1
     ) ON CONFLICT (${pks.map((k) => `"${k.name}"`).join(", ")}) DO UPDATE SET
       ${sets}${sets != "" ? "," : ""}
+      "crr_cl" = CASE
+        WHEN EXCLUDED."crr_cl" > "crr_cl" THEN EXCLUDED."crr_cl"
+        ELSE "crr_cl"
+      END,
       "crr_update_src" = 1;
   
     INSERT INTO "${tableName}_crr_clocks" (

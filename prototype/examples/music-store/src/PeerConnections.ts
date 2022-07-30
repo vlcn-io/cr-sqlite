@@ -15,10 +15,10 @@ const syncedTables = [
   "invoiceline",
   "mediatype",
 ];
-
+const baseSeq = 15607;
 export default class PeerConnections {
   public readonly peers: Map<string, DataConnection> = new Map();
-  public readonly versions: Map<string, [number, number]> = new Map();
+  public readonly missingChanges: Map<string, number> = new Map();
   public readonly pendingPeers: Set<string> = new Set();
 
   private peerChangeCbs: Set<() => void> = new Set();
@@ -34,13 +34,30 @@ export default class PeerConnections {
     });
 
     notifier.on(() => {
-      const myVersion = db.exec(`select version from crr_db_version`)[0]
-        .values[0][0];
+      // TODO: totally find a different way to compute this
+      // you can track it in-mem by observing messages
+      // or in-mem with a trigger on the clock tables.
+      const myVersionVector = syncedTables
+        .map((t) => {
+          const r = db.exec(
+            `select siteId, max(version) as version from "${t}_crr_clocks" group by "siteId"`
+          );
+          return clock.collapseArray(r[0].values);
+        })
+        .reduce((l, r) => {
+          Object.entries(r).forEach(([key, value]) => {
+            if (l[key] == null || l[key] > value) {
+              l[key] = value;
+            }
+          });
+          return l;
+        }, {});
+
       for (const conn of this.peers.values()) {
         conn.send(
           JSON.stringify({
             type: "version-update",
-            count: myVersion,
+            versionVector: myVersionVector,
           })
         );
       }
@@ -154,15 +171,13 @@ export default class PeerConnections {
         this.#receiveState(conn, m);
         break;
       case "version-update":
-        let prior = this.versions.get(conn.peer);
-        // this is wrong. should be based on our view of that peer's clock
-        if (prior == null) {
-          prior = [15607, 15607];
-        }
-        this.versions.set(conn.peer, [prior[0], m.count]);
-        this.#notifyPeersChanged();
+        this.#receiveVersionUpdate(conn, m);
         break;
     }
+  }
+
+  #receiveVersionUpdate(conn: DataConnection, m: VersionUpdate) {
+    // this.#notifyPeersChanged();
   }
 
   #provideState(conn: DataConnection, m: AskState) {
@@ -207,32 +222,12 @@ export default class PeerConnections {
       const q = queries.patchArray(slice.table, slice.columns, slice.rows);
       console.log(q);
       this.db.run(q[0], q[1]);
-
-      // Need a better way to get max clock val
-      slice.rows.forEach((r) => {
-        const clocks = JSON.parse(r[r.length - 1]);
-        Object.keys(clocks).forEach((p) => {
-          const vs = this.versions.get(p);
-          const seq = parseInt(clocks[p]);
-          if (vs && seq > vs[0]) {
-            vs[0] = seq;
-          } else {
-            this.versions.set(p, [seq, seq]);
-          }
-        });
-      });
     });
     this.#notifyPeersChanged();
   }
 }
 
-type Message =
-  | AskState
-  | ProvideState
-  | {
-      type: "version-update";
-      count: number;
-    };
+type Message = AskState | ProvideState | VersionUpdate;
 
 type AskState = {
   type: "ask-state";
@@ -250,4 +245,9 @@ type ProvideState = {
     columns: string[];
     rows: any[][];
   }[];
+};
+
+type VersionUpdate = {
+  type: "version-update";
+  versionVector: { [key: string]: number };
 };

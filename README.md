@@ -10,7 +10,7 @@ This project implements [CRDTs](https://crdt.tech/) and [CRRs](https://hal.inria
 
 [![loom](https://cdn.loom.com/sessions/thumbnails/0934f93364d340e0ba658146a974edb4-with-play.gif)](https://www.loom.com/share/0934f93364d340e0ba658146a974edb4)
 
-I'm working on a demo application to show how to use cfsqlite in practice. This will live in `examples/music-store`.
+I'm working on a demo application to show how to use cfsqlite in practice. This will live in `examples/music-store` -- current progress: https://www.loom.com/share/09aa7726f5964e5b8a12ca15652f39b2
 
 You can view a conflict-free DB in action in the `__tests__` folder of the `replicator` package: https://github.com/tantaman/conflict-free-sqlite/blob/main/prototype/replicator/src/__tests__/merge-random-2.test.ts
 

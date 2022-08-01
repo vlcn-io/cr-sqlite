@@ -1,0 +1,95 @@
+WHITESPACE = _{ " " }
+
+alpha = { 'a'..'z' | 'A'..'Z' }
+digit = { '0'..'9' }
+
+// todo: names can have " or [
+name = { (alpha | digit)+ }
+
+create_table = { 
+  ^"CREATE" ~ (^"TEMP" | ^"TEMPORARY") ~ ^"TABLE" ~ 
+  (^"IF" ~ ^"NOT" ~ ^"EXISTS")?
+  schema_name? ~ "." ~ table_name ~ ( "AS" ~ create_from_select | create_from_defn) }
+
+schema_name = { name }
+table_name = { name }
+
+create_from_defn = { 
+  "(" ~ column_def_list ~ table_constraint_list ~ ")" ~ table_options
+}
+
+column_def_list = {
+  column_def_list ~ "," ~ column_def |
+  column_def
+}
+
+column_def = {
+  column_name ~ type_name? ~ column_constraint*
+}
+
+column_constraint = {
+  "CONSTRAINT" ~ name ~ column_constraint_def |
+  column_constraint_def
+}
+
+column_constraint_def = {
+  ^"PRIMARY" ~ ^"KEY" ~ (^"ASC" | ^"DESC")? ~ conflict_clause ~ ^"AUTOINCREMENT"?
+  | ^"NOT" ~ ^"NULL" ~ conflict_clause
+  | ^"UNIQUE" ~ conflict_clause
+  | ^"CHECK" ~ "(" ~ expr ~ ")"
+  | ^"DEFAULT" ~ ( "(" ~ expr ~ ")" | literal_value | signed_number)
+  | ^"COLLATE" ~ collation_name
+  | foreign_key_caluse
+  | ^"GENERATED" ~ ^"ALWAYS" ~ ^"AS" ~ "(" ~ expr ~ ")" ~ (^"STORED" | ^"VIRTUAL")
+}
+
+conflict_clause = {
+  ^"ON" ~ ^"CONFLICT" ~ conflict_choice
+}
+
+conflict_choice = {
+  ^"ROLLBACK"
+  | ^"ABORT"
+  | ^"FAIL"
+  | ^"IGNORE"
+  | ^"REPLACE"
+}
+
+expr = {
+  literal_value
+  | bind_parameter
+  | column_name
+  | table_name ~ "." ~ column_name
+  | schema_name ~ "." ~ table_name ~ "." column_name
+  | unary_operator ~ expr
+  | expr ~ binary_operator ~ expr
+  | function_name ~ "(" function_args ~ ")" ~ filter_clause? ~ over_clause?
+  | "(" ~ expr_list ~ ")"
+  | ^"CAST" ~ "(" ~ expr ~ "AS" ~ type_name ~ ")"
+  | expr ~ ^"COLLATE" ~ collation_name
+  | expr ~ ^"NOT"? ~ (like_expr | glob_regexp_match_expr)
+  | expr ~ (^"ISNULL" | ^"NOT" ~ ^"NULL")
+  | expr ~ ^"IS" ~ ^"NOT"? ~ (^"DISTINCT" ~ ^"FROM")? expr
+  | expr ~ ^"NOT"? ~ ^"BETWEEN" ~ expr ~ ^"AND" ~ expr
+  | expr ~ ^"NOT"? ~ ^"IN" ~ ( "(" ~ in_parenthetical ~ ")" | in_table_like )
+  | ^"NOT"? ~ ^"EXISTS"? ~ "(" ~ select_statement ~ ")"
+  | ^"CASE" ~ expr? ~ (^"WHEN" ~ expr ~ ^"THEN" ~ expr)+ ~ (^"ELSE" expr)? ~ ^"END"
+  | raise_function
+}
+
+
+in_parenthetical = {
+  select_statement
+  | expr_list
+  | ""
+}
+
+in_table_like = {
+  table_name
+  | table_function ~ "(" ~ expr_list ~ ")"
+  | schema_name ~ "." ~ table_name
+  | schema_name ~ "." ~ table_function ~ "(" ~ expr_list ~ ")"
+}
+
+like_expr = {}
+glob_regexp_match_expr = {^"GLOB" | ^"REGEXP" | ^"MATCH"}

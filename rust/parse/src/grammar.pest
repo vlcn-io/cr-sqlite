@@ -6,6 +6,7 @@ digit = { '0'..'9' }
 // todo: names can have " or [
 name = { (alpha | digit)+ }
 
+// https://sqlite.org/lang_createtable.html
 create_table = { 
   ^"CREATE" ~ (^"TEMP" | ^"TEMPORARY") ~ ^"TABLE" ~ 
   (^"IF" ~ ^"NOT" ~ ^"EXISTS")?
@@ -93,3 +94,90 @@ in_table_like = {
 
 like_expr = {}
 glob_regexp_match_expr = {^"GLOB" | ^"REGEXP" | ^"MATCH"}
+
+filter_clause = {
+  ^"FILTER" ~ "(" ~ ^"WHERE" ~ expr ~ ")"
+}
+
+over_clause = {
+  ^"OVER" ~ (window_name | "(" ~ base_window_name? ~ detailed_over ~ ")")
+}
+
+detailed_over = {
+  partition_by? order_by? frame_spec?
+}
+
+partition_by = {
+  ^"PARTITION" ~ ^"BY" ~ expr_list
+}
+
+order_by = {
+  ^"ORDER" ~ ^"BY" ~ ordering_term_list
+}
+
+frame_spec = {
+  (^"RANGE" | ^"ROWS" | ^"GROUPS") ~
+    (between_frame_spec | ^"UNBOUNDED" ~ ^"PRECEDING" | expr ~ ^"PRECEDING" | ^"CURRENT" ~ ^"ROW") ~
+    frame_spec_exclude?
+}
+
+frame_spec_exclude = {
+  ^"EXCLUDE" ~ ^"NO" ~ ^"OTHERS"
+  | ^"EXCLUDE" ~ ^"CURRENT" ~ ^"ROW"
+  | ^"EXCLUDE" ~ ^"GROUP"
+  | ^"EXCLUDE" ~ ^"TIES"
+}
+
+ordering_term = {
+  expr ~ (^"COLLATE" ~ collation_name)? ~ (^"ASC" | ^"DESC")? ~ (^"NULLS" ~ ^"FIRST" | ^"NULLS" ~ ^"LAST")?
+}
+
+raise_function = {
+  ^"RAISE" ~ "(" ~ (^"IGNORE" | ((^"ROLLBACK" | ^"ABORT" | ^"FAIL") ~ "," ~ error_message)) ~ ")"
+}
+
+foreign_key_caluse = {
+  ^"REFERENCES" ~ foreign_table ~ 
+    fk_clause_column_list? ~
+    fk_clause_on_or_match ~ ^"NOT"? ~ ^"DEFERRABLE" ~ (^"INITIALLY" ~ ^"DEFERRED" | ^"INITIALLY" ~ ^"IMMEDIATE")?  
+}
+
+fk_clause_on_or_match = {
+  fk_clause_on_or_match ~ fk_clause_on
+  | fk_clause_on_or_match ~ fk_clause_match
+  | ""
+}
+
+fk_clause_on = {
+  ^"ON" ~ (^"DELETE" | ^"UPDATE") ~ (
+    ^"SET" ~ ^"NULL"
+    | ^"SET" ~ ^"DEFAULT"
+    | ^"CASCADE"
+    | ^"RESTRICT"
+    | ^"NO" ~ ^"ACTION"
+  )
+}
+
+fk_clause_match = {
+  ^"MATCH" ~ name
+}
+
+literal_value = {
+  numeric_literal
+  | string_literal
+  | blob_literal
+  | ^"NULL"
+  | ^"TRUE"
+  | ^"FALSE"
+  | ^"CURRENT_TIME"
+  | ^"CURRENT_DATE"
+  | ^"CURRENT_TIMESTAMP"
+}
+
+signed_number = {
+  ("+" | "-")? ~ numeric_literal
+}
+
+type_name = {
+  name+ ~ ("(" ~ signed_number ~ ")" | "(" ~signed_number ~ "," ~ signed_number ~ ")")
+}

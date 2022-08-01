@@ -1,4 +1,4 @@
-# cfsqlite - conflict-free-sqlite
+# cfsql - conflict-free-sqlite
 
 [SQLite](https://www.sqlite.org/index.html) is a foundation of offline, local-first and edge deployed software. Wouldn't it be great, however, if we could merge two or more SQLite databases together and not run into any conflicts?
 

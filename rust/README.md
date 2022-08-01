@@ -1,3 +1,5 @@
+# cfsql - rust
+
 A proof of concept `cfsql` has been built out in the `prototype` directory. This proof of concept showed that we could migrate existing dbs (via the `migrator` scripts) and do p2p replication (vis the `cf-music` example).
 
 The proof of concept is a bit cumbersome to use. You can't just run "create" or "alter" table statements and have those tables be conflict free.

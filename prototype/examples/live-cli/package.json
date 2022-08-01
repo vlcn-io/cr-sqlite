@@ -1,5 +1,5 @@
 {
-  "name": "@cfsql/music-app",
+  "name": "@cfsql/example-live-cli",
   "version": "0.0.1",
   "description": "",
   "main": "dist/main.js",

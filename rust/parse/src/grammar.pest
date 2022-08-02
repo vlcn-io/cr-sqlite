@@ -1,16 +1,40 @@
-WHITESPACE = _{ " " }
+sql_statement_list = {
+  sql_statement_list ~ ";" ~ sql_statement
+  | sql_statement
+}
 
-alpha = { 'a'..'z' | 'A'..'Z' }
-digit = { '0'..'9' }
+sql_statement = {
+  explain? ~ sql_statements
+}
 
-// todo: names can have " or [
-name = { (alpha | digit)+ }
+// Only support a subset of statements but we likely need to support all so we can reliably lift these out...
+// Can't we split on `;` and just take the things we care about?
+sql_statements = {
+  alter_table
+  | create_index
+  | create_table
+  | drop_index
+  | drop_table
+  | expr
+}
+
+explain = {
+  ^"EXPLAIN" ~ (^"QUERY" ^"PLAN")?
+}
 
 // https://sqlite.org/lang_createtable.html
 create_table = { 
   ^"CREATE" ~ (^"TEMP" | ^"TEMPORARY") ~ ^"TABLE" ~ 
   (^"IF" ~ ^"NOT" ~ ^"EXISTS")?
   schema_name? ~ "." ~ table_name ~ ( "AS" ~ create_from_select | create_from_defn) }
+
+WHITESPACE = _{ " " }
+
+alpha = { 'a'..'z' | 'A'..'Z' }
+digit = { '0'..'9' }
+
+// todo: names can have " or [
+name = @{ (alpha | digit)+ }
 
 schema_name = { name }
 table_name = { name }

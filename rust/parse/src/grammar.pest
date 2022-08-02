@@ -14,6 +14,12 @@ create_table = {
 
 schema_name = { name }
 table_name = { name }
+index_name = { name }
+column_name = { name }
+column_name_list = {
+  column_name_list ~ ","
+  | column_name
+}
 
 create_from_defn = { 
   "(" ~ column_def_list ~ table_constraint_list ~ ")" ~ table_options
@@ -40,7 +46,7 @@ column_constraint_def = {
   | ^"CHECK" ~ "(" ~ expr ~ ")"
   | ^"DEFAULT" ~ ( "(" ~ expr ~ ")" | literal_value | signed_number)
   | ^"COLLATE" ~ collation_name
-  | foreign_key_caluse
+  | foreign_key_clause
   | ^"GENERATED" ~ ^"ALWAYS" ~ ^"AS" ~ "(" ~ expr ~ ")" ~ (^"STORED" | ^"VIRTUAL")
 }
 
@@ -136,7 +142,7 @@ raise_function = {
   ^"RAISE" ~ "(" ~ (^"IGNORE" | ((^"ROLLBACK" | ^"ABORT" | ^"FAIL") ~ "," ~ error_message)) ~ ")"
 }
 
-foreign_key_caluse = {
+foreign_key_clause = {
   ^"REFERENCES" ~ foreign_table ~ 
     fk_clause_column_list? ~
     fk_clause_on_or_match ~ ^"NOT"? ~ ^"DEFERRABLE" ~ (^"INITIALLY" ~ ^"DEFERRED" | ^"INITIALLY" ~ ^"IMMEDIATE")?  
@@ -180,4 +186,227 @@ signed_number = {
 
 type_name = {
   name+ ~ ("(" ~ signed_number ~ ")" | "(" ~signed_number ~ "," ~ signed_number ~ ")")
+}
+
+select_statement = {
+  with_select_statement
+  | common_select_statement
+}
+
+with_select_statement = {
+  ^"WITH" ~ ^"RECURSIVE"? ~ common_table_expression_list ~ common_select_statement
+}
+
+common_select_statement = {
+  ^"SELECT" ~ (^"DISTINCT" | ^"ALL")? ~ result_column_list ~ 
+    select_modifiers ~ (compound_operator | order_by_limit)
+  | ^"VALUES" ~ paren_list_of_expr_list ~ (compound_operator | order_by_limit)
+}
+
+select_modifiers = {
+  select_from
+  | select_where
+  | select_group_by
+  | select_window
+}
+
+select_from = {
+  ^"FROM" ~ (join_clause | table_or_subquery_list) ~
+    (select_where | select_group_by | select_window)?
+}
+
+select_where = {
+  ^"WHERE" ~ expr ~ (select_group_by | select_window | select_having)?
+}
+
+select_group_by = {
+  ^"GROUP" ~ ^"BY" ~ expr_list ~ (select_having | select_window)?
+}
+
+select_having = {
+  ^"HAVING" ~ expr
+}
+
+select_window = {
+  ^"WINDOW" ~ window_name_as_list
+}
+
+window_name_as_list = {
+  window_name_as_list ~ "," ~ window_name_as
+  | window_name_as
+}
+
+window_name_as = {
+  window_name ~ ^"AS" ~ window_defn
+}
+
+order_by_limit = {
+  order_by
+  | limit
+}
+
+limit = {
+  ^"LIMIT" ~ expr ~ (^"OFFSET" ~ expr | "," ~ expr)?
+}
+
+common_table_expression_list = {
+  common_table_expression_list ~ "," ~ common_table_expression
+  | common_table_expression
+}
+
+common_table_expression = {
+  table_name ~ ("(" ~ column_name_list ~ ")")? ~
+    ^"AS" ~ ^"NOT"? ~ ^"MATERIALIZED"? ~ "(" ~ select_statement ~ ")"
+}
+
+compound_operator = {
+  ^"UNION" ~ ^"ALL"?
+  | ^"INTERSECT"
+  | ^"EXCEPT"
+}
+
+join_clause = {
+  table_or_subquery ~ join_sequence
+}
+
+join_sequence = {
+  join_sequence ~ join_operator ~ table_or_subquery ~ join_constraint
+  | ""
+}
+
+join_constraint = {
+  ^"ON" ~ expr
+  | ^"USING" ~ ("(" ~ column_name_list ~ ")")?
+  | ""
+}
+
+join_operator = {
+  ","
+  | ^"NATURAL"? ~ lrfi_join? ~ ^"JOIN"
+  | ^"CROSS" ~ ^"JOIN"
+}
+
+lrfi_join = {
+  ^"LEFT" ~ ^"OUTER"?
+  | ^"RIGHT" ~ ^"OUTER"?
+  | ^"FULL" ~ ^"OUTER"?
+  ^"INNER"
+}
+
+result_column = {
+  expr ~ (^"AS"? ~ column_alias)?
+  | "*"
+  | ^"table_name" ~ "." ~ "*"
+}
+
+result_column_list = {
+  result_column_list ~ "," ~ result_column
+  | result_column
+}
+
+table_or_subquery = {
+  (schema_name ~ ".")?
+    ~ (table_for_subquery | table_function_for_subquery)
+    ~ (^"AS"? ~ table_alias)?
+  | "(" ~ select_statement ~ ")" ~ (^"AS"? ~ table_alias)?
+  | "(" ~ table_or_subquery_list ~ ")"
+  | "(" ~ join_clause ~ ")"
+}
+
+table_or_subquery_list = {
+  table_or_subquery_list ~ "," ~ table_or_subquery
+  | table_or_subquery
+}
+
+table_for_subquery = {
+  table_name ~ ^"AS"? ~ table_alias ~ index_hints?
+}
+
+index_hints = {
+  ^"INDEXED" ~ ^"BY" ~ index_name
+  | ^"NOT" ~ ^"INDEXED"
+}
+
+table_or_subquery_list = {
+  table_or_subquery_list ~ "," ~ table_or_subquery
+  | table_or_subquery
+}
+
+table_function_for_subquery = {
+  table_function ~ "(" ~ expr_list ~ ")"
+}
+
+window_defn = {
+  "(" ~ base_window_name? ~ partition_order_frame? ~ ")"
+}
+
+partition_order_frame = {
+  partition_by
+  | order_by
+  | frame_spec
+}
+
+table_constraint = {
+  ^"CONSTRAINT" ~ name ~ pucf_constraint
+  | pucf_constraint
+}
+
+pucf_constraint = {
+  ^"PRIMARY" ~ ^"KEY" ~ unique_suffix
+  | ^"UNIQUE" ~ unique_suffix
+  | ^"CHECK" ~ "(" ~ expr ~ ")"
+  | ^"FOREIGN" ~ ^"KEY" ~ "(" ~ indexed_column ~ ")" ~ foreign_key_clause
+}
+
+unique_suffix = {
+  "(" ~ column_name_list ~ ")" ~ conflict_clause
+}
+
+indexed_column = {
+  (column_name | expr) ~ (^"COLLATE" ~ collation_name)? ~ (^"ASC" | ^"DESC")?
+}
+
+indexed_column_list = {
+  indexed_column_list ~ ","
+  | indexed_column
+}
+
+table_options = {
+  table_options ~ "," ~ table_option
+  | table_option
+}
+
+table_option = {
+  ^"WITHOUT" ~ ^"ROWID"
+  | ^"STRICT"
+}
+
+create_index = {
+  ^"CREATE" ~ ^"UNIQUE"? ~ ^"INDEX" ~ if_not_exists? ~
+    (schema_name ~ ".")? ~ index_name ~ ^"ON" ~ table_name ~
+    "(" ~ indexed_column_list ~ ")" ~
+    ^"WHERE" ~ expr
+}
+
+if_not_exists = (
+  ^"IF" ~ ^"NOT" ~ ^"EXISTS"
+)
+
+drop_index = {
+  ^"DROP" ~ ^"INDEX" ~ (^"IF" ~ ^"EXISTS")? ~ (schema_name ~ ".")? index_name
+}
+
+drop_table = {
+  ^"DROP" ~ ^"TABLE" ~ (^"IF" ~ ^"EXISTS")? ~ (schema_name ~ ".")? table_name
+}
+
+alter_table = {
+  ^"ALTER" ~ ^"TABLE" ~ (schema_name ~ ".")? ~ table_name ~ rrad_table
+}
+
+rrad_table = {
+  ^"RENAME" ~ ^"TO" ~ table_name
+  | ^"RENAME" ~ ^"COLUMN"? ~ column_name ~ ^"TO" ~ column_name
+  | ^"ADD" ~ ^"COLUMN"? ~ column_def
+  | ^"DROP" ~ ^"COLUMN"? ~ column_name
 }

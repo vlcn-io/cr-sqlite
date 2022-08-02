@@ -19,13 +19,13 @@ sql_statements = {
 }
 
 explain = {
-  ^"EXPLAIN" ~ (^"QUERY" ^"PLAN")?
+  ^"EXPLAIN" ~ (^"QUERY" ~ ^"PLAN")?
 }
 
 // https://sqlite.org/lang_createtable.html
 create_table = { 
   ^"CREATE" ~ (^"TEMP" | ^"TEMPORARY") ~ ^"TABLE" ~ 
-  (^"IF" ~ ^"NOT" ~ ^"EXISTS")?
+  (^"IF" ~ ^"NOT" ~ ^"EXISTS")? ~
   schema_name? ~ "." ~ table_name ~ ( "AS" ~ create_from_select | create_from_defn) }
 
 WHITESPACE = _{ " " }
@@ -34,12 +34,26 @@ alpha = { 'a'..'z' | 'A'..'Z' }
 digit = { '0'..'9' }
 
 // todo: names can have " or [
-name = @{ (alpha | digit)+ }
+name = @{ ("\""? ~ (alpha | digit)+ ~ "\"") | (alpha | digit)+}
 
+numeric_literal = @{
+    "-"?
+    ~ ("0" | ASCII_NONZERO_DIGIT ~ ASCII_DIGIT*)
+    ~ ("." ~ ASCII_DIGIT*)?
+    ~ (^"e" ~ ("+" | "-")? ~ ASCII_DIGIT+)?
+}
+string_literal = { "'" ~ char* ~ "'"}
+char = { !"\'" ~ ANY }
 schema_name = { name }
 table_name = { name }
 index_name = { name }
 column_name = { name }
+table_alias = { name }
+column_alias = { name }
+table_function = { name }
+window_name = { name }
+collation_name = { name }
+base_window_name = { name }
 column_name_list = {
   column_name_list ~ ","
   | column_name
@@ -91,23 +105,27 @@ expr = {
   | bind_parameter
   | column_name
   | table_name ~ "." ~ column_name
-  | schema_name ~ "." ~ table_name ~ "." column_name
+  | schema_name ~ "." ~ table_name ~ "." ~ column_name
   | unary_operator ~ expr
   | expr ~ binary_operator ~ expr
-  | function_name ~ "(" function_args ~ ")" ~ filter_clause? ~ over_clause?
+  | function_name ~ "(" ~ function_args ~ ")" ~ filter_clause? ~ over_clause?
   | "(" ~ expr_list ~ ")"
   | ^"CAST" ~ "(" ~ expr ~ "AS" ~ type_name ~ ")"
   | expr ~ ^"COLLATE" ~ collation_name
   | expr ~ ^"NOT"? ~ (like_expr | glob_regexp_match_expr)
   | expr ~ (^"ISNULL" | ^"NOT" ~ ^"NULL")
-  | expr ~ ^"IS" ~ ^"NOT"? ~ (^"DISTINCT" ~ ^"FROM")? expr
+  | expr ~ ^"IS" ~ ^"NOT"? ~ (^"DISTINCT" ~ ^"FROM")? ~ expr
   | expr ~ ^"NOT"? ~ ^"BETWEEN" ~ expr ~ ^"AND" ~ expr
   | expr ~ ^"NOT"? ~ ^"IN" ~ ( "(" ~ in_parenthetical ~ ")" | in_table_like )
   | ^"NOT"? ~ ^"EXISTS"? ~ "(" ~ select_statement ~ ")"
-  | ^"CASE" ~ expr? ~ (^"WHEN" ~ expr ~ ^"THEN" ~ expr)+ ~ (^"ELSE" expr)? ~ ^"END"
+  | ^"CASE" ~ expr? ~ (^"WHEN" ~ expr ~ ^"THEN" ~ expr)+ ~ (^"ELSE" ~ expr)? ~ ^"END"
   | raise_function
 }
 
+expr_list = {
+  expr ~ ","
+  | expr
+}
 
 in_parenthetical = {
   select_statement
@@ -122,8 +140,10 @@ in_table_like = {
   | schema_name ~ "." ~ table_function ~ "(" ~ expr_list ~ ")"
 }
 
-like_expr = {}
-glob_regexp_match_expr = {^"GLOB" | ^"REGEXP" | ^"MATCH"}
+like_expr = {
+  ^"LIKE" ~ expr ~ (^"ESCAPE" ~ expr)?
+}
+glob_regexp_match_expr = {(^"GLOB" | ^"REGEXP" | ^"MATCH") ~ expr}
 
 filter_clause = {
   ^"FILTER" ~ "(" ~ ^"WHERE" ~ expr ~ ")"
@@ -134,7 +154,7 @@ over_clause = {
 }
 
 detailed_over = {
-  partition_by? order_by? frame_spec?
+  partition_by? ~ order_by? ~ frame_spec?
 }
 
 partition_by = {
@@ -167,8 +187,8 @@ raise_function = {
 }
 
 foreign_key_clause = {
-  ^"REFERENCES" ~ foreign_table ~ 
-    fk_clause_column_list? ~
+  ^"REFERENCES" ~ table_name ~ 
+    ( "(" ~ column_name_list ~ ")" )? ~
     fk_clause_on_or_match ~ ^"NOT"? ~ ^"DEFERRABLE" ~ (^"INITIALLY" ~ ^"DEFERRED" | ^"INITIALLY" ~ ^"IMMEDIATE")?  
 }
 
@@ -314,7 +334,7 @@ lrfi_join = {
   ^"LEFT" ~ ^"OUTER"?
   | ^"RIGHT" ~ ^"OUTER"?
   | ^"FULL" ~ ^"OUTER"?
-  ^"INNER"
+  | ^"INNER"
 }
 
 result_column = {
@@ -412,16 +432,16 @@ create_index = {
     ^"WHERE" ~ expr
 }
 
-if_not_exists = (
+if_not_exists = {
   ^"IF" ~ ^"NOT" ~ ^"EXISTS"
-)
+}
 
 drop_index = {
-  ^"DROP" ~ ^"INDEX" ~ (^"IF" ~ ^"EXISTS")? ~ (schema_name ~ ".")? index_name
+  ^"DROP" ~ ^"INDEX" ~ (^"IF" ~ ^"EXISTS")? ~ (schema_name ~ ".")? ~ index_name
 }
 
 drop_table = {
-  ^"DROP" ~ ^"TABLE" ~ (^"IF" ~ ^"EXISTS")? ~ (schema_name ~ ".")? table_name
+  ^"DROP" ~ ^"TABLE" ~ (^"IF" ~ ^"EXISTS")? ~ (schema_name ~ ".")? ~ table_name
 }
 
 alter_table = {

@@ -26,7 +26,7 @@ explain = {
 create_table = { 
   ^"CREATE" ~ (^"TEMP" | ^"TEMPORARY") ~ ^"TABLE" ~ 
   (^"IF" ~ ^"NOT" ~ ^"EXISTS")? ~
-  schema_name? ~ "." ~ table_name ~ ( "AS" ~ create_from_select | create_from_defn) }
+  schema_name? ~ "." ~ table_name ~ ( "AS" ~ select_statement | create_from_defn) }
 
 WHITESPACE = _{ " " }
 
@@ -43,6 +43,7 @@ numeric_literal = @{
     ~ (^"e" ~ ("+" | "-")? ~ ASCII_DIGIT+)?
 }
 string_literal = { "'" ~ char* ~ "'"}
+blob_literal = @{ ^"X" ~ string_literal }
 char = { !"\'" ~ ANY }
 schema_name = { name }
 table_name = { name }
@@ -54,6 +55,7 @@ table_function = { name }
 window_name = { name }
 collation_name = { name }
 base_window_name = { name }
+function_name = { name }
 column_name_list = {
   column_name_list ~ ","
   | column_name
@@ -122,6 +124,58 @@ expr = {
   | raise_function
 }
 
+function_args = {
+  expr_list
+  | "*"
+  | ^"DISTINCT" ~ expr_list
+  | ""
+}
+
+// maybe more: https://www.sqlite.org/lang_expr.html
+unary_operator = {
+  "~"
+  | "+"
+  | "-"
+  | "NOT"
+}
+
+binary_operator = {
+  "||"
+  | "->"
+  | "->>"
+  | "*"
+  | "%"
+  | "/"
+  | "+"
+  | "-"
+  | "&"
+  | "|"
+  | "<<"
+  | ">>"
+  | "<"
+  | ">"
+  | "<="
+  | ">="
+  | "="
+  | "=="
+  | "<>"
+  | "!="
+  | ^"IS"
+  | ^"IS" ~ ^"NOT"
+  | ^"IS" ~ ^"DISTINCT" ~ ^"FROM"
+  | ^"IS" ~ ^"NOT" ~ ^"DISTINCT" ~ ^"FROM"
+  | ^"NOT"? ~ ^"IN"
+  | ^"NOT"? ~ ^"MATCH"
+  | ^"NOT"? ~ ^"LIKE"
+  | ^"NOT"? ~ ^"REGEXP"
+  | ^"NOT"? ~ ^"GLOB"
+  | ^"AND"
+  | ^"OR"
+}
+
+// more rules: https://www.sqlite.org/c3ref/bind_blob.html
+bind_parameter = { "?" }
+
 expr_list = {
   expr ~ ","
   | expr
@@ -167,8 +221,8 @@ order_by = {
 
 frame_spec = {
   (^"RANGE" | ^"ROWS" | ^"GROUPS") ~
-    (between_frame_spec | ^"UNBOUNDED" ~ ^"PRECEDING" | expr ~ ^"PRECEDING" | ^"CURRENT" ~ ^"ROW") ~
-    frame_spec_exclude?
+  (^"BETWEEN" ~ between_frame_spec | ^"UNBOUNDED" ~ ^"PRECEDING" | expr ~ ^"PRECEDING" | ^"CURRENT" ~ ^"ROW") ~
+  frame_spec_exclude?
 }
 
 frame_spec_exclude = {
@@ -178,12 +232,35 @@ frame_spec_exclude = {
   | ^"EXCLUDE" ~ ^"TIES"
 }
 
+between_frame_spec = {
+  between_frame_spec_left ~ ^"AND" ~ between_frame_spec_right
+}
+
+between_frame_spec_left = {
+  ^"UNBOUNDED" ~ ^"PRECEDING"
+  | expr ~ ^"PRECEDING"
+  | ^"CURRENT" ~ ^"ROW"
+  | expr ~ ^"FOLLOWING"
+}
+
+between_frame_spec_right = {
+  expr ~ ^"PRECEDING"
+  | ^"CURRENT" ~ ^"ROW"
+  | expr ~ ^"FOLLOWING"
+  | ^"UNBOUNDED" ~ ^"FOLLOWING"
+}
+
 ordering_term = {
   expr ~ (^"COLLATE" ~ collation_name)? ~ (^"ASC" | ^"DESC")? ~ (^"NULLS" ~ ^"FIRST" | ^"NULLS" ~ ^"LAST")?
 }
 
+ordering_term_list = {
+  ordering_term_list ~ "," ~ ordering_term
+  | ordering_term
+}
+
 raise_function = {
-  ^"RAISE" ~ "(" ~ (^"IGNORE" | ((^"ROLLBACK" | ^"ABORT" | ^"FAIL") ~ "," ~ error_message)) ~ ")"
+  ^"RAISE" ~ "(" ~ (^"IGNORE" | ((^"ROLLBACK" | ^"ABORT" | ^"FAIL") ~ "," ~ string_literal)) ~ ")"
 }
 
 foreign_key_clause = {
@@ -243,8 +320,17 @@ with_select_statement = {
 
 common_select_statement = {
   ^"SELECT" ~ (^"DISTINCT" | ^"ALL")? ~ result_column_list ~ 
-    select_modifiers ~ (compound_operator | order_by_limit)
-  | ^"VALUES" ~ paren_list_of_expr_list ~ (compound_operator | order_by_limit)
+    select_modifiers ~ (compounded_select | order_by_limit)
+  | ^"VALUES" ~ paren_list_of_expr_list ~ (compounded_select | order_by_limit)
+}
+
+paren_list_of_expr_list = {
+  paren_list_of_expr_list ~ "," ~ "(" ~ expr_list ~ ")"
+  | "(" ~ expr_list ~ ")"
+}
+
+compounded_select = {
+  compound_operator ~ common_select_statement
 }
 
 select_modifiers = {
@@ -371,11 +457,6 @@ index_hints = {
   | ^"NOT" ~ ^"INDEXED"
 }
 
-table_or_subquery_list = {
-  table_or_subquery_list ~ "," ~ table_or_subquery
-  | table_or_subquery
-}
-
 table_function_for_subquery = {
   table_function ~ "(" ~ expr_list ~ ")"
 }
@@ -400,6 +481,11 @@ pucf_constraint = {
   | ^"UNIQUE" ~ unique_suffix
   | ^"CHECK" ~ "(" ~ expr ~ ")"
   | ^"FOREIGN" ~ ^"KEY" ~ "(" ~ indexed_column ~ ")" ~ foreign_key_clause
+}
+
+table_constraint_list = {
+  table_constraint_list ~ "," ~ table_constraint
+  | table_constraint
 }
 
 unique_suffix = {

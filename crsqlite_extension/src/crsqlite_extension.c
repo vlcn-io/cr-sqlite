@@ -20,11 +20,7 @@ int init_crsqlite(sqlite3 *db)
 __declspec(dllexport)
 #endif
 
-/* TODO:
-    --  Add augmentation function(s)
-    --  Add Generate changeset
-    --  Add other stuff
-*/
+
 int sqlite3_crsqlite_init(
   sqlite3 *db,
   char **pzErrMsg,
@@ -39,14 +35,7 @@ int sqlite3_crsqlite_init(
     return rc;
   }
 
-  /* Insert here calls to
-  **     sqlite3_create_function_v2(),
-  **     sqlite3_create_collation_v2(),
-  **     sqlite3_create_module_v2(), and/or
-  **     sqlite3_vfs_register()
-  ** to register the new features that your extension adds.
-  */
-  rc = initCrsqliteVtab(db, "crsqlite", 0);
+  rc = init_crsqlite_vtab(db, "crsqlite", 0);
   if (rc != SQLITE_OK){
     fprintf(stderr, "SQL error when initializing crsqlite: %s\n", sqlite3_errmsg(db));
     return rc;

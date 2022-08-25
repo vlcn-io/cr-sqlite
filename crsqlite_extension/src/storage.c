@@ -21,7 +21,7 @@ SQLITE_EXTENSION_INIT3
 **
 ** If *pRc is initially non-zero then this routine is a no-op.
 */
-static void storageDbExec(
+static void storage_db_exec(
   int *pRc,              /* Success code */
   sqlite3 *db,           /* Database in which to run SQL */
   const char *zFormat,   /* Format string for SQL */
@@ -29,7 +29,7 @@ static void storageDbExec(
 ){
   va_list ap;
   char *zSql;
-  if( *pRc ) return;
+  if( *pRc != SQLITE_OK ) return;
   va_start(ap, zFormat);
   zSql = sqlite3_vmprintf(zFormat, ap);
   //printf("Executing SQL statement: %s\n", zSql);
@@ -55,7 +55,7 @@ int init_storage(
   
   //Create the table with "normal" schema
   int rc = SQLITE_OK;
-  storageDbExec(&rc, db, "CREATE TABLE crsqlite_%s(%s);", ttbl, createTableArgs);
+  storage_db_exec(&rc, db, "CREATE TABLE crsqlite_%s(%s);", ttbl, createTableArgs);
   if (rc != SQLITE_OK){
     fprintf(stderr,"Error creating table: %s\n", ttbl);
     return rc;
@@ -78,7 +78,7 @@ int init_storage(
     if( columnName==0) break;
 
     if (primaryKey == 0){
-      storageDbExec(&rc, db, "ALTER TABLE %s ADD COLUMN v_%s INTEGER;", crsqliteTableName, columnName);
+      storage_db_exec(&rc, db, "ALTER TABLE %s ADD COLUMN v_%s INTEGER;", crsqliteTableName, columnName);
       if (rc!=SQLITE_OK) break;
     }
 
@@ -101,6 +101,7 @@ int init_storage(
   }
 
   //Add causal lenght column, which determines if the row is deleted or not
-  storageDbExec(&rc, db, "ALTER TABLE %s ADD COLUMN cl INTEGER DEFAULT 1;", crsqliteTableName);
+  storage_db_exec(&rc, db, "ALTER TABLE %s ADD COLUMN cl INTEGER DEFAULT 1;", crsqliteTableName);
+  sqlite3_free(crsqliteTableName);
   return rc;
 }

@@ -3,7 +3,7 @@
 
 #include <sqlite3ext.h>
 
-int initCrsqliteVtab(
+int init_crsqlite_vtab(
   sqlite3 *db,               /* SQLite connection to register module with */
   const char *zName,         /* Name of the module */
   void *pClientData          /* Client data for xCreate/xConnect */

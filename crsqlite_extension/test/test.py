@@ -18,8 +18,10 @@ cur.execute('''
         );'''
     )
 
+print("OK")
+
 cur.execute('''SELECT sql 
-FROM sqlite_schema 
+FROM sqlite_schema sq
 WHERE name = 'crsqlite_contacts';''')
 print(cur.fetchall())
 

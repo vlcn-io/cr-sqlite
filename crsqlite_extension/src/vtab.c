@@ -1,28 +1,3 @@
-/*
-** 2017-08-10
-**
-** The author disclaims copyright to this source code.  In place of
-** a legal notice, here is a blessing:
-**
-**    May you do good and not evil.
-**    May you find forgiveness for yourself and forgive others.
-**    May you share freely, never taking more than you give.
-**
-*************************************************************************
-**
-** This file implements a virtual table that prints diagnostic information
-** on stdout when its key interfaces are called.  This is intended for
-** interactive analysis and debugging of virtual table interfaces.
-**
-** Usage example:
-**
-**     .load ./crsqlite
-**     CREATE VIRTUAL TABLE temp.log USING crsqlite(
-**        schema='CREATE TABLE x(a,b,c)',
-**        rows=25
-**     );
-**     SELECT * FROM log;
-*/
 #include "sqlite3ext.h"
 #include "storage.h"
 
@@ -59,73 +34,9 @@ struct crsqlite_cursor {
   sqlite3_int64 iRowid;      /* The rowid */
 };
 
-/* Skip leading whitespace.  Return a pointer to the first non-whitespace
-** character, or to the zero terminator if the string has only whitespace */
-static const char *crsqlite_skip_whitespace(const char *z){
-  while( isspace((unsigned char)z[0]) ) z++;
-  return z;
-}
-
-/* Remove trailing whitespace from the end of string z[] */
-static void crsqlite_trim_whitespace(char *z){
-  size_t n = strlen(z);
-  while( n>0 && isspace((unsigned char)z[n]) ) n--;
-  z[n] = 0;
-}
-
-/* Dequote the string */
-static void crsqlite_dequote(char *z){
-  int j;
-  char cQuote = z[0];
-  size_t i, n;
-
-  if( cQuote!='\'' && cQuote!='"' ) return;
-  n = strlen(z);
-  if( n<2 || z[n-1]!=z[0] ) return;
-  for(i=1, j=0; i<n-1; i++){
-    if( z[i]==cQuote && z[i+1]==cQuote ) i++;
-    z[j++] = z[i];
-  }
-  z[j] = 0;
-}
-
-/* Check to see if the string is of the form:  "TAG = VALUE" with optional
-** whitespace before and around tokens.  If it is, return a pointer to the
-** first character of VALUE.  If it is not, return NULL.
-*/
-static const char *crsqlite_parameter(const char *zTag, int nTag, const char *z){
-  z = crsqlite_skip_whitespace(z);
-  if( strncmp(zTag, z, nTag)!=0 ) return 0;
-  z = crsqlite_skip_whitespace(z+nTag);
-  if( z[0]!='=' ) return 0;
-  return crsqlite_skip_whitespace(z+1);
-}
-
-#if 0 /* not used - yet */
-/* Return 0 if the argument is false and 1 if it is true.  Return -1 if
-** we cannot really tell.
-*/
-static int crsqlite_boolean(const char *z){
-  if( sqlite3_stricmp("yes",z)==0
-   || sqlite3_stricmp("on",z)==0
-   || sqlite3_stricmp("true",z)==0
-   || (z[0]=='1' && z[1]==0)
-  ){
-    return 1;
-  }
-  if( sqlite3_stricmp("no",z)==0
-   || sqlite3_stricmp("off",z)==0
-   || sqlite3_stricmp("false",z)==0
-   || (z[0]=='0' && z[1]==0)
-  ){
-    return 0;
-  }
-  return -1;
-}
-#endif
 
 /*
-** The crsqliteConnect() method is invoked to create a new
+** The crsqliteCreate() method is invoked to create a new
 ** crsqlite_vtab that describes the crsqlite virtual table.
 **
 ** Think of this routine as the constructor for crsqlite_vtab objects.
@@ -453,7 +364,7 @@ static sqlite3_module crsqliteModule = {
   0,                         /* xShadowName */
 };
 
-int initCrsqliteVtab(
+int init_crsqlite_vtab(
   sqlite3 *db,               /* SQLite connection to register module with */
   const char *zName,         /* Name of the module */
   void *pClientData          /* Client data for xCreate/xConnect */

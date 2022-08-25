@@ -1,5 +1,4 @@
 .DS_Store
 out.db
-crsqlite_extension/.vscode/c_cpp_properties.json
-crsqlite_extension/.vscode/settings.json
+crsqlite_extension/.vscode/
 crsqlite_extension/crsqlite.so

@@ -48,6 +48,7 @@ int get_column_names(
     goto out;
   }
   rc = sqlite3_prepare(db, zSql, -1, &pStmt, 0);
+
   sqlite3_free(zSql);
 
   if( rc==SQLITE_OK ){
@@ -117,8 +118,6 @@ int get_index_array(
   int rc;
   char *zSql;
 
-  printf("doodoodo1\n");
-
   /* Allocate space for the index array */
   aIndex = (int *)sqlite3_malloc(sizeof(int*) * nCol);
   if( !aIndex ){
@@ -126,18 +125,17 @@ int get_index_array(
     goto get_index_array_out;
   }
 
-  printf("doodoodo2\n");
-
   /* Compile an sqlite pragma to loop through all indices on table zTab */
   zSql = sqlite3_mprintf("PRAGMA index_list(%s)", zTab);
+
+  printf("%s\n",  zSql);
+
   if( !zSql ){
     rc = SQLITE_NOMEM;
     goto get_index_array_out;
   }
   rc = sqlite3_prepare(db, zSql, -1, &pStmt, 0);
   sqlite3_free(zSql);
-
-    printf("doodoodo3\n");
 
   /* For each index, figure out the left-most column and set the 
   ** corresponding entry in aIndex[] to 1.

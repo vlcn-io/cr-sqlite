@@ -53,7 +53,7 @@ static int create_crsqlite_vtab(
   sqlite3_vtab **ppVtab,
   char **pzErr
 ){
-  int rc;
+  int rc = SQLITE_OK;
   int i;
   crsqlite_vtab *pVtab;
 
@@ -137,8 +137,7 @@ static int declare_crsqlite_vtab(
 
 
   //Create vtab object in memory
-  //rc = create_crsqlite_vtab(db, pAux, argc, argv, ppVtab, pzErr);
-
+  rc = create_crsqlite_vtab(db, pAux, argc, argv, ppVtab, pzErr);
   return rc;
 }
 
@@ -171,6 +170,7 @@ static int crsqliteCreate(
   }
 
   rc = declare_crsqlite_vtab(db, pAux, argc, argv, ppVtab, pzErr);
+
   return rc;
 }
 

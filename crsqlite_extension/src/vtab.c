@@ -76,12 +76,15 @@ static int create_crsqlite_vtab(
 
   if( rc==SQLITE_OK ){
     rc = get_column_names(db, pVtab->crTableName, &pVtab->aCol, &pVtab->nCol);
-  }
+  }  
 
   if( rc==SQLITE_OK ){
     rc = get_index_array(db, pVtab->crTableName, pVtab->nCol, &pVtab->aIndex);
   }
 
+  // for (i=0; i<pVtab->nCol; i++) {
+  //   printf("%s : %d\n", pVtab->aCol[i], pVtab->aIndex[i]);
+  // }
 
   if( rc!=SQLITE_OK ){
     free_vtab((sqlite3_vtab *)pVtab);
@@ -379,20 +382,146 @@ static int crsqliteBestIndex(
 /*
 ** SQLite invokes this method to INSERT, UPDATE, or DELETE content from
 ** the table. 
+** The xUpdate method for the virtual table.
+** 
+**    apData[0]  apData[1]  apData[2..]
 **
-** This implementation does not actually make any changes to the table
-** content.  It merely logs the fact that the method was invoked
+**    INTEGER                              DELETE            
+**
+**    INTEGER    NULL       (nCol args)    UPDATE (do not set rowid)
+**    INTEGER    INTEGER    (nCol args)    UPDATE (with SET rowid = <arg1>) <- This is an illegal operation
+**
+**    NULL       NULL       (nCol args)    INSERT INTO (automatic rowid value)
+**    NULL       INTEGER    (nCol args)    INSERT (incl. rowid value)
+**
 */
 static int crsqliteUpdate(
   sqlite3_vtab *tab,
-  int argc,
-  sqlite3_value **argv,
+  int nData, 
+  sqlite3_value **apData, 
   sqlite_int64 *pRowid
 ){
-  crsqlite_vtab *pTab = (crsqlite_vtab*)tab;
+  crsqlite_vtab *pVtab = (crsqlite_vtab*)tab;
+  sqlite3 *db = pVtab->db;
+  int rc = SQLITE_OK;
 
 
-  return SQLITE_OK;
+  // sqlite3_stmt *pStmt = 0;
+  // char *z = 0;               /* SQL statement to execute */
+  // int bindArgZero = 0;       /* True to bind apData[0] to sql var no. nData */
+  // int bindArgOne = 0;        /* True to bind apData[1] to sql var no. 1 */
+  // int i;                     /* Counter variable used by for loops */
+
+  // assert( nData==pVtab->nCol+2 || nData==1 );
+
+
+
+  // /* If apData[0] is an integer and nData>1 then do an UPDATE */
+  // if( nData>1 && sqlite3_value_type(apData[0])==SQLITE_INTEGER ){
+  //   char *zSep = " SET";
+  //   z = sqlite3_mprintf("UPDATE %Q", pVtab->crTableName);
+  //   if( !z ){
+  //     rc = SQLITE_NOMEM;
+  //   }
+
+  //   bindArgOne = (apData[1] && sqlite3_value_type(apData[1])==SQLITE_INTEGER);
+  //   bindArgZero = 1;
+
+  //   if( bindArgOne ){
+  //      //string_concat(&z, " SET rowid=?1 ", 0, &rc);
+  //      zSep = ",";
+  //   }
+  //   for(i=2; i<nData; i++){
+  //     if( apData[i]==0 ) continue;
+  //     // string_concat(&z, sqlite3_mprintf(
+  //     //     "%s %Q=?%d", zSep, pVtab->aCol[i-2], i), 1, &rc);
+  //     zSep = ",";
+  //   }
+  //   //string_concat(&z, sqlite3_mprintf(" WHERE rowid=?%d", nData), 1, &rc);
+  // }
+
+  // /* If apData[0] is an integer and nData==1 then do a DELETE */
+  // else if( nData==1 && sqlite3_value_type(apData[0])==SQLITE_INTEGER ){
+  //   z = sqlite3_mprintf("DELETE FROM %Q WHERE rowid = ?1", pVtab->crTableName);
+  //   if( !z ){
+  //     rc = SQLITE_NOMEM;
+  //   }
+  //   bindArgZero = 1;
+  // }
+
+  // /* If the first argument is NULL and there are more than two args, INSERT */
+  // else if( nData>2 && sqlite3_value_type(apData[0])==SQLITE_NULL ){
+  //   int ii;
+  //   sqlite3_str *zInsert = sqlite3_str_new(NULL);
+  //   sqlite3_str *zValues = sqlite3_str_new(NULL);
+  
+  //   sqlite3_str_vappendf(zInsert, "INSERT INTO %Q (", pVtab->crTableName);
+  //   if( !zInsert ){
+  //     rc = SQLITE_NOMEM;
+  //   }
+
+  //   //Explicit rowid insert
+  //   if( sqlite3_value_type(apData[1])==SQLITE_INTEGER ){
+  //     bindArgOne = 1;
+  //     sqlite3_str_appendall(zInsert, "rowid");
+  //     sqlite3_str_appendall(zValues, "?, ");
+  //   }
+
+  //   //assert((pVtab->nCol+2)==nData);
+  //   for(ii=2; ii<nData; ii++){
+  //     sqlite3_str_appendf(zInsert, "%s, cr_%s", pVtab->aCol[ii-2], pVtab->aCol[ii-2]);
+  //     sqlite3_str_appendf(z, "%s%Q", zValues ? ", " : "", pVtab->aCol[ii-2]);
+  //     string_concat(&zValues, 
+  //         sqlite3_mprintf("%s?%d", zValues?", ":"", ii), 1, &rc);
+  //   }
+
+  //   string_concat(&z, zInsert, 1, &rc);
+  //   string_concat(&z, ") VALUES(", 0, &rc);
+  //   string_concat(&z, zValues, 1, &rc);
+  //   string_concat(&z, ")", 0, &rc);
+  // }
+
+  // /* Anything else is an error */
+  // else{
+  //   assert(0);
+  //   return SQLITE_ERROR;
+  // }
+
+
+  // printf("%s\n", z);
+  // return SQLITE_OK;
+
+  // if( rc==SQLITE_OK ){
+  //   rc = sqlite3_prepare(db, z, -1, &pStmt, 0);
+  // }
+  // assert( rc!=SQLITE_OK || pStmt );
+  // sqlite3_free(z);
+  // if( rc==SQLITE_OK ) {
+  //   if( bindArgZero ){
+  //     sqlite3_bind_value(pStmt, nData, apData[0]);
+  //   }
+  //   if( bindArgOne ){
+  //     sqlite3_bind_value(pStmt, 1, apData[1]);
+  //   }
+  //   for(i=2; i<nData && rc==SQLITE_OK; i++){
+  //     if( apData[i] ) rc = sqlite3_bind_value(pStmt, i, apData[i]);
+  //   }
+  //   if( rc==SQLITE_OK ){
+  //     sqlite3_step(pStmt);
+  //     rc = sqlite3_finalize(pStmt);
+  //   }else{
+  //     sqlite3_finalize(pStmt);
+  //   }
+  // }
+
+  // if( pRowid && rc==SQLITE_OK ){
+  //   *pRowid = sqlite3_last_insert_rowid(db);
+  // }
+  // if( rc!=SQLITE_OK ){
+  //   tab->zErrMsg = sqlite3_mprintf("echo-vtab-error: %s", sqlite3_errmsg(db));
+  // }
+
+  return rc;
 }
 
 

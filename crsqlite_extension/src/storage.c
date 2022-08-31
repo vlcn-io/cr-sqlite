@@ -37,7 +37,6 @@ int get_column_names(
   sqlite3_stmt *pStmt = 0;
   int rc = SQLITE_OK;
   int nCol = 0;
-  int nRealCol = 0;
 
   /* Prepare the statement "SELECT * FROM <tbl>". The column names
   ** of the result set of the compiled SELECT will be the same as
@@ -68,10 +67,7 @@ int get_column_names(
         rc = SQLITE_NOMEM;
         goto out;
       }
-      if(strncmp(zName, "cr__", 4) != 0){
-        nBytes += (int)strlen(zName)+1;
-        nRealCol++;
-      }
+      nBytes += (int)strlen(zName)+1;
     }
     aCol = (char **)sqlite3_malloc(nBytes);
     if( !aCol ){
@@ -83,21 +79,18 @@ int get_column_names(
     ** pointers in the aCol[] array.
     */
     zSpace = (char *)(&aCol[nCol]);
-    int j = 0;
     for(ii=0; ii<nCol; ii++){
       const char *zName = sqlite3_column_name(pStmt, ii);
-      if(strncmp(zName, "cr__", 4) != 0){
-        aCol[j] = zSpace;
-        j++;
+        aCol[ii] = zSpace;
         sqlite3_snprintf(nBytes, zSpace, "%s", zName);
         zSpace += (int)strlen(zSpace) + 1;
-      }
+    
     }
     assert( (zSpace-nBytes)==(char *)aCol );
   }
 
   *paCol = aCol;
-  *pnCol = nRealCol;
+  *pnCol = nCol;
 
 out:
   sqlite3_finalize(pStmt);
@@ -136,8 +129,6 @@ int get_index_array(
 
   /* Compile an sqlite pragma to loop through all indices on table zTab */
   zSql = sqlite3_mprintf("PRAGMA index_list(%s)", zTab);
-
-  printf("%s\n",  zSql);
 
   if( !zSql ){
     rc = SQLITE_NOMEM;
@@ -249,7 +240,7 @@ int init_storage(
 
   //Create comma seperated string of arguments, for each column that is not a primary key, add a vector column aswell
   sqlite3_str* createTableArgs = sqlite3_str_new(NULL);
-  sqlite3_str_appendall(createTableArgs, "cr__cl INTEGER, ");
+  sqlite3_str_appendall(createTableArgs, "cf__cl INTEGER, ");
   for(int i = 3; i < argc; i++){
     //Get the first part of the argument, the name of the column
     rowCopy = sqlite3_mprintf("%s", argv[i]);
@@ -257,7 +248,7 @@ int init_storage(
 
     //Check if name is actually a name, or the start of a constraint
     if(column_is_constraint(nameOnly) == 0){
-      sqlite3_str_appendf(createTableArgs, "%s, cr__v_%s INTEGER", argv[i], nameOnly);
+      sqlite3_str_appendf(createTableArgs, "%s, cf__v_%s INTEGER", argv[i], nameOnly);
     } else
     {
       //For now we add all constraints in the future this will probably not be the case
@@ -273,7 +264,7 @@ int init_storage(
   sqlite3_free(rowCopy);
 
   int rc = SQLITE_OK;
-  storage_db_exec(&rc, db, "CREATE TABLE crsqlite_%s(%s);", argv[2], createTableString);
+  storage_db_exec(&rc, db, "CREATE TABLE cfsqlite_%s(%s);", argv[2], createTableString);
   if (rc != SQLITE_OK){
     fprintf(stderr,"Error creating table: %s\n", argv[2]);
   }

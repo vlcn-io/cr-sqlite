@@ -1,12 +1,12 @@
 CC=gcc
 DBG = gdb
 
-SRC = src/crsqlite_extension.c src/vtab.c src/storage.c
+SRC = src/cfsqlite_extension.c src/vtab.c src/storage.c
 
-crsqlite:
-	$(CC) -g -fPIC -shared  $(SRC) -o crsqlite.so
+cfsqlite:
+	$(CC) -g -fPIC -shared  $(SRC) -o cfsqlite.so
 
 Test:
-	$(CC) -g -fPIC unit-tests/main.c crsqlite_extension.c -o crsqlite_test.out
-	$(DBG) ./crsqlite_test.out
+	$(CC) -g -fPIC unit-tests/main.c cfsqlite_extension.c -o cfsqlite_test.out
+	$(DBG) ./cfsqlite_test.out
 

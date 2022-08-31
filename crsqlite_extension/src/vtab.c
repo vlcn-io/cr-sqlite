@@ -11,8 +11,8 @@ SQLITE_EXTENSION_INIT3
 #include <string.h>
 #include <ctype.h>
 
-typedef struct crsqlite_vtab crsqlite_vtab;
-struct crsqlite_vtab {
+typedef struct cfsqlite_vtab cfsqlite_vtab;
+struct cfsqlite_vtab {
   sqlite3_vtab base;
   sqlite3 *db;            /* Database connection */
 
@@ -22,9 +22,12 @@ struct crsqlite_vtab {
   int nCol;               /* Number of columns in the real table */
   int *aIndex;            /* Array of size nCol. True if column has an index */
   char **aCol;            /* Array of size nCol. Column names */
+  int nVirtualCol;               /* Number of columns in the virtual table */
+  int *aVirtualIndex;            /* Array of size nCol. True if column on virtual table has an index */
+  char **aVirtualCol;            /* Array of size nCol. virtual table column names */
   sqlite3_uint64 vector;  /* Local vector, incremented when updating columns */
 
-  //TODO: Store metadata relevant to a crsqlite virtual table
+  //TODO: Store metadata relevant to a cfsqlite virtual table
 };
 
 /*
@@ -32,9 +35,11 @@ struct crsqlite_vtab {
 ** table pVtab.
 */
 static int free_vtab(sqlite3_vtab *pVtab){
-  crsqlite_vtab *p = (crsqlite_vtab*)pVtab;
+  cfsqlite_vtab *p = (cfsqlite_vtab*)pVtab;
   sqlite3_free(p->aIndex);
   sqlite3_free(p->aCol);
+  sqlite3_free(p->aVirtualIndex);
+  sqlite3_free(p->aVirtualCol);
   sqlite3_free(p->vtabName);
   sqlite3_free(p->crTableName);
   sqlite3_free(p);
@@ -46,7 +51,7 @@ static int free_vtab(sqlite3_vtab *pVtab){
 ** to allocate the required in-memory structures for a newly connected
 ** virtual table.
 */
-static int create_crsqlite_vtab(
+static int create_cfsqlite_vtab(
   sqlite3 *db,
   void *pAux,
   int argc, const char *const*argv,
@@ -55,7 +60,7 @@ static int create_crsqlite_vtab(
 ){
   int rc = SQLITE_OK;
   int i;
-  crsqlite_vtab *pVtab;
+  cfsqlite_vtab *pVtab;
 
   /* Allocate the sqlite3_vtab/echo_vtab structure itself */
   pVtab = sqlite3_malloc( sizeof(*pVtab) );
@@ -72,7 +77,7 @@ static int create_crsqlite_vtab(
   }
 
   /* Allocate echo_vtab.zTableName */
-  pVtab->crTableName = sqlite3_mprintf("crsqlite_%s", argv[2]);
+  pVtab->crTableName = sqlite3_mprintf("cfsqlite_%s", argv[2]);
 
   if( rc==SQLITE_OK ){
     rc = get_column_names(db, pVtab->crTableName, &pVtab->aCol, &pVtab->nCol);
@@ -82,9 +87,12 @@ static int create_crsqlite_vtab(
     rc = get_index_array(db, pVtab->crTableName, pVtab->nCol, &pVtab->aIndex);
   }
 
-  // for (i=0; i<pVtab->nCol; i++) {
-  //   printf("%s : %d\n", pVtab->aCol[i], pVtab->aIndex[i]);
-  // }
+  //Build arrays of non cr__ column names and indexes
+  for (i=0; i<pVtab->nCol; i++) {
+    if(strncmp(pVtab->aCol[i], "cf__", 4) == 0){
+      
+    }
+  }
 
   if( rc!=SQLITE_OK ){
     free_vtab((sqlite3_vtab *)pVtab);
@@ -100,19 +108,19 @@ static int create_crsqlite_vtab(
 }
 
 
-/* crsqlite_cursor is a subclass of sqlite3_vtab_cursor which will
+/* cfsqlite_cursor is a subclass of sqlite3_vtab_cursor which will
 ** serve as the underlying representation of a cursor that scans
 ** over rows of the result
 */
-typedef struct crsqlite_cursor crsqlite_cursor;
-struct crsqlite_cursor {
+typedef struct cfsqlite_cursor cfsqlite_cursor;
+struct cfsqlite_cursor {
   sqlite3_vtab_cursor base;  /* Base class - must be first */
   int iCursor;               /* Cursor number */
   sqlite3_int64 iRowid;      /* The rowid */
 };
 
 //Called by xConnect and xCreate to declare the vtab and initiate the vtab struct
-static int declare_crsqlite_vtab(
+static int declare_cfsqlite_vtab(
   sqlite3 *db,
   void *pAux,
   int argc, const char *const*argv,
@@ -140,24 +148,24 @@ static int declare_crsqlite_vtab(
 
 
   //Create vtab object in memory
-  rc = create_crsqlite_vtab(db, pAux, argc, argv, ppVtab, pzErr);
+  rc = create_cfsqlite_vtab(db, pAux, argc, argv, ppVtab, pzErr);
   return rc;
 }
 
 /*
-** The crsqliteCreate() method is invoked to create a new
-** crsqlite_vtab that describes the crsqlite virtual table.
+** The cfsqliteCreate() method is invoked to create a new
+** cfsqlite_vtab that describes the cfsqlite virtual table.
 **
-** Think of this routine as the constructor for crsqlite_vtab objects.
+** Think of this routine as the constructor for cfsqlite_vtab objects.
 **
 ** All this routine needs to do is:
 **
-**    (1) Allocate the crsqlite_vtab object and initialize all fields.
+**    (1) Allocate the cfsqlite_vtab object and initialize all fields.
 **
 **    (2) Tell SQLite (via the sqlite3_declare_vtab() interface) what the
-**        result set of queries against crsqlite will look like.
+**        result set of queries against cfsqlite will look like.
 */
-static int crsqliteCreate(
+static int cfsqliteCreate(
   sqlite3 *db,
   void *pAux,
   int argc, const char *const*argv,
@@ -172,28 +180,28 @@ static int crsqliteCreate(
     return rc;
   }
 
-  rc = declare_crsqlite_vtab(db, pAux, argc, argv, ppVtab, pzErr);
+  rc = declare_cfsqlite_vtab(db, pAux, argc, argv, ppVtab, pzErr);
 
   return rc;
 }
 
 //TODO:
-static int crsqliteConnect(
+static int cfsqliteConnect(
   sqlite3 *db,
   void *pAux,
   int argc, const char *const*argv,
   sqlite3_vtab **ppVtab,
   char **pzErr
 ){
-  return declare_crsqlite_vtab(db, pAux, argc, argv, ppVtab,  pzErr);
+  return declare_cfsqlite_vtab(db, pAux, argc, argv, ppVtab,  pzErr);
 }
 
 
 /*
-** This method is the destructor for crsqlite_cursor objects.
+** This method is the destructor for cfsqlite_cursor objects.
 */
-static int crsqliteDisconnect(sqlite3_vtab *pVtab){
-  crsqlite_vtab *pTab = (crsqlite_vtab*)pVtab;
+static int cfsqliteDisconnect(sqlite3_vtab *pVtab){
+  cfsqlite_vtab *pTab = (cfsqlite_vtab*)pVtab;
 
 
   sqlite3_free(pVtab);
@@ -201,31 +209,31 @@ static int crsqliteDisconnect(sqlite3_vtab *pVtab){
 }
 
 /*
-** This method is the destructor for crsqlite_cursor objects.
+** This method is the destructor for cfsqlite_cursor objects.
 */
-static int crsqliteDestroy(sqlite3_vtab *pVtab){
-  crsqlite_vtab *pTab = (crsqlite_vtab*)pVtab;
+static int cfsqliteDestroy(sqlite3_vtab *pVtab){
+  cfsqlite_vtab *pTab = (cfsqlite_vtab*)pVtab;
   sqlite3_free(pVtab);
   return SQLITE_OK;
 }
 
 /*
-** Constructor for a new crsqlite_cursor object.
+** Constructor for a new cfsqlite_cursor object.
 */
-static int crsqliteOpen(sqlite3_vtab *p, sqlite3_vtab_cursor **ppCursor){
-  crsqlite_vtab *pTab = (crsqlite_vtab*)p;
-  crsqlite_cursor *pCur;
+static int cfsqliteOpen(sqlite3_vtab *p, sqlite3_vtab_cursor **ppCursor){
+  cfsqlite_vtab *pTab = (cfsqlite_vtab*)p;
+  cfsqlite_cursor *pCur;
 
 
   return SQLITE_OK;
 }
 
 /*
-** Destructor for a crsqlite_cursor.
+** Destructor for a cfsqlite_cursor.
 */
-static int crsqliteClose(sqlite3_vtab_cursor *cur){
-  crsqlite_cursor *pCur = (crsqlite_cursor*)cur;
-  crsqlite_vtab *pTab = (crsqlite_vtab*)cur->pVtab;
+static int cfsqliteClose(sqlite3_vtab_cursor *cur){
+  cfsqlite_cursor *pCur = (cfsqlite_cursor*)cur;
+  cfsqlite_vtab *pTab = (cfsqlite_vtab*)cur->pVtab;
 
 
   sqlite3_free(cur);
@@ -234,27 +242,27 @@ static int crsqliteClose(sqlite3_vtab_cursor *cur){
 
 
 /*
-** Advance a crsqlite_cursor to its next row of output.
+** Advance a cfsqlite_cursor to its next row of output.
 */
-static int crsqliteNext(sqlite3_vtab_cursor *cur){
-  crsqlite_cursor *pCur = (crsqlite_cursor*)cur;
-  crsqlite_vtab *pTab = (crsqlite_vtab*)cur->pVtab;
+static int cfsqliteNext(sqlite3_vtab_cursor *cur){
+  cfsqlite_cursor *pCur = (cfsqlite_cursor*)cur;
+  cfsqlite_vtab *pTab = (cfsqlite_vtab*)cur->pVtab;
 
 
   return SQLITE_OK;
 }
 
 /*
-** Return values of columns for the row at which the crsqlite_cursor
+** Return values of columns for the row at which the cfsqlite_cursor
 ** is currently pointing.
 */
-static int crsqliteColumn(
+static int cfsqliteColumn(
   sqlite3_vtab_cursor *cur,   /* The cursor */
   sqlite3_context *ctx,       /* First argument to sqlite3_result_...() */
   int i                       /* Which column to return */
 ){
-  crsqlite_cursor *pCur = (crsqlite_cursor*)cur;
-  crsqlite_vtab *pTab = (crsqlite_vtab*)cur->pVtab;
+  cfsqlite_cursor *pCur = (cfsqlite_cursor*)cur;
+  cfsqlite_vtab *pTab = (cfsqlite_vtab*)cur->pVtab;
 
   return SQLITE_OK;
 }
@@ -263,9 +271,9 @@ static int crsqliteColumn(
 ** Return the rowid for the current row.  In this implementation, the
 ** rowid is the same as the output value.
 */
-static int crsqliteRowid(sqlite3_vtab_cursor *cur, sqlite_int64 *pRowid){
-  crsqlite_cursor *pCur = (crsqlite_cursor*)cur;
-  crsqlite_vtab *pTab = (crsqlite_vtab*)cur->pVtab;
+static int cfsqliteRowid(sqlite3_vtab_cursor *cur, sqlite_int64 *pRowid){
+  cfsqlite_cursor *pCur = (cfsqlite_cursor*)cur;
+  cfsqlite_vtab *pTab = (cfsqlite_vtab*)cur->pVtab;
 
 
   return SQLITE_OK;
@@ -275,9 +283,9 @@ static int crsqliteRowid(sqlite3_vtab_cursor *cur, sqlite_int64 *pRowid){
 ** Return TRUE if the cursor has been moved off of the last
 ** row of output.
 */
-static int crsqliteEof(sqlite3_vtab_cursor *cur){
-  crsqlite_cursor *pCur = (crsqlite_cursor*)cur;
-  crsqlite_vtab *pTab = (crsqlite_vtab*)cur->pVtab;
+static int cfsqliteEof(sqlite3_vtab_cursor *cur){
+  cfsqlite_cursor *pCur = (cfsqlite_cursor*)cur;
+  cfsqlite_vtab *pTab = (cfsqlite_vtab*)cur->pVtab;
 
 
   return SQLITE_OK;
@@ -286,7 +294,7 @@ static int crsqliteEof(sqlite3_vtab_cursor *cur){
 /*
 ** Output an sqlite3_value object's value as an SQL literal.
 */
-static void crsqliteQuote(sqlite3_value *p){
+static void cfsqliteQuote(sqlite3_value *p){
   char z[50];
   switch( sqlite3_value_type(p) ){
     case SQLITE_NULL: {
@@ -346,18 +354,18 @@ static void crsqliteQuote(sqlite3_value *p){
 
 
 /*
-** This method is called to "rewind" the crsqlite_cursor object back
+** This method is called to "rewind" the cfsqlite_cursor object back
 ** to the first row of output.  This method is always called at least
-** once prior to any call to crsqliteColumn() or crsqliteRowid() or 
-** crsqliteEof().
+** once prior to any call to cfsqliteColumn() or cfsqliteRowid() or 
+** cfsqliteEof().
 */
-static int crsqliteFilter(
+static int cfsqliteFilter(
   sqlite3_vtab_cursor *cur,
   int idxNum, const char *idxStr,
   int argc, sqlite3_value **argv
 ){
-  crsqlite_cursor *pCur = (crsqlite_cursor *)cur;
-  crsqlite_vtab *pTab = (crsqlite_vtab*)cur->pVtab;
+  cfsqlite_cursor *pCur = (cfsqlite_cursor *)cur;
+  cfsqlite_vtab *pTab = (cfsqlite_vtab*)cur->pVtab;
 
 
   return SQLITE_OK;
@@ -365,15 +373,15 @@ static int crsqliteFilter(
 
 /*
 ** SQLite will invoke this method one or more times while planning a query
-** that uses the crsqlite virtual table.  This routine needs to create
+** that uses the cfsqlite virtual table.  This routine needs to create
 ** a query plan for each invocation and compute an estimated cost for that
 ** plan.
 */
-static int crsqliteBestIndex(
+static int cfsqliteBestIndex(
   sqlite3_vtab *tab,
   sqlite3_index_info *pIdxInfo
 ){
-  crsqlite_vtab *pTab = (crsqlite_vtab*)tab;
+  cfsqlite_vtab *pTab = (cfsqlite_vtab*)tab;
 
 
   return SQLITE_OK;
@@ -395,13 +403,13 @@ static int crsqliteBestIndex(
 **    NULL       INTEGER    (nCol args)    INSERT (incl. rowid value)
 **
 */
-static int crsqliteUpdate(
+static int cfsqliteUpdate(
   sqlite3_vtab *tab,
   int nData, 
   sqlite3_value **apData, 
   sqlite_int64 *pRowid
 ){
-  crsqlite_vtab *pVtab = (crsqlite_vtab*)tab;
+  cfsqlite_vtab *pVtab = (cfsqlite_vtab*)tab;
   sqlite3 *db = pVtab->db;
   int rc = SQLITE_OK;
 
@@ -527,23 +535,23 @@ static int crsqliteUpdate(
 
 /*
 ** This following structure defines all the methods for the 
-** crsqlite virtual table.
+** cfsqlite virtual table.
 */
-static sqlite3_module crsqliteModule = {
+static sqlite3_module cfsqliteModule = {
   0,                         /* iVersion */
-  crsqliteCreate,             /* xCreate */
-  crsqliteConnect,            /* xConnect */
-  crsqliteBestIndex,          /* xBestIndex */
-  crsqliteDisconnect,         /* xDisconnect */
-  crsqliteDestroy,            /* xDestroy */
-  crsqliteOpen,               /* xOpen - open a cursor */
-  crsqliteClose,              /* xClose - close a cursor */
-  crsqliteFilter,             /* xFilter - configure scan constraints */
-  crsqliteNext,               /* xNext - advance a cursor */
-  crsqliteEof,                /* xEof - check for end of scan */
-  crsqliteColumn,             /* xColumn - read data */
-  crsqliteRowid,              /* xRowid - read data */
-  crsqliteUpdate,             /* xUpdate */
+  cfsqliteCreate,             /* xCreate */
+  cfsqliteConnect,            /* xConnect */
+  cfsqliteBestIndex,          /* xBestIndex */
+  cfsqliteDisconnect,         /* xDisconnect */
+  cfsqliteDestroy,            /* xDestroy */
+  cfsqliteOpen,               /* xOpen - open a cursor */
+  cfsqliteClose,              /* xClose - close a cursor */
+  cfsqliteFilter,             /* xFilter - configure scan constraints */
+  cfsqliteNext,               /* xNext - advance a cursor */
+  cfsqliteEof,                /* xEof - check for end of scan */
+  cfsqliteColumn,             /* xColumn - read data */
+  cfsqliteRowid,              /* xRowid - read data */
+  cfsqliteUpdate,             /* xUpdate */
   0,                         /* xBegin */
   0,                         /* xSync */
   0,                         /* xCommit */
@@ -556,10 +564,10 @@ static sqlite3_module crsqliteModule = {
   0,                         /* xShadowName */
 };
 
-int init_crsqlite_vtab(
+int init_cfsqlite_vtab(
   sqlite3 *db,               /* SQLite connection to register module with */
   const char *zName,         /* Name of the module */
   void *pClientData          /* Client data for xCreate/xConnect */
 ){
-  return sqlite3_create_module(db, "crsqlite", &crsqliteModule, pClientData);
+  return sqlite3_create_module(db, "cfsqlite", &cfsqliteModule, pClientData);
 }

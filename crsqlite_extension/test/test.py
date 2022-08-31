@@ -2,12 +2,12 @@ import sqlite3
 
 con = sqlite3.connect(':memory:')
 con.enable_load_extension(True)
-con.load_extension("./crsqlite")
+con.load_extension("./cfsqlite")
 
 cur = con.cursor()
 
 cur.execute('''
-    CREATE VIRTUAL TABLE contacts USING crsqlite(
+    CREATE VIRTUAL TABLE contacts USING cfsqlite(
 	    contact_id INTEGER,
         contact_id2 INTEGER,
 	    first_name TEXT NOT NULL,
@@ -20,7 +20,7 @@ cur.execute('''
 
 cur.execute('''SELECT sql 
 FROM sqlite_schema sq
-WHERE name = 'crsqlite_contacts';''')
+WHERE name = 'cfsqlite_contacts';''')
 print(cur.fetchall())
 
 cur.execute('''SELECT sql 

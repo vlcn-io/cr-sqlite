@@ -1,6 +1,9 @@
 #include "sqlite3ext.h"
 #include "storage.h"
 
+//Parser from: https://github.com/marcobambini/sqlite-createtable-parser
+#include "sqlite-createtable-parser/sql3parse_table.h"
+
 #ifndef sqlite3_api
 SQLITE_EXTENSION_INIT3
 #endif
@@ -25,6 +28,7 @@ struct cfsqlite_vtab {
   int nVirtualCol;               /* Number of columns in the virtual table */
   int *aVirtualIndex;            /* Array of size nCol. True if column on virtual table has an index */
   char **aVirtualCol;            /* Array of size nCol. virtual table column names */
+  char *zInsert;          /* SQL statement to insert a new row into the crr table */
   sqlite3_uint64 vector;  /* Local vector, incremented when updating columns */
 
   //TODO: Store metadata relevant to a cfsqlite virtual table
@@ -44,6 +48,36 @@ static int free_vtab(sqlite3_vtab *pVtab){
   sqlite3_free(p->crTableName);
   sqlite3_free(p);
   return SQLITE_OK;
+}
+
+//Build a string to insert a row into the CR layer table, like example:
+  // INSERT INTO "todo_crr" (
+  //   "cr__cl"
+  //   "id",
+  //   "cr__v_id",
+  //   "value",
+  //   "cr__v_value"
+  // ) VALUES (
+  //   1,
+  //   ?
+  //   0,
+  //   ?,
+  //   0"
+  // ) ON CONFLICT ("id") DO UPDATE SET
+  //   "cr__cl" = CASE WHEN "crr_cl" % 2 = 0 THEN "crr_cl" + 1 ELSE "crr_cl" END,
+  //   "value" = EXCLUDED."text",
+  //   "cr__v_value" = CASE WHEN EXCLUDED."text" != "text" THEN "text_v" + 1 ELSE "text_v" END,
+  //   "completed" = EXCLUDED."completed",
+  //   "completed_v" = CASE WHEN EXCLUDED."completed" != "completed" THEN "completed_v" + 1 ELSE "completed_v" END,
+  //   "crr_cl" = CASE WHEN "crr_cl" % 2 = 0 THEN "crr_cl" + 1 ELSE "crr_cl" END,
+  //   "crr_update_src" = 0;
+char* create_insert_statement(
+  cfsqlite_vtab *pVtab
+){
+  sqlite3_str *values = sqlite3_str_new(NULL);
+  sqlite3_str *columns = sqlite3_str_new(NULL);
+  sqlite3_str *update = sqlite3_str_new(NULL);
+
 }
 
 /*
@@ -87,12 +121,31 @@ static int create_cfsqlite_vtab(
     rc = get_index_array(db, pVtab->crTableName, pVtab->nCol, &pVtab->aIndex);
   }
 
-  //Build arrays of non cr__ column names and indexes
+  //Build arrays of non cf__ column names and indexes, which are the columns and indexes of the virtual table
+  pVtab->nVirtualCol = 0;
+
   for (i=0; i<pVtab->nCol; i++) {
-    if(strncmp(pVtab->aCol[i], "cf__", 4) == 0){
-      
+    if(strncmp(pVtab->aCol[i], "cf__", 4) != 0){
+      pVtab->nVirtualCol++;
     }
   }
+
+  pVtab->aVirtualCol = sqlite3_malloc(pVtab->nVirtualCol * sizeof(char*));
+  pVtab->aVirtualIndex = sqlite3_malloc(pVtab->nVirtualCol * sizeof(int));
+
+  int j = 0;
+  for (i=0; i<pVtab->nCol; i++) {
+    if(strncmp(pVtab->aCol[i], "cf__", 4) != 0){
+      pVtab->aVirtualCol[j] = pVtab->aCol[i];
+      pVtab->aVirtualIndex[j] = pVtab->aIndex[i];
+      j++;
+    }
+  }
+
+
+  pVtab->zInsert = create_insert_statement(pVtab);
+
+
 
   if( rc!=SQLITE_OK ){
     free_vtab((sqlite3_vtab *)pVtab);
@@ -142,6 +195,11 @@ static int declare_cfsqlite_vtab(
   char* declareSql = sqlite3_mprintf("CREATE TABLE sqliteIgnoresThisName(%s);", createTableString);
   sqlite3_free(createTableString);
 
+  sql3error_code error;
+  //Parse create table statement
+  sql3table *tableMetadata = sql3parse_table(declareSql, 0, &error);
+
+  
   //printf("%s\n", declareSql);
   rc = sqlite3_declare_vtab(db, declareSql);
   sqlite3_free(declareSql);
@@ -289,67 +347,6 @@ static int cfsqliteEof(sqlite3_vtab_cursor *cur){
 
 
   return SQLITE_OK;
-}
-
-/*
-** Output an sqlite3_value object's value as an SQL literal.
-*/
-static void cfsqliteQuote(sqlite3_value *p){
-  char z[50];
-  switch( sqlite3_value_type(p) ){
-    case SQLITE_NULL: {
-      printf("NULL");
-      break;
-    }
-    case SQLITE_INTEGER: {
-      sqlite3_snprintf(50,z,"%lld", sqlite3_value_int64(p));
-      printf("%s", z);
-      break;
-    }
-    case SQLITE_FLOAT: {
-      sqlite3_snprintf(50,z,"%!.20g", sqlite3_value_double(p));
-      printf("%s", z);
-      break;
-    }
-    case SQLITE_BLOB: {
-      int n = sqlite3_value_bytes(p);
-      const unsigned char *z = (const unsigned char*)sqlite3_value_blob(p);
-      int i;
-      printf("x'");
-      for(i=0; i<n; i++) printf("%02x", z[i]);
-      printf("'");
-      break;
-    }
-    case SQLITE_TEXT: {
-      const char *z = (const char*)sqlite3_value_text(p);
-      int i;
-      char c;
-      for(i=0; (c = z[i])!=0 && c!='\''; i++){}
-      if( c==0 ){
-        printf("'%s'",z);
-      }else{
-        printf("'");
-        while( *z ){
-          for(i=0; (c = z[i])!=0 && c!='\''; i++){}
-          if( c=='\'' ) i++;
-          if( i ){
-            printf("%.*s", i, z);
-            z += i;
-          }
-          if( c=='\'' ){
-            printf("'");
-            continue;
-          }
-          if( c==0 ){
-            break;
-          }
-          z++;
-        }
-        printf("'");
-      }
-      break;
-    }
-  }
 }
 
 

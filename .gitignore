@@ -1,4 +1,4 @@
 .DS_Store
 out.db
 crsqlite_extension/.vscode/
-crsqlite_extension/crsqlite.so
+crsqlite_extension/cfsqlite.so

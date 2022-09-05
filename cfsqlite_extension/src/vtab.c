@@ -33,17 +33,18 @@ struct cfsqlite_vtab {
   sqlite3_uint64 vector;  /* Local vector, incremented when updating columns */
 
   int nCol; /* Number of columns in the virtual table */
-  cf_column *columns; /* Columns in the virtual table */
+  cf_column **columns; /* Columns in the virtual table */
 
   //TODO: Store metadata relevant to a cfsqlite virtual table
 };
 
 
-static int free_columns(int nCol, cf_column *columns){
+static int free_columns(int nCol, cf_column **columns){
   
   for (int i = 0; i < nCol; i++){
-    if (columns[i].name) sqlite3_free(columns[i].name);
-    if (columns[i].default_value) sqlite3_free(columns[i].name);
+    if (columns[i]->name) sqlite3_free(columns[i]->name);
+    if (columns[i]->default_value) sqlite3_free(columns[i]->name);
+    sqlite3_free(columns[i]);
   }
   sqlite3_free(columns);
 
@@ -88,11 +89,14 @@ int create_columns(cfsqlite_vtab *pVtab)
   if( !zSql ) goto out;
   rc = sqlite3_prepare(pVtab->db, zSql, -1, &pStmt, 0);
 
+
+  //TODO: This causes memory issues
   int i = 0;
   while( sqlite3_step(pStmt)==SQLITE_ROW ){
-    pVtab->columns[i].name = sqlite3_mprintf("%s", (char *)sqlite3_column_text(pStmt, COLUMN_NAME));
-    pVtab->columns[i].isPk = sqlite3_column_int(pStmt, COLUMN_PK);
-    pVtab->columns[i].default_value = sqlite3_mprintf("%s", (char *)sqlite3_column_text(pStmt, COLUMN_DFLT_VAL));
+    pVtab->columns[i] = sqlite3_malloc(sizeof(cf_column));
+    pVtab->columns[i]->name = sqlite3_mprintf("%s", (char *)sqlite3_column_text(pStmt, COLUMN_NAME));
+    pVtab->columns[i]->isPk = sqlite3_column_int(pStmt, COLUMN_PK);
+    pVtab->columns[i]->default_value = sqlite3_mprintf("%s", (char *)sqlite3_column_text(pStmt, COLUMN_DFLT_VAL));
     i++;
   }
   rc = sqlite3_finalize(pStmt);

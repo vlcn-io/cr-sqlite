@@ -18,22 +18,14 @@ cur.execute('''
         );'''
     )
 
-print("OK")
-
 cur.execute('''SELECT sql 
 FROM sqlite_schema sq
 WHERE name = 'cfsqlite_contacts';''')
 print(cur.fetchall())
-
-print("OK")
 
 cur.execute('''SELECT sql 
 FROM sqlite_schema 
 WHERE name = 'contacts';''')
 print(cur.fetchall())
 
-print("OK")
-
-
-print("OK")
 con.close()

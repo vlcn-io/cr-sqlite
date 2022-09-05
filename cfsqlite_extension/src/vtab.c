@@ -1,8 +1,6 @@
 #include "sqlite3ext.h"
 #include "storage.h"
-
-//Parser from: https://github.com/marcobambini/sqlite-createtable-parser
-#include "sqlite-createtable-parser/sql3parse_table.h"
+#include "vtab.h"
 
 #ifndef sqlite3_api
 SQLITE_EXTENSION_INIT3
@@ -14,6 +12,15 @@ SQLITE_EXTENSION_INIT3
 #include <string.h>
 #include <ctype.h>
 
+
+typedef struct cf_column cf_column;
+struct cf_column {
+  char *name;
+  char *default_value;
+  int isPk;
+  int isIndex;
+};
+
 typedef struct cfsqlite_vtab cfsqlite_vtab;
 struct cfsqlite_vtab {
   sqlite3_vtab base;
@@ -22,17 +29,27 @@ struct cfsqlite_vtab {
   int inTransaction;      /* True if within a transaction */
   char *vtabName;            /* Name of the virtual table */
   char *crTableName;       /* Name of the real cr table */
-  int nCol;               /* Number of columns in the real table */
-  int *aIndex;            /* Array of size nCol. True if column has an index */
-  char **aCol;            /* Array of size nCol. Column names */
-  int nVirtualCol;               /* Number of columns in the virtual table */
-  int *aVirtualIndex;            /* Array of size nCol. True if column on virtual table has an index */
-  char **aVirtualCol;            /* Array of size nCol. virtual table column names */
   char *zInsert;          /* SQL statement to insert a new row into the crr table */
   sqlite3_uint64 vector;  /* Local vector, incremented when updating columns */
 
+  int nCol; /* Number of columns in the virtual table */
+  cf_column *columns; /* Columns in the virtual table */
+
   //TODO: Store metadata relevant to a cfsqlite virtual table
 };
+
+
+static int free_columns(int nCol, cf_column *columns){
+  
+  for (int i = 0; i < nCol; i++){
+    if (columns[i].name) sqlite3_free(columns[i].name);
+    if (columns[i].default_value) sqlite3_free(columns[i].name);
+  }
+  sqlite3_free(columns);
+
+  return SQLITE_OK;
+}
+
 
 /*
 ** This function frees all runtime structures associated with the virtual
@@ -40,14 +57,49 @@ struct cfsqlite_vtab {
 */
 static int free_vtab(sqlite3_vtab *pVtab){
   cfsqlite_vtab *p = (cfsqlite_vtab*)pVtab;
-  sqlite3_free(p->aIndex);
-  sqlite3_free(p->aCol);
-  sqlite3_free(p->aVirtualIndex);
-  sqlite3_free(p->aVirtualCol);
   sqlite3_free(p->vtabName);
   sqlite3_free(p->crTableName);
+  free_columns(p->nCol, p->columns);
   sqlite3_free(p);
   return SQLITE_OK;
+}
+
+/* Allocates a set of columns in the cfsqlite_vtab structure */
+int create_columns(cfsqlite_vtab *pVtab)
+{
+  char *zSql;
+  sqlite3_stmt *pStmt = 0;
+  int rc;
+
+  //Get number of non-metadata columns
+  zSql = sqlite3_mprintf("SELECT count(*) FROM pragma_table_info(%Q) WHERE name NOT LIKE 'cf@_@_%%' ESCAPE '@';", pVtab->crTableName);
+  if( !zSql ) goto out;
+
+  rc = sqlite3_prepare(pVtab->db, zSql, -1, &pStmt, 0);
+  rc = sqlite3_step(pStmt);
+
+  pVtab->nCol = sqlite3_column_int(pStmt, 0);
+  pVtab->columns = sqlite3_malloc(sizeof(cf_column*)*pVtab->nCol);
+  rc = sqlite3_finalize(pStmt);
+
+
+  //Get info about each column
+  zSql = sqlite3_mprintf("SELECT * FROM pragma_table_info(%Q) WHERE name NOT LIKE 'cf@_@_%%' ESCAPE '@';", pVtab->crTableName);
+  if( !zSql ) goto out;
+  rc = sqlite3_prepare(pVtab->db, zSql, -1, &pStmt, 0);
+
+  int i = 0;
+  while( sqlite3_step(pStmt)==SQLITE_ROW ){
+    pVtab->columns[i].name = sqlite3_mprintf("%s", (char *)sqlite3_column_text(pStmt, COLUMN_NAME));
+    pVtab->columns[i].isPk = sqlite3_column_int(pStmt, COLUMN_PK);
+    pVtab->columns[i].default_value = sqlite3_mprintf("%s", (char *)sqlite3_column_text(pStmt, COLUMN_DFLT_VAL));
+    i++;
+  }
+  rc = sqlite3_finalize(pStmt);
+
+  out:
+  if (zSql) sqlite3_free(zSql);
+  return rc;
 }
 
 //Build a string to insert a row into the CR layer table, like example:
@@ -66,18 +118,11 @@ static int free_vtab(sqlite3_vtab *pVtab){
   // ) ON CONFLICT ("id") DO UPDATE SET
   //   "cr__cl" = CASE WHEN "crr_cl" % 2 = 0 THEN "crr_cl" + 1 ELSE "crr_cl" END,
   //   "value" = EXCLUDED."text",
-  //   "cr__v_value" = CASE WHEN EXCLUDED."text" != "text" THEN "text_v" + 1 ELSE "text_v" END,
-  //   "completed" = EXCLUDED."completed",
-  //   "completed_v" = CASE WHEN EXCLUDED."completed" != "completed" THEN "completed_v" + 1 ELSE "completed_v" END,
-  //   "crr_cl" = CASE WHEN "crr_cl" % 2 = 0 THEN "crr_cl" + 1 ELSE "crr_cl" END,
-  //   "crr_update_src" = 0;
+  //   "cr__v_value" = CASE WHEN EXCLUDED."text" != "text" THEN "text_v" + 1 ELSE "text_v" END;
 char* create_insert_statement(
   cfsqlite_vtab *pVtab
 ){
-  sqlite3_str *values = sqlite3_str_new(NULL);
-  sqlite3_str *columns = sqlite3_str_new(NULL);
-  sqlite3_str *update = sqlite3_str_new(NULL);
-
+  return 0;
 }
 
 /*
@@ -113,37 +158,9 @@ static int create_cfsqlite_vtab(
   /* Allocate echo_vtab.zTableName */
   pVtab->crTableName = sqlite3_mprintf("cfsqlite_%s", argv[2]);
 
-  if( rc==SQLITE_OK ){
-    rc = get_column_names(db, pVtab->crTableName, &pVtab->aCol, &pVtab->nCol);
-  }  
+  rc = create_columns(pVtab);
 
-  if( rc==SQLITE_OK ){
-    rc = get_index_array(db, pVtab->crTableName, pVtab->nCol, &pVtab->aIndex);
-  }
-
-  //Build arrays of non cf__ column names and indexes, which are the columns and indexes of the virtual table
-  pVtab->nVirtualCol = 0;
-
-  for (i=0; i<pVtab->nCol; i++) {
-    if(strncmp(pVtab->aCol[i], "cf__", 4) != 0){
-      pVtab->nVirtualCol++;
-    }
-  }
-
-  pVtab->aVirtualCol = sqlite3_malloc(pVtab->nVirtualCol * sizeof(char*));
-  pVtab->aVirtualIndex = sqlite3_malloc(pVtab->nVirtualCol * sizeof(int));
-
-  int j = 0;
-  for (i=0; i<pVtab->nCol; i++) {
-    if(strncmp(pVtab->aCol[i], "cf__", 4) != 0){
-      pVtab->aVirtualCol[j] = pVtab->aCol[i];
-      pVtab->aVirtualIndex[j] = pVtab->aIndex[i];
-      j++;
-    }
-  }
-
-
-  pVtab->zInsert = create_insert_statement(pVtab);
+  //pVtab->zInsert = create_insert_statement(pVtab);
 
 
 
@@ -157,6 +174,7 @@ static int create_cfsqlite_vtab(
 
   /* Success. Set *ppVtab and return */
   *ppVtab = &pVtab->base;
+
   return SQLITE_OK;
 }
 
@@ -194,11 +212,6 @@ static int declare_cfsqlite_vtab(
   char *createTableString = sqlite3_str_finish(createTableArgs);
   char* declareSql = sqlite3_mprintf("CREATE TABLE sqliteIgnoresThisName(%s);", createTableString);
   sqlite3_free(createTableString);
-
-  sql3error_code error;
-  //Parse create table statement
-  sql3table *tableMetadata = sql3parse_table(declareSql, 0, &error);
-
   
   //printf("%s\n", declareSql);
   rc = sqlite3_declare_vtab(db, declareSql);
@@ -260,8 +273,6 @@ static int cfsqliteConnect(
 */
 static int cfsqliteDisconnect(sqlite3_vtab *pVtab){
   cfsqlite_vtab *pTab = (cfsqlite_vtab*)pVtab;
-
-
   sqlite3_free(pVtab);
   return SQLITE_OK;
 }
@@ -270,7 +281,7 @@ static int cfsqliteDisconnect(sqlite3_vtab *pVtab){
 ** This method is the destructor for cfsqlite_cursor objects.
 */
 static int cfsqliteDestroy(sqlite3_vtab *pVtab){
-  cfsqlite_vtab *pTab = (cfsqlite_vtab*)pVtab;
+  cfsqlite_vtab *pTab = (cfsqlite_vtab*)pVtab;  
   sqlite3_free(pVtab);
   return SQLITE_OK;
 }

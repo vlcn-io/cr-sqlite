@@ -1,7 +1,7 @@
 CC=gcc
 DBG = gdb
 
-SRC = src/cfsqlite_extension.c src/vtab.c src/storage.c src/sqlite-createtable-parser/sql3parse_table.c
+SRC = src/cfsqlite_extension.c src/vtab.c src/storage.c
 
 cfsqlite:
 	$(CC) -g -fPIC -shared  $(SRC) -o cfsqlite.so

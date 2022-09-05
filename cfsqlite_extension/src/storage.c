@@ -9,12 +9,6 @@
 SQLITE_EXTENSION_INIT3
 #endif
 
-#define COLUMN_NAME 1
-#define COLUMN_TYPE 2
-#define COLUMN_NOT_NULL 3
-#define COLUMN_DFLT_VAL 4
-#define COLUMN_PK 5
-
 
 /*
 ** Retrieve the column names for the table named zTab via database

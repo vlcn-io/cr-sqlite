@@ -1,6 +1,6 @@
 sql_statement_list = {
-  sql_statement_list ~ ";" ~ sql_statement
-  | sql_statement
+  sql_statement
+  | sql_statement ~ ";" ~ sql_statement_list
 }
 
 sql_statement = {
@@ -57,8 +57,8 @@ collation_name = { name }
 base_window_name = { name }
 function_name = { name }
 column_name_list = {
-  column_name_list ~ ","
-  | column_name
+  column_name
+  | column_name ~ "," ~ column_name_list
 }
 
 create_from_defn = { 
@@ -66,8 +66,8 @@ create_from_defn = {
 }
 
 column_def_list = {
-  column_def_list ~ "," ~ column_def |
   column_def
+  | column_def ~ "," ~ column_def_list
 }
 
 column_def = {
@@ -177,8 +177,8 @@ binary_operator = {
 bind_parameter = { "?" }
 
 expr_list = {
-  expr ~ ","
-  | expr
+  expr
+  | expr ~ "," ~ expr_list
 }
 
 in_parenthetical = {
@@ -255,8 +255,8 @@ ordering_term = {
 }
 
 ordering_term_list = {
-  ordering_term_list ~ "," ~ ordering_term
-  | ordering_term
+  ordering_term
+  | ordering_term ~ "," ~ ordering_term_list
 }
 
 raise_function = {
@@ -325,8 +325,9 @@ common_select_statement = {
 }
 
 paren_list_of_expr_list = {
-  paren_list_of_expr_list ~ "," ~ "(" ~ expr_list ~ ")"
-  | "(" ~ expr_list ~ ")"
+  "(" ~ expr_list ~ ")"
+  | "(" ~ expr_list ~ ")" ~ "," ~ paren_list_of_expr_list
+  
 }
 
 compounded_select = {
@@ -362,8 +363,8 @@ select_window = {
 }
 
 window_name_as_list = {
-  window_name_as_list ~ "," ~ window_name_as
-  | window_name_as
+  window_name_as
+  | window_name_as ~ "," ~ window_name_as_list
 }
 
 window_name_as = {
@@ -380,8 +381,8 @@ limit = {
 }
 
 common_table_expression_list = {
-  common_table_expression_list ~ "," ~ common_table_expression
-  | common_table_expression
+  common_table_expression
+  | common_table_expression ~ "," ~ common_table_expression_list
 }
 
 common_table_expression = {
@@ -430,8 +431,8 @@ result_column = {
 }
 
 result_column_list = {
-  result_column_list ~ "," ~ result_column
-  | result_column
+  result_column
+  | result_column ~ "," ~ result_column_list
 }
 
 table_or_subquery = {
@@ -444,8 +445,8 @@ table_or_subquery = {
 }
 
 table_or_subquery_list = {
-  table_or_subquery_list ~ "," ~ table_or_subquery
-  | table_or_subquery
+  result_column_list
+  | table_or_subquery ~ "," ~ table_or_subquery_list
 }
 
 table_for_subquery = {
@@ -484,8 +485,8 @@ pucf_constraint = {
 }
 
 table_constraint_list = {
-  table_constraint_list ~ "," ~ table_constraint
-  | table_constraint
+  table_constraint
+  | table_constraint ~ "," ~ table_constraint_list
 }
 
 unique_suffix = {
@@ -497,13 +498,13 @@ indexed_column = {
 }
 
 indexed_column_list = {
-  indexed_column_list ~ ","
-  | indexed_column
+  indexed_column
+  | indexed_column ~ "," ~ indexed_column_list
 }
 
 table_options = {
-  table_options ~ "," ~ table_option
-  | table_option
+  table_option
+  | table_option ~ "," ~ table_options
 }
 
 table_option = {

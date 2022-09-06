@@ -1,11 +1,17 @@
 extern crate bindgen;
+extern crate cc;
 
 use std::env;
 use std::path::PathBuf;
 
 fn main() {
+  cc::Build::new()
+    .file("./c/sql3parse_table.c")
+    .compile("sql3parse");
+
     // Tell cargo to look for shared libraries in the specified directory
     println!("cargo:rustc-link-search=./c/");
+    println!("cargo:rustc-link-lib=sql3parse");
 
     // Tell cargo to invalidate the built crate whenever the wrapper changes
     println!("cargo:rerun-if-changed=wrapper.h");

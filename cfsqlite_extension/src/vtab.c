@@ -475,10 +475,7 @@ static int cfsqliteUpdate(
     zSql = pVtab->zInsert;
   }
 
-  printf("%s\n", zSql);
-
   rc = sqlite3_prepare(db, zSql, -1, &pStmt, 0);
-  assert( rc!=SQLITE_OK || pStmt );
 
   if( rc==SQLITE_OK ) {
     sqlite3_bind_int(pStmt, pVtab->nCol+1, pVtab->vector);

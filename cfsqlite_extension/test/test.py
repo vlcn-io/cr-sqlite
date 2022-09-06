@@ -1,4 +1,5 @@
 import sqlite3
+import time
 
 con = sqlite3.connect(':memory:')
 con.enable_load_extension(True)
@@ -24,19 +25,34 @@ cur.execute('''
         );'''
     )
 
-cur.execute('''
-    INSERT INTO test VALUES(100, "b", "c");'''
-    )
+t1 = time.time()
+for i in range(0, 100000):
+    cur.execute(
+        f"INSERT INTO test VALUES({i}, 'b', 'c');"
+        )    
+
+t2 = time.time()
+print(t2-t1)
 
 cur.execute('''
-    INSERT INTO test VALUES(101, "b", "c");'''
+    CREATE TABLE test2(
+	    a INTEGER PRIMARY KEY,
+	    b TEXT,
+	    c TEXT
+        );'''
     )
 
-cur.execute('''
-    SELECT * FROM cfsqlite_test;
-    '''
-)
-print(cur.fetchall())
+t1 = time.time()
+for i in range(0, 100000):
+    cur.execute(
+        f" INSERT INTO test2 VALUES({i}, 'b', 'c'); "
+        )    
+
+t2 = time.time()
+print(t2-t1)
+
+
+#print(cur.fetchall())
 
 
 # cur.execute('''SELECT sql 

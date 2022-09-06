@@ -1,4 +1,4 @@
-# cfsqlite - conflict-free-sqlite
+# cfsql - conflict-free-sqlite
 
 08/22 - Currently investigating [`virtual table extensions`](https://www.sqlite.org/vtab.html) and/or connection proxies to make `cfsqlite` production ready.
 

@@ -89,8 +89,6 @@ int create_columns(cfsqlite_vtab *pVtab)
   if( !zSql ) goto out;
   rc = sqlite3_prepare(pVtab->db, zSql, -1, &pStmt, 0);
 
-
-  //TODO: This causes memory issues
   int i = 0;
   while( sqlite3_step(pStmt)==SQLITE_ROW ){
     pVtab->columns[i] = sqlite3_malloc(sizeof(cf_column));
@@ -101,6 +99,8 @@ int create_columns(cfsqlite_vtab *pVtab)
   }
   rc = sqlite3_finalize(pStmt);
 
+  //TODO: isIdx field on columns should be set;
+
   out:
   if (zSql) sqlite3_free(zSql);
   return rc;
@@ -108,25 +108,61 @@ int create_columns(cfsqlite_vtab *pVtab)
 
 //Build a string to insert a row into the CR layer table, like example:
   // INSERT INTO "todo_crr" (
-  //   "cr__cl"
+  //   "cf__cl",
   //   "id",
-  //   "cr__v_id",
+  //   "cf__v_id",
   //   "value",
-  //   "cr__v_value"
+  //   "cf__v_value"
   // ) VALUES (
   //   1,
-  //   ?
-  //   0,
-  //   ?,
-  //   0"
-  // ) ON CONFLICT ("id") DO UPDATE SET
-  //   "cr__cl" = CASE WHEN "crr_cl" % 2 = 0 THEN "crr_cl" + 1 ELSE "crr_cl" END,
-  //   "value" = EXCLUDED."text",
-  //   "cr__v_value" = CASE WHEN EXCLUDED."text" != "text" THEN "text_v" + 1 ELSE "text_v" END;
+  //   ?1
+  //   ?0,
+  //   ?2,
+  //   ?0"
+  // ) ON CONFLICT DO UPDATE SET
+  //   "cf__cl" = CASE WHEN "cf__cl" % 2 = 0 THEN "cf__cl" + 1 ELSE "cf__cl" END,
+  //   "value" = EXCLUDED."value",
+  //   "cf__v_value" = CASE WHEN EXCLUDED."value" != "value" THEN "cf__v_value" + 1 ELSE "cf__v_value" END;
 char* create_insert_statement(
   cfsqlite_vtab *pVtab
 ){
-  return 0;
+  sqlite3_str * columns = sqlite3_str_new(NULL);
+  sqlite3_str * values = sqlite3_str_new(NULL);
+  sqlite3_str * update = sqlite3_str_new(NULL);
+
+  sqlite3_str_appendf(columns, "INSERT INTO %Q ('cf__cl', ", pVtab->crTableName);
+  sqlite3_str_appendall(values, ") VALUES ( 1, ");
+  sqlite3_str_appendall(update, ") ON CONFLICT DO UPDATE SET 'cf__cl' = CASE WHEN 'cf__cl' % 2 = 0 THEN 'cf__cl' + 1 ELSE 'cf__cl' END, ");
+
+  for (int i = 0 ; i < pVtab->nCol; i++){
+    if (pVtab->columns[i]->isPk == 0){
+
+      sqlite3_str_appendf(columns, "'%s', 'cf__v_%s'", pVtab->columns[i]->name, pVtab->columns[i]->name);
+      sqlite3_str_appendf(values, "?%d, ?%d", i+1, pVtab->nCol+1);
+      sqlite3_str_appendf(update, "'%s' = EXCLUDED.'%s', ", pVtab->columns[i]->name, pVtab->columns[i]->name);
+      sqlite3_str_appendf(update, "'cf__v_%s' = CASE WHEN EXCLUDED.'%s' != '%s' THEN 'cf__v_%s' + 1 ELSE 'cf__v_%s' END"
+        ,pVtab->columns[i]->name, pVtab->columns[i]->name, pVtab->columns[i]->name, pVtab->columns[i]->name, pVtab->columns[i]->name);
+
+    } else {
+
+      sqlite3_str_appendf(columns, "'%s'", pVtab->columns[i]->name);
+      sqlite3_str_appendf(values, "?%d", i+1);
+
+    }
+    if (i != pVtab->nCol-1){
+
+      sqlite3_str_appendall(columns, ", ");
+      sqlite3_str_appendall(values, ", ");
+      if (pVtab->columns[i]->isPk == 0) sqlite3_str_appendall(update, ", ");
+
+    }
+  }
+
+  sqlite3_str_appendall(update, ";");
+  sqlite3_str_appendall(columns, sqlite3_str_finish(values));
+  sqlite3_str_appendall(columns, sqlite3_str_finish(update));
+
+  return sqlite3_str_finish(columns);
 }
 
 /*
@@ -164,8 +200,8 @@ static int create_cfsqlite_vtab(
 
   rc = create_columns(pVtab);
 
-  //pVtab->zInsert = create_insert_statement(pVtab);
-
+  pVtab->zInsert = create_insert_statement(pVtab);
+  // printf("%s\n", pVtab->zInsert);
 
 
   if( rc!=SQLITE_OK ){
@@ -426,124 +462,49 @@ static int cfsqliteUpdate(
   int rc = SQLITE_OK;
 
 
-  // sqlite3_stmt *pStmt = 0;
-  // char *z = 0;               /* SQL statement to execute */
-  // int bindArgZero = 0;       /* True to bind apData[0] to sql var no. nData */
-  // int bindArgOne = 0;        /* True to bind apData[1] to sql var no. 1 */
-  // int i;                     /* Counter variable used by for loops */
-
-  // assert( nData==pVtab->nCol+2 || nData==1 );
+  sqlite3_stmt *pStmt = 0;
+  char *zSql = 0;               /* SQL statement to execute */
 
 
+  /* If apData[0] is an integer and nData>1 then do an UPDATE */
 
-  // /* If apData[0] is an integer and nData>1 then do an UPDATE */
-  // if( nData>1 && sqlite3_value_type(apData[0])==SQLITE_INTEGER ){
-  //   char *zSep = " SET";
-  //   z = sqlite3_mprintf("UPDATE %Q", pVtab->crTableName);
-  //   if( !z ){
-  //     rc = SQLITE_NOMEM;
-  //   }
+  /* If apData[0] is an integer and nData==1 then do a DELETE */
 
-  //   bindArgOne = (apData[1] && sqlite3_value_type(apData[1])==SQLITE_INTEGER);
-  //   bindArgZero = 1;
+  /* If the first argument is NULL and there are more than two args, INSERT */
+  if( nData>2 && sqlite3_value_type(apData[0])==SQLITE_NULL ){
+    zSql = pVtab->zInsert;
+  }
 
-  //   if( bindArgOne ){
-  //      //string_concat(&z, " SET rowid=?1 ", 0, &rc);
-  //      zSep = ",";
-  //   }
-  //   for(i=2; i<nData; i++){
-  //     if( apData[i]==0 ) continue;
-  //     // string_concat(&z, sqlite3_mprintf(
-  //     //     "%s %Q=?%d", zSep, pVtab->aCol[i-2], i), 1, &rc);
-  //     zSep = ",";
-  //   }
-  //   //string_concat(&z, sqlite3_mprintf(" WHERE rowid=?%d", nData), 1, &rc);
-  // }
+  printf("%s\n", zSql);
 
-  // /* If apData[0] is an integer and nData==1 then do a DELETE */
-  // else if( nData==1 && sqlite3_value_type(apData[0])==SQLITE_INTEGER ){
-  //   z = sqlite3_mprintf("DELETE FROM %Q WHERE rowid = ?1", pVtab->crTableName);
-  //   if( !z ){
-  //     rc = SQLITE_NOMEM;
-  //   }
-  //   bindArgZero = 1;
-  // }
+  rc = sqlite3_prepare(db, zSql, -1, &pStmt, 0);
+  assert( rc!=SQLITE_OK || pStmt );
 
-  // /* If the first argument is NULL and there are more than two args, INSERT */
-  // else if( nData>2 && sqlite3_value_type(apData[0])==SQLITE_NULL ){
-  //   int ii;
-  //   sqlite3_str *zInsert = sqlite3_str_new(NULL);
-  //   sqlite3_str *zValues = sqlite3_str_new(NULL);
-  
-  //   sqlite3_str_vappendf(zInsert, "INSERT INTO %Q (", pVtab->crTableName);
-  //   if( !zInsert ){
-  //     rc = SQLITE_NOMEM;
-  //   }
+  if( rc==SQLITE_OK ) {
+    sqlite3_bind_int(pStmt, pVtab->nCol+1, pVtab->vector);
 
-  //   //Explicit rowid insert
-  //   if( sqlite3_value_type(apData[1])==SQLITE_INTEGER ){
-  //     bindArgOne = 1;
-  //     sqlite3_str_appendall(zInsert, "rowid");
-  //     sqlite3_str_appendall(zValues, "?, ");
-  //   }
+    for(int i=2; i<nData && rc==SQLITE_OK; i++){
+      if( apData[i] ) rc = sqlite3_bind_value(pStmt, i-1, apData[i]);
+    }
+    if( rc==SQLITE_OK ){
+      sqlite3_step(pStmt);
+      rc = sqlite3_finalize(pStmt);
+    }else{
+      sqlite3_finalize(pStmt);
+    }
+  }
 
-  //   //assert((pVtab->nCol+2)==nData);
-  //   for(ii=2; ii<nData; ii++){
-  //     sqlite3_str_appendf(zInsert, "%s, cr_%s", pVtab->aCol[ii-2], pVtab->aCol[ii-2]);
-  //     sqlite3_str_appendf(z, "%s%Q", zValues ? ", " : "", pVtab->aCol[ii-2]);
-  //     string_concat(&zValues, 
-  //         sqlite3_mprintf("%s?%d", zValues?", ":"", ii), 1, &rc);
-  //   }
-
-  //   string_concat(&z, zInsert, 1, &rc);
-  //   string_concat(&z, ") VALUES(", 0, &rc);
-  //   string_concat(&z, zValues, 1, &rc);
-  //   string_concat(&z, ")", 0, &rc);
-  // }
-
-  // /* Anything else is an error */
-  // else{
-  //   assert(0);
-  //   return SQLITE_ERROR;
-  // }
-
-
-  // printf("%s\n", z);
-  // return SQLITE_OK;
-
-  // if( rc==SQLITE_OK ){
-  //   rc = sqlite3_prepare(db, z, -1, &pStmt, 0);
-  // }
-  // assert( rc!=SQLITE_OK || pStmt );
-  // sqlite3_free(z);
-  // if( rc==SQLITE_OK ) {
-  //   if( bindArgZero ){
-  //     sqlite3_bind_value(pStmt, nData, apData[0]);
-  //   }
-  //   if( bindArgOne ){
-  //     sqlite3_bind_value(pStmt, 1, apData[1]);
-  //   }
-  //   for(i=2; i<nData && rc==SQLITE_OK; i++){
-  //     if( apData[i] ) rc = sqlite3_bind_value(pStmt, i, apData[i]);
-  //   }
-  //   if( rc==SQLITE_OK ){
-  //     sqlite3_step(pStmt);
-  //     rc = sqlite3_finalize(pStmt);
-  //   }else{
-  //     sqlite3_finalize(pStmt);
-  //   }
-  // }
-
-  // if( pRowid && rc==SQLITE_OK ){
-  //   *pRowid = sqlite3_last_insert_rowid(db);
-  // }
-  // if( rc!=SQLITE_OK ){
-  //   tab->zErrMsg = sqlite3_mprintf("echo-vtab-error: %s", sqlite3_errmsg(db));
-  // }
+  if( pRowid && rc==SQLITE_OK ){
+    *pRowid = sqlite3_last_insert_rowid(db);
+  }
+  if( rc!=SQLITE_OK ){
+    tab->zErrMsg = sqlite3_mprintf("cfsqlite-vtab-error: %s", sqlite3_errmsg(db));
+  } else {
+    pVtab->vector++;
+  }
 
   return rc;
 }
-
 
 /*
 ** This following structure defines all the methods for the 

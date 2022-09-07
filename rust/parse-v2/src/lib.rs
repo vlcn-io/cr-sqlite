@@ -19,8 +19,17 @@ mod tests {
 
   #[test]
   fn it_works() {
-    let parsed = sql_parser::statements("foo; bar");
-    println!("{:?}", parsed);
-    // assert_eq!(parsed, Ok(vec!["foo", "bar"]));
+    let cases = vec![
+      ("foo", vec!["foo"]),
+      ("foo;", vec!["foo"]),
+      ("foo;bar", vec!["foo", "bar"]),
+      ("foo; bar", vec!["foo", "bar"])
+    ];
+
+
+    for case in cases {
+      let parsed = sql_parser::statements(case[0]);
+      assert_eq!(parsed, Ok(case[1]));
+    }
   }
 }

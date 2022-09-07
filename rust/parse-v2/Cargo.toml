@@ -6,4 +6,5 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-peg = "0.8.0"
+sqlite3-parser = "0.4.0"
+fallible-iterator = "0.2.0"

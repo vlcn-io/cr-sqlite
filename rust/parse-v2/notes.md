@@ -1,3 +1,16 @@
+# SQLite Extension in Rust
+
+https://github.com/phiresky/sqlite-zstd
+https://ricardoanderegg.com/posts/extending-sqlite-with-rust/
+
+# SQLite Query Parser
+
+https://crates.io/crates/sqlite3-parser
+
+---
+
+# Old / Irrelevant:
+
 # PEG
 
 PEG crate:

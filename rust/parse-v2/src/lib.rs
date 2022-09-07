@@ -86,6 +86,7 @@ pub fn parse(query: &str) -> Result<Option<Stmt>, &'static str> {
 #[cfg(test)]
 mod tests {
   use crate::{convert_crr_stmt_to_sql, is_crr_stmt, parse};
+  use sqlite3_parser::ast::{ColumnDefinition, Name, Stmt, TableOptions};
 
   #[test]
   fn ignore_non_crr_stmts() {
@@ -96,6 +97,33 @@ mod tests {
 
     let arg = "ALTER TABLE foo RENAME TO bar;";
     assert_eq!(parse(arg), Ok(None));
+  }
+
+  #[test]
+  fn crr_stmts_are_parsed() {
+    let parsed = parse("CREATE CRR TABLE foo (a);").unwrap();
+
+    assert_eq!(
+      parsed,
+      Some(Stmt::CreateTable {
+        temporary: false,
+        if_not_exists: false,
+        tbl_name: sqlite3_parser::ast::QualifiedName {
+          db_name: None,
+          name: Name("foo".to_string()),
+          alias: None
+        },
+        body: sqlite3_parser::ast::CreateTableBody::ColumnsAndConstraints {
+          columns: vec![ColumnDefinition {
+            col_name: Name("a".to_string()),
+            col_type: None,
+            constraints: vec![],
+          }],
+          constraints: None,
+          options: TableOptions::NONE
+        }
+      })
+    )
   }
 
   #[test]

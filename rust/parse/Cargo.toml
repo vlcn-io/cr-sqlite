@@ -6,7 +6,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-
-[build-dependencies]
-bindgen = "0.60.1"
-cc = "1.0.73"
+sqlite3-parser = "0.4.0"
+fallible-iterator = "0.2.0"
+regex = "1.6.0"
+lazy_static = "1.4.0"
+substring = "1.4.5"

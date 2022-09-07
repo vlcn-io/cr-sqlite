@@ -18,25 +18,44 @@ use regex::{Regex, RegexBuilder};
 use sqlite3_parser::ast::Cmd::{Explain, ExplainQueryPlan, Stmt as StmtVar};
 use sqlite3_parser::ast::Stmt;
 use sqlite3_parser::lexer::sql::Parser;
+use substring::Substring;
 
-fn is_crr_statement(query: &str) -> bool {
-  lazy_static! {
-    static ref RE: Regex = RegexBuilder::new(r"^CREATE CRR|ALTER CRR")
-      .case_insensitive(true)
-      .build()
-      .unwrap();
-  }
+lazy_static! {
+  static ref RE: Regex = RegexBuilder::new(r"^(?P<create>CREATE\s+CRR)|(?P<alter>ALTER\s+CRR)")
+    .case_insensitive(true)
+    .build()
+    .unwrap();
+}
 
+fn is_crr_stmt(query: &str) -> bool {
   match RE.find(query) {
     None => false,
     Some(_) => true,
   }
 }
 
+fn convert_crr_stmt_to_sql(query: &str) -> Result<String, &'static str> {
+  let caps = RE.captures(query).unwrap();
+
+  let create = caps.name("create");
+  let alter = caps.name("alter");
+
+  let crr_type = create.or(alter);
+
+  match crr_type {
+    Some(m) => Ok(
+      query.substring(0, m.range().end - 3).to_string()
+        + query.substring(m.range().end, query.len()),
+    ),
+    _ => Err("CRR statement could not be converted to SQL"),
+  }
+}
+
 pub fn parse(query: &str) -> Result<Option<Stmt>, &'static str> {
-  if is_crr_statement(query) {
-    // TODO: strip CRR keyword
-    let mut parser = Parser::new(query.as_bytes());
+  if is_crr_stmt(query) {
+    let sql = convert_crr_stmt_to_sql(query).expect("Unable to convert CRR string to SQL string");
+
+    let mut parser = Parser::new(sql.as_bytes());
     let stmt = parser.next();
 
     match parser.next() {
@@ -66,13 +85,13 @@ pub fn parse(query: &str) -> Result<Option<Stmt>, &'static str> {
 
 #[cfg(test)]
 mod tests {
-  use crate::parse;
+  use crate::{convert_crr_stmt_to_sql, is_crr_stmt, parse};
 
   #[test]
   fn ignore_non_crr_stmts() {
     let arg = "CREATE TABLE foo (a, b, c);";
 
-    // Non crr statements do not get parsed by us -- just return a none result
+    // Non-crr statements do not get parsed by us -- just return a none result
     assert_eq!(parse(arg), Ok(None));
 
     let arg = "ALTER TABLE foo RENAME TO bar;";
@@ -80,5 +99,47 @@ mod tests {
   }
 
   #[test]
-  fn parse_crr_stmts() {}
+  fn test_is_crr_stmt() {
+    assert_eq!(is_crr_stmt("CREATE CRR"), true);
+    assert_eq!(is_crr_stmt("CREATE CRR INDEX"), true);
+    assert_eq!(is_crr_stmt("ALTER CRR"), true);
+    assert_eq!(
+      is_crr_stmt(
+        "ALTER
+    CRR"
+      ),
+      true
+    );
+    assert_eq!(
+      is_crr_stmt(
+        "CREATE
+CRR
+INDEX"
+      ),
+      true
+    );
+    assert_eq!(is_crr_stmt("CREATE TABLE"), false);
+    assert_eq!(is_crr_stmt("ALTER TABLE"), false);
+    assert_eq!(is_crr_stmt("CREATE UNIQUE INDEX"), false);
+  }
+
+  #[test]
+  fn test_convert_crr_stmt_to_sql() {
+    assert_eq!(
+      convert_crr_stmt_to_sql("CREATE CRR TABLE foo (a, b)").unwrap(),
+      "CREATE  TABLE foo (a, b)"
+    );
+    assert_eq!(
+      convert_crr_stmt_to_sql("create crr table foo (a, b)").unwrap(),
+      "create  table foo (a, b)"
+    );
+    assert_eq!(
+      convert_crr_stmt_to_sql("create crr unique index bar on foo (a)").unwrap(),
+      "create  unique index bar on foo (a)"
+    );
+    assert_eq!(
+      convert_crr_stmt_to_sql("alter crr table foo").unwrap(),
+      "alter  table foo"
+    );
+  }
 }

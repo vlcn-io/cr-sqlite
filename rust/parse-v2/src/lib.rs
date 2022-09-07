@@ -33,11 +33,21 @@ fn is_crr_statement(query: &str) -> bool {
   }
 }
 
-fn parse(query: &str) -> Result<Option<Stmt>, &'static str> {
+pub fn parse(query: &str) -> Result<Option<Stmt>, &'static str> {
   if is_crr_statement(query) {
     // TODO: strip CRR keyword
     let mut parser = Parser::new(query.as_bytes());
     let stmt = parser.next();
+
+    match parser.next() {
+      Ok(None) => {}
+      Err(_) => {}
+      Ok(_) => {
+        // TODO support many statements
+        return Err("CRR layer currently only supports running a single statement at a time");
+      }
+    }
+
     match stmt {
       Ok(Some(cmd)) => match cmd {
         Explain(_) => Err("Got an unexpected `explain` statement in CRR parsing"),
@@ -56,24 +66,19 @@ fn parse(query: &str) -> Result<Option<Stmt>, &'static str> {
 
 #[cfg(test)]
 mod tests {
-  use fallible_iterator::FallibleIterator;
-  use sqlite3_parser::lexer::sql::Parser;
+  use crate::parse;
 
   #[test]
-  fn it_works() {
-    let arg = "CREATE TABLE foo (a, b, c); CREATE TABLE bar (d, e, f);";
-    let mut parser = Parser::new(arg.as_bytes());
-    loop {
-      match parser.next() {
-        Ok(None) => break,
-        Err(err) => {
-          eprintln!("Err: {} in {}", err, arg);
-          break;
-        }
-        Ok(Some(cmd)) => {
-          println!("{}", cmd);
-        }
-      }
-    }
+  fn ignore_non_crr_stmts() {
+    let arg = "CREATE TABLE foo (a, b, c);";
+
+    // Non crr statements do not get parsed by us -- just return a none result
+    assert_eq!(parse(arg), Ok(None));
+
+    let arg = "ALTER TABLE foo RENAME TO bar;";
+    assert_eq!(parse(arg), Ok(None));
   }
+
+  #[test]
+  fn parse_crr_stmts() {}
 }

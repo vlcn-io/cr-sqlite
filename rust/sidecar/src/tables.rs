@@ -6,10 +6,10 @@ use crate::{
 };
 
 pub fn create_crr_tbl_stmt(
-  temporary: bool,
-  if_not_exists: bool,
-  tbl_name: QualifiedName,
-  body: CreateTableBody,
+  temporary: &bool,
+  if_not_exists: &bool,
+  tbl_name: &QualifiedName,
+  body: &CreateTableBody,
 ) -> String {
   format!(
     "CREATE {temporary} TABLE {if_not_exists} {tbl_name}",
@@ -20,9 +20,9 @@ pub fn create_crr_tbl_stmt(
 }
 
 pub fn create_crr_clock_tbl_stmt(
-  temporary: bool,
-  if_not_exists: bool,
-  tbl_name: QualifiedName,
+  temporary: &bool,
+  if_not_exists: &bool,
+  tbl_name: &QualifiedName,
 ) -> String {
   format!(
     "CREATE {temporary} TABLE {ifne} {tbl_name} (
@@ -37,4 +37,6 @@ pub fn create_crr_clock_tbl_stmt(
   )
 }
 
-pub fn create_alter_crr_tbl_stmt() -> String {}
+pub fn create_alter_crr_tbl_stmt() -> String {
+  format!("")
+}

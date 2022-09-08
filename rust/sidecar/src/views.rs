@@ -5,10 +5,10 @@ use crate::{
 use sqlite3_parser::ast::{CreateTableBody, QualifiedName};
 
 pub fn create_view_stmt(
-  temporary: bool,
-  if_not_exists: bool,
-  tbl_name: QualifiedName,
-  body: CreateTableBody,
+  temporary: &bool,
+  if_not_exists: &bool,
+  tbl_name: &QualifiedName,
+  body: &CreateTableBody,
 ) -> String {
   // TODO: select `rowid` if no pk?
   format!(
@@ -28,9 +28,9 @@ pub fn create_view_stmt(
 }
 
 pub fn create_patch_view_stmt(
-  temporary: bool,
-  if_not_exists: bool,
-  tbl_name: QualifiedName,
+  temporary: &bool,
+  if_not_exists: &bool,
+  tbl_name: &QualifiedName,
 ) -> String {
   format!(
     "CREATE {temporary} VIEW

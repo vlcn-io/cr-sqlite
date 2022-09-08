@@ -4,6 +4,9 @@ use crate::ast::QualifiedNameExt;
 use crate::parse::parse;
 use crate::sql_bits::meta_query;
 use crate::tables::{create_alter_crr_tbl_stmt, create_crr_clock_tbl_stmt, create_crr_tbl_stmt};
+use crate::triggers::{
+  create_delete_trig, create_insert_trig, create_patch_trig, create_update_trig,
+};
 use crate::views::{create_patch_view_stmt, create_view_stmt};
 
 /**
@@ -21,17 +24,17 @@ use crate::views::{create_patch_view_stmt, create_view_stmt};
  *
  * Example usage:
  *
- * ```
+ * ```typescript
  * // do everything in a transaction so we don't end up in an inconsistent state
  * sqlite_connection.in_transaction(() => {
  *   // re-write our query to standard sql
- *   let [query, meta_query] = rewrite(query)
+ *   let [query, meta_query] = cfsqlite.rewrite(query)
  *   // run the re-written query
  *   sqlite_connection.execute(query)
  *   // if a meta query was returned, do additional crr work
  *   if (meta_query) {
  *     metadata = sqlite_connection.all(query)
- *     sqlite_connection.execute(support_statements(metadata))
+ *     sqlite_connection.execute(cfsqlite.support_statements(metadata))
  *   }
  * })
  * ```
@@ -59,14 +62,14 @@ pub fn support_statements(meta_query_result: &str) -> String {
   // todo: normalize the able name before parsing?
   // the meta query result should only ever be the crr create table statement
   let ast = parse(meta_query_result).unwrap().unwrap();
-  match ast {
+  match &ast {
     Stmt::CreateTable {
       temporary,
       if_not_exists,
       tbl_name,
       body,
     } => vec![
-      create_crr_clock_tbl_stmt(temporary, true, tbl_name),
+      create_crr_clock_tbl_stmt(temporary, &true, tbl_name),
       create_view_stmt(temporary, if_not_exists, tbl_name, body),
       create_patch_view_stmt(temporary, if_not_exists, tbl_name),
       create_insert_trig(),
@@ -80,25 +83,25 @@ pub fn support_statements(meta_query_result: &str) -> String {
 }
 
 fn ast_to_crr_stmt(ast: Stmt) -> Result<(String, Option<String>), &'static str> {
-  match ast {
+  match &ast {
     Stmt::CreateTable { tbl_name, .. } => Ok((
-      rewrite_create_table(ast),
+      rewrite_create_table(&ast),
       Some(meta_query(tbl_name.to_crr_table_ident())),
     )),
     Stmt::AlterTable(tbl_name, ..) => Ok((
-      rewrite_alter(ast),
+      rewrite_alter(&ast),
       Some(meta_query(tbl_name.to_crr_table_ident())),
     )),
-    Stmt::CreateIndex { .. } => Ok((rewrite_create_index(ast), None)),
-    Stmt::DropIndex { .. } => Ok((rewrite_drop_index(ast), None)),
-    Stmt::DropTable { .. } => Ok((rewrite_drop_table(ast), None)),
+    Stmt::CreateIndex { .. } => Ok((rewrite_create_index(&ast), None)),
+    Stmt::DropIndex { .. } => Ok((rewrite_drop_index(&ast), None)),
+    Stmt::DropTable { .. } => Ok((rewrite_drop_table(&ast), None)),
     _ => Err("Received an unexpected crr statement"),
   }
 }
 
 // TODO: throw on missing primary key
-fn rewrite_create_table(ast: Stmt) -> String {
-  match ast {
+fn rewrite_create_table(ast: &Stmt) -> String {
+  match &ast {
     Stmt::CreateTable {
       temporary,
       if_not_exists,
@@ -109,19 +112,19 @@ fn rewrite_create_table(ast: Stmt) -> String {
   }
 }
 
-fn rewrite_create_index(ast: Stmt) -> String {
+fn rewrite_create_index(ast: &Stmt) -> String {
   "".to_string()
 }
 
-fn rewrite_drop_table(ast: Stmt) -> String {
+fn rewrite_drop_table(ast: &Stmt) -> String {
   "".to_string()
 }
 
-fn rewrite_drop_index(ast: Stmt) -> String {
+fn rewrite_drop_index(ast: &Stmt) -> String {
   "".to_string()
 }
 
-fn rewrite_alter(ast: Stmt) -> String {
+fn rewrite_alter(ast: &Stmt) -> String {
   match ast {
     // where can we get the full def from?
     // a pointer to a connection would have to be provided...

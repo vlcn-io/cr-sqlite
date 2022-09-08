@@ -1,3 +1,4 @@
+mod ast;
 mod parse;
 mod rewrite;
 

@@ -1,5 +1,6 @@
 use sqlite3_parser::ast::{CreateTableBody, QualifiedName, Stmt};
 
+use crate::ast::QualifiedNameExt;
 use crate::parse::parse;
 
 pub fn rewrite(query: &str) -> Result<String, &'static str> {
@@ -31,11 +32,8 @@ fn rewrite_alter(ast: Stmt) -> Vec<String> {
     // views, triggers
     Stmt::AlterTable(name, body) => vec![
       "BEGIN".to_string(),
-      format!("DROP VIEW IF EXISTS {}", qualified_name_to_ident(name)),
-      format!(
-        "DROP VIEW IF EXISTS {}",
-        qualified_name_to_patch_ident(name)
-      ),
+      format!("DROP VIEW IF EXISTS {}", name.to_view_ident()),
+      format!("DROP VIEW IF EXISTS {}", name.to_patch_view_ident()),
       create_alter_crr_tbl_stmt(),
       create_view_stmt(),
       create_patch_view_stmt(),
@@ -84,7 +82,7 @@ fn create_crr_tbl_stmt(
     "CREATE {temp_str} TABLE {ifne_str} {tbl_name_str} {}",
     temp_str = if temporary { "TEMPORARY" } else { "" },
     ifne_str = if if_not_exists { "IF NOT EXISTS" } else { "" },
-    tbl_name_str = qualified_name_to_ident(tbl_name),
+    tbl_name_str = tbl_name.to_view_ident(),
   )
 }
 
@@ -93,15 +91,3 @@ fn rewrite_create_index(ast: Stmt) -> Vec<String> {
 }
 
 // TODO: handle drop index!
-
-fn qualified_name_to_ident(name: QualifiedName) -> String {
-  if name.db_name.is_some() {
-    format!(
-      "\"{dbname}\".\"{name}\"",
-      dbname = name.db_name.unwrap().0,
-      name = name.name.0
-    )
-  } else {
-    format!("\"{name}\"", name = name.name.0)
-  }
-}

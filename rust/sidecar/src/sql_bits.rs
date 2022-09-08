@@ -6,6 +6,14 @@ pub fn ifne_str(if_not_exists: &bool) -> &'static str {
   }
 }
 
+pub fn if_exists_str(if_exists: &bool) -> &'static str {
+  if *if_exists {
+    "IF EXISTS"
+  } else {
+    ""
+  }
+}
+
 pub fn temp_str(temporary: &bool) -> &'static str {
   if *temporary {
     "TEMPORARY"

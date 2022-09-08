@@ -2,7 +2,7 @@ use sqlite3_parser::ast::Stmt;
 
 use crate::ast::{to_string, NameExt, QualifiedNameExt};
 use crate::parse::parse;
-use crate::sql_bits::{ifne_str, meta_query, unique_str};
+use crate::sql_bits::{if_exists_str, ifne_str, meta_query, unique_str};
 use crate::tables::{create_alter_crr_tbl_stmt, create_crr_clock_tbl_stmt, create_crr_tbl_stmt};
 use crate::triggers::{
   create_delete_trig, create_insert_trig, create_patch_trig, create_update_trig,
@@ -112,6 +112,9 @@ fn rewrite_create_table(ast: &Stmt) -> String {
   }
 }
 
+/**
+ * Creates the index against the crr table rather than view / non-crr
+ */
 fn rewrite_create_index(ast: &Stmt) -> String {
   match &ast {
     Stmt::CreateIndex {
@@ -141,16 +144,42 @@ fn rewrite_create_index(ast: &Stmt) -> String {
   }
 }
 
+/**
+ * Drops the:
+ * - view against the crr table
+ * - the crr table
+ * - the crr clock table
+ */
 fn rewrite_drop_table(ast: &Stmt) -> String {
   match &ast {
     Stmt::DropTable {
       if_exists,
       tbl_name,
-    } => format!(""),
+    } => vec![
+      format!(
+        "DROP VIEW {if_exists} {tbl_name}",
+        if_exists = if_exists_str(if_exists),
+        tbl_name = tbl_name.to_view_ident()
+      ),
+      format!(
+        "DROP TABLE {if_exists} {tbl_name}",
+        if_exists = if_exists_str(if_exists),
+        tbl_name = tbl_name.to_crr_table_ident()
+      ),
+      format!(
+        "DROP TABLE {if_exists} {tbl_name}",
+        if_exists = if_exists_str(if_exists),
+        tbl_name = tbl_name.to_crr_clock_table_ident()
+      ),
+    ]
+    .join(";\n"),
     _ => unreachable!(),
   }
 }
 
+/**
+ * Drops the index against the crr table
+ */
 fn rewrite_drop_index(ast: &Stmt) -> String {
   match &ast {
     Stmt::DropIndex {
@@ -161,6 +190,11 @@ fn rewrite_drop_index(ast: &Stmt) -> String {
   }
 }
 
+/**
+ * Drops views, creates alter statement that targets the crr table.
+ * Caller constructs a meta-query to use to fetch data to recreate
+ * views and triggers.
+ */
 fn rewrite_alter(ast: &Stmt) -> String {
   match ast {
     // where can we get the full def from?

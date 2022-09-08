@@ -1,4 +1,4 @@
-use sqlite3_parser::ast::QualifiedName;
+use sqlite3_parser::ast::{CreateTableBody, QualifiedName};
 
 pub trait QualifiedNameExt {
   fn to_view_ident(&self) -> String;
@@ -9,6 +9,10 @@ pub trait QualifiedNameExt {
   fn to_update_trig_ident(&self) -> String;
   fn to_delete_trig_ident(&self) -> String;
   fn to_patch_trig_ident(&self) -> String;
+}
+
+pub trait CreateTableBodyExt {
+  fn column_name_idents(&self) -> Vec<String>;
 }
 
 impl QualifiedNameExt for QualifiedName {
@@ -66,5 +70,11 @@ impl QualifiedNameExt for QualifiedName {
       Some(db_name) => format!("\"{}\".\"cfsql_patch_trig__{}\"", db_name.0, self.name.0),
       None => format!("\"cfsql_patch_trig__{}\"", self.name.0),
     }
+  }
+}
+
+impl CreateTableBodyExt for CreateTableBody {
+  fn column_name_idents(&self) -> Vec<String> {
+    return vec![];
   }
 }

@@ -2,6 +2,8 @@ use sqlite3_parser::ast::{CreateTableBody, QualifiedName, Stmt};
 
 use crate::ast::QualifiedNameExt;
 use crate::parse::parse;
+use crate::tables::{create_crr_clock_tbl_stmt, create_crr_tbl_stmt};
+use crate::views::{create_patch_view_stmt, create_view_stmt};
 
 pub fn rewrite(query: &str) -> Result<String, &'static str> {
   let parsed = parse(query).unwrap();
@@ -31,22 +33,23 @@ fn rewrite_alter(ast: Stmt) -> Vec<String> {
     // create:
     // views, triggers
     Stmt::AlterTable(name, body) => vec![
-      "BEGIN".to_string(),
+      "SAVEPOINT cfsql_crr_alter".to_string(),
       format!("DROP VIEW IF EXISTS {}", name.to_view_ident()),
       format!("DROP VIEW IF EXISTS {}", name.to_patch_view_ident()),
       create_alter_crr_tbl_stmt(),
-      create_view_stmt(),
-      create_patch_view_stmt(),
+      create_view_stmt(false, false, name, body),
+      create_patch_view_stmt(false, false, name),
       create_insert_trig(),
       create_update_trig(),
       create_delete_trig(),
       create_patch_trig(),
-      "COMMIT".to_string(),
+      "RELEASE cfsql_crr_alter".to_string(),
     ],
     _ => unreachable!(),
   }
 }
 
+// TODO: throw on missing primary key
 fn rewrite_create_table(ast: Stmt) -> Vec<String> {
   match ast {
     Stmt::CreateTable {
@@ -56,34 +59,20 @@ fn rewrite_create_table(ast: Stmt) -> Vec<String> {
       body,
     } => {
       vec![
-        "BEGIN".to_string(),
+        "SAVEPOINT cfsql_crr_alter".to_string(),
         create_crr_tbl_stmt(temporary, if_not_exists, tbl_name, body),
-        create_crr_clock_tbl_stmt(),
-        create_view_stmt(),
-        create_patch_view_stmt(),
+        create_crr_clock_tbl_stmt(temporary, if_not_exists, tbl_name),
+        create_view_stmt(temporary, if_not_exists, tbl_name, body),
+        create_patch_view_stmt(temporary, if_not_exists, tbl_name),
         create_insert_trig(),
         create_update_trig(),
         create_delete_trig(),
         create_patch_trig(),
-        "COMMIT".to_string(),
+        "RELEASE cfsql_crr_alter".to_string(),
       ]
     }
     _ => unreachable!(),
   }
-}
-
-fn create_crr_tbl_stmt(
-  temporary: bool,
-  if_not_exists: bool,
-  tbl_name: QualifiedName,
-  body: CreateTableBody,
-) -> String {
-  format!(
-    "CREATE {temp_str} TABLE {ifne_str} {tbl_name_str} {}",
-    temp_str = if temporary { "TEMPORARY" } else { "" },
-    ifne_str = if if_not_exists { "IF NOT EXISTS" } else { "" },
-    tbl_name_str = tbl_name.to_view_ident(),
-  )
 }
 
 fn rewrite_create_index(ast: Stmt) -> Vec<String> {

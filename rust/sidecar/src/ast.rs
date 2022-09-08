@@ -1,4 +1,6 @@
-use sqlite3_parser::ast::{CreateTableBody, QualifiedName};
+use std::fmt::Display;
+
+use sqlite3_parser::ast::{CreateTableBody, QualifiedName, Stmt};
 
 pub trait QualifiedNameExt {
   fn to_view_ident(&self) -> String;
@@ -9,6 +11,7 @@ pub trait QualifiedNameExt {
   fn to_update_trig_ident(&self) -> String;
   fn to_delete_trig_ident(&self) -> String;
   fn to_patch_trig_ident(&self) -> String;
+  fn to_ident(&self) -> String;
 }
 
 pub trait CreateTableBodyExt {
@@ -17,6 +20,10 @@ pub trait CreateTableBodyExt {
 
 impl QualifiedNameExt for QualifiedName {
   fn to_view_ident(&self) -> String {
+    QualifiedNameExt::to_ident(self)
+  }
+
+  fn to_ident(&self) -> String {
     match &self.db_name {
       Some(db_name) => format!("\"{}\".\"{}\"", db_name.0, self.name.0),
       None => format!("\"{}\"", self.name.0),

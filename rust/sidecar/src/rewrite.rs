@@ -2,7 +2,7 @@ use sqlite3_parser::ast::Stmt;
 
 use crate::ast::QualifiedNameExt;
 use crate::parse::parse;
-use crate::sql_bits::meta_query;
+use crate::sql_bits::{ifne_str, meta_query, sorted_col_name_ident_list, unique_str};
 use crate::tables::{create_alter_crr_tbl_stmt, create_crr_clock_tbl_stmt, create_crr_tbl_stmt};
 use crate::triggers::{
   create_delete_trig, create_insert_trig, create_patch_trig, create_update_trig,
@@ -113,7 +113,26 @@ fn rewrite_create_table(ast: &Stmt) -> String {
 }
 
 fn rewrite_create_index(ast: &Stmt) -> String {
-  "".to_string()
+  format!("")
+  // match &ast {
+  //   Stmt::CreateIndex {
+  //     unique,
+  //     if_not_exists,
+  //     idx_name,
+  //     tbl_name,
+  //     columns,
+  //     where_clause,
+  //   } => format!(
+  //     "CREATE {unique} INDEX {if_not_exists} {idx_name} ON {tbl_name} ({columns}) {where_clause}",
+  //     unique = unique_str(unique),
+  //     if_not_exists = ifne_str(if_not_exists),
+  //     idx_name = idx_name.to_ident(),
+  //     tbl_name = tbl_name.to_crr_table_ident(),
+  //     columns = sorted_col_name_ident_list(columns).join(", "),
+  //     where_clause =
+  //   ),
+  //   _ => unreachable!(),
+  // }
 }
 
 fn rewrite_drop_table(ast: &Stmt) -> String {
@@ -135,5 +154,34 @@ fn rewrite_alter(ast: &Stmt) -> String {
     ]
     .join(";\n"),
     _ => unreachable!(),
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  // test out `ToTokens` to see if we can easily stringify a where clause or some such thing
+
+  use std::fmt::{self, Display, Formatter};
+
+  use sqlite3_parser::ast::ToTokens;
+
+  use crate::parse;
+
+  struct Wrap<T: ToTokens> {
+    pub val: T,
+  }
+
+  impl<T: ToTokens> Display for Wrap<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+      self.val.to_fmt(f)
+    }
+  }
+
+  #[test]
+  fn explore() {
+    let sql = "CREATE CRR INDEX foo ON bar (a, b) WHERE a > 1";
+    let ast = parse(sql).unwrap().unwrap();
+
+    println!("{}", Wrap { val: ast });
   }
 }

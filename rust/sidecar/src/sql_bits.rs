@@ -14,9 +14,21 @@ pub fn temp_str(temporary: &bool) -> &'static str {
   }
 }
 
+pub fn unique_str(unique: &bool) -> &'static str {
+  if *unique {
+    "UNIQUE"
+  } else {
+    ""
+  }
+}
+
 pub fn meta_query(tbl: String) -> String {
   format!(
     "SELECT sql FROM sqlite_schema WHERE type = 'table' AND tbl_name = {};",
     tbl
   )
+}
+
+pub fn sorted_col_name_ident_list() -> Vec<String> {
+  vec![]
 }

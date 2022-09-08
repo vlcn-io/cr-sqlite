@@ -21,10 +21,11 @@ use sqlite3_parser::lexer::sql::Parser;
 use substring::Substring;
 
 lazy_static! {
-  static ref RE: Regex = RegexBuilder::new(r"^(?P<create>CREATE\s+CRR)|(?P<alter>ALTER\s+CRR)")
-    .case_insensitive(true)
-    .build()
-    .unwrap();
+  static ref RE: Regex =
+    RegexBuilder::new(r"^(?P<create>CREATE\s+CRR)|(?P<alter>ALTER\s+CRR)|(?P<drop>DROP\s+CRR)")
+      .case_insensitive(true)
+      .build()
+      .unwrap();
 }
 
 fn is_crr_stmt(query: &str) -> bool {
@@ -39,8 +40,9 @@ fn convert_crr_stmt_to_sql(query: &str) -> Result<String, &'static str> {
 
   let create = caps.name("create");
   let alter = caps.name("alter");
+  let drop = caps.name("drop");
 
-  let crr_type = create.or(alter);
+  let crr_type = create.or(alter).or(drop);
 
   match crr_type {
     Some(m) => Ok(
@@ -129,8 +131,11 @@ mod tests {
   #[test]
   fn test_is_crr_stmt() {
     assert_eq!(is_crr_stmt("CREATE CRR"), true);
+    assert_eq!(is_crr_stmt("CREATE CRR TABLE"), true);
     assert_eq!(is_crr_stmt("CREATE CRR INDEX"), true);
     assert_eq!(is_crr_stmt("ALTER CRR"), true);
+    assert_eq!(is_crr_stmt("DROP CRR TABLE"), true);
+    assert_eq!(is_crr_stmt("DROP CRR INDEX"), true);
     assert_eq!(
       is_crr_stmt(
         "ALTER

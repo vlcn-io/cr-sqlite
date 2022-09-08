@@ -1,8 +1,8 @@
 use sqlite3_parser::ast::Stmt;
 
-use crate::ast::QualifiedNameExt;
+use crate::ast::{to_string, NameExt, QualifiedNameExt};
 use crate::parse::parse;
-use crate::sql_bits::{ifne_str, meta_query, sorted_col_name_ident_list, unique_str};
+use crate::sql_bits::{ifne_str, meta_query, unique_str};
 use crate::tables::{create_alter_crr_tbl_stmt, create_crr_clock_tbl_stmt, create_crr_tbl_stmt};
 use crate::triggers::{
   create_delete_trig, create_insert_trig, create_patch_trig, create_update_trig,
@@ -113,34 +113,52 @@ fn rewrite_create_table(ast: &Stmt) -> String {
 }
 
 fn rewrite_create_index(ast: &Stmt) -> String {
-  format!("")
-  // match &ast {
-  //   Stmt::CreateIndex {
-  //     unique,
-  //     if_not_exists,
-  //     idx_name,
-  //     tbl_name,
-  //     columns,
-  //     where_clause,
-  //   } => format!(
-  //     "CREATE {unique} INDEX {if_not_exists} {idx_name} ON {tbl_name} ({columns}) {where_clause}",
-  //     unique = unique_str(unique),
-  //     if_not_exists = ifne_str(if_not_exists),
-  //     idx_name = idx_name.to_ident(),
-  //     tbl_name = tbl_name.to_crr_table_ident(),
-  //     columns = sorted_col_name_ident_list(columns).join(", "),
-  //     where_clause =
-  //   ),
-  //   _ => unreachable!(),
-  // }
+  match &ast {
+    Stmt::CreateIndex {
+      unique,
+      if_not_exists,
+      idx_name,
+      tbl_name,
+      columns,
+      where_clause,
+    } => format!(
+      "CREATE {unique} INDEX {if_not_exists} {idx_name} ON {tbl_name} ({columns}) {where_clause}",
+      unique = unique_str(unique),
+      if_not_exists = ifne_str(if_not_exists),
+      idx_name = idx_name.to_ident(),
+      tbl_name = tbl_name.to_crr_table_ident(),
+      columns = columns
+        .iter()
+        .map(|x| to_string(x))
+        .collect::<Vec<_>>()
+        .join(","),
+      where_clause = match where_clause {
+        None => "".to_string(),
+        Some(clause) => to_string(clause),
+      }
+    ),
+    _ => unreachable!(),
+  }
 }
 
 fn rewrite_drop_table(ast: &Stmt) -> String {
-  "".to_string()
+  match &ast {
+    Stmt::DropTable {
+      if_exists,
+      tbl_name,
+    } => format!(""),
+    _ => unreachable!(),
+  }
 }
 
 fn rewrite_drop_index(ast: &Stmt) -> String {
-  "".to_string()
+  match &ast {
+    Stmt::DropIndex {
+      if_exists,
+      idx_name,
+    } => format!(""),
+    _ => unreachable!(),
+  }
 }
 
 fn rewrite_alter(ast: &Stmt) -> String {

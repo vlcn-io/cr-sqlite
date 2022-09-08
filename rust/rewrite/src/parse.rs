@@ -85,7 +85,7 @@ pub fn parse(query: &str) -> Result<Option<Stmt>, &'static str> {
 
 #[cfg(test)]
 mod tests {
-  use crate::{convert_crr_stmt_to_sql, is_crr_stmt, parse};
+  use crate::parse::{convert_crr_stmt_to_sql, is_crr_stmt, parse};
   use sqlite3_parser::ast::{ColumnDefinition, Name, Stmt, TableOptions};
 
   #[test]

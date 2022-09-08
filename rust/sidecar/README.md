@@ -16,7 +16,7 @@ Enter "sidecar"
 
 Sidecar is a library to which you pass:
 
-1. A connection
+1. A sqlite connection
 2. Statements to create or alter conflict-free tables
 
 and sidecar will create or update the schemas for the given conflict-free table(s).
@@ -44,3 +44,9 @@ class UnifiedConnection {
   }
 }
 ```
+
+---
+
+We can't sidecar it...
+Sidecar would need to create own connection...
+Or... we need the re-write lib and invoke that.

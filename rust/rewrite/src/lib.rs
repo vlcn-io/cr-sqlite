@@ -1,8 +1,5 @@
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        let result = 2 + 2;
-        assert_eq!(result, 4);
-    }
-}
+mod parse;
+mod rewrite;
+
+pub use crate::parse::parse;
+pub use crate::rewrite::rewrite;

@@ -1,6 +1,6 @@
-use std::fmt::Display;
+use std::fmt::{self, Display, Formatter};
 
-use sqlite3_parser::ast::{CreateTableBody, QualifiedName, Stmt};
+use sqlite3_parser::ast::{CreateTableBody, QualifiedName, ToTokens};
 
 pub trait QualifiedNameExt {
   fn to_view_ident(&self) -> String;
@@ -83,5 +83,15 @@ impl QualifiedNameExt for QualifiedName {
 impl CreateTableBodyExt for CreateTableBody {
   fn column_name_idents(&self) -> Vec<String> {
     return vec![];
+  }
+}
+
+pub struct WrapForDisplay<T: ToTokens> {
+  pub val: T,
+}
+
+impl<T: ToTokens> Display for WrapForDisplay<T> {
+  fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+    self.val.to_fmt(f)
   }
 }

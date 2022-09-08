@@ -161,27 +161,13 @@ fn rewrite_alter(ast: &Stmt) -> String {
 mod tests {
   // test out `ToTokens` to see if we can easily stringify a where clause or some such thing
 
-  use std::fmt::{self, Display, Formatter};
-
-  use sqlite3_parser::ast::ToTokens;
-
-  use crate::parse;
-
-  struct Wrap<T: ToTokens> {
-    pub val: T,
-  }
-
-  impl<T: ToTokens> Display for Wrap<T> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-      self.val.to_fmt(f)
-    }
-  }
+  use crate::{ast::WrapForDisplay, parse};
 
   #[test]
   fn explore() {
-    let sql = "CREATE CRR INDEX foo ON bar (a, b) WHERE a > 1";
+    let sql = "CREATE CRR INDEX \"foo\" ON \"bar\" (\"a\", \"b\") WHERE \"a\" > 1";
     let ast = parse(sql).unwrap().unwrap();
 
-    println!("{}", Wrap { val: ast });
+    println!("{}", WrapForDisplay { val: ast });
   }
 }

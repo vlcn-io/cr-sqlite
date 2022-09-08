@@ -36,3 +36,5 @@ pub fn create_crr_clock_tbl_stmt(
     tbl_name = tbl_name.to_crr_clock_table_ident(),
   )
 }
+
+pub fn create_alter_crr_tbl_stmt() -> String {}

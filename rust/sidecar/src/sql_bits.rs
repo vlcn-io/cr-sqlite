@@ -13,3 +13,10 @@ pub fn temp_str(temporary: bool) -> &'static str {
     ""
   }
 }
+
+pub fn meta_query(tbl: String) -> String {
+  format!(
+    "SELECT sql FROM sqlite_schema WHERE type = 'table' AND tbl_name = {};",
+    tbl
+  )
+}

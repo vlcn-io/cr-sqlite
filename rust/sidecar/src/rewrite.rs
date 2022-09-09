@@ -74,7 +74,7 @@ pub fn support_statements(meta_query_result: &str) -> String {
       create_patch_view_stmt(temporary, if_not_exists, tbl_name),
       create_insert_trig(if_not_exists, tbl_name, body),
       create_update_trig(if_not_exists, tbl_name, body),
-      create_delete_trig(if_not_exists, tbl_name, body),
+      create_delete_trig(if_not_exists, tbl_name),
       create_patch_trig(if_not_exists, tbl_name, body),
     ]
     .join(";\n"),

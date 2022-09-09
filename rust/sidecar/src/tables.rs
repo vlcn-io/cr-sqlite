@@ -94,20 +94,20 @@ fn to_crr_column_idents(
 
     // create the version col
     ret.push(to_string(ColumnDefinition {
-      col_name: Name(format!("{}__cfsql_v", c.col_name.0)),
+      col_name: Name(format!("\"{}__cfsql_v\"", c.col_name.0)),
       col_type: None,
       constraints: vec![],
     }));
   }
 
   ret.push(to_string(ColumnDefinition {
-    col_name: Name("cfsql_cl".to_string()),
+    col_name: Name("\"cfsql_cl\"".to_string()),
     col_type: None,
     constraints: vec![],
   }));
 
   ret.push(to_string(ColumnDefinition {
-    col_name: Name("cfsql_src".to_string()),
+    col_name: Name("\"cfsql_src\"".to_string()),
     col_type: None,
     constraints: vec![],
   }));
@@ -186,7 +186,7 @@ mod tests {
   use indoc::indoc;
   use sqlite3_parser::ast::{
     ColumnConstraint, ColumnDefinition, CreateTableBody, Expr, Id, Name, NamedColumnConstraint,
-    NamedTableConstraint, QualifiedName, SortedColumn, TableOptions,
+    NamedTableConstraint, QualifiedName, SortedColumn, TableConstraint, TableOptions,
   };
 
   #[test]
@@ -240,7 +240,7 @@ mod tests {
   fn test_to_crr_column_idents() {
     assert_eq!(
       to_crr_column_idents(&vec![], &None),
-      vec!["cfsql_cl", "cfsql_src"]
+      vec!["\"cfsql_cl\"", "\"cfsql_src\""]
     );
 
     assert_eq!(
@@ -259,7 +259,7 @@ mod tests {
         }],
         &None
       ),
-      vec!["a PRIMARY KEY", "cfsql_cl", "cfsql_src"]
+      vec!["a PRIMARY KEY", "\"cfsql_cl\"", "\"cfsql_src\""]
     );
 
     assert_eq!(
@@ -271,18 +271,79 @@ mod tests {
         }],
         &None
       ),
-      vec!["a", "a__cfsql_v", "cfsql_cl", "cfsql_src"]
+      vec!["a", "\"a__cfsql_v\"", "\"cfsql_cl\"", "\"cfsql_src\""]
     );
 
-    // TODO: add a test for when the primary key def is in a table constraint instead
+    assert_eq!(
+      to_crr_column_idents(
+        &vec![ColumnDefinition {
+          col_name: Name("a".to_string()),
+          col_type: None,
+          constraints: vec![]
+        }],
+        &Some(vec![NamedTableConstraint {
+          name: None,
+          constraint: TableConstraint::PrimaryKey {
+            columns: vec![SortedColumn {
+              expr: Expr::Id(Id("a".to_string())),
+              order: None,
+              nulls: None
+            }],
+            auto_increment: false,
+            conflict_clause: None
+          }
+        }])
+      ),
+      vec!["a", "\"cfsql_cl\"", "\"cfsql_src\""]
+    );
   }
 
   #[test]
   fn test_create_body_def() {
-    create_body_def(&CreateTableBody::ColumnsAndConstraints {
-      columns: vec![],
-      constraints: None,
-      options: TableOptions::NONE,
-    });
+    assert_eq!(
+      create_body_def(&CreateTableBody::ColumnsAndConstraints {
+        columns: vec![],
+        constraints: None,
+        options: TableOptions::NONE,
+      }),
+      Ok("(\"cfsql_cl\",\n\"cfsql_src\") ".to_string())
+    );
+
+    assert_eq!(
+      create_body_def(&CreateTableBody::ColumnsAndConstraints {
+        columns: vec![ColumnDefinition {
+          col_name: Name("a".to_string()),
+          col_type: None,
+          constraints: vec![]
+        }],
+        constraints: Some(vec![NamedTableConstraint {
+          name: None,
+          constraint: TableConstraint::PrimaryKey {
+            columns: vec![SortedColumn {
+              expr: Expr::Id(Id("a".to_string())),
+              order: None,
+              nulls: None
+            }],
+            auto_increment: false,
+            conflict_clause: None
+          }
+        }]),
+        options: TableOptions::NONE,
+      }),
+      Ok("(a,\n\"cfsql_cl\",\n\"cfsql_src\",\nPRIMARY KEY (a)) ".to_string())
+    );
+
+    assert_eq!(
+      create_body_def(&CreateTableBody::ColumnsAndConstraints {
+        columns: vec![ColumnDefinition {
+          col_name: Name("a".to_string()),
+          col_type: None,
+          constraints: vec![]
+        }],
+        constraints: None,
+        options: TableOptions::NONE,
+      }),
+      Ok("(a,\n\"a__cfsql_v\",\n\"cfsql_cl\",\n\"cfsql_src\") ".to_string())
+    );
   }
 }

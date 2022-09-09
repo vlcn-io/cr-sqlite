@@ -1,6 +1,6 @@
 use sqlite3_parser::ast::Stmt;
 
-use crate::ast::{to_string, NameExt, QualifiedNameExt};
+use crate::ast::{to_string, wrap_for_display, NameExt, QualifiedNameExt};
 use crate::parse::parse;
 use crate::sql_bits::{if_exists_str, ifne_str, meta_query, unique_str};
 use crate::tables::{create_alter_crr_tbl_stmt, create_crr_clock_tbl_stmt, create_crr_tbl_stmt};
@@ -185,7 +185,11 @@ fn rewrite_drop_index(ast: &Stmt) -> String {
     Stmt::DropIndex {
       if_exists,
       idx_name,
-    } => format!(""),
+    } => format!(
+      "DROP INDEX {if_exists} {idx_name}",
+      if_exists = if_exists_str(if_exists),
+      idx_name = wrap_for_display(idx_name)
+    ),
     _ => unreachable!(),
   }
 }
@@ -202,7 +206,7 @@ fn rewrite_alter(ast: &Stmt) -> String {
     Stmt::AlterTable(name, body) => vec![
       format!("DROP VIEW IF EXISTS {}", name.to_view_ident()),
       format!("DROP VIEW IF EXISTS {}", name.to_patch_view_ident()),
-      create_alter_crr_tbl_stmt(),
+      create_alter_crr_tbl_stmt(body),
     ]
     .join(";\n"),
     _ => unreachable!(),

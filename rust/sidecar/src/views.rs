@@ -1,5 +1,5 @@
 use crate::{
-  ast::{CreateTableBodyExt, QualifiedNameExt},
+  ast::{CreateTableBodyExt, NameExt, QualifiedNameExt},
   sql_bits::{ifne_str, temp_str},
 };
 use sqlite3_parser::ast::{CreateTableBody, QualifiedName};
@@ -22,7 +22,13 @@ pub fn create_view_stmt(
     temporary = temp_str(temporary),
     if_not_exists = ifne_str(if_not_exists),
     tbl_name = tbl_name.to_view_ident(),
-    column_list = body.column_name_idents().join(",\n"),
+    column_list = body
+      .non_crr_columns()
+      .unwrap()
+      .iter()
+      .map(|x| x.col_name.to_ident())
+      .collect::<Vec<_>>()
+      .join(",\n"),
     crr_tbl_name = tbl_name.to_crr_table_ident(),
   )
 }

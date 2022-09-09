@@ -1,6 +1,6 @@
 use std::fmt::{self, Display, Formatter};
 
-use sqlite3_parser::ast::{CreateTableBody, Name, QualifiedName, ToTokens};
+use sqlite3_parser::ast::{ColumnDefinition, CreateTableBody, Name, QualifiedName, ToTokens};
 
 // TODO: push down to name struct or add there as well
 pub trait QualifiedNameExt {
@@ -28,7 +28,7 @@ pub trait NameExt {
 }
 
 pub trait CreateTableBodyExt {
-  fn column_name_idents(&self) -> Vec<String>;
+  fn non_crr_columns(&self) -> Result<Vec<&ColumnDefinition>, &'static str>;
 }
 
 impl QualifiedNameExt for QualifiedName {
@@ -148,8 +148,20 @@ impl NameExt for Name {
 }
 
 impl CreateTableBodyExt for CreateTableBody {
-  fn column_name_idents(&self) -> Vec<String> {
-    return vec![];
+  fn non_crr_columns(&self) -> Result<Vec<&ColumnDefinition>, &'static str> {
+    match self {
+      Self::ColumnsAndConstraints {
+        columns,
+        constraints,
+        options,
+      } => Ok(
+        columns
+          .iter()
+          .filter(|x| !x.col_name.0.contains("cfsql"))
+          .collect::<Vec<_>>(),
+      ),
+      _ => Err("table creation from select is not supported for crr creation"),
+    }
   }
 }
 
@@ -165,4 +177,8 @@ impl<T: ToTokens> Display for WrapForDisplay<T> {
 
 pub fn to_string<T: ToTokens>(x: T) -> String {
   format!("{}", WrapForDisplay { val: x })
+}
+
+pub fn wrap_for_display<T: ToTokens>(x: T) -> WrapForDisplay<T> {
+  WrapForDisplay { val: x }
 }

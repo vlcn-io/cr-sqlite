@@ -1,7 +1,8 @@
 use std::fmt::{self, Display, Formatter};
 
 use sqlite3_parser::ast::{
-  ColumnConstraint, ColumnDefinition, CreateTableBody, Name, QualifiedName, ToTokens,
+  ColumnConstraint, ColumnDefinition, CreateTableBody, Expr, Name, NamedTableConstraint,
+  QualifiedName, TableConstraint, ToTokens,
 };
 
 // TODO: push down to name struct or add there as well
@@ -27,6 +28,7 @@ pub trait NameExt {
   fn to_delete_trig_ident(&self) -> String;
   fn to_patch_trig_ident(&self) -> String;
   fn to_ident(&self) -> String;
+  fn to_naked(&self) -> String;
 }
 
 pub trait CreateTableBodyExt {
@@ -34,7 +36,7 @@ pub trait CreateTableBodyExt {
 }
 
 pub trait ColumnDefinitionExt {
-  fn is_primary_key(&self) -> bool;
+  fn is_primary_key(&self, table_constraints: &Option<Vec<NamedTableConstraint>>) -> bool;
 }
 
 impl QualifiedNameExt for QualifiedName {
@@ -45,21 +47,21 @@ impl QualifiedNameExt for QualifiedName {
   fn to_ident(&self) -> String {
     match &self.db_name {
       Some(db_name) => format!("{}.{}", db_name.to_ident(), self.name.to_ident()),
-      None => format!("\"{}\"", self.name.0),
+      None => self.name.to_ident(),
     }
   }
 
   fn to_patch_view_ident(&self) -> String {
     match &self.db_name {
       Some(db_name) => format!("{}.{}", db_name.to_ident(), self.name.to_patch_view_ident()),
-      None => format!("\"cfsql_patch__{}\"", self.name.0),
+      None => self.name.to_patch_view_ident(),
     }
   }
 
   fn to_crr_table_ident(&self) -> String {
     match &self.db_name {
       Some(db_name) => format!("{}.{}", db_name.to_ident(), self.name.to_crr_table_ident()),
-      None => format!("\"cfsql_crr__{}\"", self.name.0),
+      None => self.name.to_crr_table_ident(),
     }
   }
 
@@ -70,7 +72,7 @@ impl QualifiedNameExt for QualifiedName {
         db_name.to_ident(),
         self.name.to_crr_clock_table_ident()
       ),
-      None => format!("\"cfsql_clock__{}\"", self.name.0),
+      None => self.name.to_crr_clock_table_ident(),
     }
   }
 
@@ -81,7 +83,7 @@ impl QualifiedNameExt for QualifiedName {
         db_name.to_ident(),
         self.name.to_insert_trig_ident()
       ),
-      None => format!("\"cfsql_ins_trig__{}\"", self.name.0),
+      None => self.name.to_insert_trig_ident(),
     }
   }
 
@@ -92,7 +94,7 @@ impl QualifiedNameExt for QualifiedName {
         db_name.to_ident(),
         self.name.to_update_trig_ident()
       ),
-      None => format!("\"cfsql_up_trig__{}\"", self.name.0),
+      None => self.name.to_update_trig_ident(),
     }
   }
 
@@ -103,21 +105,21 @@ impl QualifiedNameExt for QualifiedName {
         db_name.to_ident(),
         self.name.to_delete_trig_ident()
       ),
-      None => format!("\"cfsql_del_trig__{}\"", self.name.0),
+      None => self.name.to_delete_trig_ident(),
     }
   }
 
   fn to_patch_trig_ident(&self) -> String {
     match &self.db_name {
       Some(db_name) => format!("{}.{}", db_name.to_ident(), self.name.to_patch_trig_ident()),
-      None => format!("\"cfsql_patch_trig__{}\"", self.name.0),
+      None => self.name.to_patch_trig_ident(),
     }
   }
 }
 
 impl NameExt for Name {
   fn to_ident(&self) -> String {
-    format!("\"{}\"", self.0)
+    format!("\"{}\"", self.to_naked())
   }
 
   fn to_view_ident(&self) -> String {
@@ -125,42 +127,42 @@ impl NameExt for Name {
   }
 
   fn to_patch_view_ident(&self) -> String {
-    format!("\"cfsql_patch__{}\"", self.0)
+    format!("\"cfsql_patch__{}\"", self.to_naked())
   }
 
   fn to_crr_table_ident(&self) -> String {
-    format!("\"cfsql_crr__{}\"", self.0)
+    format!("\"cfsql_crr__{}\"", self.to_naked())
   }
 
   fn to_crr_clock_table_ident(&self) -> String {
-    format!("\"cfsql_clock__{}\"", self.0)
+    format!("\"cfsql_clock__{}\"", self.to_naked())
   }
 
   fn to_insert_trig_ident(&self) -> String {
-    format!("\"cfsql_ins_trig__{}\"", self.0)
+    format!("\"cfsql_ins_trig__{}\"", self.to_naked())
   }
 
   fn to_update_trig_ident(&self) -> String {
-    format!("\"cfsql_up_trig__{}\"", self.0)
+    format!("\"cfsql_up_trig__{}\"", self.to_naked())
   }
 
   fn to_delete_trig_ident(&self) -> String {
-    format!("\"cfsql_del_trig__{}\"", self.0)
+    format!("\"cfsql_del_trig__{}\"", self.to_naked())
   }
 
   fn to_patch_trig_ident(&self) -> String {
-    format!("\"cfsql_patch_trig__{}\"", self.0)
+    format!("\"cfsql_patch_trig__{}\"", self.to_naked())
+  }
+
+  fn to_naked(&self) -> String {
+    self.0.replace(&['[', '"', ']', '`'][..], "")
   }
 }
 
 impl CreateTableBodyExt for CreateTableBody {
   fn non_crr_columns(&self) -> Result<Vec<&ColumnDefinition>, &'static str> {
     match self {
-      Self::ColumnsAndConstraints {
-        columns,
-        constraints,
-        options,
-      } => Ok(
+      Self::ColumnsAndConstraints { columns, .. } => Ok(
         columns
           .iter()
           .filter(|x| !x.col_name.0.contains("cfsql"))
@@ -172,11 +174,25 @@ impl CreateTableBodyExt for CreateTableBody {
 }
 
 impl ColumnDefinitionExt for ColumnDefinition {
-  fn is_primary_key(&self) -> bool {
+  fn is_primary_key(&self, table_constraints: &Option<Vec<NamedTableConstraint>>) -> bool {
     self.constraints.iter().any(|c| match c.constraint {
       ColumnConstraint::PrimaryKey { .. } => true,
       _ => false,
-    })
+    }) || (table_constraints.is_some()
+      && table_constraints
+        .as_ref()
+        .unwrap()
+        .iter()
+        .any(|c| match &c.constraint {
+          TableConstraint::PrimaryKey { columns, .. } => {
+            columns.len() == 1
+              && match &columns[0].expr {
+                Expr::Id(id) => id.0 == self.col_name.0,
+                _ => false,
+              }
+          }
+          _ => false,
+        }))
   }
 }
 
@@ -196,4 +212,29 @@ pub fn to_string<T: ToTokens>(x: T) -> String {
 
 pub fn wrap_for_display<T: ToTokens>(x: T) -> WrapForDisplay<T> {
   WrapForDisplay { val: x }
+}
+
+#[cfg(test)]
+mod tests {
+  use fallible_iterator::FallibleIterator;
+  use sqlite3_parser::{
+    ast::{Cmd, Stmt},
+    lexer::sql::Parser,
+  };
+
+  use super::QualifiedNameExt;
+
+  #[test]
+  fn test_parsed_to_ident() {
+    let sql = "CREATE TABLE [foo] (a, b)";
+    let mut parser = Parser::new(sql.as_bytes());
+
+    let cmd = parser.next().unwrap().unwrap();
+    match cmd {
+      Cmd::Stmt(Stmt::CreateTable { tbl_name, .. }) => {
+        assert_eq!(tbl_name.to_ident(), "\"foo\"")
+      }
+      _ => unreachable!(),
+    }
+  }
 }

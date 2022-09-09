@@ -50,3 +50,22 @@ pub fn table_opts_str(opts: &TableOptions) -> String {
 
   options.join(", ")
 }
+
+#[cfg(test)]
+mod tests {
+  use sqlite3_parser::ast::TableOptions;
+
+  use super::table_opts_str;
+
+  #[test]
+  fn table_opts() {
+    assert_eq!(table_opts_str(&TableOptions::NONE), "");
+    assert_eq!(
+      table_opts_str(&TableOptions::WITHOUT_ROWID),
+      "WITHOUT ROWID"
+    );
+    assert_eq!(table_opts_str(&TableOptions::STRICT), "STRICT");
+    let flags = TableOptions::WITHOUT_ROWID | TableOptions::STRICT;
+    assert_eq!(table_opts_str(&flags), "WITHOUT ROWID, STRICT");
+  }
+}

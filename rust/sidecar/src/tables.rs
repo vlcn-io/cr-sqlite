@@ -1,3 +1,4 @@
+use indoc::indoc;
 use sqlite3_parser::ast::{
   AlterTableBody, ColumnDefinition, CreateTableBody, Name, NamedTableConstraint, QualifiedName,
 };
@@ -55,7 +56,7 @@ fn create_body_def(body: &CreateTableBody) -> Result<String, &'static str> {
       "({column_and_constraint_list}) {table_options}",
       // add version columns, causal length and update src
       // validate constraints (e.g., too many unique keys)
-      column_and_constraint_list = to_crr_column_idents(columns)
+      column_and_constraint_list = to_crr_column_idents(columns, constraints)
         .into_iter()
         .chain(to_crr_constraint_idents(constraints).into_iter())
         .collect::<Vec<_>>()
@@ -76,7 +77,10 @@ fn create_body_def(body: &CreateTableBody) -> Result<String, &'static str> {
  * We might want to narrow the scope of this function down to only adding version columns and using
  * other functions to append causal length and update source.
  */
-fn to_crr_column_idents(columns: &Vec<ColumnDefinition>) -> Vec<String> {
+fn to_crr_column_idents(
+  columns: &Vec<ColumnDefinition>,
+  table_constraints: &Option<Vec<NamedTableConstraint>>,
+) -> Vec<String> {
   let mut ret: Vec<String> = vec![];
 
   // TODO: primary keys do not get versions.
@@ -84,7 +88,7 @@ fn to_crr_column_idents(columns: &Vec<ColumnDefinition>) -> Vec<String> {
   for c in columns {
     // just copy over the definition
     ret.push(to_string(c));
-    if c.is_primary_key() {
+    if c.is_primary_key(table_constraints) {
       continue;
     }
 
@@ -134,13 +138,26 @@ pub fn create_crr_clock_tbl_stmt(
   if_not_exists: &bool,
   tbl_name: &QualifiedName,
 ) -> String {
+  // TODO: rather than mangling strings, potentially just build and re-encode the ast --
+  // to_string(Stmt::CreateTable {
+  //   temporary: *temporary,
+  //   if_not_exists: *if_not_exists,
+  //   tbl_name: *tbl_name,
+  //   body: CreateTableBody::ColumnsAndConstraints {
+  //     columns: (),
+  //     constraints: (),
+  //     options: (),
+  //   },
+  // });
   format!(
-    "CREATE {temporary} TABLE {ifne} {tbl_name} (
-    \"id\" integer NOT NULL,
-    \"siteId\" integer NOT NULL,
-    \"version\" integer NOT NULL,
-    PRIMARY KEY (\"siteId\", \"id\")
-  )",
+    indoc! {"
+      CREATE {temporary} TABLE {ifne} {tbl_name} (
+        \"id\" integer NOT NULL,
+        \"siteId\" integer NOT NULL,
+        \"version\" integer NOT NULL,
+        PRIMARY KEY (\"siteId\", \"id\")
+      )
+    "},
     temporary = temp_str(temporary),
     ifne = ifne_str(if_not_exists),
     tbl_name = tbl_name.to_crr_clock_table_ident(),
@@ -159,4 +176,113 @@ pub fn create_alter_crr_tbl_stmt(body: &AlterTableBody) -> String {
   // add col -> std but crr tbl + version col
   // drop col -> std but crr tbl + drop version col
   format!("ALTER TABLE")
+}
+
+#[cfg(test)]
+mod tests {
+  use crate::tables::to_crr_column_idents;
+
+  use super::{create_body_def, create_crr_clock_tbl_stmt, to_crr_constraint_idents};
+  use indoc::indoc;
+  use sqlite3_parser::ast::{
+    ColumnConstraint, ColumnDefinition, CreateTableBody, Expr, Id, Name, NamedColumnConstraint,
+    NamedTableConstraint, QualifiedName, SortedColumn, TableOptions,
+  };
+
+  #[test]
+  fn test_create_crr_clock_tbl_stmt() {
+    assert_eq!(
+      create_crr_clock_tbl_stmt(
+        &false,
+        &false,
+        &QualifiedName {
+          db_name: None,
+          name: Name("foo".to_string()),
+          alias: None,
+        },
+      ),
+      indoc! {"
+        CREATE  TABLE  \"cfsql_clock__foo\" (
+          \"id\" integer NOT NULL,
+          \"siteId\" integer NOT NULL,
+          \"version\" integer NOT NULL,
+          PRIMARY KEY (\"siteId\", \"id\")
+        )
+      "},
+    );
+  }
+
+  #[test]
+  fn test_to_crr_constraint_idents() {
+    let empty: Vec<String> = vec![];
+
+    assert_eq!(to_crr_constraint_idents(&None), empty);
+    assert_eq!(to_crr_constraint_idents(&Some(vec![])), empty);
+
+    assert_eq!(
+      to_crr_constraint_idents(&Some(vec![NamedTableConstraint {
+        constraint: sqlite3_parser::ast::TableConstraint::PrimaryKey {
+          columns: vec![SortedColumn {
+            expr: Expr::Id(Id("a".to_string())),
+            order: None,
+            nulls: None,
+          }],
+          auto_increment: false,
+          conflict_clause: None
+        },
+        name: None
+      }])),
+      vec!["PRIMARY KEY (a)"]
+    );
+  }
+
+  #[test]
+  fn test_to_crr_column_idents() {
+    assert_eq!(
+      to_crr_column_idents(&vec![], &None),
+      vec!["cfsql_cl", "cfsql_src"]
+    );
+
+    assert_eq!(
+      to_crr_column_idents(
+        &vec![ColumnDefinition {
+          col_name: Name("a".to_string()),
+          col_type: None,
+          constraints: vec![NamedColumnConstraint {
+            constraint: ColumnConstraint::PrimaryKey {
+              order: None,
+              conflict_clause: None,
+              auto_increment: false,
+            },
+            name: None
+          }]
+        }],
+        &None
+      ),
+      vec!["a PRIMARY KEY", "cfsql_cl", "cfsql_src"]
+    );
+
+    assert_eq!(
+      to_crr_column_idents(
+        &vec![ColumnDefinition {
+          col_name: Name("a".to_string()),
+          col_type: None,
+          constraints: vec![]
+        }],
+        &None
+      ),
+      vec!["a", "a__cfsql_v", "cfsql_cl", "cfsql_src"]
+    );
+
+    // TODO: add a test for when the primary key def is in a table constraint instead
+  }
+
+  #[test]
+  fn test_create_body_def() {
+    create_body_def(&CreateTableBody::ColumnsAndConstraints {
+      columns: vec![],
+      constraints: None,
+      options: TableOptions::NONE,
+    });
+  }
 }

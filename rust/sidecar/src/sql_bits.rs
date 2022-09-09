@@ -40,8 +40,13 @@ pub fn meta_query(tbl: String) -> String {
 }
 
 pub fn table_opts_str(opts: &TableOptions) -> String {
-  // if opts == &TableOptions::NONE {
-  //   "".to_string()
-  // } else if opts == &TableOptions::
-  "".to_string()
+  let mut options: Vec<&'static str> = vec![];
+  if opts.contains(TableOptions::WITHOUT_ROWID) {
+    options.push("WITHOUT ROWID");
+  }
+  if opts.contains(TableOptions::STRICT) {
+    options.push("STRICT");
+  }
+
+  options.join(", ")
 }

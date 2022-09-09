@@ -1,6 +1,8 @@
 use std::fmt::{self, Display, Formatter};
 
-use sqlite3_parser::ast::{ColumnDefinition, CreateTableBody, Name, QualifiedName, ToTokens};
+use sqlite3_parser::ast::{
+  ColumnConstraint, ColumnDefinition, CreateTableBody, Name, QualifiedName, ToTokens,
+};
 
 // TODO: push down to name struct or add there as well
 pub trait QualifiedNameExt {
@@ -29,6 +31,10 @@ pub trait NameExt {
 
 pub trait CreateTableBodyExt {
   fn non_crr_columns(&self) -> Result<Vec<&ColumnDefinition>, &'static str>;
+}
+
+pub trait ColumnDefinitionExt {
+  fn is_primary_key(&self) -> bool;
 }
 
 impl QualifiedNameExt for QualifiedName {
@@ -162,6 +168,15 @@ impl CreateTableBodyExt for CreateTableBody {
       ),
       _ => Err("table creation from select is not supported for crr creation"),
     }
+  }
+}
+
+impl ColumnDefinitionExt for ColumnDefinition {
+  fn is_primary_key(&self) -> bool {
+    self.constraints.iter().any(|c| match c.constraint {
+      ColumnConstraint::PrimaryKey { .. } => true,
+      _ => false,
+    })
   }
 }
 

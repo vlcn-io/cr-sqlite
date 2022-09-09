@@ -4,7 +4,7 @@ use sqlite3_parser::ast::{
 };
 
 use crate::{
-  ast::{to_string, ColumnDefinitionExt, QualifiedNameExt},
+  ast::{to_string, ColumnDefinitionExt, NameExt, QualifiedNameExt},
   sql_bits::{ifne_str, table_opts_str, temp_str},
 };
 
@@ -94,7 +94,7 @@ fn to_crr_column_idents(
 
     // create the version col
     ret.push(to_string(ColumnDefinition {
-      col_name: Name(format!("\"{}__cfsql_v\"", c.col_name.0)),
+      col_name: Name(format!("\"{}__cfsql_v\"", c.col_name.to_naked())),
       col_type: None,
       constraints: vec![],
     }));
@@ -138,17 +138,6 @@ pub fn create_crr_clock_tbl_stmt(
   if_not_exists: &bool,
   tbl_name: &QualifiedName,
 ) -> String {
-  // TODO: rather than mangling strings, potentially just build and re-encode the ast --
-  // to_string(Stmt::CreateTable {
-  //   temporary: *temporary,
-  //   if_not_exists: *if_not_exists,
-  //   tbl_name: *tbl_name,
-  //   body: CreateTableBody::ColumnsAndConstraints {
-  //     columns: (),
-  //     constraints: (),
-  //     options: (),
-  //   },
-  // });
   format!(
     indoc! {"
       CREATE {temporary} TABLE {ifne} {tbl_name} (
@@ -164,18 +153,53 @@ pub fn create_crr_clock_tbl_stmt(
   )
 }
 
-pub fn create_alter_crr_tbl_stmt(body: &AlterTableBody) -> String {
-  // branches:
-  // rename table
-  // rename col
-  // add col
-  // drop col
-  // --
-  // rename table -> rename crr
-  // rename col -> std but crr tbl + version col
-  // add col -> std but crr tbl + version col
-  // drop col -> std but crr tbl + drop version col
-  format!("ALTER TABLE")
+pub fn create_alter_crr_tbl_stmts(name: &QualifiedName, body: &AlterTableBody) -> String {
+  match body {
+    AlterTableBody::AddColumn(column_def) => vec![
+      format!(
+        "ALTER TABLE {crr_tbl_name} ADD COLUMN {column_def}",
+        crr_tbl_name = name.to_crr_table_ident(),
+        column_def = to_string(column_def)
+      ),
+      format!(
+        "ALTER TABLE {crr_tbl_name} ADD COLUMN \"{col_name}__cfsql_v\"",
+        crr_tbl_name = name.to_crr_table_ident(),
+        col_name = column_def.col_name.to_naked()
+      ),
+    ]
+    .join(";\n"),
+    AlterTableBody::DropColumn(col_name) => vec![
+      format!(
+        "ALTER TABLE {crr_tbl_name} DROP COLUMN {col_name}",
+        crr_tbl_name = name.to_crr_table_ident(),
+      ),
+      format!(
+        "ALTER TABLE {crr_tbl_name} DROP COLUMN \"{col_name}__cfsql_v\"",
+        crr_tbl_name = name.to_crr_table_ident(),
+        col_name = col_name.to_naked()
+      ),
+    ]
+    .join(";\n"),
+    AlterTableBody::RenameColumn { old, new } => vec![
+      format!(
+        "ALTER TABLE {crr_tbl_name} RENAME COLUMN {old} TO {new}",
+        crr_tbl_name = name.to_crr_table_ident(),
+      ),
+      format!(
+        "ALTER TABLE {crr_tbl_name} RENAME COLUMN \"{old}__cfsql_v\" TO \"{new}__cfsql_v\"",
+        crr_tbl_name = name.to_crr_table_ident(),
+        old = old.to_naked(),
+        new = new.to_naked(),
+      ),
+    ]
+    .join(";\n"),
+    AlterTableBody::RenameTo(tbl_name) => {
+      format!(
+        "ALTER TABLE {crr_tbl_name} RENAME TO {tbl_name}",
+        crr_tbl_name = name.to_crr_table_ident(),
+      )
+    }
+  }
 }
 
 #[cfg(test)]

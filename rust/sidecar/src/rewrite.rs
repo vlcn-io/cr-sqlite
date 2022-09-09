@@ -3,7 +3,7 @@ use sqlite3_parser::ast::Stmt;
 use crate::ast::{to_string, wrap_for_display, NameExt, QualifiedNameExt};
 use crate::parse::parse;
 use crate::sql_bits::{if_exists_str, ifne_str, meta_query, unique_str};
-use crate::tables::{create_alter_crr_tbl_stmt, create_crr_clock_tbl_stmt, create_crr_tbl_stmt};
+use crate::tables::{create_alter_crr_tbl_stmts, create_crr_clock_tbl_stmt, create_crr_tbl_stmt};
 use crate::triggers::{
   create_delete_trig, create_insert_trig, create_patch_trig, create_update_trig,
 };
@@ -206,7 +206,7 @@ fn rewrite_alter(ast: &Stmt) -> String {
     Stmt::AlterTable(name, body) => vec![
       format!("DROP VIEW IF EXISTS {}", name.to_view_ident()),
       format!("DROP VIEW IF EXISTS {}", name.to_patch_view_ident()),
-      create_alter_crr_tbl_stmt(body),
+      create_alter_crr_tbl_stmts(name, body),
     ]
     .join(";\n"),
     _ => unreachable!(),

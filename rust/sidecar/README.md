@@ -1,12 +1,15 @@
 # cfsqlite - sidecar
 
-As a non-intrusive option, `cfsqlite` can be used as a "side-car" to your standard sqlite integration.
+As a non-intrusive option (keep your application's existing sqlite bindings and sqlite build), `cfsqlite` can be used as a "side-car" to your standard sqlite integration.
 
-The only queries that require special treatment to make `sqlite` conflict-free are those that alter the schema(s) of tables. `select`, `insert`, `update` queries are unchanged.
+Thisis the case since the only queries that require special treatment to make `sqlite` conflict-free are those that alter the schema(s) of tables. `select`, `insert`, and `update` queries are unchanged.
 
-As such, the `sidecar` provides methods to re-write any of your schema changing queries to their conflict free equivalents. If you pass `sidecar` a non-crr query `sidecar` will just return it back to you unchanged. This latter set of behavior is provided as a convenience so you can pass all queries through sidecar without having to know their contents.
+The `sidecar` provides methods to re-write any of your schema changing queries to their conflict-free schema creation & alteration equivalents. If you pass `sidecar` a non-crr query `sidecar` will just return it back to you unchanged. This latter option is provided as a convenience so you can pass all queries through sidecar without having to know their contents.
 
-## Examples
+TODO: site_id and db_seq extensions must be loaded on the given connection.
+TODO: share db_seq num across connections?
+
+## Example Usage
 
 The `SQL` syntax is extended by sidecar to add the following statements:
 
@@ -20,9 +23,9 @@ DROP CRR INDEX ...
 
 Other than the addition of `CRR` (where CRR stands for conflict free replicated relation), the syntax of these statements is identical to their non-crr equivalents.
 
-When you want to create a conflict free table or modify a conflict free table, use `CRR` queries and provide them to `sidecar`.
+When you want to create a conflict free table or modify a conflict free table, craft a `CRR` query and provide it to `sidecar`.
 
-`sidecar` will re-write the query into a series of standard SQL statements that you then execute in a transaction against your sqlite db.
+`sidecar` will re-write the given query into a series of standard `SQL` statements that you then execute in a transaction against your `sqlite` db.
 
 Example usage:
 

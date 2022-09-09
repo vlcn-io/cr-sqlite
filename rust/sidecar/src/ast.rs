@@ -187,6 +187,7 @@ impl ColumnDefinitionExt for ColumnDefinition {
           TableConstraint::PrimaryKey { columns, .. } => {
             columns.len() == 1
               && match &columns[0].expr {
+                // TODO: we probably need to to_naked compare?
                 Expr::Id(id) => id.0 == self.col_name.0,
                 _ => false,
               }

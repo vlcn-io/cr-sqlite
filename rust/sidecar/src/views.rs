@@ -4,6 +4,9 @@ use crate::{
 };
 use sqlite3_parser::ast::{CreateTableBody, QualifiedName};
 
+/**
+ * Takes in a crr or non crr table definition and creates the corresponding view.
+ */
 pub fn create_view_stmt(
   temporary: &bool,
   if_not_exists: &bool,

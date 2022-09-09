@@ -165,7 +165,7 @@ impl CreateTableBodyExt for CreateTableBody {
       Self::ColumnsAndConstraints { columns, .. } => Ok(
         columns
           .iter()
-          .filter(|x| !x.col_name.0.contains("cfsql"))
+          .filter(|x| !x.col_name.0.contains("__cfsql"))
           .collect::<Vec<_>>(),
       ),
       _ => Err("table creation from select is not supported for crr creation"),

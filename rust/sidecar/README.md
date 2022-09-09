@@ -1,17 +1,42 @@
-# cfsqlite-parse
+# cfsqlite - sidecar
 
-Processes conflict-free SQL statements of the form:
+As a non-intrusive option, `cfsqlite` can be used as a "side-car" to your standard sqlite integration.
 
-```
+The only queries that require special treatment to make `sqlite` conflict-free are those that alter the schema(s) of tables. `select`, `insert`, `update` queries are unchanged.
+
+As such, the `sidecar` provides methods to re-write any of your schema changing queries to their conflict free equivalents. If you pass `sidecar` a non-crr query `sidecar` will just return it back to you unchanged. This latter set of behavior is provided as a convenience so you can pass all queries through sidecar without having to know their contents.
+
+## Examples
+
+The `SQL` syntax is extended by sidecar to add the following statements:
+
+```sql
 CREATE CRR TABLE ...
-CREATE CRR [UNIQUE] INDEX ...
+CREATE CRR INDEX ...
 ALTER CRR TABLE ...
+DROP CRR TABLE ...
+DROP CRR INDEX ...
 ```
 
-where crr means "conflict free replicated relation."
+Other than the addition of `CRR` (where CRR stands for conflict free replicated relation), the syntax of these statements is identical to their non-crr equivalents.
 
-If the provided statement is not a `CRR` statement it is ignored and a `None` result is returned.
+When you want to create a conflict free table or modify a conflict free table, use `CRR` queries and provide them to `sidecar`.
 
-If the provided statement is a `CRR` statement, an AST representation of the underlying `SQL` statement (the CRR statement sans the CRR keyword) is returned.
+`sidecar` will re-write the query into a series of standard SQL statements that you then execute in a transaction against your sqlite db.
 
-This AST can be used by other crates to re-write the desired create/alter statement into its conflict free variant(s) and then re-issue those statements against a sqlite db.
+Example usage:
+
+```js
+// do everything in a transaction so we don't end up in an inconsistent state
+sqlite_connection.in_transaction(() => {
+  // re-write our query to standard sql
+  let [query, meta_query] = sidecar.rewrite(query);
+  // run the re-written query
+  sqlite_connection.execute(query);
+  // if a meta query was returned, do additional crr work
+  if (meta_query) {
+    metadata = sqlite_connection.all(query);
+    sqlite_connection.execute(sidecar.support_statements(metadata));
+  }
+});
+```

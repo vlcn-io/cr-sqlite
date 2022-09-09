@@ -33,10 +33,12 @@ pub trait NameExt {
 
 pub trait CreateTableBodyExt {
   fn non_crr_columns(&self) -> Result<Vec<&ColumnDefinition>, &'static str>;
+  fn get_primary_key(&self) -> Result<&ColumnDefinition, &'static str>;
 }
 
 pub trait ColumnDefinitionExt {
   fn is_primary_key(&self, table_constraints: &Option<Vec<NamedTableConstraint>>) -> bool;
+  fn version_of(&self) -> Option<String>;
 }
 
 impl QualifiedNameExt for QualifiedName {
@@ -171,6 +173,32 @@ impl CreateTableBodyExt for CreateTableBody {
       _ => Err("table creation from select is not supported for crr creation"),
     }
   }
+
+  fn get_primary_key(&self) -> Result<&ColumnDefinition, &'static str> {
+    // TODO: we should eventually support compound primary keys.
+    // The prototype migrator does.
+    match self {
+      Self::ColumnsAndConstraints {
+        columns,
+        constraints,
+        ..
+      } => {
+        let primary_keys = columns
+          .iter()
+          .filter(|c| c.is_primary_key(constraints))
+          .collect::<Vec<_>>();
+
+        if primary_keys.len() > 1 {
+          Err("cfsql currently only supports non-compound primary keys")
+        } else if primary_keys.len() == 0 {
+          Err("cfsql requires tables to have a primary key")
+        } else {
+          Ok(primary_keys[0])
+        }
+      }
+      _ => Err("table creation from select is not supported for crr creation"),
+    }
+  }
 }
 
 impl ColumnDefinitionExt for ColumnDefinition {
@@ -187,13 +215,21 @@ impl ColumnDefinitionExt for ColumnDefinition {
           TableConstraint::PrimaryKey { columns, .. } => {
             columns.len() == 1
               && match &columns[0].expr {
-                // TODO: we probably need to to_naked compare?
                 Expr::Id(id) => id.0 == self.col_name.0,
                 _ => false,
               }
           }
           _ => false,
         }))
+  }
+
+  fn version_of(&self) -> Option<String> {
+    let ident = self.col_name.to_ident();
+    if ident.ends_with("__cfsql_v\"") {
+      Some(ident.replace("__cfsql_v", ""))
+    } else {
+      None
+    }
   }
 }
 

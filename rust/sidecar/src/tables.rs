@@ -206,11 +206,15 @@ pub fn create_alter_crr_tbl_stmts(name: &QualifiedName, body: &AlterTableBody) -
 mod tests {
   use crate::tables::to_crr_column_idents;
 
-  use super::{create_body_def, create_crr_clock_tbl_stmt, to_crr_constraint_idents};
+  use super::{
+    create_alter_crr_tbl_stmts, create_body_def, create_crr_clock_tbl_stmt,
+    to_crr_constraint_idents,
+  };
   use indoc::indoc;
   use sqlite3_parser::ast::{
-    ColumnConstraint, ColumnDefinition, CreateTableBody, Expr, Id, Name, NamedColumnConstraint,
-    NamedTableConstraint, QualifiedName, SortedColumn, TableConstraint, TableOptions,
+    AlterTableBody, ColumnConstraint, ColumnDefinition, CreateTableBody, Expr, Id, Name,
+    NamedColumnConstraint, NamedTableConstraint, QualifiedName, SortedColumn, TableConstraint,
+    TableOptions,
   };
 
   #[test]
@@ -369,5 +373,23 @@ mod tests {
       }),
       Ok("(a,\n\"a__cfsql_v\",\n\"cfsql_cl\",\n\"cfsql_src\") ".to_string())
     );
+  }
+
+  #[test]
+  fn test_create_alter_crr_tbl_stmts() {
+    let stmts = create_alter_crr_tbl_stmts(
+      &QualifiedName {
+        db_name: None,
+        alias: None,
+        name: Name("foo".to_string()),
+      },
+      &AlterTableBody::AddColumn(ColumnDefinition {
+        col_name: Name("a".to_string()),
+        col_type: None,
+        constraints: vec![],
+      }),
+    );
+
+    assert_eq!(stmts, "ALTER TABLE \"cfsql_crr__foo\" ADD COLUMN a;\nALTER TABLE \"cfsql_crr__foo\" ADD COLUMN \"a__cfsql_v\"");
   }
 }

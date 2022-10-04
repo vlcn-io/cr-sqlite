@@ -4,7 +4,7 @@ Status:
 
 **08/22** - Currently investigating [`virtual table extensions`](https://www.sqlite.org/vtab.html) and/or connection proxies to make `cfsqlite` production ready.
 
-**10/04** - We have a solution in a closed repository that we'll be open-sourcing once it hits v1.
+**10/04** - We have a solution in a closed repository that we'll be open-sourcing (copying to this repo) once it hits v1.
 
 ---
 

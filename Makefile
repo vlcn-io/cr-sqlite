@@ -37,7 +37,7 @@ TARGET_SQLITE3=$(prefix)/sqlite3
 TARGET_SQLJS_JS=$(prefix)/sqljs.js
 TARGET_SQLJS_WASM=$(prefix)/sqljs.wasm
 TARGET_SQLJS=$(TARGET_SQLJS_JS) $(TARGET_SQLJS_WASM)
-TARGET_C_TESTS=$(prefix)/c-tests
+TARGET_TEST=$(prefix)/test
 
 
 $(prefix):
@@ -53,7 +53,8 @@ format: $(FORMAT_FILES)
 loadable: $(TARGET_LOADABLE) $(TARGET_LOADABLE_NOFS)
 sqlite3: $(TARGET_SQLITE3)
 sqljs: $(TARGET_SQLJS)
-c-tests: $(TARGET_C_TESTS)
+test: $(TARGET_TEST)
+	./dist/test
 
 $(TARGET_LOADABLE): cfsqlite.c cfsqlite-util.c uuid.c
 	gcc -Isqlite \
@@ -74,7 +75,7 @@ $(TARGET_SQLITE3): $(prefix) $(TARGET_SQLITE3_EXTRA_C) sqlite/shell.c cfsqlite.c
 $(TARGET_SQLITE3_EXTRA_C): sqlite/sqlite3.c core_init.c
 	cat sqlite/sqlite3.c core_init.c > $@
 
-$(TARGET_C_TESTS): $(prefix) $(TARGET_SQLITE3_EXTRA_C) cfsqlite-util.test.c cfsqlite-util.c cfsqlite.c
+$(TARGET_TEST): $(prefix) $(TARGET_SQLITE3_EXTRA_C) cfsqlite-util.test.c cfsqlite-util.c cfsqlite.c
 	gcc -g \
 	$(DEFINE_SQLITE_PATH) \
 	-DSQLITE_THREADSAFE=0 -DSQLITE_OMIT_LOAD_EXTENSION=1 \
@@ -85,29 +86,24 @@ $(TARGET_C_TESTS): $(prefix) $(TARGET_SQLITE3_EXTRA_C) cfsqlite-util.test.c cfsq
 	$(TARGET_SQLITE3_EXTRA_C) cfsqlite-util.test.c cfsqlite.c cfsqlite-util.c uuid.c \
 	-o $@
 
-test: 
-	make test-format
-	make test-loadable
-	make test-sqlite3
+# test-format: SHELL:=/bin/bash
+# test-format:
+# 	diff -u <(cat $(FORMAT_FILES)) <(clang-format $(FORMAT_FILES))
 
-test-format: SHELL:=/bin/bash
-test-format:
-	diff -u <(cat $(FORMAT_FILES)) <(clang-format $(FORMAT_FILES))
+# test-loadable: $(TARGET_LOADABLE)
+# 	python3 tests/test-loadable.py
 
-test-loadable: $(TARGET_LOADABLE)
-	python3 tests/test-loadable.py
+# test-loadable-watch: $(TARGET_LOADABLE)
+# 	watchexec -w cfsqlite.c cfsqlite-util.c uuid.c -w $(TARGET_LOADABLE) -w tests/test-loadable.py --clear -- make test-loadable
 
-test-loadable-watch: $(TARGET_LOADABLE)
-	watchexec -w cfsqlite.c cfsqlite-util.c uuid.c -w $(TARGET_LOADABLE) -w tests/test-loadable.py --clear -- make test-loadable
+# test-sqlite3: $(TARGET_SQLITE3)
+# 	python3 tests/test-sqlite3.py
 
-test-sqlite3: $(TARGET_SQLITE3)
-	python3 tests/test-sqlite3.py
+# test-sqlite3-watch: $(TARAGET_SQLITE3)
+# 	watchexec -w $(TARAGET_SQLITE3) -w tests/test-sqlite3.py --clear -- make test-sqlite3
 
-test-sqlite3-watch: $(TARAGET_SQLITE3)
-	watchexec -w $(TARAGET_SQLITE3) -w tests/test-sqlite3.py --clear -- make test-sqlite3
-
-test-sqljs: $(TARGET_SQLJS)
-	python3 -m http.server & open http://localhost:8000/tests/test-sqljs.html
+# test-sqljs: $(TARGET_SQLJS)
+# 	python3 -m http.server & open http://localhost:8000/tests/test-sqljs.html
 
 .PHONY: all clean format \
 	test test-watch test-format \

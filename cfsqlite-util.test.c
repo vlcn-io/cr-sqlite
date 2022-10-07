@@ -324,7 +324,7 @@ void testCreateClockTable()
   sqlite3_exec(db, "CREATE TABLE foo (a)", 0, 0, 0);
   sqlite3_exec(db, "CREATE TABLE bar (a primary key)", 0, 0, 0);
   sqlite3_exec(db, "CREATE TABLE baz (a primary key, b)", 0, 0, 0);
-  sqlite3_exec(db, "CREATE TABLE boo (a primary key, primary key b, c)", 0, 0, 0);
+  sqlite3_exec(db, "CREATE TABLE boo (a primary key, b, c)", 0, 0, 0);
 
   rc = cfsql_getTableInfo(db, USER_SPACE, "foo", &tc1, &err);
   CHECK_OK
@@ -350,7 +350,7 @@ void testCreateClockTable()
   return;
 
   fail:
-  printf("err: %s\n", err);
+  printf("err: %s %d\n", err, rc);
   sqlite3_free(err);
   assert(rc == SQLITE_OK);
 }

@@ -96,7 +96,6 @@ void cfsql_freeColumnInfoContents(cfsql_ColumnInfo *columnInfo)
 
 void cfsql_freeIndexInfoContents(cfsql_IndexInfo *indexInfo)
 {
-  sqlite3_free(indexInfo->indexedCols);
   sqlite3_free(indexInfo->name);
   sqlite3_free(indexInfo->origin);
   for (int j = 0; j < indexInfo->indexedColsLen; ++j)
@@ -535,4 +534,5 @@ void cfsql_freeTableInfo(cfsql_TableInfo *tableInfo)
   sqlite3_free(tableInfo->nonPks);
 
   cfsql_freeIndexInfos(tableInfo->indexInfo, tableInfo->indexInfoLen);
+  sqlite3_free(tableInfo);
 }

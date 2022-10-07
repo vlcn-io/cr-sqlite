@@ -70,6 +70,8 @@ void testGetTableInfo()
   assert(tableInfo->nonPksLen == 1);
 
   assert(tableInfo->withVersionColsLen == 3);
+  assert(tableInfo->indexInfoLen == 1);
+  assert(strcmp(tableInfo->indexInfo[0].indexedCols[0], "a") == 0);
 
   cfsql_freeTableInfo(tableInfo);
 
@@ -263,7 +265,6 @@ void testGetIndexList() {
     0
   );
 
-  printf("rc: %d\n", rc);
   assert(rc == SQLITE_OK);
   assert(indexInfosLen == 1);
   for (int i = 0; i < indexInfosLen; ++i) {

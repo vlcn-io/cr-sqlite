@@ -63,6 +63,8 @@ fail:
   assert(rc == SQLITE_OK);
 }
 
+// TODO: create a method that generates all the table conditions
+// we're interested in and runs these tests over them.
 void testCreateCrrBaseTable()
 {
   printf("CreateCrrBaseTable\n");
@@ -101,6 +103,36 @@ void testCreateCrrBaseTable()
 
 void testCreateViewOfCrr()
 {
+  printf("CreateViewOfCrr\n");
+
+  int rc = SQLITE_OK;
+  sqlite3* db;
+  char *err = 0;
+  cfsql_TableInfo * tableInfo = 0;
+  rc = sqlite3_open(":memory:", &db);
+
+  rc = sqlite3_exec(db, "CREATE TABLE foo (a primary key, b DEFAULT 0)", 0, 0, &err);
+  CHECK_OK
+
+  rc = cfsql_getTableInfo(db, USER_SPACE, "foo", &tableInfo, &err);
+  CHECK_OK
+  rc = cfsql_createCrrBaseTable(db, tableInfo, &err);
+  CHECK_OK
+
+  rc = sqlite3_exec(db, "DROP TABLE foo", 0, 0, &err);
+  CHECK_OK
+
+  rc = cfsql_createViewOfCrr(db, tableInfo, &err);
+  CHECK_OK
+
+  printf("\t\e[0;32mSuccess\e[0m\n");
+  return;
+
+  fail:
+    printf("err: %s %d\n", err, rc);
+    sqlite3_free(err);
+    cfsql_freeTableInfo(tableInfo);
+    assert(rc == SQLITE_OK);
 }
 
 void cfsqlTestSuite() {

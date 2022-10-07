@@ -466,7 +466,7 @@ int cfsql_createCrrBaseTable(
  * A view that matches the table as defined by the user
  * and represents the crr to their application.
  */
-static int cfsql_createViewOfCrr(
+int cfsql_createViewOfCrr(
     sqlite3 *db,
     cfsql_TableInfo *tableInfo,
     char **err)

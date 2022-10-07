@@ -381,7 +381,7 @@ int cfsql_addIndicesToCrrBaseTable(
 
   for (int i = 0; i < indexInfoLen; ++i)
   {
-    int isPk = strcmp(indexInfo[i].origin, "pk") != 0;
+    int isPk = strcmp(indexInfo[i].origin, "pk") == 0;
     if (isPk)
     {
       // we create primary keys in the table creation statement
@@ -442,6 +442,8 @@ int cfsql_createCrrBaseTable(
 
   rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
   if (rc != SQLITE_OK) {
+    *err = sqlite3_mprintf("Failed to prepare the create crr statement: %s", zSql);
+    sqlite3_free(zSql);
     return rc;
   }
   sqlite3_free(zSql);
@@ -452,6 +454,7 @@ int cfsql_createCrrBaseTable(
     if (tableInfo->baseCols[i].dfltValue != 0) {
       rc = sqlite3_bind_value(pStmt, j, tableInfo->baseCols[i].dfltValue);
       if (rc != SQLITE_OK) {
+        *err = sqlite3_mprintf("Failed to bind default values for crr create");
         return rc;
       }
       ++j;
@@ -463,17 +466,20 @@ int cfsql_createCrrBaseTable(
 
   if (rc != SQLITE_DONE)
   {
+    *err = sqlite3_mprintf("Failed to step the create crr statement");
     return rc;
   }
 
-  rc = cfsql_addIndicesToCrrBaseTable(
-      db,
-      tableInfo,
-      err);
-  if (rc != SQLITE_OK)
-  {
-    return rc;
-  }
+  // We actually never need to do this.
+  // Unless we're migrating existing tables.
+  // rc = cfsql_addIndicesToCrrBaseTable(
+  //     db,
+  //     tableInfo,
+  //     err);
+  // if (rc != SQLITE_OK)
+  // {
+  //   return rc;
+  // }
 
   return SQLITE_OK;
 }

@@ -75,8 +75,12 @@ void testCreateCrrBaseTable()
 
   rc = sqlite3_exec(db, "CREATE TABLE foo (a primary key, b)", 0, 0, &err);
   CHECK_OK
-  rc = sqlite3_exec(db, "CREATE INDEX foo_b ON foo (b)", 0, 0, &err);
-  CHECK_OK
+  // using the crr interface, it'd be impossible to have a new table
+  // creation that includes an index. Index additions would be
+  // statements after crr creation and thus can be added simply by
+  // changing the target table of the user's create index statement to the crr table.
+  // rc = sqlite3_exec(db, "CREATE INDEX foo_b ON foo (b)", 0, 0, &err);
+  // CHECK_OK
 
   rc = cfsql_getTableInfo(db, USER_SPACE, "foo", &tableInfo, &err);
   CHECK_OK

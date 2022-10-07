@@ -123,7 +123,7 @@ static void cfsql_freeColumnInfos(cfsql_ColumnInfo *columnInfos, int len)
   if (columnInfos == 0) {
     return;
   }
-  
+
   int i = 0;
   for (i = 0; i < len; ++i)
   {
@@ -498,7 +498,13 @@ int cfsql_getTableInfo(
 
     columnInfos[i].notnull = sqlite3_column_int(pStmt, 3);
     columnInfos[i].pk = sqlite3_column_int(pStmt, 4);
-    columnInfos[i].dfltValue = sqlite3_value_dup(sqlite3_column_value(pStmt, 5));
+    sqlite3_value *dflt = sqlite3_column_value(pStmt, 5);
+    if (sqlite3_value_type(dflt) == SQLITE_NULL) {
+      columnInfos[i].dfltValue = 0;
+    } else {
+      columnInfos[i].dfltValue = sqlite3_value_dup(dflt);
+    }
+    
     columnInfos[i].versionOf = 0;
 
     ++i;

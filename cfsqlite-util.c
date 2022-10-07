@@ -88,7 +88,7 @@ char *cfsql_asIdentifierListStr(char **in, size_t inlen, char delim)
 }
 
 /**
- * Reads tokens until the first space or end of string is encountered.
+ * Reads tokens until the first space, end of string or '(' is encountered.
  * Returns the tokens read.
  *
  * If str starts with a space, returns empty string.
@@ -100,11 +100,16 @@ char *cfsql_extractWord(
   char *tblName;
   int tblNameLen = 0;
   char *splitIndex;
+  char *splitIndexParen;
 
   splitIndex = strstr(str + prefixLen, " ");
+  splitIndexParen = strstr(str + prefixLen, "(");
   if (splitIndex == NULL)
   {
     splitIndex = str + strlen(str);
+  }
+  if (splitIndexParen != NULL && splitIndexParen < splitIndex) {
+    splitIndex = splitIndexParen;
   }
 
   tblNameLen = splitIndex - (str + prefixLen);

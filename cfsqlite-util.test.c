@@ -32,11 +32,11 @@ void testExtractWord()
   assert(strcmp(word, "there") == 0);
   sqlite3_free(word);
 
-  word = cfsql_extractWord(CREATE_TEMP_TABLE_CFSQL_LEN, "CREATE TEMP TABLE cfsql_temp__foo ");
+  word = cfsql_extractWord(CREATE_TEMP_TABLE_CFSQL_LEN, "CREATE TEMP TABLE cfsql_tmp__foo ");
   assert(strcmp(word, "foo") == 0);
   sqlite3_free(word);
 
-  word = cfsql_extractWord(CREATE_TEMP_TABLE_CFSQL_LEN, "CREATE TEMP TABLE cfsql_temp__foo");
+  word = cfsql_extractWord(CREATE_TEMP_TABLE_CFSQL_LEN, "CREATE TEMP TABLE cfsql_tmp__foo");
   assert(strcmp(word, "foo") == 0);
   sqlite3_free(word);
   printf("\t\e[0;32mSuccess\e[0m\n");

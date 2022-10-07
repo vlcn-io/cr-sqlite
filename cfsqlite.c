@@ -251,59 +251,40 @@ static void dbVersionFunc(sqlite3_context *context, int argc, sqlite3_value **ar
  *
  * We need to know given each schema modification type
  * requires unique handling in the crr layer.
+ * 
+ * The provided query must be a normalized query.
  */
 static int determineQueryType(sqlite3 *db, sqlite3_context *context, const char *query)
 {
   int rc = SQLITE_OK;
-  sqlite3_stmt *pStmt = 0;
-  const char *normalized = 0;
   char *formattedError = 0;
 
-  // Prepare a statement so we can normalize the query.
-  // Normalizing the query strips comments, extra whitespace
-  // and just puts it in a format that we can easily parse.
-  rc = sqlite3_prepare_v2(db, query, -1, &pStmt, 0);
-  if (rc != SQLITE_OK)
-  {
-    sqlite3_result_error(context, sqlite3_errmsg(db), -1);
-    return rc;
-  }
-
-  normalized = sqlite3_normalized_sql(pStmt);
-
-  if (strncmp("CREATE TABLE", normalized, CREATE_TABLE_LEN) == 0)
-  {
-    sqlite3_finalize(pStmt);
+  if (strncmp("CREATE TABLE", query, CREATE_TABLE_LEN) == 0)
+  {;
     return CREATE_TABLE;
   }
-  if (strncmp("ALTER TABLE", normalized, ALTER_TABLE_LEN) == 0)
+  if (strncmp("ALTER TABLE", query, ALTER_TABLE_LEN) == 0)
   {
-    sqlite3_finalize(pStmt);
     return ALTER_TABLE;
   }
-  if (strncmp("CREATE INDEX", normalized, CREATE_INDEX_LEN) == 0)
+  if (strncmp("CREATE INDEX", query, CREATE_INDEX_LEN) == 0)
   {
-    sqlite3_finalize(pStmt);
     return CREATE_INDEX;
   }
-  if (strncmp("CREATE UNIQUE INDEX", normalized, CREATE_UNIQUE_INDEX_LEN) == 0)
+  if (strncmp("CREATE UNIQUE INDEX", query, CREATE_UNIQUE_INDEX_LEN) == 0)
   {
-    sqlite3_finalize(pStmt);
     return CREATE_INDEX;
   }
-  if (strncmp("DROP INDEX", normalized, DROP_INDEX_LEN) == 0)
+  if (strncmp("DROP INDEX", query, DROP_INDEX_LEN) == 0)
   {
-    sqlite3_finalize(pStmt);
     return DROP_INDEX;
   }
-  if (strncmp("DROP TABLE", normalized, DROP_TABLE_LEN) == 0)
+  if (strncmp("DROP TABLE", query, DROP_TABLE_LEN) == 0)
   {
-    sqlite3_finalize(pStmt);
     return DROP_TABLE;
   }
 
-  formattedError = sqlite3_mprintf("Unknown schema modification statement provided: %s | from: %s", normalized, query);
-  sqlite3_finalize(pStmt);
+  formattedError = sqlite3_mprintf("Unknown schema modification statement provided: %s", query);
   sqlite3_result_error(context, formattedError, -1);
   sqlite3_free(formattedError);
 
@@ -556,7 +537,7 @@ static void createCrr(
   cfsql_TableInfo *tableInfo = 0;
 
   // convert statement to create temp table prefixed with `cfsql_temp__`
-  zSql = sqlite3_mprintf("CREATE TEMP TABLE cfsql_temp__%s", query + CREATE_TABLE_LEN + 1);
+  zSql = sqlite3_mprintf("CREATE TEMP TABLE cfsql_tmp__%s", query + CREATE_TABLE_LEN + 1);
   rc = sqlite3_exec(db, zSql, 0, 0, &err);
 
   if (rc != SQLITE_OK)
@@ -571,16 +552,20 @@ static void createCrr(
   tblName = cfsql_extractWord(CREATE_TEMP_TABLE_CFSQL_LEN, zSql);
   sqlite3_free(zSql);
 
+  // TODO: we should get table info from the temp table
+  // but use the proper table base name.
+  char *tmpTblName = sqlite3_mprintf("cfsql_tmp__%s", tblName);
   rc = cfsql_getTableInfo(
       db,
       USER_SPACE,
-      tblName,
+      tmpTblName,
       &tableInfo,
       &err);
 
   if (rc != SQLITE_OK)
   {
     sqlite3_free(tblName);
+    sqlite3_free(tmpTblName);
     sqlite3_result_error(context, err, -1);
     sqlite3_free(err);
     cfsql_freeTableInfo(tableInfo);
@@ -591,7 +576,9 @@ static void createCrr(
   zSql = sqlite3_mprintf("DROP TABLE cfsql_temp__%s", tblName);
   rc = sqlite3_exec(db, zSql, 0, 0, &err);
   sqlite3_free(zSql);
+  tableInfo->tblName = strdup(tblName);
   sqlite3_free(tblName);
+  sqlite3_free(tmpTblName);
   if (rc != SQLITE_OK)
   {
     sqlite3_result_error(context, err, -1);
@@ -687,14 +674,16 @@ static void alterCrr()
  */
 static void cfsqlFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
-  const char *query = 0;
+  char *query = 0;
   int rc = SQLITE_OK;
   char *found = 0;
   int queryType = -1;
   sqlite3 *db = sqlite3_context_db_handle(context);
   char *errmsg = 0;
+  sqlite3_stmt *pStmt = 0;
+  char *normalized = 0;
 
-  query = (const char *)sqlite3_value_text(argv[0]);
+  query = (char *)sqlite3_value_text(argv[0]);
   found = strstr(query, ";");
 
   if (found != NULL)
@@ -702,6 +691,18 @@ static void cfsqlFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
     sqlite3_result_error(context, "You may not pass multiple statements to cfsql yet. Run one statement at a time.", -1);
     return;
   }
+
+  // Prepare a statement so we can normalize the query.
+  // Normalizing the query strips comments, extra whitespace
+  // and just puts it in a format that we can easily parse.
+  rc = sqlite3_prepare_v2(db, query, -1, &pStmt, 0);
+  if (rc != SQLITE_OK)
+  {
+    sqlite3_result_error(context, sqlite3_errmsg(db), -1);
+    return;
+  }
+  query = strdup(sqlite3_normalized_sql(pStmt));
+  sqlite3_finalize(pStmt);
 
   queryType = determineQueryType(db, context, query);
   // TODO: likely need this to be a sub-transaction

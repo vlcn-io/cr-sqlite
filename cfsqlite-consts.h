@@ -14,7 +14,7 @@
 #define CREATE_UNIQUE_INDEX_LEN 19
 #define DROP_INDEX_LEN 10
 #define DROP_TABLE_LEN 10
-#define CFSQL_TEMP__LEN 12
+#define CFSQL_TEMP__LEN 11
 #define TEMP_LEN 4
 #define SPACE_LEN 1
 

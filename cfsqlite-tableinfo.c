@@ -486,6 +486,7 @@ int cfsql_getTableInfo(
 
   if (numColInfos < 0)
   {
+    *pErrMsg = sqlite3_mprintf("Failed to find columns for crr -- %s", tblName);
     return numColInfos;
   }
 
@@ -496,6 +497,7 @@ int cfsql_getTableInfo(
 
   if (rc != SQLITE_OK)
   {
+    *pErrMsg = sqlite3_mprintf("Failed to prepare select for ccr -- %s", tblName);
     sqlite3_finalize(pStmt);
     return rc;
   }
@@ -503,6 +505,7 @@ int cfsql_getTableInfo(
   rc = sqlite3_step(pStmt);
   if (rc != SQLITE_ROW)
   {
+    *pErrMsg = sqlite3_mprintf("Failed to parse crr definition -- %s", tblName);
     sqlite3_finalize(pStmt);
     return rc;
   }

@@ -30,7 +30,8 @@ struct cfsql_IndexInfo {
   int unique;
   char *origin;
   int partial;
-  char **indexedColumns;
+  char **indexedCols;
+  int indexedColsLen;
 };
 
 typedef struct cfsql_TableInfo cfsql_TableInfo;

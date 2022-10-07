@@ -143,25 +143,8 @@ int cfsql_doesTableExist(sqlite3 *db, const char *tblName)
   zSql = sqlite3_mprintf(
       "SELECT count(*) as c FROM sqlite_master WHERE type='table' AND tbl_name = \"%s\"",
       tblName);
-  rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
+  ret = cfsql_getCount(db, zSql);
   sqlite3_free(zSql);
-
-  if (rc != SQLITE_OK)
-  {
-    return -1;
-  }
-
-  rc = sqlite3_step(pStmt);
-
-  // a row must be returned. If no results we get a single row of count 0.
-  if (rc != SQLITE_ROW)
-  {
-    sqlite3_finalize(pStmt);
-    return -1;
-  }
-
-  ret = sqlite3_column_int(pStmt, 0);
-  sqlite3_finalize(pStmt);
 
   return ret;
 }
@@ -194,10 +177,62 @@ int cfsql_getCount(
   return count;
 }
 
-int cfsql_getIndexedColumns(
+/**
+ * Given an index name, return all the columns in that index.
+ * Fills pIndexedCols with an array of strings.
+ * Caller is responsible for freeing pIndexedCols.
+ */
+int cfsql_getIndexedCols(
     sqlite3 *db,
     const char *indexName,
-    char **pIndexedColumns)
+    char ***pIndexedCols,
+    int *pIndexedColsLen)
 {
+  int rc = SQLITE_OK;
+  int numCols = 0;
+  char **indexedCols;
+  sqlite3_stmt *pStmt = 0;
+
+  char* zSql = sqlite3_mprintf(
+      "SELECT count(*) FROM pragma_index_info('%s')",
+      indexName
+    );
+  numCols = cfsql_getCount(db, zSql);
+  *pIndexedColsLen = numCols;
+  sqlite3_free(zSql);
+
+  if (numCols <= 0) {
+    return numCols;
+  }
+
+  zSql = sqlite3_mprintf("SELECT name FROM pragma_index_info('%s') ORDER BY seq ASC");
+  rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
+
+  rc = sqlite3_step(pStmt);
+  if (rc != SQLITE_ROW) {
+    sqlite3_finalize(pStmt);
+    return rc;
+  }
+
+  int j = 0;
+  indexedCols = sqlite3_malloc(numCols * sizeof(char *));
+  while (rc == SQLITE_ROW) {
+    assert(j < numCols);
+
+    indexedCols[j] = strdup((const char *)sqlite3_column_text(pStmt, 0));
+
+    ++j;
+  }
+
+  if (rc != SQLITE_DONE) {
+    for (int i = 0; i < j; ++i) {
+      sqlite3_free(indexedCols[i]);
+    }
+    sqlite3_free(indexedCols);
+    return rc;
+  }
+
+  *pIndexedCols = indexedCols;
+
   return SQLITE_OK;
 }

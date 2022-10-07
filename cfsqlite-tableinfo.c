@@ -94,6 +94,16 @@ void cfsql_freeColumnInfoContents(cfsql_ColumnInfo *columnInfo)
   // sqlite3_free(columnInfo->versionOf);
 }
 
+void cfsql_freeIndexInfoContents(cfsql_IndexInfo *indexInfo) {
+  sqlite3_free(indexInfo->indexedCols);
+  sqlite3_free(indexInfo->name);
+  sqlite3_free(indexInfo->origin);
+  for (int j = 0; j < indexInfo->indexedColsLen; ++j) {
+    sqlite3_free(indexInfo->indexedCols[j]);
+  }
+  sqlite3_free(indexInfo->indexedCols);  
+}
+
 static void cfsql_freeColumnInfos(cfsql_ColumnInfo *columnInfos, int len)
 {
   int i = 0;
@@ -335,7 +345,7 @@ int cfsql_getIndexList(
   sqlite3_free(zSql);
 
   zSql = sqlite3_mprintf(
-      "SELECT seq, name, unique, origin, partial FROM pragam_index_list(%s)",
+      "SELECT seq, name, unique, origin, partial FROM pragma_index_list(%s)",
       tblName);
   rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
   sqlite3_free(zSql);
@@ -358,9 +368,9 @@ int cfsql_getIndexList(
   {
     assert(i < numIndices);
     indexInfos[i].seq = sqlite3_column_int(pStmt, 0);
-    indexInfos[i].name = strdup((char *)sqlite3_column_text(pStmt, 1));
+    indexInfos[i].name = strdup((const char *)sqlite3_column_text(pStmt, 1));
     indexInfos[i].unique = sqlite3_column_int(pStmt, 2);
-    indexInfos[i].origin = strdup((char *)sqlite3_column_text(pStmt, 3));
+    indexInfos[i].origin = strdup((const char *)sqlite3_column_text(pStmt, 3));
     indexInfos[i].partial = sqlite3_column_int(pStmt, 4);
 
     ++i;
@@ -368,12 +378,32 @@ int cfsql_getIndexList(
   }
   sqlite3_finalize(pStmt);
 
+  if (rc != SQLITE_DONE) {
+    goto FAIL;
+  }
+
   for (i = 0; i < numIndices; ++i)
   {
-    // now populate indexed columns
+    rc = cfsql_getIndexedCols(
+      db,
+      indexInfos[i].name,
+      &(indexInfos[i].indexedCols),
+      &(indexInfos[i].indexedColsLen)
+    );
+
+    if (rc != SQLITE_OK) {
+      goto FAIL;
+    }
   }
 
   *pIndexInfo = indexInfos;
+  return rc;
+
+  FAIL:
+  *pIndexInfo = 0;
+  for (i = 0; i < numIndices; ++i) {
+    cfsql_freeIndexInfoContents(&indexInfos[i]);
+  }
   return rc;
 }
 

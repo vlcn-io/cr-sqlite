@@ -8,7 +8,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#define CHECK_OK if (rc != SQLITE_OK) { goto fail; }
+#define CHECK_OK       \
+  if (rc != SQLITE_OK) \
+  {                    \
+    goto fail;         \
+  }
 
 // TODO: use a real unit test framework
 // TODO: updated to use property based testing: https://github.com/silentbicycle/theft
@@ -150,20 +154,20 @@ void testCreateClockTable()
   printf("\t\e[0;32mSuccess\e[0m\n");
   return;
 
-  fail:
+fail:
   printf("err: %s %d\n", err, rc);
   sqlite3_free(err);
   assert(rc == SQLITE_OK);
 }
 
-void testJoinWith() {
+void testJoinWith()
+{
   printf("JoinWith\n");
   char dest[13];
   char *src[] = {
-    "one",
-    "two",
-    "four"
-  };
+      "one",
+      "two",
+      "four"};
 
   cfsql_joinWith(dest, src, 3, ',');
 
@@ -171,16 +175,58 @@ void testJoinWith() {
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
+void testGetIndexedCols()
+{
+  printf("GetIndexedCols\n");
 
-void testCreateCrrBaseTable() {
+  sqlite3 *db = 0;
+  int rc = SQLITE_OK;
+  char **indexedCols = 0;
+  int indexedColsLen;
 
+  rc = sqlite3_open(":memory:", &db);
+  sqlite3_exec(db, "CREATE TABLE foo (a);", 0, 0, 0);
+  sqlite3_exec(db, "CREATE TABLE bar (a primary key);", 0, 0, 0);
+
+  rc = cfsql_getIndexedCols(
+      db,
+      "sqlite_autoindex_foo_1",
+      &indexedCols,
+      &indexedColsLen);
+  CHECK_OK
+
+  assert(indexedColsLen == 0);
+  assert(indexedCols == 0);
+
+  rc = cfsql_getIndexedCols(
+      db,
+      "sqlite_autoindex_bar_1",
+      &indexedCols,
+      &indexedColsLen);
+  CHECK_OK
+
+  assert(indexedColsLen == 1);
+  assert(strcmp(indexedCols[0], "a") == 0);
+
+  sqlite3_free(indexedCols[0]);
+  sqlite3_free(indexedCols);
+
+  printf("\t\e[0;32mSuccess\e[0m\n");
+
+fail:
+  printf("bad return code: %d\n", rc);
 }
 
-void testCreateViewOfCrr() {
-
+void testCreateCrrBaseTable()
+{
 }
 
-void cfsqlUtilTestSuite() {
+void testCreateViewOfCrr()
+{
+}
+
+void cfsqlUtilTestSuite()
+{
   printf("\e[47m\e[1;30mSuite: cfsql_util\e[0m\n");
 
   testExtractWord();
@@ -191,6 +237,7 @@ void cfsqlUtilTestSuite() {
   testJoinWith();
   testCreateCrrBaseTable();
   testCreateViewOfCrr();
+  testGetIndexedCols();
 
   // TODO: test pk pulling and correct sorting of pks
   // TODO: create a fn to create test tables for all tests.

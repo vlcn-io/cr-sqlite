@@ -22,4 +22,10 @@ int cfsql_getCount(
 
 void cfsql_joinWith(char *dest, char** src, size_t srcLen, char delim);
 
+int cfsql_getIndexedCols(
+    sqlite3 *db,
+    const char *indexName,
+    char ***pIndexedCols,
+    int *pIndexedColsLen);
+
 #endif

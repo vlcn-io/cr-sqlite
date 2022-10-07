@@ -2,8 +2,6 @@
 
 **10/7** - production ready c extension is nearing completion.
 
----
-
 [SQLite](https://www.sqlite.org/index.html) is a foundation of offline, local-first and edge deployed software. Wouldn't it be great, however, if we could merge two or more SQLite databases together and not run into any conflicts?
 
 This project implements [CRDTs](https://crdt.tech/) and [CRRs](https://hal.inria.fr/hal-02983557/document) in `SQLite`, allowing databases that share a common schema to merge their state together. Merges can happen between an arbitrary number of peers and all peers will eventually converge to the same state.

@@ -35,7 +35,8 @@ char *cfsql_join(char **in, size_t inlen)
   return joinHelper(in, inlen, 0, 0);
 }
 
-void cfsql_joinWith(char *dest, char** src, size_t srcLen, char delim) {
+void cfsql_joinWith(char *dest, char **src, size_t srcLen, char delim)
+{
   int j = 0;
   for (int i = 0; i < srcLen; ++i)
   {
@@ -76,7 +77,7 @@ char *cfsql_asIdentifierList(cfsql_ColumnInfo *in, size_t inlen)
   // + 1 for null terminator
   ret = sqlite3_malloc(finalLen * sizeof(char) + 1);
   ret[finalLen] = '\0';
-  
+
   cfsql_joinWith(ret, mapped, inlen, ',');
 
   // free everything we allocated, except ret.
@@ -387,8 +388,9 @@ cfsql_ColumnInfo *cfsql_addVersionCols(
   return ret;
 }
 
-static int cmpPks(const void * a, const void * b) {
-   return ( ((cfsql_ColumnInfo*)a)->pk - ((cfsql_ColumnInfo*)b)->pk );
+static int cmpPks(const void *a, const void *b)
+{
+  return (((cfsql_ColumnInfo *)a)->pk - ((cfsql_ColumnInfo *)b)->pk);
 }
 
 cfsql_ColumnInfo *cfsql_pks(cfsql_ColumnInfo *colInfos,
@@ -494,24 +496,78 @@ static cfsql_TableInfo *cfsql_tableInfo(
   return ret;
 }
 
+int cfsql_getIndexedColumns(
+    sqlite3 *db,
+    const char *indexName,
+    char **pIndexedColumns)
+{
+}
+
 /**
  * Given a table, return (into pIndexInfo) all the
  * indices for that table and the columns indexed.
  */
 int cfsql_getIndexList(
-  sqlite3 *db,
-  const char *tblName,
-  cfsql_IndexInfo **pIndexInfo,
-  char **pErrMsg
-) {
+    sqlite3 *db,
+    const char *tblName,
+    cfsql_IndexInfo **pIndexInfo,
+    char **pErrMsg)
+{
   // query the index_list pragma
   // create index info structs
   // query the index_info pragma for cols
   int rc = SQLITE_OK;
+  int numIndices = 0;
   char *zSql = 0;
-  // zSql = sqlite3_mprintf("SELECT seq, name, unique, origin, partial FROM pragam_index_list(%s)");
+  sqlite3_stmt *pStmt = 0;
+  cfsql_IndexInfo *indexInfos = 0;
+  int i = 0;
 
-  return rc;  
+  zSql = sqlite3_mprintf("select count(*) from pragma_table_info(\"%s\")", tblName);
+  numIndices = cfsql_getCount(db, zSql);
+  sqlite3_free(zSql);
+
+  zSql = sqlite3_mprintf(
+      "SELECT seq, name, unique, origin, partial FROM pragam_index_list(%s)",
+      tblName);
+  rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
+  sqlite3_free(zSql);
+
+  if (rc != SQLITE_OK)
+  {
+    sqlite3_finalize(pStmt);
+    return rc;
+  }
+
+  rc = sqlite3_step(pStmt);
+  if (rc != SQLITE_ROW)
+  {
+    sqlite3_finalize(pStmt);
+    return rc;
+  }
+
+  indexInfos = sqlite3_malloc(numIndices * sizeof *indexInfos);
+  while (rc == SQLITE_ROW)
+  {
+    assert(i < numIndices);
+    indexInfos[i].seq = sqlite3_column_int(pStmt, 0);
+    indexInfos[i].name = strdup(sqlite3_column_text(pStmt, 1));
+    indexInfos[i].unique = sqlite3_column_int(pStmt, 2);
+    indexInfos[i].origin = strdup(sqlite3_column_text(pStmt, 3));
+    indexInfos[i].partial = sqlite3_column_int(pStmt, 4);
+
+    ++i;
+    rc = sqlite3_step(pStmt);
+  }
+  sqlite3_finalize(pStmt);
+
+  for (i = 0; i < numIndices; ++i)
+  {
+    // now populate indexed columns
+  }
+
+  *pIndexInfo = indexInfos;
+  return rc;
 }
 
 /**
@@ -557,8 +613,13 @@ int cfsql_getTableInfo(
     return rc;
   }
 
-  columnInfos = sqlite3_malloc(numRows * sizeof *columnInfos);
   rc = sqlite3_step(pStmt);
+  if (rc != SQLITE_ROW)
+  {
+    sqlite3_finalize(pStmt);
+    return rc;
+  }
+  columnInfos = sqlite3_malloc(numRows * sizeof *columnInfos);
   while (rc == SQLITE_ROW)
   {
     assert(i < numRows);

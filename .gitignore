@@ -1,4 +1,6 @@
 .DS_Store
 out.db
-target/
-.vscode/
+.vscode
+a.out
+dist/
+bench/

@@ -1,0 +1,106 @@
+name: "release"
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build-macos:
+    name: Build for MacOS
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+      - name: Build
+        env:
+          ENV: CI
+        run: |
+          mkdir -p dist/
+          make test-loadable
+      - name: Upload dist as artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: path0-darwin-amd64
+          path: dist
+  build-linux:
+    name: Build for Linux
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+      - name: Build
+        env:
+          ENV: CI
+        run: |
+          mkdir -p dist/
+          make test-loadable
+      - name: Upload dist as artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: path0-linux-amd64
+          path: dist
+  build-windows:
+    name: Build for Windows
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+      - name: Build
+        env:
+          ENV: CI
+        run: |
+          mkdir -p dist/
+          make test-loadable
+      - name: Upload dist as artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: path0-windows-amd64
+          path: dist
+  build-sqljs:
+    name: Build for SQL.JS/WASM
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+      - name: Setup emsdk
+        uses: mymindstorm/setup-emsdk@v11
+        with:
+          version: 3.1.5
+          actions-cache-folder: "emsdk-cache"
+      - name: Verify
+        run: emcc -v
+      - run: |
+          mkdir -p dist/
+          make sqljs
+      - uses: actions/upload-artifact@v2
+        with:
+          name: path0-sqljs
+          path: dist/sqljs.js
+      - uses: actions/upload-artifact@v2
+        with:
+          name: path0-sqljs
+          path: dist/sqljs.wasm
+  release:
+    name: "releases"
+    if: ${{ github.event_name == 'release' }}
+    needs: [build-macos, build-linux, build-windows, build-sqljs]
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+      - name: Download workflow artifacts
+        uses: actions/download-artifact@v2
+      - uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const script = require('.github/workflows/release.js')
+            await script({github, context})

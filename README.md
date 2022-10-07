@@ -1,6 +1,6 @@
-# cfsql - conflict-free-sqlite
+# [wip] cfsql - conflict-free-sqlite
 
-08/22 - Currently investigating [`virtual table extensions`](https://www.sqlite.org/vtab.html) and/or connection proxies to make `cfsqlite` production ready.
+**10/7** - production ready c extension is nearing completion.
 
 ---
 
@@ -20,7 +20,7 @@ You can view a conflict-free DB in action in the `__tests__` folder of the `repl
 
 # Auto-Migrate
 
-A script to migrate existing `sqlite` dbs to be conflict free lives in the `migrator` package. 
+A script to migrate existing `sqlite` dbs to be conflict free lives in the `migrator` package.
 
 An example of the results this migration can be seen in the `chinook` package.
 
@@ -30,6 +30,7 @@ An example of the results this migration can be seen in the `chinook` package.
 # Prior Art
 
 ## [1] Towards a General Database Management System of Conflict-Free Replicated Relations
+
 https://munin.uit.no/bitstream/handle/10037/22344/thesis.pdf?sequence=2
 
 `cfsqlite` improves upon [1] in the following ways --
@@ -38,6 +39,7 @@ https://munin.uit.no/bitstream/handle/10037/22344/thesis.pdf?sequence=2
 - [1] cannot compute deltas between databases without sending the full copy of each database to be compared. `cfsqlite` only needs the logical clock (1 64bit int per peer) of a given database to determine what updates that database is missing.
 
 ## [2] Conflict-Free Replicated Relations for Multi-Synchronous Database Management at Edge
+
 https://hal.inria.fr/hal-02983557/document
 
 `cfsqlite` improves upon [2] in the following ways --
@@ -46,6 +48,7 @@ https://hal.inria.fr/hal-02983557/document
 - [2] keeps a queue of all writes. This queue is drained when those writes are merged. This means that [2] can only sync changes to a single centralized node. `cfsqlite` keeps a logical clock at each database. If a new database comes online it sends its logical clock to a peer. That peer can compute what changes are missing from the clock.
 
 ## [3] CRDTs for Mortals
+
 https://www.youtube.com/watch?v=DEcwa68f-jY
 
 `cfsqlite` improves upon [3] in the following ways --
@@ -64,11 +67,11 @@ These projects helped improve my understanding of CRDTs on this journey --
 # Schema Design for CRDTs & Eventual Consistency
 
 `cfsqlite` currently does not support:
+
 1. Foreign key cosntraints. You can still have foreign keys (i.e. a column with an id of another row), but they can't be enforced by the db.
    1. TODO: discuss design alternatives and why this is actually not a bad thing when considering row level security.
 2. Uniqueness constraints other than the primary key. The only enforceably unique column in a table should be the primary key. Other columns may be indices but they may not be unique.
    1. TODO: discuss this in much more detail.
-
 
 Note: prior art [1] & [2] claim to support foreign key and uniqueness constraints. I believe their approach is unsound and results in update loops and have not incoroprated it into `cfsqlite`. If I'm wrong, I'll gladly fold their approach in.
 
@@ -76,13 +79,14 @@ Note: prior art [1] & [2] claim to support foreign key and uniqueness constraint
 
 ## Tables
 
-Tables are modeled as [GSets](https://en.wikipedia.org/wiki/Conflict-free_replicated_data_type#G-Set_(Grow-only_Set)) where each item has a [causal length](https://munin.uit.no/bitstream/handle/10037/19591/article.pdf?sequence=2). You can call this a "CLSet". This allows us to keep all rows as well as track deletes so your application will not see deleted rows.
+Tables are modeled as [GSets](<https://en.wikipedia.org/wiki/Conflict-free_replicated_data_type#G-Set_(Grow-only_Set)>) where each item has a [causal length](https://munin.uit.no/bitstream/handle/10037/19591/article.pdf?sequence=2). You can call this a "CLSet". This allows us to keep all rows as well as track deletes so your application will not see deleted rows.
 
 ## Rows
 
 Rows are currently modeled as [LWWW maps](https://bartoszsypytkowski.com/crdt-map/#crdtmapwithlastwritewinsupdates). I.e., each column in a row is a [LWW Register](https://bartoszsypytkowski.com/operation-based-crdts-registers-and-sets/#lastwritewinsregister).
 
 Things to support in the future
+
 - counter columns
 - MVR (multi-value register) columns
 
@@ -93,6 +97,7 @@ Deltas between databases are calculated by each database keeping a [version vect
 Every row in the database is associated with a copy of the version vector. This copy is a snapshot of the value of the vector at the time the most recent write was made to the row.
 
 If DB-A wants changes from DB-B,
+
 - DB-A sends its version vector to DB-B
 - DB-B finds all rows for which _any_ element in the row's snapshot vector is _greater_ than the corresponding element in the provided vector or for which the provided vector is missing an entry (https://github.com/tantaman/conflict-free-sqlite/blob/main/prototype/replicator/src/queries.ts#L59-L63)
 - DB-B sends these rows to DB-A
@@ -115,6 +120,7 @@ https://github.com/tantaman/conflict-free-sqlite/tree/main/prototype/test-schema
 # Perf
 
 `cfsqlite` is currently 2-3x slower than base `sqlite`. I believe we can get perf to be near identical. The current bottlenecks are:
+
 1. The current database clock value is stored in a table and must be touched every write
 2. The site id of the database is stored in a table and queried every write
 
@@ -127,9 +133,11 @@ We can move both of these values out of their tables and into a variable in-memo
 - Subselects -- peers may want to sync subsets of the database even if they have access to the entire thing. Compute deltas but only send those deltas that fall into the peer's provided query.
 
 # Example Use Case
+
 Say we have a databse schema called "Animal App." Alice, Bob and Billy all have local copies of "Animal App" on their devices. They start their day at a hostel with all of their devices synced. They then part ways, backpacking into the wilderness each with their own copy of the db.
 
-As they see different (or maybe even the same) animals, they record their observations. 
+As they see different (or maybe even the same) animals, they record their observations.
+
 - Name
 - Genus
 - Species
@@ -144,7 +152,8 @@ At the end of the day, the group comes back together. They need to merge all of 
 Note that "without conflict" would be based on the rules of the selected `CRDTs` used within the schema.
 
 Some example are --
-- Tables might be [grow only sets](https://en.wikipedia.org/wiki/Conflict-free_replicated_data_type#G-Set_(Grow-only_Set)) -- thus never losing an observation.
+
+- Tables might be [grow only sets](<https://en.wikipedia.org/wiki/Conflict-free_replicated_data_type#G-Set_(Grow-only_Set)>) -- thus never losing an observation.
   - Or [sets with a causal length](https://www.youtube.com/watch?v=l4JxlK8Qzvs) so we can safely remove rows
 - Table columns might be last write win (LWW) registers -- converging but throwing out earlier writes
 - Table columns might be multi value (MV) registers -- keeping around all concurrent edits to a single column for users (or code) to pick and merge later.

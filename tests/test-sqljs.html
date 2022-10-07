@@ -1,0 +1,85 @@
+<meta charset="utf8" />
+<html>
+  <body>
+    <div id="results">⏳ Running tests...</div>
+  </body>
+  <script src="../dist/sqljs.js"></script>
+  <script type="module">
+    import { html } from "https://cdn.skypack.dev/htl";
+
+    const config = {
+      locateFile: (filename, prefix) => {
+        return `../dist/${filename}`;
+      },
+    };
+    initSqlJs(config).then(function (SQL) {
+      var db = new SQL.Database();
+
+      function printResults(query) {
+        let stmt = db.prepare(query);
+        const columns = stmt.getColumnNames();
+        const rows = [];
+        while (stmt.step()) {
+          rows.push(stmt.get());
+        }
+
+        document.body.appendChild(html` <style>
+            td {
+              border: 1px solid #ccc;
+            }
+            th {
+              background: #ccc;
+              border: 1px solid black;
+            }
+            code pre {
+              background: #eee;
+            }
+          </style>
+          <div
+            style="border: 1px solid black;margin-bottom: 1rem; padding: 1rem;"
+          >
+            <code><pre>${query}</pre></code>
+            <table style="border-collapse: collapse;">
+              <thead>
+                <tr>
+                  ${columns.map((column) => html`<th>${column}</th>`)}
+                </tr>
+              </thead>
+              <tbody>
+                ${rows.map(
+                  (values) => html`<tr>
+                    ${values.map((d) => html`<td><pre>${d}</pre></td>`)}
+                  </tr>`
+                )}
+              </tbody>
+            </table>
+          </div>`);
+      }
+      try {
+        printResults(
+          `select name 
+from pragma_function_list 
+where name like 'path%'`
+        );
+        printResults(
+          `select name 
+from pragma_module_list 
+where name like 'path%'`
+        );
+        printResults("select path_version(), path_debug()");
+
+        printResults(
+          `select 
+  rowid, 
+  type,
+  part
+from path_parts('/usr/lib/ayoo')`
+        );
+        document.querySelector("#results").innerText = "✅ tests passed";
+      } catch {
+        document.querySelector("#results").innerText =
+          "❌ test(s) failed, check console";
+      }
+    });
+  </script>
+</html>

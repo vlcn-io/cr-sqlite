@@ -29,4 +29,11 @@ char *cfsql_asColumnDefinitions(cfsql_ColumnInfo *in, size_t inlen);
 
 char *cfsql_asIdentifierList(cfsql_ColumnInfo *in, size_t inlen);
 
+int cfsql_getIndexList(
+    sqlite3 *db,
+    const char *tblName,
+    cfsql_IndexInfo **pIndexInfos,
+    int *pIndexInfosLen,
+    char **pErrMsg);
+
 #endif

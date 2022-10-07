@@ -52,6 +52,9 @@ struct cfsql_TableInfo {
   // the column infos inside of all the other arrays.
   cfsql_ColumnInfo *withVersionCols;
   int withVersionColsLen;
+
+  cfsql_IndexInfo *indexInfo;
+  int indexInfoLen;
 };
 
 int cfsql_createClockTable(

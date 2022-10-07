@@ -192,21 +192,27 @@ int cfsql_getIndexedCols(
   int numCols = 0;
   char **indexedCols;
   sqlite3_stmt *pStmt = 0;
+  *pIndexedCols = 0;
+  *pIndexedColsLen = 0;
 
   char* zSql = sqlite3_mprintf(
       "SELECT count(*) FROM pragma_index_info('%s')",
       indexName
     );
   numCols = cfsql_getCount(db, zSql);
-  *pIndexedColsLen = numCols;
   sqlite3_free(zSql);
 
   if (numCols <= 0) {
     return numCols;
   }
 
-  zSql = sqlite3_mprintf("SELECT name FROM pragma_index_info('%s') ORDER BY seq ASC");
+  zSql = sqlite3_mprintf("SELECT \"name\" FROM pragma_index_info('%s') ORDER BY \"seq\" ASC");
   rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
+  sqlite3_free(zSql);
+  if (rc != SQLITE_OK) {
+    sqlite3_finalize(pStmt);
+    return rc;
+  }
 
   rc = sqlite3_step(pStmt);
   if (rc != SQLITE_ROW) {
@@ -221,8 +227,10 @@ int cfsql_getIndexedCols(
 
     indexedCols[j] = strdup((const char *)sqlite3_column_text(pStmt, 0));
 
+    rc = sqlite3_step(pStmt);
     ++j;
   }
+  sqlite3_finalize(pStmt);
 
   if (rc != SQLITE_DONE) {
     for (int i = 0; i < j; ++i) {
@@ -233,6 +241,7 @@ int cfsql_getIndexedCols(
   }
 
   *pIndexedCols = indexedCols;
+  *pIndexedColsLen = numCols;
 
   return SQLITE_OK;
 }

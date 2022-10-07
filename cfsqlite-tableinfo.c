@@ -7,7 +7,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
-
+#include <stdio.h>
 
 // TODO: generalize to `asList` for identifiers or values or bind vars
 char *cfsql_asIdentifierList(cfsql_ColumnInfo *in, size_t inlen)
@@ -94,14 +94,25 @@ void cfsql_freeColumnInfoContents(cfsql_ColumnInfo *columnInfo)
   // sqlite3_free(columnInfo->versionOf);
 }
 
-void cfsql_freeIndexInfoContents(cfsql_IndexInfo *indexInfo) {
+void cfsql_freeIndexInfoContents(cfsql_IndexInfo *indexInfo)
+{
   sqlite3_free(indexInfo->indexedCols);
   sqlite3_free(indexInfo->name);
   sqlite3_free(indexInfo->origin);
-  for (int j = 0; j < indexInfo->indexedColsLen; ++j) {
+  for (int j = 0; j < indexInfo->indexedColsLen; ++j)
+  {
     sqlite3_free(indexInfo->indexedCols[j]);
   }
-  sqlite3_free(indexInfo->indexedCols);  
+  sqlite3_free(indexInfo->indexedCols);
+}
+
+
+void cfsql_freeIndexInfos(cfsql_IndexInfo *indexInfos, int indexInfosLen) {
+  for (int i = 0; i < indexInfosLen; ++i) {
+    cfsql_freeIndexInfoContents(&indexInfos[i]);
+  }
+
+  sqlite3_free(indexInfos);
 }
 
 static void cfsql_freeColumnInfos(cfsql_ColumnInfo *columnInfos, int len)
@@ -287,7 +298,9 @@ static cfsql_TableInfo *cfsql_tableInfo(
     int tblType,
     const char *tblName,
     cfsql_ColumnInfo *colInfos,
-    int colInfosLen)
+    int colInfosLen,
+    cfsql_IndexInfo *indexInfos,
+    int indexInfosLen)
 {
   cfsql_TableInfo *ret = sqlite3_malloc(sizeof *ret);
   int tmpLen = 0;
@@ -316,6 +329,8 @@ static cfsql_TableInfo *cfsql_tableInfo(
 
   ret->nonPks = cfsql_nonPks(ret->baseCols, ret->baseColsLen, &(ret->nonPksLen));
   ret->pks = cfsql_pks(ret->baseCols, ret->baseColsLen, &(ret->pksLen));
+  ret->indexInfo = indexInfos;
+  ret->indexInfoLen = indexInfosLen;
 
   return ret;
 }
@@ -327,7 +342,8 @@ static cfsql_TableInfo *cfsql_tableInfo(
 int cfsql_getIndexList(
     sqlite3 *db,
     const char *tblName,
-    cfsql_IndexInfo **pIndexInfo,
+    cfsql_IndexInfo **pIndexInfos,
+    int *pIndexInfosLen,
     char **pErrMsg)
 {
   // query the index_list pragma
@@ -340,12 +356,18 @@ int cfsql_getIndexList(
   cfsql_IndexInfo *indexInfos = 0;
   int i = 0;
 
-  zSql = sqlite3_mprintf("select count(*) from pragma_table_info(\"%s\")", tblName);
+  zSql = sqlite3_mprintf("select count(*) from pragma_index_list('%s')", tblName);
   numIndices = cfsql_getCount(db, zSql);
   sqlite3_free(zSql);
 
+  if (numIndices == 0) {
+    *pIndexInfos = 0;
+    *pIndexInfosLen = 0;
+    return SQLITE_OK;
+  }
+
   zSql = sqlite3_mprintf(
-      "SELECT seq, name, unique, origin, partial FROM pragma_index_list(%s)",
+      "SELECT \"seq\", \"name\", \"unique\", \"origin\", \"partial\" FROM pragma_index_list('%s')",
       tblName);
   rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
   sqlite3_free(zSql);
@@ -378,30 +400,34 @@ int cfsql_getIndexList(
   }
   sqlite3_finalize(pStmt);
 
-  if (rc != SQLITE_DONE) {
+  if (rc != SQLITE_DONE)
+  {
     goto FAIL;
   }
 
   for (i = 0; i < numIndices; ++i)
   {
     rc = cfsql_getIndexedCols(
-      db,
-      indexInfos[i].name,
-      &(indexInfos[i].indexedCols),
-      &(indexInfos[i].indexedColsLen)
-    );
+        db,
+        indexInfos[i].name,
+        &(indexInfos[i].indexedCols),
+        &(indexInfos[i].indexedColsLen));
 
-    if (rc != SQLITE_OK) {
+    if (rc != SQLITE_OK)
+    {
       goto FAIL;
     }
   }
 
-  *pIndexInfo = indexInfos;
+  *pIndexInfos = indexInfos;
+  *pIndexInfosLen = numIndices;
   return rc;
 
-  FAIL:
-  *pIndexInfo = 0;
-  for (i = 0; i < numIndices; ++i) {
+FAIL:
+  *pIndexInfos = 0;
+  *pIndexInfosLen = 0;
+  for (i = 0; i < numIndices; ++i)
+  {
     cfsql_freeIndexInfoContents(&indexInfos[i]);
   }
   return rc;
@@ -423,7 +449,7 @@ int cfsql_getTableInfo(
   char *zSql = 0;
   int rc = SQLITE_OK;
   sqlite3_stmt *pStmt = 0;
-  int numRows = 0;
+  int numColInfos = 0;
   int i = 0;
   cfsql_ColumnInfo *columnInfos = 0;
   const char *tmp = 0;
@@ -431,12 +457,12 @@ int cfsql_getTableInfo(
   int tmpLen = 0;
 
   zSql = sqlite3_mprintf("select count(*) from pragma_table_info(\"%s\")", tblName);
-  numRows = cfsql_getCount(db, zSql);
+  numColInfos = cfsql_getCount(db, zSql);
   sqlite3_free(zSql);
 
-  if (numRows < 0)
+  if (numColInfos < 0)
   {
-    return numRows;
+    return numColInfos;
   }
 
   zSql = sqlite3_mprintf("select \"cid\", \"name\", \"type\", \"notnull\", \"pk\", \"dflt_value\" from pragma_table_info(\"%s\")",
@@ -456,10 +482,10 @@ int cfsql_getTableInfo(
     sqlite3_finalize(pStmt);
     return rc;
   }
-  columnInfos = sqlite3_malloc(numRows * sizeof *columnInfos);
+  columnInfos = sqlite3_malloc(numColInfos * sizeof *columnInfos);
   while (rc == SQLITE_ROW)
   {
-    assert(i < numRows);
+    assert(i < numColInfos);
 
     columnInfos[i].cid = sqlite3_column_int(pStmt, 0);
 
@@ -474,9 +500,25 @@ int cfsql_getTableInfo(
     ++i;
     rc = sqlite3_step(pStmt);
   }
-
-  *pTableInfo = cfsql_tableInfo(tblType, tblName, columnInfos, numRows);
   sqlite3_finalize(pStmt);
+
+  cfsql_IndexInfo *indexInfos;
+  int numIndexInfos;
+
+  rc = cfsql_getIndexList(
+      db,
+      tblName,
+      &indexInfos,
+      &numIndexInfos,
+      pErrMsg);
+
+  if (rc != SQLITE_OK)
+  {
+    return rc;
+  }
+
+  *pTableInfo = cfsql_tableInfo(tblType, tblName, columnInfos, numColInfos, indexInfos, numIndexInfos);
+
   return SQLITE_OK;
 }
 
@@ -491,4 +533,6 @@ void cfsql_freeTableInfo(cfsql_TableInfo *tableInfo)
   sqlite3_free(tableInfo->baseCols);
   sqlite3_free(tableInfo->pks);
   sqlite3_free(tableInfo->nonPks);
+
+  cfsql_freeIndexInfos(tableInfo->indexInfo, tableInfo->indexInfoLen);
 }

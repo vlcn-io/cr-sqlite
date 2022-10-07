@@ -9,11 +9,11 @@
 
 void testGetTableInfo()
 {
+  printf("GetTableInfo\n");
   sqlite3 *db = 0;
   cfsql_TableInfo *tableInfo = 0;
   char *errMsg = 0;
   int rc = SQLITE_OK;
-  printf("GetTableInfo\n");
 
   rc = sqlite3_open(":memory:", &db);
 
@@ -24,6 +24,7 @@ void testGetTableInfo()
   {
     printf("err: %s %d\n", errMsg, rc);
     sqlite3_free(errMsg);
+    assert(0);
     return;
   }
 
@@ -54,6 +55,7 @@ void testGetTableInfo()
   {
     printf("err: %s %d\n", errMsg, rc);
     sqlite3_free(errMsg);
+    assert(0);
     return;
   }
 
@@ -230,6 +232,50 @@ void testAsColumnDefinitions() {
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
+void testGetIndexList() {
+  printf("GetIndexList\n");
+  sqlite3 *db = 0;
+  cfsql_IndexInfo *indexInfos;
+  int indexInfosLen;
+  int rc = sqlite3_open(":memory:", &db);
+
+  sqlite3_exec(db, "CREATE TABLE foo (a)", 0, 0, 0);
+
+  rc = cfsql_getIndexList(
+    db,
+    "foo",
+    &indexInfos,
+    &indexInfosLen,
+    0
+  );
+
+  assert(rc == SQLITE_OK);
+  assert(indexInfos == 0);
+  assert(indexInfosLen == 0);
+
+  sqlite3_exec(db, "CREATE TABLE bar (a primary key)", 0, 0, 0);
+
+  rc = cfsql_getIndexList(
+    db,
+    "bar",
+    &indexInfos,
+    &indexInfosLen,
+    0
+  );
+
+  printf("rc: %d\n", rc);
+  assert(rc == SQLITE_OK);
+  assert(indexInfosLen == 1);
+  for (int i = 0; i < indexInfosLen; ++i) {
+    assert(indexInfos[i].indexedColsLen == 1);
+    assert(strcmp(indexInfos[i].indexedCols[0], "a") == 0);
+    assert(strcmp(indexInfos[i].origin, "pk") == 0);
+    assert(indexInfos[i].unique == 1);
+  }
+
+  printf("\t\e[0;32mSuccess\e[0m\n");
+}
+
 void cfsqlTableInfoTestSuite() {
   printf("\e[47m\e[1;30mSuite: cfsql_tableInfo\e[0m\n");
 
@@ -238,4 +284,5 @@ void cfsqlTableInfoTestSuite() {
   testAddVersionCols();
   testExtractBaseCols();
   testGetTableInfo();
+  testGetIndexList();
 }

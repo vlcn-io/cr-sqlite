@@ -212,6 +212,7 @@ void testGetIndexedCols()
   sqlite3_free(indexedCols);
 
   printf("\t\e[0;32mSuccess\e[0m\n");
+  return;
 
 fail:
   printf("bad return code: %d\n", rc);

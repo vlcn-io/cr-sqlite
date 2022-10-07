@@ -8,3 +8,5 @@ int main(int argc, char *argv[])
   cfsqlTableInfoTestSuite();
   cfsqlTestSuite();
 }
+
+// TODO: support `if not exists`

@@ -34,7 +34,7 @@ static char siteIdBlob[] = {
  * TODO: Add a mutex to guard initialization of cfsqlite.
  * This will prevent connections from initializing
  * the shared memory concurrently.
- * 
+ *
  * The initialization mutex does not need to be re-entrant
  * as cfsqlite initialization makes no calls to itself.
  */
@@ -46,7 +46,7 @@ static const size_t siteIdBlobSize = sizeof(siteIdBlob);
  *
  * This is not an unsigned int since sqlite does not support unsigned ints
  * as a data type and we do eventually write db version(s) to the db.
- * 
+ *
  * TODO: Changing the db version needs to be done in a thread safe manner.
  */
 static int64_t dbVersion = -9223372036854775807L;
@@ -248,7 +248,7 @@ static void dbVersionFunc(sqlite3_context *context, int argc, sqlite3_value **ar
 /**
  * Given a query passed to cfsqlite, determine what kind of schema modification
  * query it is.
- * 
+ *
  * We need to know given each schema modification type
  * requires unique handling in the crr layer.
  */
@@ -363,6 +363,51 @@ int cfsql_createClockTable(
   return SQLITE_OK;
 }
 
+int cfsql_addIndicesToCrrBaseTable(
+    sqlite3 *db,
+    cfsql_TableInfo *tableInfo,
+    char **err)
+{
+  int rc = SQLITE_OK;
+  cfsql_IndexInfo *indexInfo = tableInfo->indexInfo;
+  int indexInfoLen = tableInfo->indexInfoLen;
+  char *identifierList;
+  char *zSql;
+
+  if (indexInfoLen == 0)
+  {
+    return rc;
+  }
+
+  for (int i = 0; i < indexInfoLen; ++i)
+  {
+    int isPk = strcmp(indexInfo[i].origin, "pk") != 0;
+    if (isPk)
+    {
+      // we create primary keys in the table creation statement
+      continue;
+    }
+
+    // TODO: we don't yet handle indices created with where clauses
+    identifierList = cfsql_asIdentifierListStr(indexInfo[i].indexedCols, indexInfo[i].indexedColsLen, ',');
+    zSql = sqlite3_mprintf(
+        "CREATE INDEX \"%s\" ON \"%s__cfsql_crr\" (%s)",
+        indexInfo[i].name,
+        tableInfo->tblName,
+        identifierList);
+    sqlite3_free(identifierList);
+
+    rc = sqlite3_exec(db, zSql, 0, 0, err);
+    sqlite3_free(zSql);
+    if (rc != SQLITE_OK)
+    {
+      return rc;
+    }
+  }
+
+  return SQLITE_OK;
+}
+
 int cfsql_createCrrBaseTable(
     sqlite3 *db,
     cfsql_TableInfo *tableInfo,
@@ -403,8 +448,14 @@ int cfsql_createCrrBaseTable(
     return rc;
   }
 
-  // TODO: we need index definitions too!
-  // we should add those to the CRR post creation of the table.
+  rc = cfsql_addIndicesToCrrBaseTable(
+      db,
+      tableInfo,
+      err);
+  if (rc != SQLITE_OK)
+  {
+    return rc;
+  }
 
   return SQLITE_OK;
 }
@@ -439,15 +490,16 @@ static int cfsql_createViewOfCrr(
   return rc;
 }
 
-static void createCrrViewTriggers(
+static int createCrrViewTriggers(
     cfsql_TableInfo *tableInfo)
 {
+  return 0;
 }
 
 /**
  * The patch view provides an interface for applying patches
  * to a crr.
- * 
+ *
  * I.e., inserts can be made
  * against the patch view to sync data from
  * a peer.
@@ -473,9 +525,10 @@ static int cfsql_createPatchView(
   return rc;
 }
 
-static void createPatchTrigger(
+static int createPatchTrigger(
     cfsql_TableInfo *tableInfo)
 {
+  return 0;
 }
 
 /**
@@ -553,8 +606,15 @@ static void createCrr(
   }
   if (rc == SQLITE_OK)
   {
-    createCrrViewTriggers(tableInfo);
+    rc = createCrrViewTriggers(tableInfo);
+  }
+  if (rc == SQLITE_OK)
+  {
     createPatchTrigger(tableInfo);
+  }
+  if (rc == SQLITE_OK)
+  {
+    cfsql_freeTableInfo(tableInfo);
     return;
   }
 
@@ -583,6 +643,27 @@ static void alterCrrIndex()
 
 static void alterCrr()
 {
+  // create crr in tmp table
+  // run alter againt tmp crr
+  // diff pragma of orig crr and tmp crr
+  // determine:
+  // - col add
+  // - col drop
+  // - col rename
+  // add: +1
+  // rm: -1
+  // rename: delta on one
+  //
+  // rename:
+  // drop triggers and views
+  // rename col on base crr (and version col.. if need be)
+  // recreate triggers and views based on new crr pragma
+  //
+  // add:
+  // same as above but add col on step 2
+  //
+  // remove:
+  // remove col on step 2
 }
 
 /**
@@ -616,6 +697,7 @@ static void cfsqlFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
   }
 
   queryType = determineQueryType(db, context, query);
+  // TODO: likely need this to be a sub-transaction
   rc = sqlite3_exec(db, "BEGIN", 0, 0, &errmsg);
   if (rc != SQLITE_OK)
   {

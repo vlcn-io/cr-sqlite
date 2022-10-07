@@ -53,6 +53,40 @@ void cfsql_joinWith(char *dest, char **src, size_t srcLen, char delim)
   }
 }
 
+// TODO:
+// have this take a function pointer that extracts the string so we can
+// delete cfsql_asIdentifierList
+char *cfsql_asIdentifierListStr(char **in, size_t inlen, char delim)
+{
+  int finalLen = 0;
+  char *ret = 0;
+  char **mapped = sqlite3_malloc(inlen * sizeof(char *));
+
+  for (int i = 0; i < inlen; ++i)
+  {
+    mapped[i] = sqlite3_mprintf("\"%w\"", in[i]);
+    finalLen += strlen(mapped[i]);
+  }
+  // -1 for spearator not appended to last thing
+  finalLen += inlen - 1;
+
+  // + 1 for null terminator
+  ret = sqlite3_malloc(finalLen * sizeof(char) + 1);
+  ret[finalLen] = '\0';
+
+  cfsql_joinWith(ret, in, inlen, delim);
+
+  // free everything we allocated, except ret.
+  // caller will free ret.
+  for (int i = 0; i < inlen; ++i)
+  {
+    sqlite3_free(mapped[i]);
+  }
+  sqlite3_free(mapped);
+
+  return ret;
+}
+
 /**
  * Reads tokens until the first space or end of string is encountered.
  * Returns the tokens read.
@@ -195,34 +229,37 @@ int cfsql_getIndexedCols(
   *pIndexedCols = 0;
   *pIndexedColsLen = 0;
 
-  char* zSql = sqlite3_mprintf(
+  char *zSql = sqlite3_mprintf(
       "SELECT count(*) FROM pragma_index_info('%s')",
-      indexName
-    );
+      indexName);
   numCols = cfsql_getCount(db, zSql);
   sqlite3_free(zSql);
 
-  if (numCols <= 0) {
+  if (numCols <= 0)
+  {
     return numCols;
   }
 
   zSql = sqlite3_mprintf("SELECT \"name\" FROM pragma_index_info('%s') ORDER BY \"seq\" ASC");
   rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
   sqlite3_free(zSql);
-  if (rc != SQLITE_OK) {
+  if (rc != SQLITE_OK)
+  {
     sqlite3_finalize(pStmt);
     return rc;
   }
 
   rc = sqlite3_step(pStmt);
-  if (rc != SQLITE_ROW) {
+  if (rc != SQLITE_ROW)
+  {
     sqlite3_finalize(pStmt);
     return rc;
   }
 
   int j = 0;
   indexedCols = sqlite3_malloc(numCols * sizeof(char *));
-  while (rc == SQLITE_ROW) {
+  while (rc == SQLITE_ROW)
+  {
     assert(j < numCols);
 
     indexedCols[j] = strdup((const char *)sqlite3_column_text(pStmt, 0));
@@ -232,8 +269,10 @@ int cfsql_getIndexedCols(
   }
   sqlite3_finalize(pStmt);
 
-  if (rc != SQLITE_DONE) {
-    for (int i = 0; i < j; ++i) {
+  if (rc != SQLITE_DONE)
+  {
+    for (int i = 0; i < j; ++i)
+    {
       sqlite3_free(indexedCols[i]);
     }
     sqlite3_free(indexedCols);

@@ -9,7 +9,7 @@
 #include <assert.h>
 #include <stdio.h>
 
-// TODO: generalize to `asList` for identifiers or values or bind vars
+// Bug here? see cfsql_asIdentifierListStr
 char *cfsql_asIdentifierList(cfsql_ColumnInfo *in, size_t inlen)
 {
   if (inlen <= 0)
@@ -451,9 +451,6 @@ int cfsql_getTableInfo(
   int numColInfos = 0;
   int i = 0;
   cfsql_ColumnInfo *columnInfos = 0;
-  const char *tmp = 0;
-  char *tmp2 = 0;
-  int tmpLen = 0;
 
   zSql = sqlite3_mprintf("select count(*) from pragma_table_info(\"%s\")", tblName);
   numColInfos = cfsql_getCount(db, zSql);

@@ -172,6 +172,25 @@ fail:
   printf("bad return code: %d\n", rc);
 }
 
+void testAsIdentifierListStr() {
+  char* tc1[] = {
+    "one",
+    "two",
+    "three"
+  };
+  char *res;
+
+  res = cfsql_asIdentifierListStr(
+    tc1,
+    3,
+    ','
+  );
+  printf("s: %s\n", res);
+  assert(strcmp(res, "\"one\",\"two\",\"three\"") == 0);
+  assert(strlen(res) == 19);
+  sqlite3_free(res);
+}
+
 void cfsqlUtilTestSuite()
 {
   printf("\e[47m\e[1;30mSuite: cfsql_util\e[0m\n");
@@ -182,6 +201,7 @@ void cfsqlUtilTestSuite()
   testGetCount();
   testJoinWith();
   testGetIndexedCols();
+  testAsIdentifierListStr();
 
   // TODO: test pk pulling and correct sorting of pks
   // TODO: create a fn to create test tables for all tests.

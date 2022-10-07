@@ -74,7 +74,7 @@ char *cfsql_asIdentifierListStr(char **in, size_t inlen, char delim)
   ret = sqlite3_malloc(finalLen * sizeof(char) + 1);
   ret[finalLen] = '\0';
 
-  cfsql_joinWith(ret, in, inlen, delim);
+  cfsql_joinWith(ret, mapped, inlen, delim);
 
   // free everything we allocated, except ret.
   // caller will free ret.

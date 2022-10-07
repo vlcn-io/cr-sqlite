@@ -107,6 +107,10 @@ void cfsql_freeIndexInfoContents(cfsql_IndexInfo *indexInfo)
 
 
 void cfsql_freeIndexInfos(cfsql_IndexInfo *indexInfos, int indexInfosLen) {
+  if (indexInfos == 0) {
+    return;
+  }
+
   for (int i = 0; i < indexInfosLen; ++i) {
     cfsql_freeIndexInfoContents(&indexInfos[i]);
   }
@@ -116,6 +120,10 @@ void cfsql_freeIndexInfos(cfsql_IndexInfo *indexInfos, int indexInfosLen) {
 
 static void cfsql_freeColumnInfos(cfsql_ColumnInfo *columnInfos, int len)
 {
+  if (columnInfos == 0) {
+    return;
+  }
+  
   int i = 0;
   for (i = 0; i < len; ++i)
   {
@@ -520,6 +528,9 @@ int cfsql_getTableInfo(
 
 void cfsql_freeTableInfo(cfsql_TableInfo *tableInfo)
 {
+  if (tableInfo == 0) {
+    return;
+  }
   // withVersionCols is a superset of all other col arrays
   // and will free their contents.
   cfsql_freeColumnInfos(tableInfo->withVersionCols, tableInfo->withVersionColsLen);

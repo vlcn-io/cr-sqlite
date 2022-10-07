@@ -65,6 +65,34 @@ fail:
 
 void testCreateCrrBaseTable()
 {
+  printf("CreateCrrBaseTable\n");
+
+  int rc = SQLITE_OK;
+  sqlite3* db;
+  char *err = 0;
+  cfsql_TableInfo * tableInfo = 0;
+  rc = sqlite3_open(":memory:", &db);
+
+  rc = sqlite3_exec(db, "CREATE TABLE foo (a primary key, b)", 0, 0, &err);
+  CHECK_OK
+  rc = sqlite3_exec(db, "CREATE INDEX foo_b ON foo (b)", 0, 0, &err);
+  CHECK_OK
+
+  rc = cfsql_getTableInfo(db, USER_SPACE, "foo", &tableInfo, &err);
+  CHECK_OK
+  rc = cfsql_createCrrBaseTable(db, tableInfo, &err);
+  CHECK_OK
+
+  // now select the base table sql and check it is what is expected.
+
+  printf("\t\e[0;32mSuccess\e[0m\n");
+  return;
+
+  fail:
+    printf("err: %s %d\n", err, rc);
+    sqlite3_free(err);
+    cfsql_freeTableInfo(tableInfo);
+    assert(rc == SQLITE_OK);
 }
 
 void testCreateViewOfCrr()
@@ -73,7 +101,7 @@ void testCreateViewOfCrr()
 
 void cfsqlTestSuite() {
   printf("\e[47m\e[1;30mSuite: cfsql\e[0m\n");
-  
+
   testCreateClockTable();
   testCreateCrrBaseTable();
   testCreateViewOfCrr();

@@ -415,6 +415,7 @@ int cfsql_createCrrBaseTable(
 {
   int rc = SQLITE_OK;
   char *zSql = 0;
+  sqlite3_stmt *pStmt = 0;
 
   char *columnDefs = cfsql_asColumnDefinitions(
       tableInfo->withVersionCols,
@@ -439,11 +440,28 @@ int cfsql_createCrrBaseTable(
   sqlite3_free(pkList);
   sqlite3_free(columnDefs);
 
-  // TODO: we can't exec. We have to prepare and bind
-  // since default values are not filled in!
-  rc = sqlite3_exec(db, zSql, 0, 0, err);
+  rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
+  if (rc != SQLITE_OK) {
+    return rc;
+  }
   sqlite3_free(zSql);
-  if (rc != SQLITE_OK)
+
+  int j = 0;
+  for (int i = 0; i < tableInfo->baseColsLen; ++i)
+  {
+    if (tableInfo->baseCols[i].dfltValue != 0) {
+      rc = sqlite3_bind_value(pStmt, j, tableInfo->baseCols[i].dfltValue);
+      if (rc != SQLITE_OK) {
+        return rc;
+      }
+      ++j;
+    }
+  }
+
+  rc = sqlite3_step(pStmt);
+  sqlite3_finalize(pStmt);
+
+  if (rc != SQLITE_DONE)
   {
     return rc;
   }
@@ -728,32 +746,6 @@ static void cfsqlFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
   }
 
   sqlite3_exec(db, "COMMIT", 0, 0, 0);
-  // 1. CREATE TABLE
-  // this is the common case. We go and:
-  //  - create a temp table
-  //  - extract table info
-  //  - create view, crr, triggers, clock tables
-  // 2. DROP TABLE
-  // simplest case. Go and:
-  //  - drop base crr table
-  //  - drop clock table for crr
-  //  - views and triggers should auto-drop
-  // 3. CREATE INDEX
-  //  - re-write to create against crr table. Simple regex match and replace?
-  // 4. DROP INDEX
-  //  - should be fine given index names are specified rather than table names
-  // 5. ALTER TABLE
-  // Most complex.
-  //   - extract SQL for CRR table
-  //   - create temp table for base CRR table
-  //   - run alter on temp table
-  //   - extract table info(s) to understand delta(s)
-  //     - new cols? dropped cols? renamed cols?
-  //       technically we can't track renames? -- we can if we look into the alter statement.
-  //   - drop triggers and views, alter crr table
-  //   - re-create triggers and views as we do in create table flow
-  //     - although major difference is we have a crr table to start with rather than user-requested table.
-  // read over their approach: https://david.rothlis.net/declarative-schema-migration-for-sqlite/
 }
 
 // todo: install a commit_hook to advance the dbversion on every tx commit

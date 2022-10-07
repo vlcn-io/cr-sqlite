@@ -44,7 +44,7 @@ $(prefix):
 	mkdir -p $(prefix)
 
 clean:
-	rm dist/*
+	rm -rf dist/*
 
 FORMAT_FILES=cfsqlite.h cfsqlite.c cfsqlite-util.h cfsqlite-util.c cfsqlite-tableinfo.c cfsqlite-tableinfo.h core_init.c
 format: $(FORMAT_FILES)
@@ -75,7 +75,7 @@ $(TARGET_SQLITE3): $(prefix) $(TARGET_SQLITE3_EXTRA_C) sqlite/shell.c cfsqlite.c
 $(TARGET_SQLITE3_EXTRA_C): sqlite/sqlite3.c core_init.c
 	cat sqlite/sqlite3.c core_init.c > $@
 
-$(TARGET_TEST): $(prefix) $(TARGET_SQLITE3_EXTRA_C) cfsqlite-util.test.c cfsqlite-util.c cfsqlite-tableinfo.c cfsqlite.c
+$(TARGET_TEST): $(prefix) $(TARGET_SQLITE3_EXTRA_C) cfsqlite.test.c cfsqlite-tableinfo.test.c cfsqlite-util.test.c cfsqlite-util.c cfsqlite-tableinfo.c cfsqlite.c
 	gcc -g \
 	$(DEFINE_SQLITE_PATH) \
 	-DSQLITE_THREADSAFE=0 -DSQLITE_OMIT_LOAD_EXTENSION=1 \
@@ -83,7 +83,7 @@ $(TARGET_TEST): $(prefix) $(TARGET_SQLITE3_EXTRA_C) cfsqlite-util.test.c cfsqlit
 	-DSQLITE_EXTRA_INIT=core_init \
 	-DUNIT_TEST=1 \
 	-I./ -I./sqlite \
-	$(TARGET_SQLITE3_EXTRA_C) cfsqlite-util.test.c cfsqlite.c cfsqlite-util.c cfsqlite-tableinfo.c uuid.c \
+	$(TARGET_SQLITE3_EXTRA_C) cfsqlite.test.c cfsqlite-tableinfo.test.c cfsqlite-util.test.c cfsqlite.c cfsqlite-util.c cfsqlite-tableinfo.c uuid.c \
 	-o $@
 
 # test-format: SHELL:=/bin/bash

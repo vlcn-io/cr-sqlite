@@ -402,8 +402,7 @@ void testCreateViewOfCrr() {
 
 }
 
-int main(int argc, char *argv[])
-{
+void cfsqlUtilTestSuite() {
   testExtractWord();
   testGetVersionUnionQuery();
   testDoesTableExist();

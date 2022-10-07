@@ -453,6 +453,10 @@ cfsql_ColumnInfo *cfsql_nonPks(cfsql_ColumnInfo *colInfos,
   return ret;
 }
 
+/**
+ * Constructs a table info based on the results of pragma
+ * statements against the base table.
+ */
 static cfsql_TableInfo *cfsql_tableInfo(
     int tblType,
     const char *tblName,
@@ -490,6 +494,10 @@ static cfsql_TableInfo *cfsql_tableInfo(
   return ret;
 }
 
+/**
+ * Given a table, return (into pIndexInfo) all the
+ * indices for that table and the columns indexed.
+ */
 int cfsql_getIndexList(
   sqlite3 *db,
   const char *tblName,
@@ -508,6 +516,9 @@ int cfsql_getIndexList(
 
 /**
  * Given a table name, return the table info that describes that table.
+ * TableInfo is a struct that represents the results
+ * of pragma_table_info, pragma_index_list, pragma_index_info on a given table
+ * and its inidces as well as some extra fields to facilitate crr creation.
  */
 int cfsql_getTableInfo(
     sqlite3 *db,

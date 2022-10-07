@@ -10,8 +10,8 @@
 
 /**
  * Global variables to hold the site id and db version.
- * This prevents us from having to query the tables that stores
- * these values every time we do a write.
+ * This prevents us from having to query the tables that store
+ * these values every time we do a read or write.
  *
  * The db version must be correctly updated on every write transaction.
  * All writes within the same transaction must use the same db version.
@@ -29,26 +29,31 @@ static char siteIdBlob[] = {
 // TODO: mutex to guard initialization of cfsqlite.
 // cfsqlite initialize should not need to be re-entrant
 // as now calls within initialization should depend on cfsqlite itself.
+/**
+ * TODO: Add a mutex to guard initialization of cfsqlite.
+ * This will prevent connections from initializing
+ * the shared memory concurrently.
+ * 
+ * The initialization mutex does not need to be re-entrant
+ * as cfsqlite initialization makes no calls to itself.
+ */
 static int siteIdSet = 0;
 static const size_t siteIdBlobSize = sizeof(siteIdBlob);
 
-// Note: since dbVersion is global, is it shared between all connections
-// in the same process? -- if so we need to CAS it when we update it.
-// Note: we should acquire an exclusive lock to the db file from the given
-// process that embedded sqlite.
 /**
  * Cached representation of the version of the database.
  *
  * This is not an unsigned int since sqlite does not support unsigned ints
- * as a data type.
+ * as a data type and we do eventually write db version(s) to the db.
+ * 
+ * TODO: Changing the db version needs to be done in a thread safe manner.
  */
 static int64_t dbVersion = -9223372036854775807L;
-// So we don't re-initialize db version on new connections
 static int dbVersionSet = 0;
 
 /**
  * The site id table is used to persist the site id and
- * populate the `siteIdBlob` on initialization of a connection.
+ * populate `siteIdBlob` on initialization of a connection.
  */
 static int createSiteIdTable(sqlite3 *db)
 {
@@ -56,7 +61,7 @@ static int createSiteIdTable(sqlite3 *db)
   char *zSql = 0;
 
   zSql = sqlite3_mprintf(
-      "CREATE TABLE %Q (site_id)",
+      "CREATE TABLE \"%s\" (site_id)",
       TBL_SITE_ID);
   rc = sqlite3_exec(db, zSql, 0, 0, 0);
   sqlite3_free(zSql);
@@ -66,7 +71,7 @@ static int createSiteIdTable(sqlite3 *db)
     return rc;
   }
 
-  zSql = sqlite3_mprintf("INSERT INTO %Q VALUES(uuid_blob(uuid()))", TBL_SITE_ID);
+  zSql = sqlite3_mprintf("INSERT INTO \"%s\" VALUES(uuid_blob(uuid()))", TBL_SITE_ID);
   rc = sqlite3_exec(db, zSql, 0, 0, 0);
   sqlite3_free(zSql);
 
@@ -239,6 +244,13 @@ static void dbVersionFunc(sqlite3_context *context, int argc, sqlite3_value **ar
   sqlite3_result_int64(context, dbVersion);
 }
 
+/**
+ * Given a query passed to cfsqlite, determine what kind of schema modification
+ * query it is.
+ * 
+ * We need to know given each schema modification type
+ * requires unique handling in the crr layer.
+ */
 static int determineQueryType(sqlite3 *db, sqlite3_context *context, const char *query)
 {
   int rc = SQLITE_OK;
@@ -396,6 +408,10 @@ int cfsql_createCrrBaseTable(
   return SQLITE_OK;
 }
 
+/**
+ * A view that matches the table as defined by the user
+ * and represents the crr to their application.
+ */
 static int cfsql_createViewOfCrr(
     sqlite3 *db,
     cfsql_TableInfo *tableInfo,
@@ -427,6 +443,14 @@ static void createCrrViewTriggers(
 {
 }
 
+/**
+ * The patch view provides an interface for applying patches
+ * to a crr.
+ * 
+ * I.e., inserts can be made
+ * against the patch view to sync data from
+ * a peer.
+ */
 static int cfsql_createPatchView(
     sqlite3 *db,
     cfsql_TableInfo *tableInfo,
@@ -453,6 +477,10 @@ static void createPatchTrigger(
 {
 }
 
+/**
+ * Create a new crr --
+ * all triggers, views, tables
+ */
 static void createCrr(
     sqlite3_context *context,
     sqlite3 *db,

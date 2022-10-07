@@ -73,7 +73,7 @@ void testCreateCrrBaseTable()
   cfsql_TableInfo * tableInfo = 0;
   rc = sqlite3_open(":memory:", &db);
 
-  rc = sqlite3_exec(db, "CREATE TABLE foo (a primary key, b)", 0, 0, &err);
+  rc = sqlite3_exec(db, "CREATE TABLE foo (a primary key, b DEFAULT 0)", 0, 0, &err);
   CHECK_OK
   // using the crr interface, it'd be impossible to have a new table
   // creation that includes an index. Index additions would be

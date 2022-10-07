@@ -440,33 +440,11 @@ int cfsql_createCrrBaseTable(
   sqlite3_free(pkList);
   sqlite3_free(columnDefs);
 
-  rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
-  if (rc != SQLITE_OK) {
-    *err = sqlite3_mprintf("Failed to prepare the create crr statement: %s", zSql);
-    sqlite3_free(zSql);
-    return rc;
-  }
+  rc = sqlite3_exec(db, zSql, 0, 0, err);
   sqlite3_free(zSql);
-
-  int j = 0;
-  for (int i = 0; i < tableInfo->baseColsLen; ++i)
+  
+  if (rc != SQLITE_OK)
   {
-    if (tableInfo->baseCols[i].dfltValue != 0) {
-      rc = sqlite3_bind_value(pStmt, j, tableInfo->baseCols[i].dfltValue);
-      if (rc != SQLITE_OK) {
-        *err = sqlite3_mprintf("Failed to bind default values for crr create");
-        return rc;
-      }
-      ++j;
-    }
-  }
-
-  rc = sqlite3_step(pStmt);
-  sqlite3_finalize(pStmt);
-
-  if (rc != SQLITE_DONE)
-  {
-    *err = sqlite3_mprintf("Failed to step the create crr statement");
     return rc;
   }
 

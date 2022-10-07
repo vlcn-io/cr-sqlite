@@ -46,6 +46,24 @@ char *cfsql_asIdentifierList(cfsql_ColumnInfo *in, size_t inlen)
   return ret;
 }
 
+char * cfsql_getDfltStr(sqlite3_value *val) {
+  if (val == 0) {
+    return 0;
+  }
+  int type = sqlite3_value_type(val);
+
+  // TODO: test all possible combinations -- especially blobs
+  if (type == SQLITE_NULL) {
+    return strdup("DEFAULT NULL");
+  } else if (type == SQLITE_INTEGER || type == SQLITE_FLOAT) {
+    return sqlite3_mprintf("DEFAULT %d", sqlite3_value_int(val));
+  } else if (type == SQLITE_BLOB) {
+    return sqlite3_mprintf("DEFAULT x%Q", sqlite3_value_text(val));
+  } else {
+    return 0;
+  }
+}
+
 char *cfsql_asColumnDefinitions(cfsql_ColumnInfo *in, size_t inlen)
 {
   char *ret = 0;
@@ -54,10 +72,12 @@ char *cfsql_asColumnDefinitions(cfsql_ColumnInfo *in, size_t inlen)
 
   for (int i = 0; i < inlen; ++i)
   {
+    char *dfltStr = cfsql_getDfltStr(in[i].dfltValue);
     mapped[i] = sqlite3_mprintf("\"%w\" %s %s",
                                 in[i].name,
                                 in[i].type,
-                                in[i].dfltValue != 0 ? "DEFAULT ?" : 0);
+                                dfltStr != 0 ? dfltStr : 0);
+    sqlite3_free(dfltStr);
     finalLen += strlen(mapped[i]);
   }
   finalLen += inlen - 1;
@@ -515,6 +535,7 @@ int cfsql_getTableInfo(
   cfsql_IndexInfo *indexInfos;
   int numIndexInfos;
 
+  // TODO: we don't need to extract the index list.
   rc = cfsql_getIndexList(
       db,
       tblName,

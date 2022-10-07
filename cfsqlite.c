@@ -270,34 +270,40 @@ static int determineQueryType(sqlite3 *db, sqlite3_context *context, const char 
   }
 
   normalized = sqlite3_normalized_sql(pStmt);
-  sqlite3_finalize(pStmt);
 
   if (strncmp("CREATE TABLE", normalized, CREATE_TABLE_LEN) == 0)
   {
+    sqlite3_finalize(pStmt);
     return CREATE_TABLE;
   }
   if (strncmp("ALTER TABLE", normalized, ALTER_TABLE_LEN) == 0)
   {
+    sqlite3_finalize(pStmt);
     return ALTER_TABLE;
   }
   if (strncmp("CREATE INDEX", normalized, CREATE_INDEX_LEN) == 0)
   {
+    sqlite3_finalize(pStmt);
     return CREATE_INDEX;
   }
   if (strncmp("CREATE UNIQUE INDEX", normalized, CREATE_UNIQUE_INDEX_LEN) == 0)
   {
+    sqlite3_finalize(pStmt);
     return CREATE_INDEX;
   }
   if (strncmp("DROP INDEX", normalized, DROP_INDEX_LEN) == 0)
   {
+    sqlite3_finalize(pStmt);
     return DROP_INDEX;
   }
   if (strncmp("DROP TABLE", normalized, DROP_TABLE_LEN) == 0)
   {
+    sqlite3_finalize(pStmt);
     return DROP_TABLE;
   }
 
-  formattedError = sqlite3_mprintf("Unknown schema modification statement provided: %s", normalized);
+  formattedError = sqlite3_mprintf("Unknown schema modification statement provided: %s | from: %s", normalized, query);
+  sqlite3_finalize(pStmt);
   sqlite3_result_error(context, formattedError, -1);
   sqlite3_free(formattedError);
 
@@ -360,7 +366,7 @@ int cfsql_createClockTable(
     return rc;
   }
 
-  return SQLITE_OK;
+  return rc;
 }
 
 int cfsql_addIndicesToCrrBaseTable(
@@ -495,6 +501,7 @@ int cfsql_createViewOfCrr(
 static int createCrrViewTriggers(
     cfsql_TableInfo *tableInfo)
 {
+
   return 0;
 }
 
@@ -628,19 +635,17 @@ static void dropCrr()
 {
   // drop base table
   // drop clocks table
+  // views and triggers should auto-drop
 }
 
 static void createCrrIndex()
 {
-  //
+  // just replace the table name with the crr table name. done.
 }
 
 static void dropCrrIndex()
 {
-}
-
-static void alterCrrIndex()
-{
+  // just replace the table name with the crr table name. done.
 }
 
 static void alterCrr()

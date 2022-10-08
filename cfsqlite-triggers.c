@@ -50,6 +50,7 @@ int cfsql_createInsertTrigger(
   char *baseColumnsNewList = 0;
   char *conflictResolution = 0;
   char *updateClocks = 0;
+  int rc = SQLITE_OK;
 
   baseColumnsList = cfsql_asIdentifierList(tableInfo->baseCols, tableInfo->baseColsLen, 0);
   baseColumnsNewList = cfsql_asIdentifierList(tableInfo->baseCols, tableInfo->baseColsLen, "NEW.");
@@ -74,7 +75,7 @@ int cfsql_createInsertTrigger(
       baseColumnsNewList,
       conflictResolution,
       updateClocks);
-  // exec
+  rc = sqlite3_exec(db, zSql, 0, 0, err);
 
   sqlite3_free(zSql);
   sqlite3_free(baseColumnsList);
@@ -82,7 +83,7 @@ int cfsql_createInsertTrigger(
   sqlite3_free(conflictResolution);
   sqlite3_free(updateClocks);
 
-  return SQLITE_OK;
+  return rc;
 }
 
 int cfsql_createUpdateTrigger(sqlite3 *db,

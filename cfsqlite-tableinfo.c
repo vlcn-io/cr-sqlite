@@ -10,7 +10,7 @@
 #include <stdio.h>
 
 // Bug here? see cfsql_asIdentifierListStr
-char *cfsql_asIdentifierList(cfsql_ColumnInfo *in, size_t inlen)
+char *cfsql_asIdentifierList(cfsql_ColumnInfo *in, size_t inlen, char* prefix)
 {
   if (inlen <= 0)
   {
@@ -23,7 +23,7 @@ char *cfsql_asIdentifierList(cfsql_ColumnInfo *in, size_t inlen)
 
   for (int i = 0; i < inlen; ++i)
   {
-    mapped[i] = sqlite3_mprintf("\"%w\"", in[i].name);
+    mapped[i] = sqlite3_mprintf("%s\"%w\"", prefix, in[i].name);
     finalLen += strlen(mapped[i]);
   }
   // -1 for spearator not appended to last thing
@@ -383,7 +383,7 @@ int cfsql_getIndexList(
   cfsql_IndexInfo *indexInfos = 0;
   int i = 0;
 
-  zSql = sqlite3_mprintf("select count(*) from pragma_index_list('%s')", tblName);
+  zSql = sqlite3_mprintf("select count(*) from temp.pragma_index_list('%s')", tblName);
   numIndices = cfsql_getCount(db, zSql);
   sqlite3_free(zSql);
 
@@ -394,7 +394,7 @@ int cfsql_getIndexList(
   }
 
   zSql = sqlite3_mprintf(
-      "SELECT \"seq\", \"name\", \"unique\", \"origin\", \"partial\" FROM pragma_index_list('%s')",
+      "SELECT \"seq\", \"name\", \"unique\", \"origin\", \"partial\" FROM temp.pragma_index_list('%s')",
       tblName);
   rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
   sqlite3_free(zSql);
@@ -480,7 +480,7 @@ int cfsql_getTableInfo(
   int i = 0;
   cfsql_ColumnInfo *columnInfos = 0;
 
-  zSql = sqlite3_mprintf("select count(*) from pragma_table_info(\"%s\")", tblName);
+  zSql = sqlite3_mprintf("select count(*) from temp.pragma_table_info(\"%s\")", tblName);
   numColInfos = cfsql_getCount(db, zSql);
   sqlite3_free(zSql);
 
@@ -490,7 +490,7 @@ int cfsql_getTableInfo(
     return numColInfos;
   }
 
-  zSql = sqlite3_mprintf("select \"cid\", \"name\", \"type\", \"notnull\", \"pk\", \"dflt_value\" from pragma_table_info(\"%s\")",
+  zSql = sqlite3_mprintf("select \"cid\", \"name\", \"type\", \"notnull\", \"pk\", \"dflt_value\" from temp.pragma_table_info(\"%s\")",
                          tblName);
   rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
   sqlite3_free(zSql);

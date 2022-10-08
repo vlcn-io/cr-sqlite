@@ -17,7 +17,7 @@ void testGetTableInfo()
 
   rc = sqlite3_open(":memory:", &db);
 
-  sqlite3_exec(db, "CREATE TABLE foo (a INT NOT NULL, b)", 0, 0, 0);
+  sqlite3_exec(db, "CREATE TEMP TABLE foo (a INT NOT NULL, b)", 0, 0, 0);
   rc = cfsql_getTableInfo(db, USER_SPACE, "foo", &tableInfo, &errMsg);
 
   if (rc != SQLITE_OK)
@@ -49,7 +49,7 @@ void testGetTableInfo()
 
   cfsql_freeTableInfo(tableInfo);
 
-  sqlite3_exec(db, "CREATE TABLE bar (a PRIMARY KEY, b)", 0, 0, 0);
+  sqlite3_exec(db, "CREATE TEMP TABLE bar (a PRIMARY KEY, b)", 0, 0, 0);
   rc = cfsql_getTableInfo(db, USER_SPACE, "bar", &tableInfo, &errMsg);
   if (rc != SQLITE_OK)
   {
@@ -196,15 +196,15 @@ void testAsIdentifierList()
   tc3[0].name = "one";
   char *result;
 
-  result = cfsql_asIdentifierList(tc1, 3);
+  result = cfsql_asIdentifierList(tc1, 3, 0);
   assert(strcmp(result, "\"one\",\"two\",\"three\"") == 0);
   sqlite3_free(result);
 
-  result = cfsql_asIdentifierList(tc2, 0);
+  result = cfsql_asIdentifierList(tc2, 0, 0);
   assert(result == 0);
   sqlite3_free(result);
 
-  result = cfsql_asIdentifierList(tc3, 1);
+  result = cfsql_asIdentifierList(tc3, 1, 0);
   assert(strcmp(result, "\"one\"") == 0);
   sqlite3_free(result);
 
@@ -241,7 +241,7 @@ void testGetIndexList() {
   int indexInfosLen;
   int rc = sqlite3_open(":memory:", &db);
 
-  sqlite3_exec(db, "CREATE TABLE foo (a)", 0, 0, 0);
+  sqlite3_exec(db, "CREATE TEMP TABLE foo (a)", 0, 0, 0);
 
   rc = cfsql_getIndexList(
     db,
@@ -255,7 +255,7 @@ void testGetIndexList() {
   assert(indexInfos == 0);
   assert(indexInfosLen == 0);
 
-  sqlite3_exec(db, "CREATE TABLE bar (a primary key)", 0, 0, 0);
+  sqlite3_exec(db, "CREATE TEMP TABLE bar (a primary key)", 0, 0, 0);
 
   rc = cfsql_getIndexList(
     db,

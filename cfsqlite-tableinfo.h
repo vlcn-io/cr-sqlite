@@ -27,7 +27,7 @@ int cfsql_getTableInfo(
 
 char *cfsql_asColumnDefinitions(cfsql_ColumnInfo *in, size_t inlen);
 
-char *cfsql_asIdentifierList(cfsql_ColumnInfo *in, size_t inlen);
+char *cfsql_asIdentifierList(cfsql_ColumnInfo *in, size_t inlen, char *prefix);
 
 int cfsql_getIndexList(
     sqlite3 *db,

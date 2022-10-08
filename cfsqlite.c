@@ -329,7 +329,8 @@ int cfsql_createClockTable(
   {
     pkList = cfsql_asIdentifierList(
         tableInfo->pks,
-        tableInfo->pksLen);
+        tableInfo->pksLen,
+        0);
     zSql = sqlite3_mprintf("CREATE TABLE \"%s__cfsql_clock\" (\
       %s,\
       \"__cfsql_site_id\" NOT NULL,\
@@ -409,7 +410,8 @@ int cfsql_createCrrBaseTable(
       tableInfo->withVersionColsLen);
   char *pkList = cfsql_asIdentifierList(
       tableInfo->pks,
-      tableInfo->pksLen);
+      tableInfo->pksLen,
+      0);
   zSql = sqlite3_mprintf("CREATE TABLE \"%s__cfsql_crr\" (\
     %s,\
     __cfsql_cl INT DEFAULT 1,\
@@ -460,7 +462,7 @@ int cfsql_createViewOfCrr(
 {
   int rc = SQLITE_OK;
   char *zSql = 0;
-  char *columns = cfsql_asIdentifierList(tableInfo->baseCols, tableInfo->baseColsLen);
+  char *columns = cfsql_asIdentifierList(tableInfo->baseCols, tableInfo->baseColsLen, 0);
 
   zSql = sqlite3_mprintf("CREATE VIEW \"%s\" \
     AS SELECT %s \
@@ -479,9 +481,45 @@ int cfsql_createViewOfCrr(
   return rc;
 }
 
-static int createCrrViewTriggers(
-    cfsql_TableInfo *tableInfo)
+void cfsql_insertConflictResolution() {
+
+}
+
+int cfsql_createCrrViewTriggers(
+    sqlite3 *db,
+    cfsql_TableInfo *tableInfo,
+    char **err)
 {
+  char *zSql;
+  char *baseColumnsList = 0;
+  char *baseColumnsNewList = 0;
+  char *conflictResolution = 0;
+  char *updateClocks = 0;
+
+  baseColumnsList = cfsql_asIdentifierList(tableInfo->baseCols, tableInfo->baseColsLen, 0);
+  baseColumnsNewList = cfsql_asIdentifierList(tableInfo->baseCols, tableInfo->baseColsLen, "NEW.");
+  // conflictResolution = cfsql_localInsertConflictResolution();
+
+  zSql = sqlite3_mprintf(
+    "CREATE TRIGGER \"%s__cfsql_itrig\"\
+      INSTEAD OF INSERT ON \"%s\"\
+    BEGIN\
+      INSERT INTO \"%s__cfsql_crr\" (\
+        %s\
+      ) VALUES (\
+        %s\
+      ) %s;\
+      %s\
+    END;",
+    tableInfo->tblName,
+    tableInfo->tblName,
+    tableInfo->tblName,
+    baseColumnsList,
+    baseColumnsNewList,
+    conflictResolution,
+    updateClocks
+  );
+  sqlite3_free(zSql);
 
   return 0;
 }
@@ -494,7 +532,7 @@ static int createCrrViewTriggers(
  * against the patch view to sync data from
  * a peer.
  */
-static int cfsql_createPatchView(
+int cfsql_createPatchView(
     sqlite3 *db,
     cfsql_TableInfo *tableInfo,
     char **err)
@@ -515,8 +553,10 @@ static int cfsql_createPatchView(
   return rc;
 }
 
-static int createPatchTrigger(
-    cfsql_TableInfo *tableInfo)
+int cfsql_createPatchTrigger(
+    sqlite3 *db,
+    cfsql_TableInfo *tableInfo,
+    char **err)
 {
   return 0;
 }
@@ -536,7 +576,7 @@ static void createCrr(
   char *tblName = 0;
   cfsql_TableInfo *tableInfo = 0;
 
-  // convert statement to create temp table prefixed with `cfsql_temp__`
+  // convert statement to create temp table prefixed with `cfsql_tmp__`
   zSql = sqlite3_mprintf("CREATE TEMP TABLE cfsql_tmp__%s", query + CREATE_TABLE_LEN + 1);
   rc = sqlite3_exec(db, zSql, 0, 0, &err);
 
@@ -548,7 +588,7 @@ static void createCrr(
     return;
   }
 
-  // extract the word after CREATE TEMP TABLE cfsql_temp__
+  // extract the word after CREATE TEMP TABLE cfsql_tmp__
   tblName = cfsql_extractWord(CREATE_TEMP_TABLE_CFSQL_LEN, zSql);
   sqlite3_free(zSql);
 
@@ -573,7 +613,7 @@ static void createCrr(
   }
 
   // We only needed the temp table to extract pragma info
-  zSql = sqlite3_mprintf("DROP TABLE cfsql_temp__%s", tblName);
+  zSql = sqlite3_mprintf("DROP TABLE temp.cfsql_tmp__%s", tblName);
   rc = sqlite3_exec(db, zSql, 0, 0, &err);
   sqlite3_free(zSql);
   tableInfo->tblName = strdup(tblName);
@@ -602,11 +642,11 @@ static void createCrr(
   }
   if (rc == SQLITE_OK)
   {
-    rc = createCrrViewTriggers(tableInfo);
+    rc = cfsql_createCrrViewTriggers(db, tableInfo, &err);
   }
   if (rc == SQLITE_OK)
   {
-    createPatchTrigger(tableInfo);
+    rc = cfsql_createPatchTrigger(db, tableInfo, &err);
   }
   if (rc == SQLITE_OK)
   {

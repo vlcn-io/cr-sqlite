@@ -51,7 +51,12 @@ https://www.youtube.com/watch?v=DEcwa68f-jY
 
 `cfsqlite` improves upon [3] in the following ways --
 
-- [3] isn't really relational it all. It saves all data in a single table and is using sqlite as a key-value store. As such, it cannot work with your existing database schema. `cfsqlite` builds around your existing schemas.
+- [3] requires retaining all history for all time (iiuc), `cfsqlite` only needs the latest state
+- [3] keeps a hloc per column, `cfsqlite` only keeps an extra int per column and a clock per row.
+
+[3] is better in the following way --
+
+- `cfsqlite` requires more work at the network layer to ensure ordered delivery and to deliver only the columns of a row that changed. [3] doesn't require any causal order to delivery and already identifies single column changes.
 
 ## Other
 

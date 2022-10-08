@@ -40,6 +40,7 @@ TARGET_SQLJS=$(TARGET_SQLJS_JS) $(TARGET_SQLJS_WASM)
 TARGET_TEST=$(prefix)/test
 
 ext_files=cfsqlite.c cfsqlite-util.c cfsqlite-tableinfo.c cfsqlite-triggers.c uuid.c
+ext_headers=cfsqlite.h csflite-utils.h cfsqlite-tablinfo.h cfsqlite-triggers.h uuid.h
 
 $(prefix):
 	mkdir -p $(prefix)
@@ -47,7 +48,7 @@ $(prefix):
 clean:
 	rm -rf dist/*
 
-FORMAT_FILES=cfsqlite.h cfsqlite.c cfsqlite-util.h cfsqlite-util.c cfsqlite-tableinfo.c cfsqlite-tableinfo.h cfsqlite-triggers.c cfsqlite-triggers.h core_init.c
+FORMAT_FILES=$(ext_files) $(ext_headers) core_init.c
 format: $(FORMAT_FILES)
 	clang-format -i $(FORMAT_FILES)
 

@@ -4,11 +4,49 @@
 #include <stdint.h>
 #include <string.h>
 
+char *cfsql_conflictSetsStr(cfsql_ColumnInfo *cols, int len) {
+  return 0;
+}
+
+char *cfsql_localInsertConflictResolutionStr(cfsql_TableInfo *tableInfo) {
+  if (tableInfo->pksLen == 0) {
+    // dup given the caller would try to deallocate it and we 
+    // cannot deallocate a literal
+    return strdup("");
+  }
+
+  char *pkList = cfsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, 0);
+  char *conflictSets = cfsql_conflictSetsStr(tableInfo->nonPks, tableInfo->nonPksLen);
+
+  char * ret = sqlite3_mprintf(
+    "ON CONFLICT (%s) DO UPDATE SET\
+      %s\
+    \"__cfsql_cl\" = CASE WHEN \"__cfsql_cl\" % 2 = 0 THEN \"__cfsql_cl\" + 1 ELSE \"__cfsql_cl\" END,\
+    \"__cfsql_src\" = 0",
+    pkList,
+    conflictSets
+  );
+
+  sqlite3_free(pkList);
+  sqlite3_free(conflictSets);
+
+  return ret;
+}
+
+char *cfsql_updateClocksStr(cfsql_TableInfo *tableInfo) {
+  return 0;
+}
+
 int cfsql_createCrrViewTriggers(
     sqlite3 *db,
     cfsql_TableInfo *tableInfo,
     char **err)
 {
+
+  // cfsql_createInsertTrigger();
+  // cfsql_createUpdateTrigger();
+  // cfsql_createDeleteTrigger();
+
   char *zSql;
   char *baseColumnsList = 0;
   char *baseColumnsNewList = 0;
@@ -17,7 +55,8 @@ int cfsql_createCrrViewTriggers(
 
   baseColumnsList = cfsql_asIdentifierList(tableInfo->baseCols, tableInfo->baseColsLen, 0);
   baseColumnsNewList = cfsql_asIdentifierList(tableInfo->baseCols, tableInfo->baseColsLen, "NEW.");
-  // conflictResolution = cfsql_localInsertConflictResolution();
+  conflictResolution = cfsql_localInsertConflictResolutionStr(tableInfo);
+  updateClocks = cfsql_updateClocksStr(tableInfo);
 
   zSql = sqlite3_mprintf(
     "CREATE TRIGGER \"%s__cfsql_itrig\"\
@@ -38,7 +77,13 @@ int cfsql_createCrrViewTriggers(
     conflictResolution,
     updateClocks
   );
+  // exec
+
   sqlite3_free(zSql);
+  sqlite3_free(baseColumnsList);
+  sqlite3_free(baseColumnsNewList);
+  sqlite3_free(conflictResolution);
+  sqlite3_free(updateClocks);
 
   return 0;
 }

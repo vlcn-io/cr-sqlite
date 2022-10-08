@@ -2,12 +2,12 @@
 #include "cfsqlite-util.h"
 #include "cfsqlite-tableinfo.h"
 #include "cfsqlite-consts.h"
+#include "cfsqlite-triggers.h"
 
 #include <ctype.h>
 #include <stdint.h>
 #include <string.h>
 #include <limits.h>
-#include <stdio.h>
 
 /**
  * Global variables to hold the site id and db version.
@@ -485,45 +485,6 @@ void cfsql_insertConflictResolution() {
 
 }
 
-int cfsql_createCrrViewTriggers(
-    sqlite3 *db,
-    cfsql_TableInfo *tableInfo,
-    char **err)
-{
-  char *zSql;
-  char *baseColumnsList = 0;
-  char *baseColumnsNewList = 0;
-  char *conflictResolution = 0;
-  char *updateClocks = 0;
-
-  baseColumnsList = cfsql_asIdentifierList(tableInfo->baseCols, tableInfo->baseColsLen, 0);
-  baseColumnsNewList = cfsql_asIdentifierList(tableInfo->baseCols, tableInfo->baseColsLen, "NEW.");
-  // conflictResolution = cfsql_localInsertConflictResolution();
-
-  zSql = sqlite3_mprintf(
-    "CREATE TRIGGER \"%s__cfsql_itrig\"\
-      INSTEAD OF INSERT ON \"%s\"\
-    BEGIN\
-      INSERT INTO \"%s__cfsql_crr\" (\
-        %s\
-      ) VALUES (\
-        %s\
-      ) %s;\
-      %s\
-    END;",
-    tableInfo->tblName,
-    tableInfo->tblName,
-    tableInfo->tblName,
-    baseColumnsList,
-    baseColumnsNewList,
-    conflictResolution,
-    updateClocks
-  );
-  sqlite3_free(zSql);
-
-  return 0;
-}
-
 /**
  * The patch view provides an interface for applying patches
  * to a crr.
@@ -551,14 +512,6 @@ int cfsql_createPatchView(
   rc = sqlite3_exec(db, zSql, 0, 0, err);
   sqlite3_free(zSql);
   return rc;
-}
-
-int cfsql_createPatchTrigger(
-    sqlite3 *db,
-    cfsql_TableInfo *tableInfo,
-    char **err)
-{
-  return 0;
 }
 
 /**

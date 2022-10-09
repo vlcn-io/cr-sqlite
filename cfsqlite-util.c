@@ -53,6 +53,13 @@ void cfsql_joinWith(char *dest, char **src, size_t srcLen, char delim)
   }
 }
 
+char *cfsql_join2(char (*a)(int), size_t len, char delim) {
+  for (int i = 0; i < len; ++i) {
+
+  }
+  return 0;
+}
+
 // TODO:
 // have this take a function pointer that extracts the string so we can
 // delete cfsql_asIdentifierList

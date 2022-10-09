@@ -91,19 +91,7 @@ char *cfsql_updateClocksStr(cfsql_TableInfo *tableInfo)
   }
   else
   {
-    char *pkNewDots[tableInfo->pksLen];
-    pkList = cfsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, 0);
-    int pkNewLen = 0;
-    for (int i = 0; i < tableInfo->pksLen; ++i)
-    {
-      pkNewDots[i] = sqlite3_mprintf("NEW.\"%s\"", tableInfo->pks[i]);
-      pkNewLen += strlen(pkNewDots[i]);
-    }
-    pkNewLen += tableInfo->pksLen - 1;
-    pkNew = sqlite3_malloc(pkNewLen * sizeof(char) + 1);
-    pkNew[pkNewLen] = '\0';
-
-    cfsql_joinWith(pkNew, pkNewDots, tableInfo->pksLen, ',');
+    pkNew = cfsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, "NEW.");
   }
 
   char *ret = sqlite3_mprintf(
@@ -177,6 +165,44 @@ int cfsql_createInsertTrigger(
   return rc;
 }
 
+// TODO: we could generalize this and `conflictSetsStr` and and `updateTrigUpdateSet` and other places
+// if we add a parameter which is a function that produces the strings
+// to join.
+char *cfsql_updateTrigPkWhereConditions(cfsql_ColumnInfo *columnInfo, int len)
+{
+  char *toJoin[len];
+  int resultLen = 0;
+  char *ret = 0;
+
+  if (len == 0)
+  {
+    return ret;
+  }
+
+  for (int i = 0; i < len; ++i)
+  {
+    toJoin[i] = sqlite3_mprintf("\"%s\" = NEW.\"%s\"", columnInfo[i].name, columnInfo[i].name);
+    resultLen += strlen(toJoin[i]);
+  }
+  resultLen += len - 1;
+  ret = sqlite3_malloc(resultLen * sizeof(char) + 1);
+  ret[resultLen] = '\0';
+
+  cfsql_joinWith(ret, toJoin, len, ' AND ');
+
+  for (int i = 0; i < len; ++i)
+  {
+    sqlite3_free(toJoin[i]);
+  }
+
+  return ret;
+}
+
+char *cfsql_updateTrigUpdateSets(cfsql_ColumnInfo *columnInfo, int len)
+{
+  return 0;
+}
+
 int cfsql_createUpdateTrigger(sqlite3 *db,
                               cfsql_TableInfo *tableInfo,
                               char **err)
@@ -186,9 +212,24 @@ int cfsql_createUpdateTrigger(sqlite3 *db,
   char *pkWhereConditions = 0;
   char *pkList = 0;
   char *pkNewList = 0;
+  int rc = SQLITE_OK;
 
+  if (tableInfo->pksLen == 0)
+  {
+    pkList = "\"row_id\"";
+    pkNewList = "NEW.\"row_id\"";
+    pkWhereConditions = "\"row_id\" = NEW.\"row_id\"";
+  }
+  else
+  {
+    pkList = cfsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, 0);
+    pkNewList = cfsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, "NEW.");
+    pkWhereConditions = cfsql_updateTrigPkWhereConditions(tableInfo->pks, tableInfo->pksLen);
+  }
+
+  sets = cfsql_updateTrigUpdateSets(tableInfo->withVersionCols, tableInfo->withVersionColsLen);
   zSql = sqlite3_mprintf(
-    "CREATE TRIGGER \"%s__cfsql_utrig\"\
+      "CREATE TRIGGER \"%s__cfsql_utrig\"\
       INSTEAD OF UPDATE ON \"%s\"\
     BEGIN\
       UPDATE \"%s__cfsql_crr\" SET\
@@ -205,24 +246,28 @@ int cfsql_createUpdateTrigger(sqlite3 *db,
         \"__cfsql_version\" = EXCLUDED.\"__cfsql_version\";\
     END;\
     ",
-    tableInfo->tblName,
-    tableInfo->tblName,
-    tableInfo->tblName,
-    sets,
-    pkWhereConditions,
-    tableInfo->tblName,
-    pkList,
-    pkNewList,
-    pkList
-  );
+      tableInfo->tblName,
+      tableInfo->tblName,
+      tableInfo->tblName,
+      sets,
+      pkWhereConditions,
+      tableInfo->tblName,
+      pkList,
+      pkNewList,
+      pkList);
+  rc = sqlite3_exec(db, zSql, 0, 0, err);
 
   sqlite3_free(zSql);
   sqlite3_free(sets);
-  sqlite3_free(pkWhereConditions);
-  sqlite3_free(pkList);
-  sqlite3_free(pkNewList);
 
-  return SQLITE_OK;
+  if (tableInfo->pksLen != 0)
+  {
+    sqlite3_free(pkWhereConditions);
+    sqlite3_free(pkList);
+    sqlite3_free(pkNewList);
+  }
+
+  return rc;
 }
 
 int cfsql_createDeleteTrigger(

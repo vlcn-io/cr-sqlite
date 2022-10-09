@@ -13,17 +13,21 @@ char *cfsql_conflictSetsStr(cfsql_ColumnInfo *cols, int len)
   int resultLen = 0;
   char *ret = 0;
 
+  if (len == 0)
+  {
+    return ret;
+  }
+
   for (int i = 0; i < len; ++i)
   {
     if (cols[i].versionOf != 0)
     {
       sets[i] = sqlite3_mprintf(
-        "\"%s\" = CASE WHEN EXCLUDED.\"%s\" THEN \"%s\" + 1 ELSE \"%s\" END",
-        cols[i].name,
-        cols[i].versionOf,
-        cols[i].name,
-        cols[i].name
-      );
+          "\"%s\" = CASE WHEN EXCLUDED.\"%s\" THEN \"%s\" + 1 ELSE \"%s\" END",
+          cols[i].name,
+          cols[i].versionOf,
+          cols[i].name,
+          cols[i].name);
     }
     else
     {
@@ -37,6 +41,12 @@ char *cfsql_conflictSetsStr(cfsql_ColumnInfo *cols, int len)
   ret[resultLen] = '\0';
 
   cfsql_joinWith(ret, sets, len, ',');
+
+  for (int i = 0; i < len; ++i)
+  {
+    sqlite3_free(sets[i]);
+  }
+
   return ret;
 }
 
@@ -59,8 +69,7 @@ char *cfsql_localInsertOnConflictStr(cfsql_TableInfo *tableInfo)
     \"__cfsql_src\" = 0",
       pkList,
       conflictSets,
-      tableInfo->nonPksLen == 0 ? "" : ","
-    );
+      tableInfo->nonPksLen == 0 ? "" : ",");
 
   sqlite3_free(pkList);
   sqlite3_free(conflictSets);
@@ -70,8 +79,55 @@ char *cfsql_localInsertOnConflictStr(cfsql_TableInfo *tableInfo)
 
 char *cfsql_updateClocksStr(cfsql_TableInfo *tableInfo)
 {
-  
-  return 0;
+  // TODO: if there are now pks we need to use a `row_id` col
+
+  char *pkList = 0;
+  char *pkNew = 0;
+
+  if (tableInfo->pksLen == 0)
+  {
+    pkNew = "NEW.\"row_id\"";
+    pkList = "\"row_id\"";
+  }
+  else
+  {
+    char *pkNewDots[tableInfo->pksLen];
+    pkList = cfsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, 0);
+    int pkNewLen = 0;
+    for (int i = 0; i < tableInfo->pksLen; ++i)
+    {
+      pkNewDots[i] = sqlite3_mprintf("NEW.\"%s\"", tableInfo->pks[i]);
+      pkNewLen += strlen(pkNewDots[i]);
+    }
+    pkNewLen += tableInfo->pksLen - 1;
+    pkNew = sqlite3_malloc(pkNewLen * sizeof(char) + 1);
+    pkNew[pkNewLen] = '\0';
+
+    cfsql_joinWith(pkNew, pkNewDots, tableInfo->pksLen, ',');
+  }
+
+  char *ret = sqlite3_mprintf(
+      "INSERT INTO \"%s__cfsql_clock\" (\"__cfsql_site_id\", \"__cfsql_version\", %s)\
+      VALUES (\
+        cfsql_siteid(),\
+        cfsql_dbversion(),\
+        %s\
+      )\
+      ON CONFLICT (\"__cfsql_site_id\", %s) DO UPDATE SET\
+        \"__cfsql_version\" = EXCLUDED.\"__cfsql_version\";\
+    ",
+      tableInfo->tblName,
+      pkList,
+      pkNew,
+      pkList);
+
+  if (tableInfo->pksLen != 0)
+  {
+    sqlite3_free(pkNew);
+    sqlite3_free(pkList);
+  }
+
+  return ret;
 }
 
 int cfsql_createInsertTrigger(
@@ -125,6 +181,47 @@ int cfsql_createUpdateTrigger(sqlite3 *db,
                               cfsql_TableInfo *tableInfo,
                               char **err)
 {
+  char *zSql;
+  char *sets = 0;
+  char *pkWhereConditions = 0;
+  char *pkList = 0;
+  char *pkNewList = 0;
+
+  zSql = sqlite3_mprintf(
+    "CREATE TRIGGER \"%s__cfsql_utrig\"\
+      INSTEAD OF UPDATE ON \"%s\"\
+    BEGIN\
+      UPDATE \"%s__cfsql_crr\" SET\
+        %s,\
+        \"__cfsql_src\" = 0\
+      WHERE %s;\
+    INSERT INTO \"%s__cfsql_clock\" (\"__cfsql_site_id\", \"__cfsql_version\", %s)\
+      VALUES (\
+        cfsql_siteid(),\
+        cfsql_dbversion(),\
+        %s\
+      )\
+      ON CONFLCIT (\"__cfsql_site_id\", %s) DO UPDATE SET\
+        \"__cfsql_version\" = EXCLUDED.\"__cfsql_version\";\
+    END;\
+    ",
+    tableInfo->tblName,
+    tableInfo->tblName,
+    tableInfo->tblName,
+    sets,
+    pkWhereConditions,
+    tableInfo->tblName,
+    pkList,
+    pkNewList,
+    pkList
+  );
+
+  sqlite3_free(zSql);
+  sqlite3_free(sets);
+  sqlite3_free(pkWhereConditions);
+  sqlite3_free(pkList);
+  sqlite3_free(pkNewList);
+
   return SQLITE_OK;
 }
 

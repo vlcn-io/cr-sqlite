@@ -3,9 +3,17 @@
 
 #include <stdint.h>
 #include <string.h>
+#include <stdio.h>
 
 char *cfsql_conflictSetsStr(cfsql_ColumnInfo *cols, int len)
 {
+  // set statements...
+  char *sets[len];
+
+  // for (int i = 0; i < len; ++i) {
+  //   sets[i] = 
+  // }
+
   return 0;
 }
 
@@ -24,7 +32,7 @@ char *cfsql_localInsertConflictResolutionStr(cfsql_TableInfo *tableInfo)
   char *ret = sqlite3_mprintf(
       "ON CONFLICT (%s) DO UPDATE SET\
       %s\
-    \"__cfsql_cl\" = CASE WHEN \"__cfsql_cl\" % 2 = 0 THEN \"__cfsql_cl\" + 1 ELSE \"__cfsql_cl\" END,\
+    \"__cfsql_cl\" = CASE WHEN \"__cfsql_cl\" %% 2 = 0 THEN \"__cfsql_cl\" + 1 ELSE \"__cfsql_cl\" END,\
     \"__cfsql_src\" = 0",
       pkList,
       conflictSets);
@@ -75,6 +83,7 @@ int cfsql_createInsertTrigger(
       baseColumnsNewList,
       conflictResolution,
       updateClocks);
+  
   rc = sqlite3_exec(db, zSql, 0, 0, err);
 
   sqlite3_free(zSql);

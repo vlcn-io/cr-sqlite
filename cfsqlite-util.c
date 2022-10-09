@@ -60,7 +60,7 @@ char *cfsql_asIdentifierListStr(char **in, size_t inlen, char delim)
 {
   int finalLen = 0;
   char *ret = 0;
-  char **mapped = sqlite3_malloc(inlen * sizeof(char *));
+  char *mapped[inlen];
 
   for (int i = 0; i < inlen; ++i)
   {
@@ -82,7 +82,6 @@ char *cfsql_asIdentifierListStr(char **in, size_t inlen, char delim)
   {
     sqlite3_free(mapped[i]);
   }
-  sqlite3_free(mapped);
 
   return ret;
 }
@@ -132,7 +131,7 @@ char *cfsql_getDbVersionUnionQuery(
     int numRows,
     char **tableNames)
 {
-  char **unionsArr = sqlite3_malloc(sizeof(char) * numRows);
+  char *unionsArr[numRows];
   char *unionsStr;
   char *ret;
   int i = 0;
@@ -155,7 +154,6 @@ char *cfsql_getDbVersionUnionQuery(
   {
     sqlite3_free(unionsArr[i]);
   }
-  sqlite3_free(unionsArr);
 
   // compose the final query
   // and update the pointer to the string to point to it.

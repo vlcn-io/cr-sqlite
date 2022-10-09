@@ -62,6 +62,18 @@ void testCreateInsertTrigger()
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
+void testConflictSetsStr() {
+
+}
+
+void testLocalInsertOnConflictStr() {
+
+}
+
+void testUpdateClocksStr() {
+  
+}
+
 void cfsqlTriggersTestSuite()
 {
   printf("\e[47m\e[1;30mSuite: cfsqlTriggers\e[0m\n");

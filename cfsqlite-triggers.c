@@ -1,5 +1,6 @@
 #include "cfsqlite-triggers.h"
 #include "cfsqlite-tableinfo.h"
+#include "cfsqlite-util.h"
 
 #include <stdint.h>
 #include <string.h>
@@ -9,15 +10,37 @@ char *cfsql_conflictSetsStr(cfsql_ColumnInfo *cols, int len)
 {
   // set statements...
   char *sets[len];
+  int resultLen = 0;
+  char *ret = 0;
 
-  // for (int i = 0; i < len; ++i) {
-  //   sets[i] = 
-  // }
+  for (int i = 0; i < len; ++i)
+  {
+    if (cols[i].versionOf != 0)
+    {
+      sets[i] = sqlite3_mprintf(
+        "\"%s\" = CASE WHEN EXCLUDED.\"%s\" THEN \"%s\" + 1 ELSE \"%s\" END",
+        cols[i].name,
+        cols[i].versionOf,
+        cols[i].name,
+        cols[i].name
+      );
+    }
+    else
+    {
+      sets[i] = sqlite3_mprintf("\"%s\" = EXCLUDED.\"%s\"", cols[i].name, cols[i].name);
+    }
 
-  return 0;
+    resultLen += strlen(sets[i]);
+  }
+  resultLen += len - 1;
+  ret = sqlite3_malloc(resultLen * sizeof(char) + 1);
+  ret[resultLen] = '\0';
+
+  cfsql_joinWith(ret, sets, len, ',');
+  return ret;
 }
 
-char *cfsql_localInsertConflictResolutionStr(cfsql_TableInfo *tableInfo)
+char *cfsql_localInsertOnConflictStr(cfsql_TableInfo *tableInfo)
 {
   if (tableInfo->pksLen == 0)
   {
@@ -31,11 +54,13 @@ char *cfsql_localInsertConflictResolutionStr(cfsql_TableInfo *tableInfo)
 
   char *ret = sqlite3_mprintf(
       "ON CONFLICT (%s) DO UPDATE SET\
-      %s\
+      %s%s\
     \"__cfsql_cl\" = CASE WHEN \"__cfsql_cl\" %% 2 = 0 THEN \"__cfsql_cl\" + 1 ELSE \"__cfsql_cl\" END,\
     \"__cfsql_src\" = 0",
       pkList,
-      conflictSets);
+      conflictSets,
+      tableInfo->nonPksLen == 0 ? "" : ","
+    );
 
   sqlite3_free(pkList);
   sqlite3_free(conflictSets);
@@ -45,6 +70,7 @@ char *cfsql_localInsertConflictResolutionStr(cfsql_TableInfo *tableInfo)
 
 char *cfsql_updateClocksStr(cfsql_TableInfo *tableInfo)
 {
+  
   return 0;
 }
 
@@ -62,7 +88,7 @@ int cfsql_createInsertTrigger(
 
   baseColumnsList = cfsql_asIdentifierList(tableInfo->baseCols, tableInfo->baseColsLen, 0);
   baseColumnsNewList = cfsql_asIdentifierList(tableInfo->baseCols, tableInfo->baseColsLen, "NEW.");
-  conflictResolution = cfsql_localInsertConflictResolutionStr(tableInfo);
+  conflictResolution = cfsql_localInsertOnConflictStr(tableInfo);
   updateClocks = cfsql_updateClocksStr(tableInfo);
 
   zSql = sqlite3_mprintf(
@@ -83,7 +109,7 @@ int cfsql_createInsertTrigger(
       baseColumnsNewList,
       conflictResolution,
       updateClocks);
-  
+
   rc = sqlite3_exec(db, zSql, 0, 0, err);
 
   sqlite3_free(zSql);

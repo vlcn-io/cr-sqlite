@@ -27,4 +27,6 @@ int cfsql_getIndexedCols(
     char ***pIndexedCols,
     int *pIndexedColsLen);
 
+char *cfsql_join2(char *(*map)(const char *), char **in, size_t len, char* delim);
+
 #endif

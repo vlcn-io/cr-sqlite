@@ -92,6 +92,7 @@ char *cfsql_updateClocksStr(cfsql_TableInfo *tableInfo)
   else
   {
     pkNew = cfsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, "NEW.");
+    pkList = cfsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, 0);
   }
 
   char *ret = sqlite3_mprintf(
@@ -188,7 +189,7 @@ char *cfsql_updateTrigPkWhereConditions(cfsql_ColumnInfo *columnInfo, int len)
   ret = sqlite3_malloc(resultLen * sizeof(char) + 1);
   ret[resultLen] = '\0';
 
-  cfsql_joinWith(ret, toJoin, len, ' AND ');
+  // cfsql_joinWith(ret, toJoin, len, " AND ");
 
   for (int i = 0; i < len; ++i)
   {

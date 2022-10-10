@@ -52,6 +52,8 @@ static const size_t siteIdBlobSize = sizeof(siteIdBlob);
 static int64_t dbVersion = -9223372036854775807L;
 static int dbVersionSet = 0;
 
+static sqlite3_mutex *globalsInitMutex = 0;
+
 /**
  * The site id table is used to persist the site id and
  * populate `siteIdBlob` on initialization of a connection.
@@ -739,7 +741,52 @@ static void cfsqlFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
 __declspec(dllexport)
 #endif
 int sqlite3_cfsqlite_preinit() {
+  #if SQLITE_THREADSAFE != 0
+    globalsInitMutex = sqlite3_mutex_alloc(SQLITE_MUTEX_FAST);
+  #endif
   return SQLITE_OK;
+}
+
+static int initSharedMemory(sqlite3 *db) {
+  #if SQLITE_THREADSAFE != 0
+    sqlite3_mutex_enter(globalsInitMutex);
+  #endif
+  
+  int rc = SQLITE_OK;
+
+  /**
+   * Initialization creates a number of tables.
+   * We should ensure we do these in a tx
+   * so we cannot have partial initialization.
+   */
+  rc = sqlite3_exec(db, "BEGIN", 0, 0, 0);
+
+  if (rc == SQLITE_OK) {
+    // TODO: we need to guard cfsql initialization with a mutex
+    // since we set shared variables for site id and db version.
+    // TODO: we'll need to CAS on writes to db version in the commit hook.
+    // __sync_val_compare_and_swap
+    // https://gcc.gnu.org/onlinedocs/gcc-4.1.0/gcc/Atomic-Builtins.html
+    rc = initSiteId(db);
+  }
+
+  if (rc == SQLITE_OK) {
+    // once site id is initialize, we are able to init db version.
+    // db version uses site id in its queries hence why it comes after site id init.
+    rc = initDbVersion(db);
+  }
+  
+  if (rc == SQLITE_OK) {
+    rc = sqlite3_exec(db, "COMMIT", 0, 0, 0);
+  } else {
+    sqlite3_exec(db, "ROLLBACK", 0, 0, 0);
+  }
+
+  
+  #if SQLITE_THREADSAFE != 0
+    sqlite3_mutex_leave(globalsInitMutex);
+  #endif
+  return rc;
 }
 
 #ifdef _WIN32
@@ -752,42 +799,7 @@ __declspec(dllexport)
 
   SQLITE_EXTENSION_INIT2(pApi);
 
-  /**
-   * Initialization creates a number of tables.
-   * We should ensure we do these in a tx
-   * so we cannot have partial initialization.
-   */
-  rc = sqlite3_exec(db, "BEGIN", 0, 0, 0);
-  if (rc != SQLITE_OK)
-  {
-    return rc;
-  }
-
-  // TODO: we need to guard cfsql initialization with a mutex
-  // since we set shared variables for site id and db version.
-  // TODO: we'll need to CAS on writes to db version in the commit hook.
-  // __sync_val_compare_and_swap
-  // https://gcc.gnu.org/onlinedocs/gcc-4.1.0/gcc/Atomic-Builtins.html
-  rc = initSiteId(db);
-  if (rc != SQLITE_OK)
-  {
-    sqlite3_exec(db, "ROLLBACK", 0, 0, 0);
-    return rc;
-  }
-  // once site id is initialize, we are able to init db version.
-  // db version uses site id in its queries hence why it comes after site id init.
-  rc = initDbVersion(db);
-  if (rc != SQLITE_OK)
-  {
-    sqlite3_exec(db, "ROLLBACK", 0, 0, 0);
-    return rc;
-  }
-
-  rc = sqlite3_exec(db, "COMMIT", 0, 0, 0);
-  if (rc != SQLITE_OK)
-  {
-    return rc;
-  }
+  rc = initSharedMemory(db);
 
   if (rc == SQLITE_OK)
   {

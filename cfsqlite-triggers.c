@@ -77,7 +77,7 @@ char *cfsql_localInsertOnConflictStr(cfsql_TableInfo *tableInfo)
   return ret;
 }
 
-char *cfsql_updateClocksStr(cfsql_TableInfo *tableInfo)
+char *cfsql_updateClocksStr(cfsql_TableInfo *tableInfo, int isDelete)
 {
   // TODO: if there are now pks we need to use a `row_id` col
 
@@ -86,12 +86,20 @@ char *cfsql_updateClocksStr(cfsql_TableInfo *tableInfo)
 
   if (tableInfo->pksLen == 0)
   {
-    pkNew = "NEW.\"row_id\"";
+    if (isDelete)
+    {
+      pkNew = "OLD.\"row_id\"";
+    }
+    else
+    {
+      pkNew = "NEW.\"row_id\"";
+    }
+
     pkList = "\"row_id\"";
   }
   else
   {
-    pkNew = cfsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, "NEW.");
+    pkNew = cfsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, isDelete ? "OLD." : "NEW.");
     pkList = cfsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, 0);
   }
 
@@ -134,7 +142,7 @@ int cfsql_createInsertTrigger(
   baseColumnsList = cfsql_asIdentifierList(tableInfo->baseCols, tableInfo->baseColsLen, 0);
   baseColumnsNewList = cfsql_asIdentifierList(tableInfo->baseCols, tableInfo->baseColsLen, "NEW.");
   conflictResolution = cfsql_localInsertOnConflictStr(tableInfo);
-  updateClocks = cfsql_updateClocksStr(tableInfo);
+  updateClocks = cfsql_updateClocksStr(tableInfo, 0);
 
   zSql = sqlite3_mprintf(
       "CREATE TRIGGER \"%s__cfsql_itrig\"\
@@ -190,24 +198,26 @@ char *cfsql_upTrigSets(cfsql_ColumnInfo *columnInfo, int len)
   char *columnNames[len];
   for (int i = 0; i < len; ++i)
   {
-    if (columnInfo[i].versionOf == 0) {
+    if (columnInfo[i].versionOf == 0)
+    {
       columnNames[i] = sqlite3_mprintf("\"%s\" = NEW.\"%s\"", columnInfo[i].name, columnInfo[i].name);
-    } else {
+    }
+    else
+    {
       columnNames[i] = sqlite3_mprintf(
-        "\"%s\" = CASE WHEN OLD.\"%s\" != NEW.\"%s\" THEN \"%s\" + 1 ELSE \"%s\" END",
-        columnInfo[i].name,
-        columnInfo[i].versionOf,
-        columnInfo[i].versionOf,
-        columnInfo[i].name,
-        columnInfo[i].name
-      );
+          "\"%s\" = CASE WHEN OLD.\"%s\" != NEW.\"%s\" THEN \"%s\" + 1 ELSE \"%s\" END",
+          columnInfo[i].name,
+          columnInfo[i].versionOf,
+          columnInfo[i].versionOf,
+          columnInfo[i].name,
+          columnInfo[i].name);
     }
   }
 
-  // join2 will free the columnName entries. 
+  // join2 will free the columnName entries.
   // This is because `cfsql_identity` is a pass through (identity function)
   // and does not allocate a new string, causing the original string to be freed by join2.
-  char *ret = cfsql_join2((char *(*)(const char *))&cfsql_identity, columnNames, len, ",");
+  char *ret = cfsql_join2((char *(*)(const char *)) & cfsql_identity, columnNames, len, ",");
 
   return ret;
 }
@@ -232,7 +242,7 @@ int cfsql_createUpdateTrigger(sqlite3 *db,
   }
 
   sets = cfsql_upTrigSets(tableInfo->withVersionCols, tableInfo->withVersionColsLen);
-  clockUpdate = cfsql_updateClocksStr(tableInfo);
+  clockUpdate = cfsql_updateClocksStr(tableInfo, 0);
   zSql = sqlite3_mprintf(
       "CREATE TRIGGER \"%s__cfsql_utrig\"\
       INSTEAD OF UPDATE ON \"%s\"\
@@ -265,12 +275,7 @@ int cfsql_createUpdateTrigger(sqlite3 *db,
   return rc;
 }
 
-int cfsql_createDeleteTrigger(
-    sqlite3 *db,
-    cfsql_TableInfo *tableInfo,
-    char **err)
-{
-  int rc = SQLITE_OK;
+char *cfsql_deleteTriggerQuery(cfsql_TableInfo *tableInfo) {
   char *pkWhereConditions = 0;
   char *clockUpdate = 0;
   if (tableInfo->pksLen == 0)
@@ -282,29 +287,39 @@ int cfsql_createDeleteTrigger(
     pkWhereConditions = cfsql_upTrigWhereConditions(tableInfo->pks, tableInfo->pksLen);
   }
 
-  clockUpdate = cfsql_updateClocksStr(tableInfo);
+  clockUpdate = cfsql_updateClocksStr(tableInfo, 1);
   char *zSql = sqlite3_mprintf(
-    "CREATE TRIGGER \"%s__cfsql_dtrig\"\
-      INSTEAD OF DELETE ON \"%s\"\
+      "CREATE TRIGGER \"%s__cfsql_dtrig\"\
+    INSTEAD OF DELETE ON \"%s\"\
     BEGIN\
       UPDATE \"%s__cfsql_crr\" SET \"__cfsql_cl\" = \"__cfsql_cl\" + 1, \"__cfsql_src\" = 0 WHERE %s;\
       \
-      %s;\
+      %s\
     END",
-    tableInfo->tblName,
-    tableInfo->tblName,
-    tableInfo->tblName,
-    pkWhereConditions,
-    clockUpdate
-  );
-
-  sqlite3_free(zSql);
+      tableInfo->tblName,
+      tableInfo->tblName,
+      tableInfo->tblName,
+      pkWhereConditions,
+      clockUpdate);
+  
+  sqlite3_free(pkWhereConditions);
   sqlite3_free(clockUpdate);
-  if (tableInfo->pksLen == 0) {
-    sqlite3_free(pkWhereConditions);
-  }
 
-  return SQLITE_OK;
+  return zSql;
+}
+
+int cfsql_createDeleteTrigger(
+    sqlite3 *db,
+    cfsql_TableInfo *tableInfo,
+    char **err)
+{
+  int rc = SQLITE_OK;
+  
+  char *zSql = cfsql_deleteTriggerQuery(tableInfo);
+  rc = sqlite3_exec(db, zSql, 0, 0, err);
+  sqlite3_free(zSql);
+
+  return rc;
 }
 
 int cfsql_createCrrViewTriggers(

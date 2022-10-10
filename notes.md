@@ -12,6 +12,7 @@ todo:
 - c linters and static analyzers
 - support differing schema names
 - test quoted table names.... strip quote in extract word?
+- support `if not exists`
 
 - support for:
   - centralized sync

@@ -751,7 +751,7 @@ static int initSharedMemory(sqlite3 *db) {
   #if SQLITE_THREADSAFE != 0
     sqlite3_mutex_enter(globalsInitMutex);
   #endif
-  
+
   int rc = SQLITE_OK;
 
   /**

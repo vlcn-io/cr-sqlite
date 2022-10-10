@@ -74,9 +74,31 @@ void testUpdateClocksStr() {
   
 }
 
+void testUpTrigWhereConditions() {
+  printf("CreateInsertTrigger\n");
+
+  cfsql_ColumnInfo columnInfos[2];
+  columnInfos[0].cid = 0;
+  columnInfos[0].dfltValue = 0;
+  columnInfos[0].name = "a";
+  columnInfos[0].pk = 1;
+
+  columnInfos[1].cid = 1;
+  columnInfos[1].dfltValue = 0;
+  columnInfos[1].name = "b";
+  columnInfos[1].pk = 0;
+
+  char * conditions = cfsql_upTrigwhereConditions(columnInfos, 2);
+
+  assert(strcmp("\"a\" = NEW.\"a\" AND \"b\" = NEW.\"b\"", conditions) == 0);
+
+  printf("\t\e[0;32mSuccess\e[0m\n");
+}
+
 void cfsqlTriggersTestSuite()
 {
   printf("\e[47m\e[1;30mSuite: cfsqlTriggers\e[0m\n");
 
   testCreateInsertTrigger();
+  testUpTrigWhereConditions();
 }

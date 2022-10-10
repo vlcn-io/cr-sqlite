@@ -166,37 +166,21 @@ int cfsql_createInsertTrigger(
   return rc;
 }
 
+static char *mapPkWhere(const char *x) {
+  return sqlite3_mprintf("\"%s\" = NEW.\"%s\"", x, x);
+}
+
 // TODO: we could generalize this and `conflictSetsStr` and and `updateTrigUpdateSet` and other places
 // if we add a parameter which is a function that produces the strings
 // to join.
-char *cfsql_updateTrigPkWhereConditions(cfsql_ColumnInfo *columnInfo, int len)
+char *cfsql_upTrigwhereConditions(cfsql_ColumnInfo *columnInfo, int len)
 {
-  char *toJoin[len];
-  int resultLen = 0;
-  char *ret = 0;
-
-  if (len == 0)
-  {
-    return ret;
+  char *columnNames[len];
+  for (int i = 0; i < len; ++i) {
+    columnNames[i] = columnInfo[i].name;
   }
 
-  for (int i = 0; i < len; ++i)
-  {
-    toJoin[i] = sqlite3_mprintf("\"%s\" = NEW.\"%s\"", columnInfo[i].name, columnInfo[i].name);
-    resultLen += strlen(toJoin[i]);
-  }
-  resultLen += len - 1;
-  ret = sqlite3_malloc(resultLen * sizeof(char) + 1);
-  ret[resultLen] = '\0';
-
-  // cfsql_joinWith(ret, toJoin, len, " AND ");
-
-  for (int i = 0; i < len; ++i)
-  {
-    sqlite3_free(toJoin[i]);
-  }
-
-  return ret;
+  return cfsql_join2(&mapPkWhere, columnNames, len, " AND ");
 }
 
 char *cfsql_updateTrigUpdateSets(cfsql_ColumnInfo *columnInfo, int len)
@@ -225,7 +209,7 @@ int cfsql_createUpdateTrigger(sqlite3 *db,
   {
     pkList = cfsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, 0);
     pkNewList = cfsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, "NEW.");
-    pkWhereConditions = cfsql_updateTrigPkWhereConditions(tableInfo->pks, tableInfo->pksLen);
+    pkWhereConditions = cfsql_upTrigwhereConditions(tableInfo->pks, tableInfo->pksLen);
   }
 
   sets = cfsql_updateTrigUpdateSets(tableInfo->withVersionCols, tableInfo->withVersionColsLen);

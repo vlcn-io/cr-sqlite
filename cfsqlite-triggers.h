@@ -18,5 +18,7 @@ int cfsql_createInsertTrigger(
     sqlite3 *db,
     cfsql_TableInfo *tableInfo,
     char **err);
+  
+char *cfsql_upTrigwhereConditions(cfsql_ColumnInfo *columnInfo, int len);
 
 #endif

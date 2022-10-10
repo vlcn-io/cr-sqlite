@@ -1,10 +1,13 @@
 todo:
 
-- mutex on initialization
-- cas for db version?
-  - cas to new value, commit value gotten from cas
-  - allow db version to increase, even for failed transactions
-- commit hook for transactions to bump in-memory db version
+- delete
+- patch
+- delta view?
+- create index
+- drop index
+- drop crr
+- alter crr
+- sync lib
 
 - support for:
   - centralized sync

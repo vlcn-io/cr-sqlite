@@ -40,6 +40,11 @@ void testExtractWord()
   assert(strcmp(word, "foo") == 0);
   sqlite3_free(word);
   printf("\t\e[0;32mSuccess\e[0m\n");
+
+  word = cfsql_extractWord(DROP_TABLE_LEN + 1, "DROP TABLE foo");
+  assert(strcmp(word, "foo") == 0);
+  sqlite3_free(word);
+  printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
 void testGetVersionUnionQuery()

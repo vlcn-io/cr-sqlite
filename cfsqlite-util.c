@@ -138,12 +138,12 @@ char *cfsql_asIdentifierListStr(char **in, size_t inlen, char delim)
  */
 char *cfsql_extractWord(
     int prefixLen,
-    char *str)
+    const char *str)
 {
   char *tblName;
   int tblNameLen = 0;
-  char *splitIndex;
-  char *splitIndexParen;
+  const char *splitIndex;
+  const char *splitIndexParen;
 
   splitIndex = strstr(str + prefixLen, " ");
   splitIndexParen = strstr(str + prefixLen, "(");

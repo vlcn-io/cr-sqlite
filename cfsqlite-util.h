@@ -6,7 +6,7 @@
 
 char *cfsql_extractWord(
     int prefixLen,
-    char *str);
+    const char *str);
 
 char *cfsql_getDbVersionUnionQuery(
     int numRows,

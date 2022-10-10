@@ -244,7 +244,7 @@ static void dbVersionFunc(sqlite3_context *context, int argc, sqlite3_value **ar
  *
  * We need to know given each schema modification type
  * requires unique handling in the crr layer.
- * 
+ *
  * The provided query must be a normalized query.
  */
 static int determineQueryType(sqlite3 *db, sqlite3_context *context, const char *query)
@@ -253,7 +253,8 @@ static int determineQueryType(sqlite3 *db, sqlite3_context *context, const char 
   char *formattedError = 0;
 
   if (strncmp("CREATE TABLE", query, CREATE_TABLE_LEN) == 0)
-  {;
+  {
+    ;
     return CREATE_TABLE;
   }
   if (strncmp("ALTER TABLE", query, ALTER_TABLE_LEN) == 0)
@@ -424,7 +425,7 @@ int cfsql_createCrrBaseTable(
 
   rc = sqlite3_exec(db, zSql, 0, 0, err);
   sqlite3_free(zSql);
-  
+
   if (rc != SQLITE_OK)
   {
     return rc;
@@ -474,8 +475,8 @@ int cfsql_createViewOfCrr(
   return rc;
 }
 
-void cfsql_insertConflictResolution() {
-
+void cfsql_insertConflictResolution()
+{
 }
 
 /**
@@ -604,11 +605,34 @@ static void createCrr(
   sqlite3_free(err);
 }
 
-static void dropCrr()
+static int dropCrr(
+    sqlite3_context *context,
+    sqlite3 *db,
+    const char *query,
+    char **err)
 {
   // drop base table
   // drop clocks table
   // views and triggers should auto-drop
+  char *zSql = 0;
+  char *tblName = cfsql_extractWord(DROP_TABLE_LEN + 1, query);
+  int rc = SQLITE_OK;
+  
+  zSql = sqlite3_mprintf("DROP TABLE \"%s\"", tblName);
+  rc = sqlite3_exec(db, zSql, 0, 0, err);
+  sqlite3_free(zSql);
+  if (rc != SQLITE_OK) {
+    return rc;
+  }
+
+  zSql = sqlite3_mprintf("DROP TABLE \"%s\"__cfsql_clock", tblName);
+  rc = sqlite3_exec(db, zSql, 0, 0, err);
+  sqlite3_free(zSql);
+  if (rc != SQLITE_OK) {
+    return rc;
+  }
+
+  return rc;
 }
 
 static void createCrrIndex()
@@ -700,13 +724,14 @@ static void cfsqlFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
     return;
   }
 
+  // TODO: pass and use errmsg, check return codes
   switch (queryType)
   {
   case CREATE_TABLE:
     createCrr(context, db, query);
     break;
   case DROP_TABLE:
-    dropCrr();
+    dropCrr(context, db, query, &errmsg);
     break;
   case CREATE_INDEX:
     createCrrIndex();
@@ -731,28 +756,32 @@ static void cfsqlFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
 #ifdef _WIN32
 __declspec(dllexport)
 #endif
-int sqlite3_cfsqlite_preinit() {
-  #if SQLITE_THREADSAFE != 0
-    globalsInitMutex = sqlite3_mutex_alloc(SQLITE_MUTEX_FAST);
-  #endif
+    int sqlite3_cfsqlite_preinit()
+{
+#if SQLITE_THREADSAFE != 0
+  globalsInitMutex = sqlite3_mutex_alloc(SQLITE_MUTEX_FAST);
+#endif
   return SQLITE_OK;
 }
 
-static int commitHook(void *cd) {
+static int commitHook(void *cd)
+{
   // this is an atomic int so this increment is thread safe.
   dbVersion++;
   return 0;
 }
 
-static int initSharedMemory(sqlite3 *db) {
-  // TODO if we were used as a run time loadable extension rather than
-  // statically linked, the mutex will not exist.
-  #if SQLITE_THREADSAFE != 0
-    sqlite3_mutex_enter(globalsInitMutex);
-  #endif
+static int initSharedMemory(sqlite3 *db)
+{
+// TODO if we were used as a run time loadable extension rather than
+// statically linked, the mutex will not exist.
+#if SQLITE_THREADSAFE != 0
+  sqlite3_mutex_enter(globalsInitMutex);
+#endif
 
   int rc = SQLITE_OK;
-  if (sharedMemoryInitialized != 0) {
+  if (sharedMemoryInitialized != 0)
+  {
     return rc;
   }
 
@@ -763,31 +792,37 @@ static int initSharedMemory(sqlite3 *db) {
    */
   rc = sqlite3_exec(db, "BEGIN", 0, 0, 0);
 
-  if (rc == SQLITE_OK) {
+  if (rc == SQLITE_OK)
+  {
     rc = initSiteId(db);
   }
 
-  if (rc == SQLITE_OK) {
+  if (rc == SQLITE_OK)
+  {
     // once site id is initialize, we are able to init db version.
     // db version uses site id in its queries hence why it comes after site id init.
     rc = initDbVersion(db);
   }
-  
-  if (rc == SQLITE_OK) {
+
+  if (rc == SQLITE_OK)
+  {
     rc = sqlite3_exec(db, "COMMIT", 0, 0, 0);
-  } else {
+  }
+  else
+  {
     // Intentionally not setting the RC.
     // We already have a failure and do not want to record rollback success.
     sqlite3_exec(db, "ROLLBACK", 0, 0, 0);
   }
 
-  if (rc == SQLITE_OK) {
+  if (rc == SQLITE_OK)
+  {
     sharedMemoryInitialized = 1;
   }
 
-  #if SQLITE_THREADSAFE != 0
-    sqlite3_mutex_leave(globalsInitMutex);
-  #endif
+#if SQLITE_THREADSAFE != 0
+  sqlite3_mutex_leave(globalsInitMutex);
+#endif
   return rc;
 }
 
@@ -817,7 +852,7 @@ __declspec(dllexport)
                                  SQLITE_UTF8 | SQLITE_INNOCUOUS,
                                  0, dbVersionFunc, 0, 0);
   }
-  
+
   if (rc == SQLITE_OK)
   {
     // Only register a commit hook, not update or pre-update, since all rows in the same transaction

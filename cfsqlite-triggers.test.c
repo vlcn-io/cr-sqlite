@@ -56,12 +56,14 @@ void testCreateInsertAndUpdateTriggers()
   cfsql_freeTableInfo(tableInfo);
   if (rc != SQLITE_OK)
   {
+    sqlite3_close(db);
     printf("err: %s | rc: %d\n", errMsg, rc);
     sqlite3_free(errMsg);
     assert(0);
   }
 
   sqlite3_free(errMsg);
+  sqlite3_close(db);
 
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
@@ -126,7 +128,6 @@ void testUpTrigSets()
 
   char *sets = cfsql_upTrigSets(columnInfos, 3);
 
-  printf("S: %s!\n", sets);
   assert(
       strcmp(
           "\"a\" = NEW.\"a\",\"b\" = NEW.\"b\",\"b_v\" = CASE WHEN OLD.\"b\" != NEW.\"b\" THEN \"b_v\" + 1 ELSE \"b_v\" END",

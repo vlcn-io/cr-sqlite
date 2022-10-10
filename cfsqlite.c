@@ -634,25 +634,18 @@ static int dropCrr(
   return rc;
 }
 
-static int createCrrIndex(
-    sqlite3_context *context,
-    sqlite3 *db,
-    const char *query,
-    char **err)
-{
-  int rc = SQLITE_OK;
-  // https://www.sqlite.org/lang_createindex.html
-  // just replace the table name with the crr table name. done.
-  // first index of `ON` followed by first index of `(`
+char *cfsql_getCreateCrrIndexQuery(
+  const char *query
+) {
   char *onPtr = strcasestr(query, " ON ");
 
   if (onPtr == 0)
   {
-    *err = strdup("Missing `ON` in create index statement");
-    return SQLITE_ERROR;
+    return 0;
   }
 
-  char *origTblName = cfsql_extractWord(onPtr + 4, query);
+  int queryPrefixLen = (onPtr + 4) - query;
+  char *origTblName = cfsql_extractWord(queryPrefixLen, query);
   char *newTblName = sqlite3_mprintf("\"%s__cfsql_crr\"", origTblName);
   // + 11 for len of `__cfsql_crr`
   int newQueryLen = strlen(query) + 11;
@@ -660,9 +653,8 @@ static int createCrrIndex(
   char *newQuery = sqlite3_malloc((newQueryLen + 1) * sizeof(char));
   newQuery[newQueryLen] = '\0';
 
-  const newTblNameLen = strlen(newTblName);
-  const origTblNameLen = strlen(origTblName);
-  const queryPrefixLen = (onPtr + 4) - query;
+  int newTblNameLen = strlen(newTblName);
+  int origTblNameLen = strlen(origTblName);
 
   // copy from query[0] to query[onPtr + 4] into newQuery
   memcpy(newQuery, query, queryPrefixLen);
@@ -671,8 +663,26 @@ static int createCrrIndex(
   // copy query[onPtr + 4 + origTblNameLen] into newQuery.
   memcpy(newQuery + queryPrefixLen + newTblNameLen, query + queryPrefixLen + origTblNameLen, strlen(query) - queryPrefixLen - origTblNameLen);
 
-  printf("New Q: %s!", newQuery);
+  return newQuery;
+}
 
+static int createCrrIndex(
+    sqlite3_context *context,
+    sqlite3 *db,
+    const char *query,
+    char **err)
+{
+  int rc = SQLITE_OK;
+  // https://www.sqlite.org/lang_createindex.html
+  char *newQuery = cfsql_getCreateCrrIndexQuery(query);
+
+  if (newQuery == 0)
+  {
+    *err = strdup("Missing `ON` in create index statement");
+    return SQLITE_ERROR;
+  }
+
+  rc = sqlite3_exec(db, newQuery, 0, 0, err);
   sqlite3_free(newQuery);
 
   return rc;
@@ -776,10 +786,10 @@ static void cfsqlFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
     dropCrr(context, db, query, &errmsg);
     break;
   case CREATE_INDEX:
-    createCrrIndex();
+    createCrrIndex(context, db, query, &errmsg);
     break;
   case DROP_INDEX:
-    dropCrrIndex();
+    dropCrrIndex(context, db, query, &errmsg);
     break;
   case ALTER_TABLE:
     alterCrr();

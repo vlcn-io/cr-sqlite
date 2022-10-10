@@ -55,11 +55,13 @@ void testCreateClockTable()
   // TODO: check that the tables have the expected schema
 
   printf("\t\e[0;32mSuccess\e[0m\n");
+  sqlite3_close(db);
   return;
 
 fail:
   printf("err: %s %d\n", err, rc);
   sqlite3_free(err);
+  sqlite3_close(db);
   assert(rc == SQLITE_OK);
 }
 
@@ -92,9 +94,18 @@ void testCreateCrrBaseTable()
   // now select the base table sql and check it is what is expected.
 
   printf("\t\e[0;32mSuccess\e[0m\n");
+
+  // sqlite3_stmt *pStmt = 0;
+  // char *zSql = "CREATE TABLE [boo] (a, b)";
+  // rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
+  // printf("CODE: %d\n", rc);
+  // printf("NORMA: %s!\n", sqlite3_normalized_sql(pStmt));
+  
+  sqlite3_close(db);
   return;
 
   fail:
+    sqlite3_close(db);
     printf("err: %s %d\n", err, rc);
     sqlite3_free(err);
     cfsql_freeTableInfo(tableInfo);
@@ -126,13 +137,25 @@ void testCreateViewOfCrr()
   CHECK_OK
 
   printf("\t\e[0;32mSuccess\e[0m\n");
+  sqlite3_close(db);
   return;
 
   fail:
     printf("err: %s %d\n", err, rc);
     sqlite3_free(err);
     cfsql_freeTableInfo(tableInfo);
+    sqlite3_close(db);
     assert(rc == SQLITE_OK);
+}
+
+void testGetCreateCrrIndexQuery() {
+  printf("GetCreateCrrIndexQuery\n");
+
+  char * query = cfsql_getCreateCrrIndexQuery("CREATE INDEX ON foo (a, b)");
+
+  assert(strcmp(query, "CREATE INDEX ON \"foo__cfsql_crr\" (a, b)") == 0);
+
+  printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
 void cfsqlTestSuite() {
@@ -141,4 +164,5 @@ void cfsqlTestSuite() {
   testCreateClockTable();
   testCreateCrrBaseTable();
   testCreateViewOfCrr();
+  testGetCreateCrrIndexQuery();
 }

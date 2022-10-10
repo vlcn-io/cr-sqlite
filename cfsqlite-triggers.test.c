@@ -56,26 +56,27 @@ void testCreateInsertTrigger()
     sqlite3_free(errMsg);
     assert(0);
   }
-  
+
   sqlite3_free(errMsg);
-  
+
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
-void testConflictSetsStr() {
-
+void testConflictSetsStr()
+{
 }
 
-void testLocalInsertOnConflictStr() {
-
+void testLocalInsertOnConflictStr()
+{
 }
 
-void testUpdateClocksStr() {
-  
+void testUpdateClocksStr()
+{
 }
 
-void testUpTrigWhereConditions() {
-  printf("CreateInsertTrigger\n");
+void testUpTrigWhereConditions()
+{
+  printf("CreateUpTrigWhereConditions\n");
 
   cfsql_ColumnInfo columnInfos[2];
   columnInfos[0].cid = 0;
@@ -88,9 +89,44 @@ void testUpTrigWhereConditions() {
   columnInfos[1].name = "b";
   columnInfos[1].pk = 0;
 
-  char * conditions = cfsql_upTrigwhereConditions(columnInfos, 2);
+  char *conditions = cfsql_upTrigWhereConditions(columnInfos, 2);
 
   assert(strcmp("\"a\" = NEW.\"a\" AND \"b\" = NEW.\"b\"", conditions) == 0);
+  sqlite3_free(conditions);
+
+  printf("\t\e[0;32mSuccess\e[0m\n");
+}
+
+void testUpTrigSets()
+{
+  printf("CreateUpTrigSets\n");
+
+  cfsql_ColumnInfo columnInfos[3];
+  columnInfos[0].cid = 0;
+  columnInfos[0].dfltValue = 0;
+  columnInfos[0].name = "a";
+  columnInfos[0].pk = 1;
+  columnInfos[0].versionOf = 0;
+
+  columnInfos[1].cid = 1;
+  columnInfos[1].dfltValue = 0;
+  columnInfos[1].name = "b";
+  columnInfos[1].pk = 0;
+  columnInfos[1].versionOf = 0;
+
+  columnInfos[2].cid = 2;
+  columnInfos[2].dfltValue = 0;
+  columnInfos[2].name = "b_v";
+  columnInfos[2].pk = 0;
+  columnInfos[2].versionOf = "b";
+
+  char *sets = cfsql_upTrigSets(columnInfos, 3);
+
+  printf("S: %s!\n", sets);
+  assert(
+      strcmp(
+          "\"a\" = NEW.\"a\",\"b\" = NEW.\"b\",\"b_v\" = CASE WHEN OLD.\"b\" != NEW.\"b\" THEN \"b_v\" + 1 ELSE \"b_v\" END",
+          sets) == 0);
 
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
@@ -101,4 +137,5 @@ void cfsqlTriggersTestSuite()
 
   testCreateInsertTrigger();
   testUpTrigWhereConditions();
+  testUpTrigSets();
 }

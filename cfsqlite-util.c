@@ -22,6 +22,11 @@ static char *joinHelper(char **in, size_t inlen, size_t inpos, size_t accum)
   }
 }
 
+// DO NOT dupe the memory!
+const char *cfsql_identity(const char *x) {
+  return x;
+}
+
 /**
  * @brief Join an array of strings into a single string
  *

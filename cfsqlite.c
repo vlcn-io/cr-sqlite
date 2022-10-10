@@ -614,32 +614,77 @@ static int dropCrr(
   char *zSql = 0;
   char *tblName = cfsql_extractWord(DROP_TABLE_LEN + 1, query);
   int rc = SQLITE_OK;
-  
+
   zSql = sqlite3_mprintf("DROP TABLE \"%s\"", tblName);
   rc = sqlite3_exec(db, zSql, 0, 0, err);
   sqlite3_free(zSql);
-  if (rc != SQLITE_OK) {
+  if (rc != SQLITE_OK)
+  {
     return rc;
   }
 
   zSql = sqlite3_mprintf("DROP TABLE \"%s\"__cfsql_clock", tblName);
   rc = sqlite3_exec(db, zSql, 0, 0, err);
   sqlite3_free(zSql);
-  if (rc != SQLITE_OK) {
+  if (rc != SQLITE_OK)
+  {
     return rc;
   }
 
   return rc;
 }
 
-static void createCrrIndex()
+static int createCrrIndex(
+    sqlite3_context *context,
+    sqlite3 *db,
+    const char *query,
+    char **err)
 {
+  int rc = SQLITE_OK;
+  // https://www.sqlite.org/lang_createindex.html
   // just replace the table name with the crr table name. done.
+  // first index of `ON` followed by first index of `(`
+  char *onPtr = strcasestr(query, " ON ");
+
+  if (onPtr == 0)
+  {
+    *err = strdup("Missing `ON` in create index statement");
+    return SQLITE_ERROR;
+  }
+
+  char *origTblName = cfsql_extractWord(onPtr + 4, query);
+  char *newTblName = sqlite3_mprintf("\"%s__cfsql_crr\"", origTblName);
+  // + 11 for len of `__cfsql_crr`
+  int newQueryLen = strlen(query) + 11;
+  // + 1 for null terminator
+  char *newQuery = sqlite3_malloc((newQueryLen + 1) * sizeof(char));
+  newQuery[newQueryLen] = '\0';
+
+  const newTblNameLen = strlen(newTblName);
+  const origTblNameLen = strlen(origTblName);
+  const queryPrefixLen = (onPtr + 4) - query;
+
+  // copy from query[0] to query[onPtr + 4] into newQuery
+  memcpy(newQuery, query, queryPrefixLen);
+  // copy newTblName into newQuery
+  memcpy(newQuery + queryPrefixLen, newTblName, newTblNameLen);
+  // copy query[onPtr + 4 + origTblNameLen] into newQuery.
+  memcpy(newQuery + queryPrefixLen + newTblNameLen, query + queryPrefixLen + origTblNameLen, strlen(query) - queryPrefixLen - origTblNameLen);
+
+  printf("New Q: %s!", newQuery);
+
+  sqlite3_free(newQuery);
+
+  return rc;
 }
 
-static void dropCrrIndex()
+static int dropCrrIndex(
+    sqlite3_context *context,
+    sqlite3 *db,
+    const char *query,
+    char **err)
 {
-  // just replace the table name with the crr table name. done.
+  return sqlite3_exec(db, query, 0, 0, err);
 }
 
 static void alterCrr()

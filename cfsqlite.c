@@ -53,6 +53,7 @@ static int64_t dbVersion = -9223372036854775807L;
 static int dbVersionSet = 0;
 
 static sqlite3_mutex *globalsInitMutex = 0;
+static int sharedMemoryInitialized = 0;
 
 /**
  * The site id table is used to persist the site id and
@@ -748,11 +749,16 @@ int sqlite3_cfsqlite_preinit() {
 }
 
 static int initSharedMemory(sqlite3 *db) {
+  // TODO if we were used as a run time loadable extension rather than
+  // statically linked, the mutex will not exist.
   #if SQLITE_THREADSAFE != 0
     sqlite3_mutex_enter(globalsInitMutex);
   #endif
 
   int rc = SQLITE_OK;
+  if (sharedMemoryInitialized != 0) {
+    return rc;
+  }
 
   /**
    * Initialization creates a number of tables.
@@ -779,10 +785,15 @@ static int initSharedMemory(sqlite3 *db) {
   if (rc == SQLITE_OK) {
     rc = sqlite3_exec(db, "COMMIT", 0, 0, 0);
   } else {
+    // Intentionally not setting the RC.
+    // We already have a failure and do not want to record rollback success.
     sqlite3_exec(db, "ROLLBACK", 0, 0, 0);
   }
 
-  
+  if (rc == SQLITE_OK) {
+    sharedMemoryInitialized = 1;
+  }
+
   #if SQLITE_THREADSAFE != 0
     sqlite3_mutex_leave(globalsInitMutex);
   #endif

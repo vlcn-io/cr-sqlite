@@ -47,9 +47,10 @@ static const size_t siteIdBlobSize = sizeof(siteIdBlob);
  * This is not an unsigned int since sqlite does not support unsigned ints
  * as a data type and we do eventually write db version(s) to the db.
  *
- * TODO: Changing the db version needs to be done in a thread safe manner.
+ * The dbVersion points to the _next_ version to be used for a write.
+ * The current version of the db is dbVersion - 1.
  */
-static int64_t dbVersion = -9223372036854775807L;
+static int64_t dbVersion = -9223372036854775807L + 1;
 static int dbVersionSet = 0;
 
 static sqlite3_mutex *globalsInitMutex = 0;
@@ -217,7 +218,7 @@ static int initDbVersion(sqlite3 *db)
   }
 
   // had a row? grab the version returned to us
-  dbVersion = sqlite3_column_int64(pStmt, 0);
+  dbVersion = sqlite3_column_int64(pStmt, 0) + 1;
   dbVersionSet = 1;
   sqlite3_finalize(pStmt);
 
@@ -811,7 +812,6 @@ __declspec(dllexport)
   SQLITE_EXTENSION_INIT2(pApi);
 
   rc = initSharedMemory(db);
-
   if (rc == SQLITE_OK)
   {
     rc = sqlite3_create_function(db, "cfsql_siteid", 0,

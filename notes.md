@@ -1,6 +1,5 @@
 todo:
 
-- patch trigger
 - delta generation view?
   - Probs not if we want deltas across tables for cross table tx support.
   - Well we can get ids in a view since ids will union correctly.
@@ -52,3 +51,10 @@ TODO:
   Or you can keep the full causal graph and just replay the causal graph to sync.
   Causal graph is an event log, timestamped by tx, that records (row, cols) that changed.
   In big-peer model we can drop this log after every complete sync.
+
+---
+
+Delta Generation:
+Generate union query to grab primary keys from all tables where clock value > x.
+
+Big peer method:

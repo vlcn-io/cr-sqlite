@@ -419,7 +419,7 @@ char *cfsql_patchClockUpdate(cfsql_TableInfo *tableInfo)
       \"__cfsql_site_id\",\
       \"__cfsql_version\",\
       %s\
-    \) SELECT \"key\" as \"__cfsql_site_id\", \"value\" as \"__cfsql_version\", %s\
+    ) SELECT \"key\" as \"__cfsql_site_id\", \"value\" as \"__cfsql_version\", %s\
       FROM\
     json_each(NEW.\"__cfsql_clock\") WHERE true\
     ON CONFLICT (\"__cfsql_ste_id\", %s) DO UPDATE SET\

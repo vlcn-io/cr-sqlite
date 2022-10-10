@@ -1,11 +1,12 @@
 todo:
 
-- delete
-- patch
-- delta view?
+- delete trigger
+- patch trigger
+- delta generation view?
+  - Probs not if we want deltas across tables for cross table tx support.
+  - Well we can get ids in a view since ids will union correctly.
 - create index
 - drop index
-- drop crr
 - alter crr
 - sync lib
 

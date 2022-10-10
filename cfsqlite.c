@@ -611,9 +611,6 @@ static int dropCrr(
     const char *query,
     char **err)
 {
-  // drop base table
-  // drop clocks table
-  // views and triggers should auto-drop
   char *zSql = 0;
   char *tblName = cfsql_extractWord(DROP_TABLE_LEN + 1, query);
   int rc = SQLITE_OK;

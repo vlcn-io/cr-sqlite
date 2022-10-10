@@ -26,18 +26,7 @@
 static char siteIdBlob[] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-// so we don't re-initialize site id on new connections
-// TODO: mutex to guard initialization of cfsqlite.
-// cfsqlite initialize should not need to be re-entrant
-// as now calls within initialization should depend on cfsqlite itself.
-/**
- * TODO: Add a mutex to guard initialization of cfsqlite.
- * This will prevent connections from initializing
- * the shared memory concurrently.
- *
- * The initialization mutex does not need to be re-entrant
- * as cfsqlite initialization makes no calls to itself.
- */
+// track if siteId was set so we don't re-initialize site id on new connections
 static int siteIdSet = 0;
 static const size_t siteIdBlobSize = sizeof(siteIdBlob);
 
@@ -50,7 +39,7 @@ static const size_t siteIdBlobSize = sizeof(siteIdBlob);
  * The dbVersion points to the _next_ version to be used for a write.
  * The current version of the db is dbVersion - 1.
  */
-static int64_t dbVersion = -9223372036854775807L + 1;
+static _Atomic int64_t dbVersion = -9223372036854775807L + 1;
 static int dbVersionSet = 0;
 
 static sqlite3_mutex *globalsInitMutex = 0;
@@ -749,6 +738,12 @@ int sqlite3_cfsqlite_preinit() {
   return SQLITE_OK;
 }
 
+static int commitHook(void *cd) {
+  // this is an atomic int so this increment is thread safe.
+  dbVersion++;
+  return 0;
+}
+
 static int initSharedMemory(sqlite3 *db) {
   // TODO if we were used as a run time loadable extension rather than
   // statically linked, the mutex will not exist.
@@ -769,11 +764,6 @@ static int initSharedMemory(sqlite3 *db) {
   rc = sqlite3_exec(db, "BEGIN", 0, 0, 0);
 
   if (rc == SQLITE_OK) {
-    // TODO: we need to guard cfsql initialization with a mutex
-    // since we set shared variables for site id and db version.
-    // TODO: we'll need to CAS on writes to db version in the commit hook.
-    // __sync_val_compare_and_swap
-    // https://gcc.gnu.org/onlinedocs/gcc-4.1.0/gcc/Atomic-Builtins.html
     rc = initSiteId(db);
   }
 
@@ -826,6 +816,12 @@ __declspec(dllexport)
                                  // dbversion can change on each invocation.
                                  SQLITE_UTF8 | SQLITE_INNOCUOUS,
                                  0, dbVersionFunc, 0, 0);
+  }
+  if (rc == SQLITE_OK) {
+    // Only register a commit hook, not update or pre-update, since all rows in the same transaction
+    // should have the same clock value.
+    // This allows us to replicate them together and ensure more consistency.
+    sqlite3_commit_hook(db, commitHook, 0);
   }
   if (rc == SQLITE_OK)
   {

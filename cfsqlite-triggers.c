@@ -341,19 +341,84 @@ int cfsql_createCrrViewTriggers(
   return rc;
 }
 
+char *cfsql_patchConflictSets(cfsql_ColumnInfo *cols, int len)
+{
+  char *mapped[len + 2]; //  + 2 for cl and update src
+
+  for (int i = 0; i < len; ++i)
+  {
+    if (cols[i].versionOf == 0) {
+      mapped[i] = sqlite3_mprintf(
+        "\"%s\" = CASE\
+          WHEN EXCLUDED.\"%s__cfsql_v\" > \"%s__cfsql_v\" THEN EXCLUCDED.\"%s\"\
+          WHEN EXCLUDED.\"%s__cfsql_v\" = \"%s__cfsql_v\" THEN\
+            CASE\
+              WHEN EXCLUDED.\"%s\" > \"%s\" THEN EXCLUDED.\"%s\"\
+              ELSE \"%s\"\
+            END\
+          ELSE \"%s\"\
+        END",
+        cols[i].name,
+        cols[i].name,
+        cols[i].name,
+        cols[i].name,
+        cols[i].name,
+        cols[i].name,
+        cols[i].name,
+        cols[i].name,
+        cols[i].name,
+        cols[i].name,
+        cols[i].name
+      );
+    } else {
+      mapped[i] = sqlite3_mprintf(
+        "\"%s\" = CASE\
+          WHEN EXCLUDED.\"%s\" > \"%s\" THEN EXCLUDED.\"%s\"\
+          ELSE \"%s\"\
+        END",
+        cols[i].name,
+        cols[i].name,
+        cols[i].name,
+        cols[i].name,
+        cols[i].name
+      );
+    }
+  }
+
+  mapped[len] = strdup("\"__cfsql_cl\" = CASE\
+      WHEN EXCLUDED.\"__cfsql_cl\" > \"__cfsql_cl\" THEN EXCLUDED.\"__cfsql_cl\"\
+      ELSE \"__cfsql_cl\"\
+    END");
+  mapped[len + 1] = strdup("__cfsql_src = 1");
+
+  // join2 will free the mapped entries.
+  // This is because `cfsql_identity` is a pass through (identity function)
+  // and does not allocate a new string, causing the original string to be freed by join2.
+  return cfsql_join2((char *(*)(const char *)) & cfsql_identity, mapped, len + 2, ",\n");
+}
+
+char *cfsql_patchClockUpdate(cfsql_TableInfo *tableInfo) {
+  return 0;
+}
+
 char *cfsql_patchTriggerQuery(cfsql_TableInfo *tableInfo)
 {
-  char *colList = 0;
-  char *newValuesList = 0;
-  char *pkList = 0;
-  char *conflictSets = 0;
-  char *clockUpdate = 0;
+  char *colList = cfsql_asIdentifierList(tableInfo->withVersionCols, tableInfo->withVersionColsLen, 0);
+  char *newValuesList = cfsql_asIdentifierList(tableInfo->withVersionCols, tableInfo->withVersionColsLen, "NEW.");
+  char *pkList = tableInfo->pksLen ? cfsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, 0) : "rowid";
+  char *conflictSets = cfsql_patchConflictSets(tableInfo->withVersionCols, tableInfo->withVersionColsLen);
+  // patch clock update is more involved than regular clock update queries
+  char *clockUpdate = cfsql_patchClockUpdate(tableInfo);
 
   char *zSql = sqlite3_mprintf(
       "CREATE TRIGGER \"%s__cfsql_ptrig\"\
         INSTEAD OF INSERT ON \"%s\"\
       BEGIN\
-        INSERT INTO \"%s__cfsql_crr\" (%s) VALUES (%s, 1) ON CONFLICT (%s) DO UPDATE SET\
+        INSERT INTO \"%s__cfsql_crr\" (\
+          %s, \"__cfsql_cl\", \"__cfsql_src\"\
+        ) VALUES (\
+          %s, NEW.\"__cfsql_cl\", 1\
+        ) ON CONFLICT (%s) DO UPDATE SET\
         %s\
       \
       %s\
@@ -383,5 +448,7 @@ int cfsql_createPatchTrigger(
 {
 
   char *zSql = cfsql_patchTriggerQuery(tableInfo);
-  return 0;
+  int rc = sqlite3_exec(db, zSql, 0, 0, err);
+  sqlite3_free(zSql);
+  return rc;
 }

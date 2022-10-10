@@ -7,9 +7,20 @@ todo:
 - alter crr
 - sync lib for sending/receiving changes to/from peers
 - c linters and static analyzers
+  - https://clang-analyzer.llvm.org/command-line.html
+  - https://cppcheck.sourceforge.io/
 - support differing schema names
 - test quoted table names.... strip quote in extract word?
 - support `if not exists`
+- support quoted identifiers --
+
+  ```
+  sqlite> create table """foo""" (a);
+  sqlite> .tables
+  "foo"
+  sqlite> select * from foo;
+  Error: no such table: foo
+  ```
 
 - support for:
   - centralized sync

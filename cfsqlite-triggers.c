@@ -253,7 +253,7 @@ int cfsql_createUpdateTrigger(sqlite3 *db,
         cfsql_dbversion(),\
         %s\
       )\
-      ON CONFLCIT (\"__cfsql_site_id\", %s) DO UPDATE SET\
+      ON CONFLICT (\"__cfsql_site_id\", %s) DO UPDATE SET\
         \"__cfsql_version\" = EXCLUDED.\"__cfsql_version\";\
     END;\
     ",

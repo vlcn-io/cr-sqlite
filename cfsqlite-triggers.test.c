@@ -12,9 +12,9 @@
 // query construction rather than actual table creation.
 // testing actual table creation requires views and base crr to
 // be in place.
-void testCreateInsertTrigger()
+void testCreateInsertAndUpdateTriggers()
 {
-  printf("CreateInsertTrigger\n");
+  printf("CreateInsertAndUpdateTriggers\n");
 
   sqlite3 *db = 0;
   cfsql_TableInfo *tableInfo;
@@ -47,6 +47,10 @@ void testCreateInsertTrigger()
   if (rc == SQLITE_OK)
   {
     rc = cfsql_createInsertTrigger(db, tableInfo, &errMsg);
+  }
+  if (rc == SQLITE_OK)
+  {
+    rc = cfsql_createUpdateTrigger(db, tableInfo, &errMsg);
   }
 
   cfsql_freeTableInfo(tableInfo);
@@ -135,7 +139,7 @@ void cfsqlTriggersTestSuite()
 {
   printf("\e[47m\e[1;30mSuite: cfsqlTriggers\e[0m\n");
 
-  testCreateInsertTrigger();
+  testCreateInsertAndUpdateTriggers();
   testUpTrigWhereConditions();
   testUpTrigSets();
 }

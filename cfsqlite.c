@@ -731,11 +731,16 @@ static void cfsqlFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
   sqlite3_exec(db, "COMMIT", 0, 0, 0);
 }
 
-// todo: install a commit_hook to advance the dbversion on every tx commit
-
+// TODO: install a commit_hook to advance the dbversion on every tx commit
 // get_changes_since function
-
 // vector_short -- centralized resolver(s)
+
+#ifdef _WIN32
+__declspec(dllexport)
+#endif
+int sqlite3_cfsqlite_preinit() {
+  return SQLITE_OK;
+}
 
 #ifdef _WIN32
 __declspec(dllexport)

@@ -817,14 +817,13 @@ __declspec(dllexport)
                                  SQLITE_UTF8 | SQLITE_INNOCUOUS,
                                  0, dbVersionFunc, 0, 0);
   }
-  if (rc == SQLITE_OK) {
+  
+  if (rc == SQLITE_OK)
+  {
     // Only register a commit hook, not update or pre-update, since all rows in the same transaction
     // should have the same clock value.
     // This allows us to replicate them together and ensure more consistency.
     sqlite3_commit_hook(db, commitHook, 0);
-  }
-  if (rc == SQLITE_OK)
-  {
     rc = sqlite3_create_function(db, "cfsql", 1,
                                  // cfsql should only ever be used at the top level
                                  // and does a great deal to modify

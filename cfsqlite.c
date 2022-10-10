@@ -254,7 +254,6 @@ static int determineQueryType(sqlite3 *db, sqlite3_context *context, const char 
 
   if (strncmp("CREATE TABLE", query, CREATE_TABLE_LEN) == 0)
   {
-    ;
     return CREATE_TABLE;
   }
   if (strncmp("ALTER TABLE", query, ALTER_TABLE_LEN) == 0)

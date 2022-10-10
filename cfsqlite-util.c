@@ -135,6 +135,10 @@ char *cfsql_asIdentifierListStr(char **in, size_t inlen, char delim)
  * Returns the tokens read.
  *
  * If str starts with a space, returns empty string.
+ * 
+ * TODO: handle quoted identifiers...
+ * The person being returned to will add their own quotes and also needs to
+ * know the total length of the quoted thing including quotes :/
  */
 char *cfsql_extractWord(
     int prefixLen,

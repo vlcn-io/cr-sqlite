@@ -204,12 +204,10 @@ char *cfsql_upTrigSets(cfsql_ColumnInfo *columnInfo, int len)
     }
   }
 
+  // join2 will free the columnName entries. 
+  // This is because `cfsql_identity` is a pass through (identity function)
+  // and does not allocate a new string, causing the original string to be freed by join2.
   char *ret = cfsql_join2((char *(*)(const char *))&cfsql_identity, columnNames, len, ",");
-
-  // join2 will free columnName entries
-  // for (int i = 0; i < len; ++i) {
-  //   sqlite3_free(columnNames[i]);
-  // }
 
   return ret;
 }
@@ -221,24 +219,20 @@ int cfsql_createUpdateTrigger(sqlite3 *db,
   char *zSql;
   char *sets = 0;
   char *pkWhereConditions = 0;
-  char *pkList = 0;
-  char *pkNewList = 0;
+  char *clockUpdate = 0;
   int rc = SQLITE_OK;
 
   if (tableInfo->pksLen == 0)
   {
-    pkList = "\"row_id\"";
-    pkNewList = "NEW.\"row_id\"";
     pkWhereConditions = "\"row_id\" = NEW.\"row_id\"";
   }
   else
   {
-    pkList = cfsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, 0);
-    pkNewList = cfsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, "NEW.");
     pkWhereConditions = cfsql_upTrigWhereConditions(tableInfo->pks, tableInfo->pksLen);
   }
 
   sets = cfsql_upTrigSets(tableInfo->withVersionCols, tableInfo->withVersionColsLen);
+  clockUpdate = cfsql_updateClocksStr(tableInfo);
   zSql = sqlite3_mprintf(
       "CREATE TRIGGER \"%s__cfsql_utrig\"\
       INSTEAD OF UPDATE ON \"%s\"\
@@ -247,14 +241,8 @@ int cfsql_createUpdateTrigger(sqlite3 *db,
         %s,\
         \"__cfsql_src\" = 0\
       WHERE %s;\
-    INSERT INTO \"%s__cfsql_clock\" (\"__cfsql_site_id\", \"__cfsql_version\", %s)\
-      VALUES (\
-        cfsql_siteid(),\
-        cfsql_dbversion(),\
-        %s\
-      )\
-      ON CONFLICT (\"__cfsql_site_id\", %s) DO UPDATE SET\
-        \"__cfsql_version\" = EXCLUDED.\"__cfsql_version\";\
+      \
+      %s\
     END;\
     ",
       tableInfo->tblName,
@@ -262,20 +250,16 @@ int cfsql_createUpdateTrigger(sqlite3 *db,
       tableInfo->tblName,
       sets,
       pkWhereConditions,
-      tableInfo->tblName,
-      pkList,
-      pkNewList,
-      pkList);
+      clockUpdate);
   rc = sqlite3_exec(db, zSql, 0, 0, err);
 
   sqlite3_free(zSql);
   sqlite3_free(sets);
+  sqlite3_free(clockUpdate);
 
   if (tableInfo->pksLen != 0)
   {
     sqlite3_free(pkWhereConditions);
-    sqlite3_free(pkList);
-    sqlite3_free(pkNewList);
   }
 
   return rc;
@@ -286,9 +270,40 @@ int cfsql_createDeleteTrigger(
     cfsql_TableInfo *tableInfo,
     char **err)
 {
-  // char *zSql = sqlite3_mprintf(
-  //   "CREATE TRIGGER"
-  // );
+  int rc = SQLITE_OK;
+  char *pkWhereConditions = 0;
+  char *clockUpdate = 0;
+  if (tableInfo->pksLen == 0)
+  {
+    pkWhereConditions = "\"row_id\" = NEW.\"row_id\"";
+  }
+  else
+  {
+    pkWhereConditions = cfsql_upTrigWhereConditions(tableInfo->pks, tableInfo->pksLen);
+  }
+
+  clockUpdate = cfsql_updateClocksStr(tableInfo);
+  char *zSql = sqlite3_mprintf(
+    "CREATE TRIGGER \"%s__cfsql_dtrig\"\
+      INSTEAD OF DELETE ON \"%s\"\
+    BEGIN\
+      UPDATE \"%s__cfsql_crr\" SET \"__cfsql_cl\" = \"__cfsql_cl\" + 1, \"__cfsql_src\" = 0 WHERE %s;\
+      \
+      %s;\
+    END",
+    tableInfo->tblName,
+    tableInfo->tblName,
+    tableInfo->tblName,
+    pkWhereConditions,
+    clockUpdate
+  );
+
+  sqlite3_free(zSql);
+  sqlite3_free(clockUpdate);
+  if (tableInfo->pksLen == 0) {
+    sqlite3_free(pkWhereConditions);
+  }
+
   return SQLITE_OK;
 }
 

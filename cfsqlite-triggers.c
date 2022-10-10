@@ -8,7 +8,6 @@
 
 char *cfsql_conflictSetsStr(cfsql_ColumnInfo *cols, int len)
 {
-  // set statements...
   char *sets[len];
   int resultLen = 0;
   char *ret = 0;
@@ -275,7 +274,8 @@ int cfsql_createUpdateTrigger(sqlite3 *db,
   return rc;
 }
 
-char *cfsql_deleteTriggerQuery(cfsql_TableInfo *tableInfo) {
+char *cfsql_deleteTriggerQuery(cfsql_TableInfo *tableInfo)
+{
   char *pkWhereConditions = 0;
   char *clockUpdate = 0;
   if (tableInfo->pksLen == 0)
@@ -301,7 +301,7 @@ char *cfsql_deleteTriggerQuery(cfsql_TableInfo *tableInfo) {
       tableInfo->tblName,
       pkWhereConditions,
       clockUpdate);
-  
+
   sqlite3_free(pkWhereConditions);
   sqlite3_free(clockUpdate);
 
@@ -314,7 +314,7 @@ int cfsql_createDeleteTrigger(
     char **err)
 {
   int rc = SQLITE_OK;
-  
+
   char *zSql = cfsql_deleteTriggerQuery(tableInfo);
   rc = sqlite3_exec(db, zSql, 0, 0, err);
   sqlite3_free(zSql);
@@ -341,10 +341,47 @@ int cfsql_createCrrViewTriggers(
   return rc;
 }
 
+char *cfsql_patchTriggerQuery(cfsql_TableInfo *tableInfo)
+{
+  char *colList = 0;
+  char *newValuesList = 0;
+  char *pkList = 0;
+  char *conflictSets = 0;
+  char *clockUpdate = 0;
+
+  char *zSql = sqlite3_mprintf(
+      "CREATE TRIGGER \"%s__cfsql_ptrig\"\
+        INSTEAD OF INSERT ON \"%s\"\
+      BEGIN\
+        INSERT INTO \"%s__cfsql_crr\" (%s) VALUES (%s, 1) ON CONFLICT (%s) DO UPDATE SET\
+        %s\
+      \
+      %s\
+      END;",
+      tableInfo->tblName,
+      tableInfo->tblName,
+      tableInfo->tblName,
+      colList,
+      newValuesList,
+      pkList,
+      conflictSets,
+      clockUpdate);
+
+  sqlite3_free(colList);
+  sqlite3_free(newValuesList);
+  sqlite3_free(pkList);
+  sqlite3_free(conflictSets);
+  sqlite3_free(clockUpdate);
+
+  return zSql;
+}
+
 int cfsql_createPatchTrigger(
     sqlite3 *db,
     cfsql_TableInfo *tableInfo,
     char **err)
 {
+
+  char *zSql = cfsql_patchTriggerQuery(tableInfo);
   return 0;
 }

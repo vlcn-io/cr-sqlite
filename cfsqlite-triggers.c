@@ -347,9 +347,10 @@ char *cfsql_patchConflictSets(cfsql_ColumnInfo *cols, int len)
 
   for (int i = 0; i < len; ++i)
   {
-    if (cols[i].versionOf == 0) {
+    if (cols[i].versionOf == 0)
+    {
       mapped[i] = sqlite3_mprintf(
-        "\"%s\" = CASE\
+          "\"%s\" = CASE\
           WHEN EXCLUDED.\"%s__cfsql_v\" > \"%s__cfsql_v\" THEN EXCLUCDED.\"%s\"\
           WHEN EXCLUDED.\"%s__cfsql_v\" = \"%s__cfsql_v\" THEN\
             CASE\
@@ -358,30 +359,30 @@ char *cfsql_patchConflictSets(cfsql_ColumnInfo *cols, int len)
             END\
           ELSE \"%s\"\
         END",
-        cols[i].name,
-        cols[i].name,
-        cols[i].name,
-        cols[i].name,
-        cols[i].name,
-        cols[i].name,
-        cols[i].name,
-        cols[i].name,
-        cols[i].name,
-        cols[i].name,
-        cols[i].name
-      );
-    } else {
+          cols[i].name,
+          cols[i].name,
+          cols[i].name,
+          cols[i].name,
+          cols[i].name,
+          cols[i].name,
+          cols[i].name,
+          cols[i].name,
+          cols[i].name,
+          cols[i].name,
+          cols[i].name);
+    }
+    else
+    {
       mapped[i] = sqlite3_mprintf(
-        "\"%s\" = CASE\
+          "\"%s\" = CASE\
           WHEN EXCLUDED.\"%s\" > \"%s\" THEN EXCLUDED.\"%s\"\
           ELSE \"%s\"\
         END",
-        cols[i].name,
-        cols[i].name,
-        cols[i].name,
-        cols[i].name,
-        cols[i].name
-      );
+          cols[i].name,
+          cols[i].name,
+          cols[i].name,
+          cols[i].name,
+          cols[i].name);
     }
   }
 
@@ -397,8 +398,43 @@ char *cfsql_patchConflictSets(cfsql_ColumnInfo *cols, int len)
   return cfsql_join2((char *(*)(const char *)) & cfsql_identity, mapped, len + 2, ",\n");
 }
 
-char *cfsql_patchClockUpdate(cfsql_TableInfo *tableInfo) {
-  return 0;
+char *cfsql_patchClockUpdate(cfsql_TableInfo *tableInfo)
+{
+  char *pkList = 0;
+  char *pkNewList = 0;
+
+  if (tableInfo->pksLen == 0)
+  {
+    pkNewList = "NEW.\"row_id\"";
+    pkList = "\"row_id\"";
+  }
+  else
+  {
+    pkNewList = cfsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, "NEW.");
+    pkList = cfsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, 0);
+  }
+
+  char *zSql = sqlite3_mprintf(
+      "INSERT INTO \"%s__cfsql_clock\" (\
+      \"__cfsql_site_id\",\
+      \"__cfsql_version\",\
+      %s\
+    \) SELECT \"key\" as \"__cfsql_site_id\", \"value\" as \"__cfsql_version\", %s\
+      FROM\
+    json_each(NEW.\"__cfsql_clock\") WHERE true\
+    ON CONFLICT (\"__cfsql_ste_id\", %s) DO UPDATE SET\
+      \"__cfsql_version\" = CASE WHEN EXCLUDED.\"__cfsql_version\" > \"__cfsql_version\" THEN EXCLUDED.\"__cfsql_version\" ELSE \"__cfsql_version\" END;",
+      tableInfo->tblName,
+      pkList,
+      pkNewList,
+      pkList);
+
+  if (tableInfo->pksLen != 0) {
+    sqlite3_free(pkList);
+    sqlite3_free(pkNewList);
+  }
+
+  return zSql;
 }
 
 char *cfsql_patchTriggerQuery(cfsql_TableInfo *tableInfo)
@@ -419,7 +455,7 @@ char *cfsql_patchTriggerQuery(cfsql_TableInfo *tableInfo)
         ) VALUES (\
           %s, NEW.\"__cfsql_cl\", 1\
         ) ON CONFLICT (%s) DO UPDATE SET\
-        %s\
+        %s;\
       \
       %s\
       END;",

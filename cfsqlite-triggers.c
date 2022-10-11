@@ -303,7 +303,10 @@ char *cfsql_deleteTriggerQuery(cfsql_TableInfo *tableInfo)
       pkWhereConditions,
       clockUpdate);
 
-  sqlite3_free(pkWhereConditions);
+  // TODO: test cases for pk and no pk and empty tables
+  if (tableInfo->pksLen != 0) {
+    sqlite3_free(pkWhereConditions);
+  }
   sqlite3_free(clockUpdate);
 
   return zSql;
@@ -471,7 +474,9 @@ char *cfsql_patchTriggerQuery(cfsql_TableInfo *tableInfo)
 
   sqlite3_free(colList);
   sqlite3_free(newValuesList);
-  sqlite3_free(pkList);
+  if (tableInfo->pksLen > 0) {
+    sqlite3_free(pkList);
+  }
   sqlite3_free(conflictSets);
   sqlite3_free(clockUpdate);
 

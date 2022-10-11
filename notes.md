@@ -1,5 +1,10 @@
 todo:
 
+- only allow single pk column?
+  - Otherwise we have to concat somehow.. and split back
+  - or no union query
+- select quote for dflt value from pragma? and extract as text?
+- incrementing causal length without looking is problematic for upserts
 - delta generation view?
   - Probs not if we want deltas across tables for cross table tx support.
   - Well we can get ids in a view since ids will union correctly.

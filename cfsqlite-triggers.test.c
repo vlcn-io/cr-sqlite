@@ -74,6 +74,36 @@ void testCreateViewTriggers()
 
 void testConflictSetsStr()
 {
+  printf("ConflictSetsStr\n");
+
+  sqlite3 *db = 0;
+  cfsql_TableInfo *tableInfo;
+  char *errMsg = 0;
+  int rc = sqlite3_open(":memory:", &db);
+
+  rc += sqlite3_exec(
+      db,
+      "CREATE TABLE \"foo\" (\"a\" PRIMARY KEY, \"b\", \"c\")",
+      0,
+      0,
+      &errMsg);
+  rc += cfsql_getTableInfo(db, USER_SPACE, "foo", &tableInfo, &errMsg);
+  rc += sqlite3_exec(
+      db,
+      "DROP TABLE foo",
+      0,
+      0,
+      &errMsg);
+
+  char *conflictSets = cfsql_conflictSetsStr(
+      tableInfo->withVersionCols,
+      tableInfo->withVersionColsLen);
+
+  assert(strcmp("\"a\" = EXCLUDED.\"a\",\"b\" = EXCLUDED.\"b\",\"b__cfsql_v\" = CASE WHEN EXCLUDED.\"b\" != \"b\" THEN \"b__cfsql_v\" + 1 ELSE \"b__cfsql_v\" END,\"c\" = EXCLUDED.\"c\",\"c__cfsql_v\" = CASE WHEN EXCLUDED.\"c\" != \"c\" THEN \"c__cfsql_v\" + 1 ELSE \"c__cfsql_v\" END", conflictSets) == 0);
+
+  sqlite3_close(db);
+  assert(rc == SQLITE_OK);
+  printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
 void testLocalInsertOnConflictStr()
@@ -140,7 +170,8 @@ void testUpTrigSets()
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
-void testDeleteTriggerQuery() {
+void testDeleteTriggerQuery()
+{
   printf("DeleteTriggerQuery\n");
   sqlite3 *db = 0;
   cfsql_TableInfo *tableInfo;
@@ -160,9 +191,12 @@ void testDeleteTriggerQuery() {
       0,
       0,
       &errMsg);
-  
-  char * query = cfsql_deleteTriggerQuery(tableInfo);
+
+  char *query = cfsql_deleteTriggerQuery(tableInfo);
   assert(strcmp("CREATE TRIGGER \"foo__cfsql_dtrig\"    INSTEAD OF DELETE ON \"foo\"    BEGIN      UPDATE \"foo__cfsql_crr\" SET \"__cfsql_cl\" = \"__cfsql_cl\" + 1, \"__cfsql_src\" = 0 WHERE \"a\" = NEW.\"a\";            INSERT INTO \"foo__cfsql_clock\" (\"__cfsql_site_id\", \"__cfsql_version\", \"a\")      VALUES (        cfsql_siteid(),        cfsql_dbversion(),        OLD.\"a\"      )      ON CONFLICT (\"__cfsql_site_id\", \"a\") DO UPDATE SET        \"__cfsql_version\" = EXCLUDED.\"__cfsql_version\";        END", query) == 0);
+
+  sqlite3_close(db);
+  assert(rc == SQLITE_OK);
 
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
@@ -175,4 +209,5 @@ void cfsqlTriggersTestSuite()
   testCreateViewTriggers();
   testUpTrigWhereConditions();
   testUpTrigSets();
+  testConflictSetsStr();
 }

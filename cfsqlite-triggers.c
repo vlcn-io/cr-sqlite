@@ -22,8 +22,9 @@ char *cfsql_conflictSetsStr(cfsql_ColumnInfo *cols, int len)
     if (cols[i].versionOf != 0)
     {
       sets[i] = sqlite3_mprintf(
-          "\"%s\" = CASE WHEN EXCLUDED.\"%s\" THEN \"%s\" + 1 ELSE \"%s\" END",
+          "\"%s\" = CASE WHEN EXCLUDED.\"%s\" != \"%s\" THEN \"%s\" + 1 ELSE \"%s\" END",
           cols[i].name,
+          cols[i].versionOf,
           cols[i].versionOf,
           cols[i].name,
           cols[i].name);

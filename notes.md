@@ -1,5 +1,9 @@
 todo:
 
+- rm commit hook
+  - we can't guarantee transactional replications anyhow -- no crdt system can even if they do replicate the tx rows as conflict
+    resolution will invalidate all tx guarantees.
+  -
 - only allow single pk column?
   - Otherwise we have to concat somehow.. and split back
   - or no union query
@@ -63,3 +67,5 @@ Delta Generation:
 Generate union query to grab primary keys from all tables where clock value > x.
 
 Big peer method:
+
+--

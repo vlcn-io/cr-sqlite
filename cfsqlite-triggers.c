@@ -107,7 +107,7 @@ char *cfsql_updateClocksStr(cfsql_TableInfo *tableInfo, int isDelete)
       "INSERT INTO \"%s__cfsql_clock\" (\"__cfsql_site_id\", \"__cfsql_version\", %s)\
       VALUES (\
         cfsql_siteid(),\
-        cfsql_dbversion(),\
+        cfsql_nextdbversion(),\
         %s\
       )\
       ON CONFLICT (\"__cfsql_site_id\", %s) DO UPDATE SET\
@@ -483,7 +483,6 @@ int cfsql_createPatchTrigger(
     cfsql_TableInfo *tableInfo,
     char **err)
 {
-
   char *zSql = cfsql_patchTriggerQuery(tableInfo);
   int rc = sqlite3_exec(db, zSql, 0, 0, err);
   sqlite3_free(zSql);

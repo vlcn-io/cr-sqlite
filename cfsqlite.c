@@ -36,10 +36,8 @@ static const size_t siteIdBlobSize = sizeof(siteIdBlob);
  * This is not an unsigned int since sqlite does not support unsigned ints
  * as a data type and we do eventually write db version(s) to the db.
  *
- * The dbVersion points to the _next_ version to be used for a write.
- * The current version of the db is dbVersion - 1.
  */
-static _Atomic int64_t dbVersion = -9223372036854775807L + 1;
+static _Atomic int64_t dbVersion = -9223372036854775807L;
 static int dbVersionSet = 0;
 
 static sqlite3_mutex *globalsInitMutex = 0;
@@ -207,7 +205,7 @@ static int initDbVersion(sqlite3 *db)
   }
 
   // had a row? grab the version returned to us
-  dbVersion = sqlite3_column_int64(pStmt, 0) + 1;
+  dbVersion = sqlite3_column_int64(pStmt, 0);
   dbVersionSet = 1;
   sqlite3_finalize(pStmt);
 
@@ -236,6 +234,18 @@ static void siteIdFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
 static void dbVersionFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
   sqlite3_result_int64(context, dbVersion);
+}
+
+/**
+ * Return the next version of the database for use in inserts/updates/deletes
+ *
+ * `select cfsql_nextdbversion()`
+ */
+static void nextDbVersionFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
+{
+  // dbVersion is an atomic int thus `++dbVersion` is a CAS and will always return
+  // a unique version for the given invocation, even under concurrent accesses.
+  sqlite3_result_int64(context, ++dbVersion);
 }
 
 /**
@@ -815,13 +825,6 @@ __declspec(dllexport)
   return SQLITE_OK;
 }
 
-static int commitHook(void *cd)
-{
-  // this is an atomic int so this increment is thread safe.
-  dbVersion++;
-  return 0;
-}
-
 static int initSharedMemory(sqlite3 *db)
 {
 // TODO if we were used as a run time loadable extension rather than
@@ -903,13 +906,19 @@ __declspec(dllexport)
                                  SQLITE_UTF8 | SQLITE_INNOCUOUS,
                                  0, dbVersionFunc, 0, 0);
   }
+  if (rc == SQLITE_OK)
+  {
+    rc = sqlite3_create_function(db, "cfsql_nextdbversion", 0,
+                                 // dbversion can change on each invocation.
+                                 SQLITE_UTF8 | SQLITE_INNOCUOUS,
+                                 0, nextDbVersionFunc, 0, 0);
+  }
 
   if (rc == SQLITE_OK)
   {
     // Only register a commit hook, not update or pre-update, since all rows in the same transaction
     // should have the same clock value.
     // This allows us to replicate them together and ensure more consistency.
-    sqlite3_commit_hook(db, commitHook, 0);
     rc = sqlite3_create_function(db, "cfsql", 1,
                                  // cfsql should only ever be used at the top level
                                  // and does a great deal to modify

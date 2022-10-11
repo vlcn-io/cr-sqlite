@@ -452,7 +452,7 @@ char *cfsql_patchTriggerQuery(cfsql_TableInfo *tableInfo)
 
   char *zSql = sqlite3_mprintf(
       "CREATE TRIGGER \"%s__cfsql_ptrig\"\
-        INSTEAD OF INSERT ON \"%s\"\
+        INSTEAD OF INSERT ON \"%s__cfsql_patch\"\
       BEGIN\
         INSERT INTO \"%s__cfsql_crr\" (\
           %s, \"__cfsql_cl\", \"__cfsql_src\"\

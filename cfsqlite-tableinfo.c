@@ -76,7 +76,7 @@ char *cfsql_asColumnDefinitions(cfsql_ColumnInfo *in, size_t inlen)
     mapped[i] = sqlite3_mprintf("\"%w\" %s %s",
                                 in[i].name,
                                 in[i].type,
-                                dfltStr != 0 ? dfltStr : 0);
+                                dfltStr != 0 ? dfltStr : in[i].versionOf != 0 ? "DEFAULT 0" : 0);
     sqlite3_free(dfltStr);
     finalLen += strlen(mapped[i]);
   }

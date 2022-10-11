@@ -22,6 +22,7 @@ todo:
 - support `if not exists`
 - support quoted identifiers --
 - additional indices on clock tables to facilitate delta extraction?
+- just throw if no primary key is specified on create rather than allowing the create?
 
   ```
   sqlite> create table """foo""" (a);

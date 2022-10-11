@@ -79,7 +79,7 @@ char *cfsql_localInsertOnConflictStr(cfsql_TableInfo *tableInfo)
 
 char *cfsql_updateClocksStr(cfsql_TableInfo *tableInfo, int isDelete)
 {
-  // TODO: if there are now pks we need to use a `row_id` col
+  // TODO: if there are now pks we need to use a `rowid` col
 
   char *pkList = 0;
   char *pkNew = 0;
@@ -88,14 +88,14 @@ char *cfsql_updateClocksStr(cfsql_TableInfo *tableInfo, int isDelete)
   {
     if (isDelete)
     {
-      pkNew = "OLD.\"row_id\"";
+      pkNew = "OLD.\"rowid\"";
     }
     else
     {
-      pkNew = "NEW.\"row_id\"";
+      pkNew = "NEW.\"rowid\"";
     }
 
-    pkList = "\"row_id\"";
+    pkList = "\"rowid\"";
   }
   else
   {
@@ -234,7 +234,7 @@ int cfsql_createUpdateTrigger(sqlite3 *db,
 
   if (tableInfo->pksLen == 0)
   {
-    pkWhereConditions = "\"row_id\" = NEW.\"row_id\"";
+    pkWhereConditions = "\"rowid\" = NEW.\"rowid\"";
   }
   else
   {
@@ -281,7 +281,7 @@ char *cfsql_deleteTriggerQuery(cfsql_TableInfo *tableInfo)
   char *clockUpdate = 0;
   if (tableInfo->pksLen == 0)
   {
-    pkWhereConditions = "\"row_id\" = NEW.\"row_id\"";
+    pkWhereConditions = "\"rowid\" = NEW.\"rowid\"";
   }
   else
   {
@@ -409,8 +409,8 @@ char *cfsql_patchClockUpdate(cfsql_TableInfo *tableInfo)
 
   if (tableInfo->pksLen == 0)
   {
-    pkNewList = "NEW.\"row_id\"";
-    pkList = "\"row_id\"";
+    pkNewList = "NEW.\"rowid\"";
+    pkList = "\"rowid\"";
   }
   else
   {

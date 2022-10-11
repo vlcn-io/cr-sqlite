@@ -300,7 +300,7 @@ static int determineQueryType(sqlite3 *db, sqlite3_context *context, const char 
  * a mutation for a given row.
  *
  * The clock table is structured as a junction table.
- * | row_id | site_id | version
+ * | rowid | site_id | version
  * +--------+---------+--------
  *   1          a         1
  *   1          b         2
@@ -319,12 +319,12 @@ int cfsql_createClockTable(
   if (tableInfo->pksLen == 0)
   {
     // We never select the clock for a single row by itself
-    // hence that row_id is second in the pk def.
+    // hence that rowid is second in the pk def.
     zSql = sqlite3_mprintf("CREATE TABLE \"%s__cfsql_clock\" (\
-      \"row_id\" NOT NULL,\
+      \"rowid\" NOT NULL,\
       \"__cfsql_site_id\" NOT NULL,\
       \"__cfsql_version\" NOT NULL,\
-      PRIMARY KEY (\"__cfsql_site_id\", \"row_id\")\
+      PRIMARY KEY (\"__cfsql_site_id\", \"rowid\")\
     )",
                            tableInfo->tblName);
   }
@@ -468,12 +468,13 @@ int cfsql_createViewOfCrr(
   char *columns = cfsql_asIdentifierList(tableInfo->baseCols, tableInfo->baseColsLen, 0);
 
   zSql = sqlite3_mprintf("CREATE VIEW \"%s\" \
-    AS SELECT %s \
+    AS SELECT %s%s \
     FROM \
     \"%s__cfsql_crr\" \
     WHERE \
     \"%s__cfsql_crr\".\"__cfsql_cl\" % 2 = 1",
                          tableInfo->tblName,
+                         tableInfo->pksLen == 0 ? "rowid," : "",
                          columns,
                          tableInfo->tblName,
                          tableInfo->tblName);

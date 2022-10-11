@@ -22,6 +22,11 @@ static char *joinHelper(char **in, size_t inlen, size_t inpos, size_t accum)
   }
 }
 
+// DO NOT dupe the memory!
+const char *cfsql_identity(const char *x) {
+  return x;
+}
+
 /**
  * @brief Join an array of strings into a single string
  *
@@ -47,10 +52,49 @@ void cfsql_joinWith(char *dest, char **src, size_t srcLen, char delim)
     // not the last element? then we need the separator
     if (i < srcLen - 1)
     {
-      dest[j] = ',';
+      dest[j] = delim;
       j += 1;
     }
   }
+}
+
+// TODO: re-write all users of other join methods to just
+// use this
+char *cfsql_join2(char *(*map)(const char *), char **in, size_t len, char* delim) {
+  if (len == 0) {
+    return 0;
+  }
+
+  char *toJoin[len];
+  int resultLen = 0;
+  char *ret = 0;
+  for (int i = 0; i < len; ++i) {
+    toJoin[i] = map(in[i]);
+    resultLen += strlen(toJoin[i]);
+  }
+  resultLen += (len - 1) * strlen(delim);
+  ret = sqlite3_malloc(resultLen * sizeof(char) + 1);
+  ret[resultLen] = '\0';
+
+  int j = 0;
+  for (int i = 0; i < len; ++i)
+  {
+    // copy mapped thing into ret at offset j.
+    strcpy(ret + j, toJoin[i]);
+    // bump up j for next str.
+    j += strlen(toJoin[i]);
+
+    // not the last element? then we need the separator
+    if (i < len - 1)
+    {
+      strcpy(ret + j, delim);
+      j += strlen(delim);
+    }
+
+    sqlite3_free(toJoin[i]);
+  }
+
+  return ret;
 }
 
 // TODO:
@@ -91,15 +135,19 @@ char *cfsql_asIdentifierListStr(char **in, size_t inlen, char delim)
  * Returns the tokens read.
  *
  * If str starts with a space, returns empty string.
+ * 
+ * TODO: handle quoted identifiers...
+ * The person being returned to will add their own quotes and also needs to
+ * know the total length of the quoted thing including quotes :/
  */
 char *cfsql_extractWord(
     int prefixLen,
-    char *str)
+    const char *str)
 {
   char *tblName;
   int tblNameLen = 0;
-  char *splitIndex;
-  char *splitIndexParen;
+  const char *splitIndex;
+  const char *splitIndexParen;
 
   splitIndex = strstr(str + prefixLen, " ");
   splitIndexParen = strstr(str + prefixLen, "(");

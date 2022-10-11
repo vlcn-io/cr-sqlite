@@ -26,18 +26,7 @@
 static char siteIdBlob[] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-// so we don't re-initialize site id on new connections
-// TODO: mutex to guard initialization of cfsqlite.
-// cfsqlite initialize should not need to be re-entrant
-// as now calls within initialization should depend on cfsqlite itself.
-/**
- * TODO: Add a mutex to guard initialization of cfsqlite.
- * This will prevent connections from initializing
- * the shared memory concurrently.
- *
- * The initialization mutex does not need to be re-entrant
- * as cfsqlite initialization makes no calls to itself.
- */
+// track if siteId was set so we don't re-initialize site id on new connections
 static int siteIdSet = 0;
 static const size_t siteIdBlobSize = sizeof(siteIdBlob);
 
@@ -47,10 +36,12 @@ static const size_t siteIdBlobSize = sizeof(siteIdBlob);
  * This is not an unsigned int since sqlite does not support unsigned ints
  * as a data type and we do eventually write db version(s) to the db.
  *
- * TODO: Changing the db version needs to be done in a thread safe manner.
  */
-static int64_t dbVersion = -9223372036854775807L;
+static _Atomic int64_t dbVersion = -9223372036854775807L;
 static int dbVersionSet = 0;
+
+static sqlite3_mutex *globalsInitMutex = 0;
+static int sharedMemoryInitialized = 0;
 
 /**
  * The site id table is used to persist the site id and
@@ -246,12 +237,24 @@ static void dbVersionFunc(sqlite3_context *context, int argc, sqlite3_value **ar
 }
 
 /**
+ * Return the next version of the database for use in inserts/updates/deletes
+ *
+ * `select cfsql_nextdbversion()`
+ */
+static void nextDbVersionFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
+{
+  // dbVersion is an atomic int thus `++dbVersion` is a CAS and will always return
+  // a unique version for the given invocation, even under concurrent accesses.
+  sqlite3_result_int64(context, ++dbVersion);
+}
+
+/**
  * Given a query passed to cfsqlite, determine what kind of schema modification
  * query it is.
  *
  * We need to know given each schema modification type
  * requires unique handling in the crr layer.
- * 
+ *
  * The provided query must be a normalized query.
  */
 static int determineQueryType(sqlite3 *db, sqlite3_context *context, const char *query)
@@ -260,7 +263,7 @@ static int determineQueryType(sqlite3 *db, sqlite3_context *context, const char 
   char *formattedError = 0;
 
   if (strncmp("CREATE TABLE", query, CREATE_TABLE_LEN) == 0)
-  {;
+  {
     return CREATE_TABLE;
   }
   if (strncmp("ALTER TABLE", query, ALTER_TABLE_LEN) == 0)
@@ -431,7 +434,7 @@ int cfsql_createCrrBaseTable(
 
   rc = sqlite3_exec(db, zSql, 0, 0, err);
   sqlite3_free(zSql);
-  
+
   if (rc != SQLITE_OK)
   {
     return rc;
@@ -481,8 +484,8 @@ int cfsql_createViewOfCrr(
   return rc;
 }
 
-void cfsql_insertConflictResolution() {
-
+void cfsql_insertConflictResolution()
+{
 }
 
 /**
@@ -611,21 +614,96 @@ static void createCrr(
   sqlite3_free(err);
 }
 
-static void dropCrr()
+static int dropCrr(
+    sqlite3_context *context,
+    sqlite3 *db,
+    const char *query,
+    char **err)
 {
-  // drop base table
-  // drop clocks table
-  // views and triggers should auto-drop
+  char *zSql = 0;
+  char *tblName = cfsql_extractWord(DROP_TABLE_LEN + 1, query);
+  int rc = SQLITE_OK;
+
+  zSql = sqlite3_mprintf("DROP TABLE \"%s\"", tblName);
+  rc = sqlite3_exec(db, zSql, 0, 0, err);
+  sqlite3_free(zSql);
+  if (rc != SQLITE_OK)
+  {
+    return rc;
+  }
+
+  zSql = sqlite3_mprintf("DROP TABLE \"%s\"__cfsql_clock", tblName);
+  rc = sqlite3_exec(db, zSql, 0, 0, err);
+  sqlite3_free(zSql);
+  if (rc != SQLITE_OK)
+  {
+    return rc;
+  }
+
+  return rc;
 }
 
-static void createCrrIndex()
-{
-  // just replace the table name with the crr table name. done.
+char *cfsql_getCreateCrrIndexQuery(
+  const char *query
+) {
+  char *onPtr = strcasestr(query, " ON ");
+
+  if (onPtr == 0)
+  {
+    return 0;
+  }
+
+  int queryPrefixLen = (onPtr + 4) - query;
+  char *origTblName = cfsql_extractWord(queryPrefixLen, query);
+  char *newTblName = sqlite3_mprintf("\"%s__cfsql_crr\"", origTblName);
+  // + 11 for len of `__cfsql_crr`
+  int newQueryLen = strlen(query) + 11;
+  // + 1 for null terminator
+  char *newQuery = sqlite3_malloc((newQueryLen + 1) * sizeof(char));
+  newQuery[newQueryLen] = '\0';
+
+  int newTblNameLen = strlen(newTblName);
+  int origTblNameLen = strlen(origTblName);
+
+  // copy from query[0] to query[onPtr + 4] into newQuery
+  memcpy(newQuery, query, queryPrefixLen);
+  // copy newTblName into newQuery
+  memcpy(newQuery + queryPrefixLen, newTblName, newTblNameLen);
+  // copy query[onPtr + 4 + origTblNameLen] into newQuery.
+  memcpy(newQuery + queryPrefixLen + newTblNameLen, query + queryPrefixLen + origTblNameLen, strlen(query) - queryPrefixLen - origTblNameLen);
+
+  return newQuery;
 }
 
-static void dropCrrIndex()
+static int createCrrIndex(
+    sqlite3_context *context,
+    sqlite3 *db,
+    const char *query,
+    char **err)
 {
-  // just replace the table name with the crr table name. done.
+  int rc = SQLITE_OK;
+  // https://www.sqlite.org/lang_createindex.html
+  char *newQuery = cfsql_getCreateCrrIndexQuery(query);
+
+  if (newQuery == 0)
+  {
+    *err = strdup("Missing `ON` in create index statement");
+    return SQLITE_ERROR;
+  }
+
+  rc = sqlite3_exec(db, newQuery, 0, 0, err);
+  sqlite3_free(newQuery);
+
+  return rc;
+}
+
+static int dropCrrIndex(
+    sqlite3_context *context,
+    sqlite3 *db,
+    const char *query,
+    char **err)
+{
+  return sqlite3_exec(db, query, 0, 0, err);
 }
 
 static void alterCrr()
@@ -707,19 +785,20 @@ static void cfsqlFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
     return;
   }
 
+  // TODO: pass and use errmsg, check return codes
   switch (queryType)
   {
   case CREATE_TABLE:
     createCrr(context, db, query);
     break;
   case DROP_TABLE:
-    dropCrr();
+    dropCrr(context, db, query, &errmsg);
     break;
   case CREATE_INDEX:
-    createCrrIndex();
+    createCrrIndex(context, db, query, &errmsg);
     break;
   case DROP_INDEX:
-    dropCrrIndex();
+    dropCrrIndex(context, db, query, &errmsg);
     break;
   case ALTER_TABLE:
     alterCrr();
@@ -731,11 +810,75 @@ static void cfsqlFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
   sqlite3_exec(db, "COMMIT", 0, 0, 0);
 }
 
-// todo: install a commit_hook to advance the dbversion on every tx commit
-
+// TODO: install a commit_hook to advance the dbversion on every tx commit
 // get_changes_since function
-
 // vector_short -- centralized resolver(s)
+
+#ifdef _WIN32
+__declspec(dllexport)
+#endif
+    int sqlite3_cfsqlite_preinit()
+{
+#if SQLITE_THREADSAFE != 0
+  globalsInitMutex = sqlite3_mutex_alloc(SQLITE_MUTEX_FAST);
+#endif
+  return SQLITE_OK;
+}
+
+static int initSharedMemory(sqlite3 *db)
+{
+// TODO if we were used as a run time loadable extension rather than
+// statically linked, the mutex will not exist.
+#if SQLITE_THREADSAFE != 0
+  sqlite3_mutex_enter(globalsInitMutex);
+#endif
+
+  int rc = SQLITE_OK;
+  if (sharedMemoryInitialized != 0)
+  {
+    return rc;
+  }
+
+  /**
+   * Initialization creates a number of tables.
+   * We should ensure we do these in a tx
+   * so we cannot have partial initialization.
+   */
+  rc = sqlite3_exec(db, "BEGIN", 0, 0, 0);
+
+  if (rc == SQLITE_OK)
+  {
+    rc = initSiteId(db);
+  }
+
+  if (rc == SQLITE_OK)
+  {
+    // once site id is initialize, we are able to init db version.
+    // db version uses site id in its queries hence why it comes after site id init.
+    rc = initDbVersion(db);
+  }
+
+  if (rc == SQLITE_OK)
+  {
+    rc = sqlite3_exec(db, "COMMIT", 0, 0, 0);
+  }
+  else
+  {
+    // Intentionally not setting the RC.
+    // We already have a failure and do not want to record rollback success.
+    sqlite3_exec(db, "ROLLBACK", 0, 0, 0);
+  }
+
+  if (rc == SQLITE_OK)
+  {
+    sharedMemoryInitialized = 1;
+  }
+
+#if SQLITE_THREADSAFE != 0
+  sqlite3_mutex_leave(globalsInitMutex);
+#endif
+  return rc;
+}
 
 #ifdef _WIN32
 __declspec(dllexport)
@@ -747,43 +890,7 @@ __declspec(dllexport)
 
   SQLITE_EXTENSION_INIT2(pApi);
 
-  /**
-   * Initialization creates a number of tables.
-   * We should ensure we do these in a tx
-   * so we cannot have partial initialization.
-   */
-  rc = sqlite3_exec(db, "BEGIN", 0, 0, 0);
-  if (rc != SQLITE_OK)
-  {
-    return rc;
-  }
-
-  // TODO: we need to guard cfsql initialization with a mutex
-  // since we set shared variables for site id and db version.
-  // TODO: we'll need to CAS on writes to db version in the commit hook.
-  // __sync_val_compare_and_swap
-  // https://gcc.gnu.org/onlinedocs/gcc-4.1.0/gcc/Atomic-Builtins.html
-  rc = initSiteId(db);
-  if (rc != SQLITE_OK)
-  {
-    sqlite3_exec(db, "ROLLBACK", 0, 0, 0);
-    return rc;
-  }
-  // once site id is initialize, we are able to init db version.
-  // db version uses site id in its queries hence why it comes after site id init.
-  rc = initDbVersion(db);
-  if (rc != SQLITE_OK)
-  {
-    sqlite3_exec(db, "ROLLBACK", 0, 0, 0);
-    return rc;
-  }
-
-  rc = sqlite3_exec(db, "COMMIT", 0, 0, 0);
-  if (rc != SQLITE_OK)
-  {
-    return rc;
-  }
-
+  rc = initSharedMemory(db);
   if (rc == SQLITE_OK)
   {
     rc = sqlite3_create_function(db, "cfsql_siteid", 0,
@@ -801,6 +908,17 @@ __declspec(dllexport)
   }
   if (rc == SQLITE_OK)
   {
+    rc = sqlite3_create_function(db, "cfsql_nextdbversion", 0,
+                                 // dbversion can change on each invocation.
+                                 SQLITE_UTF8 | SQLITE_INNOCUOUS,
+                                 0, nextDbVersionFunc, 0, 0);
+  }
+
+  if (rc == SQLITE_OK)
+  {
+    // Only register a commit hook, not update or pre-update, since all rows in the same transaction
+    // should have the same clock value.
+    // This allows us to replicate them together and ensure more consistency.
     rc = sqlite3_create_function(db, "cfsql", 1,
                                  // cfsql should only ever be used at the top level
                                  // and does a great deal to modify

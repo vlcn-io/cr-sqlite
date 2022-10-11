@@ -6,7 +6,7 @@
 
 char *cfsql_extractWord(
     int prefixLen,
-    char *str);
+    const char *str);
 
 char *cfsql_getDbVersionUnionQuery(
     int numRows,
@@ -26,5 +26,8 @@ int cfsql_getIndexedCols(
     const char *indexName,
     char ***pIndexedCols,
     int *pIndexedColsLen);
+
+char *cfsql_join2(char *(*map)(const char *), char **in, size_t len, char* delim);
+const char *cfsql_identity(const char *x);
 
 #endif

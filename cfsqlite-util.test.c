@@ -40,6 +40,11 @@ void testExtractWord()
   assert(strcmp(word, "foo") == 0);
   sqlite3_free(word);
   printf("\t\e[0;32mSuccess\e[0m\n");
+
+  word = cfsql_extractWord(DROP_TABLE_LEN + 1, "DROP TABLE foo");
+  assert(strcmp(word, "foo") == 0);
+  sqlite3_free(word);
+  printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
 void testGetVersionUnionQuery()
@@ -173,6 +178,8 @@ fail:
 }
 
 void testAsIdentifierListStr() {
+  printf("AsIdentifierListStr\n");
+  
   char* tc1[] = {
     "one",
     "two",
@@ -185,10 +192,43 @@ void testAsIdentifierListStr() {
     3,
     ','
   );
-  printf("s: %s\n", res);
+
   assert(strcmp(res, "\"one\",\"two\",\"three\"") == 0);
   assert(strlen(res) == 19);
   sqlite3_free(res);
+
+  printf("\t\e[0;32mSuccess\e[0m\n");
+}
+
+char* join2map(const char *in) {
+  return sqlite3_mprintf("foo %s bar", in);
+}
+
+void testJoin2() {
+  printf("Join2\n");
+  char* tc0[] = {
+  };
+  char* tc1[] = {
+    "one"
+  };
+  char* tc2[] = {
+    "one",
+    "two"
+  };
+  char * result;
+
+  result = cfsql_join2(&join2map, tc0, 0, ", ");
+  assert(result == 0);
+
+  result = cfsql_join2(&join2map, tc1, 1, ", ");
+  assert(strcmp(result, "foo one bar") == 0);
+  sqlite3_free(result);
+
+  result = cfsql_join2(&join2map, tc2, 2, ", ");
+  assert(strcmp(result, "foo one bar, foo two bar") == 0);
+  sqlite3_free(result);
+
+  printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
 void cfsqlUtilTestSuite()
@@ -202,6 +242,7 @@ void cfsqlUtilTestSuite()
   testJoinWith();
   testGetIndexedCols();
   testAsIdentifierListStr();
+  testJoin2();
 
   // TODO: test pk pulling and correct sorting of pks
   // TODO: create a fn to create test tables for all tests.

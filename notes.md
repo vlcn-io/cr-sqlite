@@ -1,10 +1,34 @@
 todo:
 
-- mutex on initialization
-- cas for db version?
-  - cas to new value, commit value gotten from cas
-  - allow db version to increase, even for failed transactions
-- commit hook for transactions to bump in-memory db version
+- rm commit hook
+  - we can't guarantee transactional replications anyhow -- no crdt system can even if they do replicate the tx rows as conflict
+    resolution will invalidate all tx guarantees.
+  -
+- only allow single pk column?
+  - Otherwise we have to concat somehow.. and split back
+  - or no union query
+- select quote for dflt value from pragma? and extract as text?
+- incrementing causal length without looking is problematic for upserts
+- delta generation view?
+  - Probs not if we want deltas across tables for cross table tx support.
+  - Well we can get ids in a view since ids will union correctly.
+- alter crr
+- sync lib for sending/receiving changes to/from peers
+- c linters and static analyzers
+  - https://clang-analyzer.llvm.org/command-line.html
+  - https://cppcheck.sourceforge.io/
+- support differing schema names
+- test quoted table names.... strip quote in extract word?
+- support `if not exists`
+- support quoted identifiers --
+
+  ```
+  sqlite> create table """foo""" (a);
+  sqlite> .tables
+  "foo"
+  sqlite> select * from foo;
+  Error: no such table: foo
+  ```
 
 - support for:
   - centralized sync
@@ -36,3 +60,12 @@ TODO:
   Or you can keep the full causal graph and just replay the causal graph to sync.
   Causal graph is an event log, timestamped by tx, that records (row, cols) that changed.
   In big-peer model we can drop this log after every complete sync.
+
+---
+
+Delta Generation:
+Generate union query to grab primary keys from all tables where clock value > x.
+
+Big peer method:
+
+--

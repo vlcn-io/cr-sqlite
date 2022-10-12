@@ -1,3 +1,8 @@
+/*
+* Delta computation should be done by the network layer instead so it can pursue different 
+* replication strategies.
+*/
+
 char *cfsql_deltas() {
   /**
    * Provided clock: {me: 1, peer: 2}
@@ -52,5 +57,13 @@ Failure case: can never get through a full concurrent set because it is too big 
 Workaround: 
 
 How to determine least upper bounds?
+
+- Grab site ids that are greater than or not present in provided clock
+- Order by site id
+- Send over changes, site by site. Record what rows have been processed.
+- Receiver bumps clock for that site id for that row
+- As we get to next site id we may have to send clock bumps rather than row state if the row state was already sent.
+
+^-- we don't need a new global clock table with this approach.
 
 */

@@ -31,7 +31,7 @@ DEFINE_SQLITE_PATH=$(DEFINE_SQLITE_PATH_DATE) $(DEFINE_SQLITE_PATH_VERSION) $(DE
 
 prefix=dist
 
-TARGET_LOADABLE=dist/path0.$(LOADABLE_EXTENSION)
+TARGET_LOADABLE=dist/cfsqlite.$(LOADABLE_EXTENSION)
 TARGET_SQLITE3_EXTRA_C=$(prefix)/sqlite3-extra.c
 TARGET_SQLITE3=$(prefix)/sqlite3
 TARGET_SQLJS_JS=$(prefix)/sqljs.js
@@ -39,8 +39,8 @@ TARGET_SQLJS_WASM=$(prefix)/sqljs.wasm
 TARGET_SQLJS=$(TARGET_SQLJS_JS) $(TARGET_SQLJS_WASM)
 TARGET_TEST=$(prefix)/test
 
-ext_files=cfsqlite.c cfsqlite-util.c cfsqlite-tableinfo.c cfsqlite-triggers.c uuid.c
-ext_headers=cfsqlite.h csflite-utils.h cfsqlite-tablinfo.h cfsqlite-triggers.h uuid.h
+ext_files=cfsqlite.c cfsqlite-util.c cfsqlite-tableinfo.c cfsqlite-triggers.c
+ext_headers=cfsqlite.h csflite-utils.h cfsqlite-tablinfo.h cfsqlite-triggers.h
 
 $(prefix):
 	mkdir -p $(prefix)
@@ -52,26 +52,27 @@ FORMAT_FILES=$(ext_files) $(ext_headers) core_init.c
 format: $(FORMAT_FILES)
 	clang-format -i $(FORMAT_FILES)
 
-loadable: $(TARGET_LOADABLE) $(TARGET_LOADABLE_NOFS)
+loadable: $(TARGET_LOADABLE)
 sqlite3: $(TARGET_SQLITE3)
 sqljs: $(TARGET_SQLJS)
 test: $(TARGET_TEST)
 	./dist/test
 
 $(TARGET_LOADABLE): $(ext_files)
-	gcc -Isqlite \
+	gcc -I./ -I./sqlite \
 	$(LOADABLE_CFLAGS) \
 	$(DEFINE_SQLITE_PATH) \
-	$< -o $@
+	-DSQLITE_ENABLE_NORMALIZE \
+	$(ext_files) -o $@
 
-$(TARGET_SQLITE3): $(prefix) $(TARGET_SQLITE3_EXTRA_C) sqlite/shell.c $(ext_files)
+$(TARGET_SQLITE3): $(prefix) $(TARGET_SQLITE3_EXTRA_C) sqlite/shell.c $(ext_files) uuid.c
 	gcc -g \
 	$(DEFINE_SQLITE_PATH) \
 	-DSQLITE_THREADSAFE=0 -DSQLITE_OMIT_LOAD_EXTENSION=1 \
 	-DSQLITE_ENABLE_NORMALIZE \
 	-DSQLITE_EXTRA_INIT=core_init \
 	-I./ -I./sqlite \
-	$(TARGET_SQLITE3_EXTRA_C) sqlite/shell.c $(ext_files) \
+	$(TARGET_SQLITE3_EXTRA_C) sqlite/shell.c $(ext_files) uuid.c \
 	-o $@
 
 $(TARGET_SQLITE3_EXTRA_C): sqlite/sqlite3.c core_init.c
@@ -85,7 +86,7 @@ $(TARGET_TEST): $(prefix) $(TARGET_SQLITE3_EXTRA_C) tests.c cfsqlite.test.c cfsq
 	-DSQLITE_EXTRA_INIT=core_init \
 	-DUNIT_TEST=1 \
 	-I./ -I./sqlite \
-	$(TARGET_SQLITE3_EXTRA_C) tests.c cfsqlite.test.c cfsqlite-tableinfo.test.c cfsqlite-util.test.c cfsqlite-triggers.test.c $(ext_files) \
+	$(TARGET_SQLITE3_EXTRA_C) tests.c cfsqlite.test.c cfsqlite-tableinfo.test.c cfsqlite-util.test.c cfsqlite-triggers.test.c $(ext_files) uuid.c \
 	-o $@
 
 # test-format: SHELL:=/bin/bash
@@ -150,9 +151,9 @@ SQLJS_EMFLAGS_DEBUG = \
 	-s ASSERTIONS=1 \
 	-O1
 
-$(TARGET_SQLJS): $(prefix) $(shell find wasm/ -type f) $(ext_files) $(TARGET_SQLITE3_EXTRA_C)
+$(TARGET_SQLJS): $(prefix) $(shell find wasm/ -type f) $(ext_files) uuid.c $(TARGET_SQLITE3_EXTRA_C)
 	emcc $(SQLJS_CFLAGS) $(SQLJS_EMFLAGS) $(SQLJS_EMFLAGS_DEBUG) $(SQLJS_EMFLAGS_WASM) \
-		-I./sqlite -I./ $(ext_files) $(TARGET_SQLITE3_EXTRA_C) \
+		-I./sqlite -I./ $(ext_files) uuid.c $(TARGET_SQLITE3_EXTRA_C) \
 		--pre-js wasm/api.js \
 		-o $(TARGET_SQLJS_JS)
 	mv $(TARGET_SQLJS_JS) tmp.js

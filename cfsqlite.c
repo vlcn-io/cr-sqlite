@@ -1,4 +1,6 @@
 #include "cfsqlite.h"
+SQLITE_EXTENSION_INIT1
+
 #include "cfsqlite-util.h"
 #include "cfsqlite-tableinfo.h"
 #include "cfsqlite-consts.h"
@@ -821,7 +823,9 @@ __declspec(dllexport)
     int sqlite3_cfsqlite_preinit()
 {
 #if SQLITE_THREADSAFE != 0
-  globalsInitMutex = sqlite3_mutex_alloc(SQLITE_MUTEX_FAST);
+  if (globalsInitMutex == 0) {
+    globalsInitMutex = sqlite3_mutex_alloc(SQLITE_MUTEX_FAST);
+  }
 #endif
   return SQLITE_OK;
 }
@@ -890,6 +894,10 @@ __declspec(dllexport)
   int rc = SQLITE_OK;
 
   SQLITE_EXTENSION_INIT2(pApi);
+
+  // If this is used as a runtime loadable extension
+  // then preinit might not have been run.
+  sqlite3_cfsqlite_preinit();
 
   rc = initSharedMemory(db);
   if (rc == SQLITE_OK)

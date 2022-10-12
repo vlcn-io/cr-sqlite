@@ -2,8 +2,7 @@
 #define CFSQLITE_EXT
 
 #include "sqlite3ext.h"
-
-SQLITE_EXTENSION_INIT1
+SQLITE_EXTENSION_INIT3
 
 #ifndef UNIT_TEST
 # define STATIC static

@@ -5,7 +5,6 @@ SQLITE_EXTENSION_INIT1
 #include "cfsqlite-tableinfo.h"
 #include "cfsqlite-consts.h"
 #include "cfsqlite-triggers.h"
-#include "queryinfo.h"
 
 #include <ctype.h>
 #include <stdint.h>
@@ -281,6 +280,52 @@ static void nextDbVersionFunc(sqlite3_context *context, int argc, sqlite3_value 
   // dbVersion is an atomic int thus `++dbVersion` is a CAS and will always return
   // a unique version for the given invocation, even under concurrent accesses.
   sqlite3_result_int64(context, ++dbVersion);
+}
+
+/**
+ * Given a query passed to cfsqlite, determine what kind of schema modification
+ * query it is.
+ *
+ * We need to know given each schema modification type
+ * requires unique handling in the crr layer.
+ *
+ * The provided query must be a normalized query.
+ */
+static int determineQueryType(sqlite3 *db, sqlite3_context *context, const char *query)
+{
+  int rc = SQLITE_OK;
+  char *formattedError = 0;
+
+  if (strncmp("create table", query, CREATE_TABLE_LEN) == 0)
+  {
+    return CREATE_TABLE;
+  }
+  if (strncmp("alter table", query, ALTER_TABLE_LEN) == 0)
+  {
+    return ALTER_TABLE;
+  }
+  if (strncmp("create index", query, CREATE_INDEX_LEN) == 0)
+  {
+    return CREATE_INDEX;
+  }
+  if (strncmp("create unique index", query, CREATE_UNIQUE_INDEX_LEN) == 0)
+  {
+    return CREATE_INDEX;
+  }
+  if (strncmp("drop index", query, DROP_INDEX_LEN) == 0)
+  {
+    return DROP_INDEX;
+  }
+  if (strncmp("drop table", query, DROP_TABLE_LEN) == 0)
+  {
+    return DROP_TABLE;
+  }
+
+  formattedError = sqlite3_mprintf("Unknown schema modification statement provided: %s", query);
+  sqlite3_result_error(context, formattedError, -1);
+  sqlite3_free(formattedError);
+
+  return SQLITE_MISUSE;
 }
 
 /**
@@ -733,6 +778,7 @@ static void alterCrr()
  * - drop index
  * - alter table
  */
+char *cfsql_normalize(const char *zSql);
 static void cfsqlFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
   char *query = 0;
@@ -753,11 +799,15 @@ static void cfsqlFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
     return;
   }
 
-  cfsql_QueryInfo* queryInfo = cfsql_queryInfo(query, &errmsg);
-  if (queryInfo == 0) {
+  normalized = cfsql_normalize(query);
+  if (normalized == 0)
+  {
+    sqlite3_result_error(context, "Failed to normalize your provided query. Cannot proceed.", -1);
     return;
   }
+  query = normalized;
 
+  queryType = determineQueryType(db, context, query);
   // TODO: likely need this to be a sub-transaction
   rc = sqlite3_exec(db, "BEGIN", 0, 0, &errmsg);
   if (rc != SQLITE_OK)
@@ -769,19 +819,19 @@ static void cfsqlFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
   }
 
   // TODO: pass and use errmsg, check return codes
-  switch (queryInfo->type)
+  switch (queryType)
   {
   case CREATE_TABLE:
-    createCrr(context, db, queryInfo->reformedQuery);
+    createCrr(context, db, query);
     break;
   case DROP_TABLE:
-    dropCrr(context, db, queryInfo->reformedQuery, &errmsg);
+    dropCrr(context, db, query, &errmsg);
     break;
   case CREATE_INDEX:
-    createCrrIndex(context, db, queryInfo->reformedQuery, &errmsg);
+    createCrrIndex(context, db, query, &errmsg);
     break;
   case DROP_INDEX:
-    dropCrrIndex(context, db, queryInfo->reformedQuery, &errmsg);
+    dropCrrIndex(context, db, query, &errmsg);
     break;
   case ALTER_TABLE:
     alterCrr();
@@ -790,7 +840,7 @@ static void cfsqlFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
     break;
   }
 
-  cfsql_freeQueryInfo(queryInfo);
+  sqlite3_free(normalized);
   sqlite3_exec(db, "COMMIT", 0, 0, 0);
 }
 

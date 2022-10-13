@@ -23,8 +23,7 @@ static char *joinHelper(char **in, size_t inlen, size_t inpos, size_t accum)
 }
 
 // DO NOT dupe the memory!
-const char *cfsql_identity(const char *x)
-{
+const char *cfsql_identity(const char *x) {
   return x;
 }
 
@@ -61,18 +60,15 @@ void cfsql_joinWith(char *dest, char **src, size_t srcLen, char delim)
 
 // TODO: re-write all users of other join methods to just
 // use this
-char *cfsql_join2(char *(*map)(const char *), char **in, size_t len, char *delim)
-{
-  if (len == 0)
-  {
+char *cfsql_join2(char *(*map)(const char *), char **in, size_t len, char* delim) {
+  if (len == 0) {
     return 0;
   }
 
   char *toJoin[len];
   int resultLen = 0;
   char *ret = 0;
-  for (int i = 0; i < len; ++i)
-  {
+  for (int i = 0; i < len; ++i) {
     toJoin[i] = map(in[i]);
     resultLen += strlen(toJoin[i]);
   }
@@ -139,6 +135,10 @@ char *cfsql_asIdentifierListStr(char **in, size_t inlen, char delim)
  * Returns the tokens read.
  *
  * If str starts with a space, returns empty string.
+ * 
+ * TODO: handle quoted identifiers...
+ * The person being returned to will add their own quotes and also needs to
+ * know the total length of the quoted thing including quotes :/
  */
 char *cfsql_extractWord(
     int prefixLen,
@@ -155,8 +155,7 @@ char *cfsql_extractWord(
   {
     splitIndex = str + strlen(str);
   }
-  if (splitIndexParen != NULL && splitIndexParen < splitIndex)
-  {
+  if (splitIndexParen != NULL && splitIndexParen < splitIndex) {
     splitIndex = splitIndexParen;
   }
 
@@ -335,19 +334,4 @@ int cfsql_getIndexedCols(
   *pIndexedColsLen = numCols;
 
   return SQLITE_OK;
-}
-
-int cfsql_isIdentifierOpenQuote(char c)
-{
-  switch (c)
-  {
-  case '[':
-    return 1;
-  case '`':
-    return 1;
-  case '"':
-    return 1;
-  }
-
-  return 0;
 }

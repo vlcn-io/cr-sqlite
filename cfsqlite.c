@@ -296,27 +296,27 @@ static int determineQueryType(sqlite3 *db, sqlite3_context *context, const char 
   int rc = SQLITE_OK;
   char *formattedError = 0;
 
-  if (strncmp("CREATE TABLE", query, CREATE_TABLE_LEN) == 0)
+  if (strncmp("create table", query, CREATE_TABLE_LEN) == 0)
   {
     return CREATE_TABLE;
   }
-  if (strncmp("ALTER TABLE", query, ALTER_TABLE_LEN) == 0)
+  if (strncmp("alter table", query, ALTER_TABLE_LEN) == 0)
   {
     return ALTER_TABLE;
   }
-  if (strncmp("CREATE INDEX", query, CREATE_INDEX_LEN) == 0)
+  if (strncmp("create index", query, CREATE_INDEX_LEN) == 0)
   {
     return CREATE_INDEX;
   }
-  if (strncmp("CREATE UNIQUE INDEX", query, CREATE_UNIQUE_INDEX_LEN) == 0)
+  if (strncmp("create unique index", query, CREATE_UNIQUE_INDEX_LEN) == 0)
   {
     return CREATE_INDEX;
   }
-  if (strncmp("DROP INDEX", query, DROP_INDEX_LEN) == 0)
+  if (strncmp("drop index", query, DROP_INDEX_LEN) == 0)
   {
     return DROP_INDEX;
   }
-  if (strncmp("DROP TABLE", query, DROP_TABLE_LEN) == 0)
+  if (strncmp("drop table", query, DROP_TABLE_LEN) == 0)
   {
     return DROP_TABLE;
   }

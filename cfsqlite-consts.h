@@ -24,8 +24,8 @@
 // CREATE TEMP TABLE cfsql_tmp__
 #define CREATE_TEMP_TABLE_CFSQL_LEN CREATE_TEMP_TABLE_LEN + SPACE_LEN + CFSQL_TMP__LEN
 
-static const char *const TBL_SITE_ID = "cfsql_siteid";
-static const char *const TBL_DB_VERSION = "cfsql_dbversion";
+static const char *const TBL_SITE_ID = "__cfsql_siteid";
+static const char *const TBL_DB_VERSION = "__cfsql_dbversion";
 static const char *const UNION = "UNION";
 
 #endif

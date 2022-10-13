@@ -32,7 +32,6 @@ DEFINE_SQLITE_PATH=$(DEFINE_SQLITE_PATH_DATE) $(DEFINE_SQLITE_PATH_VERSION) $(DE
 prefix=dist
 
 TARGET_LOADABLE=$(prefix)/cfsqlite.$(LOADABLE_EXTENSION)
-TARGET_LOADABLE_UUID=$(prefix)/uuid.$(LOADABLE_EXTENSION)
 TARGET_SQLITE3_EXTRA_C=$(prefix)/sqlite3-extra.c
 TARGET_SQLITE3=$(prefix)/sqlite3
 TARGET_SQLITE3_VANILLA=$(prefix)/vanilla-sqlite3
@@ -55,7 +54,6 @@ format: $(FORMAT_FILES)
 	clang-format -i $(FORMAT_FILES)
 
 loadable: $(TARGET_LOADABLE)
-uuid: $(TARGET_LOADABLE_UUID)
 sqlite3: $(TARGET_SQLITE3)
 vanilla: $(TARGET_SQLITE3_VANILLA)
 sqljs: $(TARGET_SQLJS)
@@ -69,20 +67,14 @@ $(TARGET_LOADABLE): $(ext_files)
 	-DSQLITE_ENABLE_NORMALIZE \
 	$(ext_files) -o $@
 
-$(TARGET_LOADABLE_UUID): uuid.c
-	gcc -I./ -I./sqlite \
-	$(LOADABLE_CFLAGS) \
-	$(DEFINE_SQLITE_PATH) \
-	uuid.c -o $@
-
-$(TARGET_SQLITE3): $(prefix) $(TARGET_SQLITE3_EXTRA_C) sqlite/shell.c $(ext_files) uuid.c
+$(TARGET_SQLITE3): $(prefix) $(TARGET_SQLITE3_EXTRA_C) sqlite/shell.c $(ext_files)
 	gcc -g \
 	$(DEFINE_SQLITE_PATH) \
 	-DSQLITE_THREADSAFE=0 -DSQLITE_OMIT_LOAD_EXTENSION=1 \
 	-DSQLITE_ENABLE_NORMALIZE \
 	-DSQLITE_EXTRA_INIT=core_init \
 	-I./ -I./sqlite \
-	$(TARGET_SQLITE3_EXTRA_C) sqlite/shell.c $(ext_files) uuid.c \
+	$(TARGET_SQLITE3_EXTRA_C) sqlite/shell.c $(ext_files) \
 	-o $@
 
 $(TARGET_SQLITE3_VANILLA): $(prefix) sqlite/shell.c
@@ -105,7 +97,7 @@ $(TARGET_TEST): $(prefix) $(TARGET_SQLITE3_EXTRA_C) tests.c cfsqlite.test.c cfsq
 	-DSQLITE_EXTRA_INIT=core_init \
 	-DUNIT_TEST=1 \
 	-I./ -I./sqlite \
-	$(TARGET_SQLITE3_EXTRA_C) tests.c cfsqlite.test.c cfsqlite-tableinfo.test.c cfsqlite-util.test.c cfsqlite-triggers.test.c $(ext_files) uuid.c \
+	$(TARGET_SQLITE3_EXTRA_C) tests.c cfsqlite.test.c cfsqlite-tableinfo.test.c cfsqlite-util.test.c cfsqlite-triggers.test.c $(ext_files) \
 	-o $@
 
 # test-format: SHELL:=/bin/bash
@@ -170,9 +162,9 @@ SQLJS_EMFLAGS_DEBUG = \
 	-s ASSERTIONS=1 \
 	-O1
 
-$(TARGET_SQLJS): $(prefix) $(shell find wasm/ -type f) $(ext_files) uuid.c $(TARGET_SQLITE3_EXTRA_C)
+$(TARGET_SQLJS): $(prefix) $(shell find wasm/ -type f) $(ext_files) $(TARGET_SQLITE3_EXTRA_C)
 	emcc $(SQLJS_CFLAGS) $(SQLJS_EMFLAGS) $(SQLJS_EMFLAGS_DEBUG) $(SQLJS_EMFLAGS_WASM) \
-		-I./sqlite -I./ $(ext_files) uuid.c $(TARGET_SQLITE3_EXTRA_C) \
+		-I./sqlite -I./ $(ext_files) $(TARGET_SQLITE3_EXTRA_C) \
 		--pre-js wasm/api.js \
 		-o $(TARGET_SQLJS_JS)
 	mv $(TARGET_SQLJS_JS) tmp.js

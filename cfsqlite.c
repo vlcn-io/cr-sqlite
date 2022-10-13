@@ -10,6 +10,7 @@ SQLITE_EXTENSION_INIT1
 #include <stdint.h>
 #include <string.h>
 #include <limits.h>
+#include <assert.h>
 
 /**
  * Global variables to hold the site id and db version.
@@ -25,7 +26,7 @@ SQLITE_EXTENSION_INIT1
  * DB version is incremented on trnsaction commit via a
  * commit hook.
  */
-static char siteIdBlob[] = {
+static unsigned char siteIdBlob[] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 // track if siteId was set so we don't re-initialize site id on new connections
@@ -45,6 +46,13 @@ static int dbVersionSet = 0;
 static sqlite3_mutex *globalsInitMutex = 0;
 static int sharedMemoryInitialized = 0;
 
+static void uuid(unsigned char *blob)
+{
+  sqlite3_randomness(16, blob);
+  blob[6] = (blob[6] & 0x0f) + 0x40;
+  blob[8] = (blob[8] & 0x3f) + 0x80;
+}
+
 /**
  * The site id table is used to persist the site id and
  * populate `siteIdBlob` on initialization of a connection.
@@ -52,6 +60,7 @@ static int sharedMemoryInitialized = 0;
 static int createSiteIdTable(sqlite3 *db)
 {
   int rc = SQLITE_OK;
+  sqlite3_stmt *pStmt = 0;
   char *zSql = 0;
 
   zSql = sqlite3_mprintf(
@@ -65,11 +74,32 @@ static int createSiteIdTable(sqlite3 *db)
     return rc;
   }
 
-  zSql = sqlite3_mprintf("INSERT INTO \"%s\" VALUES(uuid_blob(uuid()))", TBL_SITE_ID);
-  rc = sqlite3_exec(db, zSql, 0, 0, 0);
+  assert(siteIdSet == 0);
+
+  zSql = sqlite3_mprintf("INSERT INTO \"%s\" (site_id) VALUES(?)", TBL_SITE_ID);
+  rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
   sqlite3_free(zSql);
 
-  return rc;
+  if (rc != SQLITE_OK)
+  {
+    sqlite3_finalize(pStmt);
+    return rc;
+  }
+
+  uuid(siteIdBlob);
+  rc = sqlite3_bind_blob(pStmt, 1, siteIdBlob, siteIdBlobSize, SQLITE_STATIC);
+  if (rc != SQLITE_OK) {
+    return rc;
+  }
+  rc = sqlite3_step(pStmt);
+  if (rc != SQLITE_DONE)
+  {
+    sqlite3_finalize(pStmt);
+    return rc;
+  }
+
+  sqlite3_finalize(pStmt);
+  return SQLITE_OK;
 }
 
 /**
@@ -127,6 +157,7 @@ static int initSiteId(sqlite3 *db)
   // the blob mem returned to us will be freed so copy it.
   // https://www.sqlite.org/c3ref/column_blob.html
   memcpy(siteIdBlob, siteIdFromTable, siteIdBlobSize);
+  siteIdSet = 1;
 
   sqlite3_finalize(pStmt);
   return SQLITE_OK;
@@ -647,8 +678,8 @@ static int dropCrr(
 }
 
 char *cfsql_getCreateCrrIndexQuery(
-  const char *query
-) {
+    const char *query)
+{
   char *onPtr = strcasestr(query, " ON ");
 
   if (onPtr == 0)
@@ -823,7 +854,8 @@ __declspec(dllexport)
     int sqlite3_cfsqlite_preinit()
 {
 #if SQLITE_THREADSAFE != 0
-  if (globalsInitMutex == 0) {
+  if (globalsInitMutex == 0)
+  {
     globalsInitMutex = sqlite3_mutex_alloc(SQLITE_MUTEX_FAST);
   }
 #endif

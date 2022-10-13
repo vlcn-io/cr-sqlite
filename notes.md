@@ -1,12 +1,7 @@
 todo:
 
-- rm commit hook
-  - we can't guarantee transactional replications anyhow -- no crdt system can even if they do replicate the tx rows as conflict
-    resolution will invalidate all tx guarantees.
-  -
-- only allow single pk column?
-  - Otherwise we have to concat somehow.. and split back
-  - or no union query
+- allow quoted identifiers! `extract_name` and such
+- concat if multiple priamry keys quote(x) || '~\'~' || quote(y)
 - select quote for dflt value from pragma? and extract as text?
 - incrementing causal length without looking is problematic for upserts
 - delta generation view?

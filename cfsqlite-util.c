@@ -168,6 +168,49 @@ char *cfsql_extractWord(
   return tblName;
 }
 
+char *cfsql_extractIdentifier(const char *start) {
+  int i = 0;
+  char closeQuote = '"';
+  const char *splitPoint = 0;
+  int len = 0;
+
+  if (cfsql_isIdentifierOpenQuote(*start)) {
+    if (*start == '[') {
+      closeQuote = ']';
+    } else {
+      closeQuote = *start;
+    }
+
+    for (i = 1; i < strlen(start); ++i) {
+      if (start[i] == closeQuote && start[i + 1] != closeQuote) {
+        break;
+      }
+    }
+
+    // move past quote
+    start += 1;
+    // move before quote
+    i -= 1;
+  } else {
+    for (i = 1; i < strlen(start); ++i) {
+      if (start[i] == ' ' || start[i] == '(' || start[i] == '.') {
+        break;
+      }
+    }
+    // move before the terminator
+    i -= 1;
+  }
+
+  splitPoint = start + i;
+  len = splitPoint - start;
+
+  char * ret = sqlite3_malloc(len + 1);
+  ret[len] = '\0';
+  strncpy(ret, start, len);
+
+  return ret;
+}
+
 /**
  * @brief Given a list of clock table names, construct a union query to get the max clock value for our site.
  *

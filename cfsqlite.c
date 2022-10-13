@@ -722,6 +722,7 @@ static void alterCrr()
 }
 
 /**
+ * TODO: write some end to end tests against this function
  * Interface to create and modify crrs.
  *
  * `select cfsql('CREATE TABLE foo (bar)')`

@@ -10,6 +10,22 @@
 SQLITE_EXTENSION_INIT3
 #include "queryinfo.h"
 #include <assert.h>
+#include <string.h>
+
+static cfsql_QueryInfo *newQueryInfo()
+{
+  cfsql_QueryInfo *ret = sqlite3_malloc(sizeof *ret);
+
+  ret->ifExists = 0;
+  ret->ifNotExists = 0;
+  ret->reformedQuery = 0;
+  ret->schemaName = 0;
+  ret->tblName = 0;
+  ret->type = 0;
+  ret->isTemp = 0;
+
+  return ret;
+}
 
 /**
  * Given a query passed to cfsqlite, determine what kind of schema modification
@@ -58,6 +74,23 @@ static int determineQueryType(const char *query, char **err)
   return SQLITE_MISUSE;
 }
 
+void cfsql_extractSchemaAndTblName(char * start, cfsql_QueryInfo* ret) {
+  char * identifier1 = cfsql_extractIdentifier(start);
+  char * identifier2 = 0;
+  int id1len = strlen(identifier1);
+
+  if (start[id1len] == '.') {
+    identifier2 = cfsql_extractIdentifier(start + id1len);
+  }
+
+  if (identifier2 != 0) {
+    ret->schemaName = identifier1;
+    ret->tblName = identifier2;
+  } else {
+    ret->tblName = identifier1;
+  }
+}
+
 cfsql_QueryInfo *queryInfoForCreateTable(char *normalized, char **err)
 {
   cfsql_QueryInfo *ret = newQueryInfo();
@@ -83,11 +116,7 @@ cfsql_QueryInfo *queryInfoForCreateTable(char *normalized, char **err)
   // skip past "if not exist "
   newStart += 14;
 
-  if (cfsql_isIdentifierOpenQuote(*newStart)) {
-
-  } else {
-    // scan till word
-  }
+  cfsql_extractSchemaAndTblName(newStart, ret);
 
   ret->type = CREATE_TABLE;
   ret->reformedQuery = normalized;
@@ -97,21 +126,25 @@ cfsql_QueryInfo *queryInfoForCreateTable(char *normalized, char **err)
 cfsql_QueryInfo *queryInfoForDropTable(char *normalized, char **err)
 {
   cfsql_QueryInfo *ret = 0;
+  return ret;
 }
 
 cfsql_QueryInfo *queryInfoForAlterTable(char *normalized, char **err)
 {
   cfsql_QueryInfo *ret = 0;
+  return ret;
 }
 
 cfsql_QueryInfo *queryInfoForCreateIndex(char *normalized, char **err)
 {
   cfsql_QueryInfo *ret = 0;
+  return ret;
 }
 
 cfsql_QueryInfo *queryInfoForDropIndex(char *normalized, char **err)
 {
   cfsql_QueryInfo *ret = 0;
+  return ret;
 }
 
 cfsql_QueryInfo *cfsql_queryInfo(const char *query, char **err)
@@ -163,19 +196,4 @@ void cfsql_freeQueryInfo(cfsql_QueryInfo *queryInfo)
   sqlite3_free(queryInfo->schemaName);
   sqlite3_free(queryInfo->tblName);
   sqlite3_free(queryInfo);
-}
-
-static newQueryInfo()
-{
-  cfsql_QueryInfo *ret = malloc(sizeof *ret);
-
-  ret->ifExists = 0;
-  ret->ifNotExists = 0;
-  ret->reformedQuery = 0;
-  ret->schemaName = 0;
-  ret->tblName = 0;
-  ret->type = 0;
-  ret->isTemp = 0;
-
-  return ret;
 }

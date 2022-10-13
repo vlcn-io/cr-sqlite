@@ -88,7 +88,8 @@ static int createSiteIdTable(sqlite3 *db)
 
   uuid(siteIdBlob);
   rc = sqlite3_bind_blob(pStmt, 1, siteIdBlob, siteIdBlobSize, SQLITE_STATIC);
-  if (rc != SQLITE_OK) {
+  if (rc != SQLITE_OK)
+  {
     return rc;
   }
   rc = sqlite3_step(pStmt);
@@ -786,7 +787,7 @@ static void cfsqlFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
   sqlite3 *db = sqlite3_context_db_handle(context);
   char *errmsg = 0;
   sqlite3_stmt *pStmt = 0;
-  char *normalized = 0;
+  const char *normalized = 0;
 
   query = (char *)sqlite3_value_text(argv[0]);
   found = strstr(query, ";");
@@ -806,7 +807,15 @@ static void cfsqlFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
     sqlite3_result_error(context, sqlite3_errmsg(db), -1);
     return;
   }
-  query = strdup(sqlite3_normalized_sql(pStmt));
+
+  normalized = sqlite3_normalized_sql(pStmt);
+  if (normalized == 0)
+  {
+    sqlite3_finalize(pStmt);
+    sqlite3_result_error(context, "Your sqlite build does not support query normalization. Rebuild it with the -DSQLITE_ENABLE_NORMALIZE compilation flag.", -1);
+    return;
+  }
+  query = strdup(normalized);
   sqlite3_finalize(pStmt);
 
   queryType = determineQueryType(db, context, query);

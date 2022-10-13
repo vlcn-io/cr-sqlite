@@ -31,9 +31,11 @@ DEFINE_SQLITE_PATH=$(DEFINE_SQLITE_PATH_DATE) $(DEFINE_SQLITE_PATH_VERSION) $(DE
 
 prefix=dist
 
-TARGET_LOADABLE=dist/cfsqlite.$(LOADABLE_EXTENSION)
+TARGET_LOADABLE=$(prefix)/cfsqlite.$(LOADABLE_EXTENSION)
+TARGET_LOADABLE_UUID=$(prefix)/uuid.$(LOADABLE_EXTENSION)
 TARGET_SQLITE3_EXTRA_C=$(prefix)/sqlite3-extra.c
 TARGET_SQLITE3=$(prefix)/sqlite3
+TARGET_SQLITE3_VANILLA=$(prefix)/vanilla-sqlite3
 TARGET_SQLJS_JS=$(prefix)/sqljs.js
 TARGET_SQLJS_WASM=$(prefix)/sqljs.wasm
 TARGET_SQLJS=$(TARGET_SQLJS_JS) $(TARGET_SQLJS_WASM)
@@ -53,7 +55,9 @@ format: $(FORMAT_FILES)
 	clang-format -i $(FORMAT_FILES)
 
 loadable: $(TARGET_LOADABLE)
+uuid: $(TARGET_LOADABLE_UUID)
 sqlite3: $(TARGET_SQLITE3)
+vanilla: $(TARGET_SQLITE3_VANILLA)
 sqljs: $(TARGET_SQLJS)
 test: $(TARGET_TEST)
 	./dist/test
@@ -65,6 +69,12 @@ $(TARGET_LOADABLE): $(ext_files)
 	-DSQLITE_ENABLE_NORMALIZE \
 	$(ext_files) -o $@
 
+$(TARGET_LOADABLE_UUID): uuid.c
+	gcc -I./ -I./sqlite \
+	$(LOADABLE_CFLAGS) \
+	$(DEFINE_SQLITE_PATH) \
+	uuid.c -o $@
+
 $(TARGET_SQLITE3): $(prefix) $(TARGET_SQLITE3_EXTRA_C) sqlite/shell.c $(ext_files) uuid.c
 	gcc -g \
 	$(DEFINE_SQLITE_PATH) \
@@ -73,6 +83,15 @@ $(TARGET_SQLITE3): $(prefix) $(TARGET_SQLITE3_EXTRA_C) sqlite/shell.c $(ext_file
 	-DSQLITE_EXTRA_INIT=core_init \
 	-I./ -I./sqlite \
 	$(TARGET_SQLITE3_EXTRA_C) sqlite/shell.c $(ext_files) uuid.c \
+	-o $@
+
+$(TARGET_SQLITE3_VANILLA): $(prefix) sqlite/shell.c
+	gcc -g \
+	$(DEFINE_SQLITE_PATH) \
+	-DSQLITE_THREADSAFE=0 \
+	-DSQLITE_ENABLE_NORMALIZE \
+	-I./ -I./sqlite \
+	sqlite/sqlite3.c sqlite/shell.c \
 	-o $@
 
 $(TARGET_SQLITE3_EXTRA_C): sqlite/sqlite3.c core_init.c

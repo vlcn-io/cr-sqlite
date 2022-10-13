@@ -1,6 +1,6 @@
-#include "cfsqlite-triggers.h"
-#include "cfsqlite-tableinfo.h"
-#include "cfsqlite-util.h"
+#include "triggers.h"
+#include "tableinfo.h"
+#include "util.h"
 
 #include <stdint.h>
 #include <string.h>

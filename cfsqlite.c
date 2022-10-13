@@ -1,10 +1,10 @@
 #include "cfsqlite.h"
 SQLITE_EXTENSION_INIT1
 
-#include "cfsqlite-util.h"
-#include "cfsqlite-tableinfo.h"
-#include "cfsqlite-consts.h"
-#include "cfsqlite-triggers.h"
+#include "util.h"
+#include "tableinfo.h"
+#include "consts.h"
+#include "triggers.h"
 #include "queryinfo.h"
 
 #include <ctype.h>

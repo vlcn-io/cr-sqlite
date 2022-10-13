@@ -2,7 +2,7 @@ todo:
 
 - test normalization does everything expected in all cases.
   e.g., spaces around `.`
-- remove `cfsqlite-` prefix on source files
+- remove `` prefix on source files
 - allow quoted identifiers! `extract_name` and such
 - concat if multiple priamry keys quote(x) || '~\'~' || quote(y)
 - select quote for dflt value from pragma? and extract as text?

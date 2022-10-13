@@ -1,6 +1,6 @@
 #include "cfsqlite.h"
-#include "cfsqlite-util.h"
-#include "cfsqlite-consts.h"
+#include "util.h"
+#include "consts.h"
 
 #include <ctype.h>
 #include <string.h>

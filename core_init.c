@@ -3,7 +3,7 @@
   file to include cfsqlite functions statically in
   a build. This is used for the demo CLI and WASM implementations.
 */
-#include "cfsqlite-ext.h"
+#include "ext.h"
 
 int core_init(const char *dummy) {
   int rc = SQLITE_OK;

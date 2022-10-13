@@ -4,8 +4,8 @@
  * - get its unquoted table name
  *
  */
-#include "cfsqlite-consts.h"
-#include "cfsqlite-util.h"
+#include "consts.h"
+#include "util.h"
 #include "sqlite3ext.h"
 SQLITE_EXTENSION_INIT3
 #include "queryinfo.h"

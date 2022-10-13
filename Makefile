@@ -40,8 +40,8 @@ TARGET_SQLJS_WASM=$(prefix)/sqljs.wasm
 TARGET_SQLJS=$(TARGET_SQLJS_JS) $(TARGET_SQLJS_WASM)
 TARGET_TEST=$(prefix)/test
 
-ext_files=cfsqlite.c cfsqlite-util.c cfsqlite-tableinfo.c cfsqlite-triggers.c cfsqlite-normalize.c queryinfo.c
-ext_headers=cfsqlite.h csflite-utils.h cfsqlite-tablinfo.h cfsqlite-triggers.h queryinfo.h
+ext_files=cfsqlite.c util.c tableinfo.c triggers.c normalize.c queryinfo.c
+ext_headers=cfsqlite.h csflite-utils.h tablinfo.h triggers.h queryinfo.h
 
 $(prefix):
 	mkdir -p $(prefix)
@@ -89,7 +89,7 @@ $(TARGET_SQLITE3_VANILLA): $(prefix) sqlite/shell.c
 $(TARGET_SQLITE3_EXTRA_C): sqlite/sqlite3.c core_init.c
 	cat sqlite/sqlite3.c core_init.c > $@
 
-$(TARGET_TEST): $(prefix) $(TARGET_SQLITE3_EXTRA_C) tests.c cfsqlite.test.c cfsqlite-tableinfo.test.c cfsqlite-util.test.c cfsqlite-triggers.test.c $(ext_files)
+$(TARGET_TEST): $(prefix) $(TARGET_SQLITE3_EXTRA_C) tests.c cfsqlite.test.c tableinfo.test.c util.test.c triggers.test.c $(ext_files)
 	gcc -g \
 	$(DEFINE_SQLITE_PATH) \
 	-DSQLITE_THREADSAFE=0 -DSQLITE_OMIT_LOAD_EXTENSION=1 \
@@ -97,7 +97,7 @@ $(TARGET_TEST): $(prefix) $(TARGET_SQLITE3_EXTRA_C) tests.c cfsqlite.test.c cfsq
 	-DSQLITE_EXTRA_INIT=core_init \
 	-DUNIT_TEST=1 \
 	-I./ -I./sqlite \
-	$(TARGET_SQLITE3_EXTRA_C) tests.c cfsqlite.test.c cfsqlite-tableinfo.test.c cfsqlite-util.test.c cfsqlite-triggers.test.c $(ext_files) \
+	$(TARGET_SQLITE3_EXTRA_C) tests.c cfsqlite.test.c tableinfo.test.c util.test.c triggers.test.c $(ext_files) \
 	-o $@
 
 # test-format: SHELL:=/bin/bash

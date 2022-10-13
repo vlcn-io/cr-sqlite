@@ -40,7 +40,7 @@ TARGET_SQLJS_WASM=$(prefix)/sqljs.wasm
 TARGET_SQLJS=$(TARGET_SQLJS_JS) $(TARGET_SQLJS_WASM)
 TARGET_TEST=$(prefix)/test
 
-ext_files=cfsqlite.c cfsqlite-util.c cfsqlite-tableinfo.c cfsqlite-triggers.c
+ext_files=cfsqlite.c cfsqlite-util.c cfsqlite-tableinfo.c cfsqlite-triggers.c cfsqlite-normalize.c
 ext_headers=cfsqlite.h csflite-utils.h cfsqlite-tablinfo.h cfsqlite-triggers.h
 
 $(prefix):

@@ -778,6 +778,7 @@ static void alterCrr()
  * - drop index
  * - alter table
  */
+char *cfsql_normalize(const char *zSql);
 static void cfsqlFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
   char *query = 0;
@@ -786,37 +787,25 @@ static void cfsqlFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
   int queryType = -1;
   sqlite3 *db = sqlite3_context_db_handle(context);
   char *errmsg = 0;
-  sqlite3_stmt *pStmt = 0;
-  const char *normalized = 0;
+  char *normalized = 0;
 
   query = (char *)sqlite3_value_text(argv[0]);
   found = strstr(query, ";");
 
   if (found != NULL)
   {
+    // TODO: relax this limitation one day
     sqlite3_result_error(context, "You may not pass multiple statements to cfsql yet. Run one statement at a time.", -1);
     return;
   }
 
-  // Prepare a statement so we can normalize the query.
-  // Normalizing the query strips comments, extra whitespace
-  // and just puts it in a format that we can easily parse.
-  rc = sqlite3_prepare_v2(db, query, -1, &pStmt, 0);
-  if (rc != SQLITE_OK)
-  {
-    sqlite3_result_error(context, sqlite3_errmsg(db), -1);
-    return;
-  }
-
-  normalized = sqlite3_normalized_sql(pStmt);
+  normalized = cfsql_normalize(query);
   if (normalized == 0)
   {
-    sqlite3_finalize(pStmt);
-    sqlite3_result_error(context, "Your sqlite build does not support query normalization. Rebuild it with the -DSQLITE_ENABLE_NORMALIZE compilation flag.", -1);
+    sqlite3_result_error(context, "Failed to normalize your provided query. Cannot proceed.", -1);
     return;
   }
-  query = strdup(normalized);
-  sqlite3_finalize(pStmt);
+  query = normalized;
 
   queryType = determineQueryType(db, context, query);
   // TODO: likely need this to be a sub-transaction
@@ -825,6 +814,7 @@ static void cfsqlFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
   {
     sqlite3_result_error(context, errmsg, -1);
     sqlite3_free(errmsg);
+    sqlite3_free(normalized);
     return;
   }
 
@@ -850,6 +840,7 @@ static void cfsqlFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
     break;
   }
 
+  sqlite3_free(normalized);
   sqlite3_exec(db, "COMMIT", 0, 0, 0);
 }
 

@@ -21,7 +21,6 @@
 void testExtractWord()
 {
   char *word;
-  int res;
 
   printf("ExtractWord\n");
   word = cfsql_extractWord(0, "hello there");
@@ -44,6 +43,23 @@ void testExtractWord()
   word = cfsql_extractWord(DROP_TABLE_LEN + 1, "DROP TABLE foo");
   assert(strcmp(word, "foo") == 0);
   sqlite3_free(word);
+  printf("\t\e[0;32mSuccess\e[0m\n");
+}
+
+void testExtractIdentifier() {
+  printf("ExtractIdentifier\n");
+
+  assert(strcmp(cfsql_extractIdentifier("[foo].[bar]"), "foo") == 0);
+  assert(strcmp(cfsql_extractIdentifier("foo.bar"), "foo") == 0);
+  assert(strcmp(cfsql_extractIdentifier("[foo]("), "foo") == 0);
+  assert(strcmp(cfsql_extractIdentifier("[foo] "), "foo") == 0);
+  assert(strcmp(cfsql_extractIdentifier("foo "), "foo") == 0);
+  assert(strcmp(cfsql_extractIdentifier("foo ("), "foo") == 0);
+  assert(strcmp(cfsql_extractIdentifier("foo( "), "foo") == 0);
+  assert(strcmp(cfsql_extractIdentifier("\"foo\".bar"), "foo") == 0);
+  assert(strcmp(cfsql_extractIdentifier("`foo`.bar"), "foo") == 0);
+  assert(strcmp(cfsql_extractIdentifier("```foo```.bar"), "``foo``") == 0);
+
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
@@ -243,6 +259,7 @@ void cfsqlUtilTestSuite()
   testGetIndexedCols();
   testAsIdentifierListStr();
   testJoin2();
+  testExtractIdentifier();
 
   // TODO: test pk pulling and correct sorting of pks
   // TODO: create a fn to create test tables for all tests.

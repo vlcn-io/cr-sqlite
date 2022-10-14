@@ -182,8 +182,13 @@ char *cfsql_extractIdentifier(const char *start) {
     }
 
     for (i = 1; i < strlen(start); ++i) {
-      if (start[i] == closeQuote && start[i + 1] != closeQuote) {
-        break;
+      if (start[i] == closeQuote) {
+        if (start[i + 1] == closeQuote) {
+          // skip the next char
+          i += 1;
+        } else {
+          break;
+        }
       }
     }
 
@@ -197,8 +202,6 @@ char *cfsql_extractIdentifier(const char *start) {
         break;
       }
     }
-    // move before the terminator
-    i -= 1;
   }
 
   splitPoint = start + i;

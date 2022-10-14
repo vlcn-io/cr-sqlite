@@ -1,9 +1,9 @@
 #include "cfsqlite.h"
 SQLITE_EXTENSION_INIT1
 
-#include "cfsqlite-util.h"
-#include "cfsqlite-consts.h"
-#include "cfsqlite-tableinfo.h"
+#include "util.h"
+#include "consts.h"
+#include "tableinfo.h"
 #include <assert.h>
 #include <string.h>
 #include <stdlib.h>
@@ -73,9 +73,9 @@ void testCreateCrrBaseTable()
   printf("CreateCrrBaseTable\n");
 
   int rc = SQLITE_OK;
-  sqlite3* db;
+  sqlite3 *db;
   char *err = 0;
-  cfsql_TableInfo * tableInfo = 0;
+  cfsql_TableInfo *tableInfo = 0;
   rc = sqlite3_open(":memory:", &db);
 
   rc = sqlite3_exec(db, "CREATE TABLE foo (a primary key, b DEFAULT 0)", 0, 0, &err);
@@ -101,16 +101,16 @@ void testCreateCrrBaseTable()
   // rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
   // printf("CODE: %d\n", rc);
   // printf("NORMA: %s!\n", sqlite3_normalized_sql(pStmt));
-  
+
   sqlite3_close(db);
   return;
 
-  fail:
-    sqlite3_close(db);
-    printf("err: %s %d\n", err, rc);
-    sqlite3_free(err);
-    cfsql_freeTableInfo(tableInfo);
-    assert(rc == SQLITE_OK);
+fail:
+  sqlite3_close(db);
+  printf("err: %s %d\n", err, rc);
+  sqlite3_free(err);
+  cfsql_freeTableInfo(tableInfo);
+  assert(rc == SQLITE_OK);
 }
 
 void testCreateViewOfCrr()
@@ -118,9 +118,9 @@ void testCreateViewOfCrr()
   printf("CreateViewOfCrr\n");
 
   int rc = SQLITE_OK;
-  sqlite3* db;
+  sqlite3 *db;
   char *err = 0;
-  cfsql_TableInfo * tableInfo = 0;
+  cfsql_TableInfo *tableInfo = 0;
   rc = sqlite3_open(":memory:", &db);
 
   rc = sqlite3_exec(db, "CREATE TABLE foo (a primary key, b DEFAULT 0)", 0, 0, &err);
@@ -141,25 +141,29 @@ void testCreateViewOfCrr()
   sqlite3_close(db);
   return;
 
-  fail:
-    printf("err: %s %d\n", err, rc);
-    sqlite3_free(err);
-    cfsql_freeTableInfo(tableInfo);
-    sqlite3_close(db);
-    assert(rc == SQLITE_OK);
+fail:
+  printf("err: %s %d\n", err, rc);
+  sqlite3_free(err);
+  cfsql_freeTableInfo(tableInfo);
+  sqlite3_close(db);
+  assert(rc == SQLITE_OK);
 }
 
-void testGetCreateCrrIndexQuery() {
+void testGetCreateCrrIndexQuery()
+{
   printf("GetCreateCrrIndexQuery\n");
+  char *err;
+  cfsql_QueryInfo *queryInfo = cfsql_queryInfo("CREATE INDEX ON foo (a, b)", &err);
+  char *query = cfsql_getCreateCrrIndexQuery(queryInfo);
 
-  char * query = cfsql_getCreateCrrIndexQuery("CREATE INDEX ON foo (a, b)");
-
-  assert(strcmp(query, "CREATE INDEX ON \"foo__cfsql_crr\" (a, b)") == 0);
+  assert(strcmp(query, "create index  \"main\".\"on__cfsql_crr\"  foo(a,b);") == 0);
 
   printf("\t\e[0;32mSuccess\e[0m\n");
+  cfsql_freeQueryInfo(queryInfo);
 }
 
-void cfsqlTestSuite() {
+void cfsqlTestSuite()
+{
   printf("\e[47m\e[1;30mSuite: cfsql\e[0m\n");
 
   testCreateClockTable();

@@ -40,8 +40,8 @@ TARGET_SQLJS_WASM=$(prefix)/sqljs.wasm
 TARGET_SQLJS=$(TARGET_SQLJS_JS) $(TARGET_SQLJS_WASM)
 TARGET_TEST=$(prefix)/test
 
-ext_files=cfsqlite.c cfsqlite-util.c cfsqlite-tableinfo.c cfsqlite-triggers.c cfsqlite-normalize.c
-ext_headers=cfsqlite.h csflite-utils.h cfsqlite-tablinfo.h cfsqlite-triggers.h
+ext_files=cfsqlite.c util.c tableinfo.c triggers.c normalize.c queryinfo.c
+ext_headers=cfsqlite.h csflite-utils.h tablinfo.h triggers.h queryinfo.h
 
 $(prefix):
 	mkdir -p $(prefix)
@@ -89,7 +89,7 @@ $(TARGET_SQLITE3_VANILLA): $(prefix) sqlite/shell.c
 $(TARGET_SQLITE3_EXTRA_C): sqlite/sqlite3.c core_init.c
 	cat sqlite/sqlite3.c core_init.c > $@
 
-$(TARGET_TEST): $(prefix) $(TARGET_SQLITE3_EXTRA_C) tests.c cfsqlite.test.c cfsqlite-tableinfo.test.c cfsqlite-util.test.c cfsqlite-triggers.test.c $(ext_files)
+$(TARGET_TEST): $(prefix) $(TARGET_SQLITE3_EXTRA_C) tests.c *.test.c $(ext_files)
 	gcc -g \
 	$(DEFINE_SQLITE_PATH) \
 	-DSQLITE_THREADSAFE=0 -DSQLITE_OMIT_LOAD_EXTENSION=1 \
@@ -97,27 +97,8 @@ $(TARGET_TEST): $(prefix) $(TARGET_SQLITE3_EXTRA_C) tests.c cfsqlite.test.c cfsq
 	-DSQLITE_EXTRA_INIT=core_init \
 	-DUNIT_TEST=1 \
 	-I./ -I./sqlite \
-	$(TARGET_SQLITE3_EXTRA_C) tests.c cfsqlite.test.c cfsqlite-tableinfo.test.c cfsqlite-util.test.c cfsqlite-triggers.test.c $(ext_files) \
+	$(TARGET_SQLITE3_EXTRA_C) tests.c *.test.c $(ext_files) \
 	-o $@
-
-# test-format: SHELL:=/bin/bash
-# test-format:
-# 	diff -u <(cat $(FORMAT_FILES)) <(clang-format $(FORMAT_FILES))
-
-# test-loadable: $(TARGET_LOADABLE)
-# 	python3 tests/test-loadable.py
-
-# test-loadable-watch: $(TARGET_LOADABLE)
-# 	watchexec -w $(ext_files) -w $(TARGET_LOADABLE) -w tests/test-loadable.py --clear -- make test-loadable
-
-# test-sqlite3: $(TARGET_SQLITE3)
-# 	python3 tests/test-sqlite3.py
-
-# test-sqlite3-watch: $(TARAGET_SQLITE3)
-# 	watchexec -w $(TARAGET_SQLITE3) -w tests/test-sqlite3.py --clear -- make test-sqlite3
-
-# test-sqljs: $(TARGET_SQLJS)
-# 	python3 -m http.server & open http://localhost:8000/tests/test-sqljs.html
 
 .PHONY: all clean format \
 	test test-watch test-format \

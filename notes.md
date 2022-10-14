@@ -1,12 +1,12 @@
 todo:
 
-- rm commit hook
-  - we can't guarantee transactional replications anyhow -- no crdt system can even if they do replicate the tx rows as conflict
-    resolution will invalidate all tx guarantees.
-  -
-- only allow single pk column?
-  - Otherwise we have to concat somehow.. and split back
-  - or no union query
+- e2e tests in c
+- loadable tests in py
+- perf notebook
+  https://stackoverflow.com/questions/35545402/how-to-run-an-ipynb-jupyter-notebook-from-terminal
+- test normalization does everything expected in all cases.
+  e.g., spaces around `.`
+- concat if multiple priamry keys quote(x) || '~\'~' || quote(y)
 - select quote for dflt value from pragma? and extract as text?
 - incrementing causal length without looking is problematic for upserts
 - delta generation view?

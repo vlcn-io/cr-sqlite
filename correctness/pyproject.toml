@@ -1,3 +1,6 @@
+[project]
+name = "cfsql_correctness"
+
 [tool.pytest.ini_options]
 addopts = [
     "--import-mode=importlib",

@@ -174,15 +174,20 @@ int cfsql_createInsertTrigger(
   return rc;
 }
 
-static char *mapPkWhere(const char *x)
+static char *mapPkWhereNew(const char *x)
 {
   return sqlite3_mprintf("\"%s\" = NEW.\"%s\"", x, x);
+}
+
+static char *mapPkWhereOld(const char *x)
+{
+  return sqlite3_mprintf("\"%s\" = OLD.\"%s\"", x, x);
 }
 
 // TODO: we could generalize this and `conflictSetsStr` and and `updateTrigUpdateSet` and other places
 // if we add a parameter which is a function that produces the strings
 // to join.
-char *cfsql_upTrigWhereConditions(cfsql_ColumnInfo *columnInfo, int len)
+char *cfsql_upTrigWhereConditions(cfsql_ColumnInfo *columnInfo, int len, int new)
 {
   char *columnNames[len];
   for (int i = 0; i < len; ++i)
@@ -190,7 +195,7 @@ char *cfsql_upTrigWhereConditions(cfsql_ColumnInfo *columnInfo, int len)
     columnNames[i] = columnInfo[i].name;
   }
 
-  return cfsql_join2(&mapPkWhere, columnNames, len, " AND ");
+  return cfsql_join2(new == 1 ? &mapPkWhereNew : &mapPkWhereOld, columnNames, len, " AND ");
 }
 
 char *cfsql_upTrigSets(cfsql_ColumnInfo *columnInfo, int len)
@@ -238,7 +243,7 @@ int cfsql_createUpdateTrigger(sqlite3 *db,
   }
   else
   {
-    pkWhereConditions = cfsql_upTrigWhereConditions(tableInfo->pks, tableInfo->pksLen);
+    pkWhereConditions = cfsql_upTrigWhereConditions(tableInfo->pks, tableInfo->pksLen, 1);
   }
 
   sets = cfsql_upTrigSets(tableInfo->withVersionCols, tableInfo->withVersionColsLen);
@@ -281,11 +286,11 @@ char *cfsql_deleteTriggerQuery(cfsql_TableInfo *tableInfo)
   char *clockUpdate = 0;
   if (tableInfo->pksLen == 0)
   {
-    pkWhereConditions = "\"rowid\" = NEW.\"rowid\"";
+    pkWhereConditions = "\"rowid\" = OLD.\"rowid\"";
   }
   else
   {
-    pkWhereConditions = cfsql_upTrigWhereConditions(tableInfo->pks, tableInfo->pksLen);
+    pkWhereConditions = cfsql_upTrigWhereConditions(tableInfo->pks, tableInfo->pksLen, 0);
   }
 
   clockUpdate = cfsql_updateClocksStr(tableInfo, 1);

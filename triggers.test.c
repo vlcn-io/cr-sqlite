@@ -129,7 +129,7 @@ void testUpTrigWhereConditions()
   columnInfos[1].name = "b";
   columnInfos[1].pk = 0;
 
-  char *conditions = cfsql_upTrigWhereConditions(columnInfos, 2);
+  char *conditions = cfsql_upTrigWhereConditions(columnInfos, 2, 1);
 
   assert(strcmp("\"a\" = NEW.\"a\" AND \"b\" = NEW.\"b\"", conditions) == 0);
   sqlite3_free(conditions);
@@ -193,7 +193,7 @@ void testDeleteTriggerQuery()
       &errMsg);
 
   char *query = cfsql_deleteTriggerQuery(tableInfo);
-  assert(strcmp("CREATE TRIGGER \"foo__cfsql_dtrig\"    INSTEAD OF DELETE ON \"foo\"    BEGIN      UPDATE \"foo__cfsql_crr\" SET \"__cfsql_cl\" = \"__cfsql_cl\" + 1, \"__cfsql_src\" = 0 WHERE \"a\" = NEW.\"a\";            INSERT INTO \"foo__cfsql_clock\" (\"__cfsql_site_id\", \"__cfsql_version\", \"a\")      VALUES (        cfsql_siteid(),        cfsql_nextdbversion(),        OLD.\"a\"      )      ON CONFLICT (\"__cfsql_site_id\", \"a\") DO UPDATE SET        \"__cfsql_version\" = EXCLUDED.\"__cfsql_version\";        END", query) == 0);
+  assert(strcmp("CREATE TRIGGER \"foo__cfsql_dtrig\"    INSTEAD OF DELETE ON \"foo\"    BEGIN      UPDATE \"foo__cfsql_crr\" SET \"__cfsql_cl\" = \"__cfsql_cl\" + 1, \"__cfsql_src\" = 0 WHERE \"a\" = OLD.\"a\";            INSERT INTO \"foo__cfsql_clock\" (\"__cfsql_site_id\", \"__cfsql_version\", \"a\")      VALUES (        cfsql_siteid(),        cfsql_nextdbversion(),        OLD.\"a\"      )      ON CONFLICT (\"__cfsql_site_id\", \"a\") DO UPDATE SET        \"__cfsql_version\" = EXCLUDED.\"__cfsql_version\";        END", query) == 0);
 
   sqlite3_close(db);
   assert(rc == SQLITE_OK);

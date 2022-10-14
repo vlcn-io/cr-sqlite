@@ -253,6 +253,14 @@ static int initDbVersion(sqlite3 *db)
 
   // had a row? grab the version returned to us
   // columns are 0 indexed.
+  int type = sqlite3_column_type(pStmt, 0);
+  if (type == SQLITE_NULL) {
+    // No rows. Keep the initial version.
+    dbVersionSet = 1;
+    sqlite3_finalize(pStmt);
+    return SQLITE_OK;
+  }
+  
   dbVersion = sqlite3_column_int64(pStmt, 0);
   dbVersionSet = 1;
   sqlite3_finalize(pStmt);

@@ -20,7 +20,9 @@ struct cfsql_QueryInfo {
   int isTemp;
   char *schemaName;
   char *tblName;
-  char *reformedQuery; // normalied + tblName is unquoted.
+  char *prefix;
+  char *suffix;
+  char *reformedQuery;
 
   // we should extract column numbers if they exist for Aphrodite
   // so we can put them into table info

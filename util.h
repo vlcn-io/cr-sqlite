@@ -30,6 +30,6 @@ int cfsql_getIndexedCols(
 char *cfsql_join2(char *(*map)(const char *), char **in, size_t len, char *delim);
 const char *cfsql_identity(const char *x);
 int cfsql_isIdentifierOpenQuote(char c);
-char *cfsql_extractIdentifier(const char *start);
+char *cfsql_extractIdentifier(const char *start, int *past);
 
 #endif

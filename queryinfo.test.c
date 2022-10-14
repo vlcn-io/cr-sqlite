@@ -49,7 +49,7 @@ void testQueryInfo()
   checkQueryInfo(result, expected, err);
 
   result = cfsql_queryInfo("create table main.foo (a, b);", &err);
-  // printf("R: %s\n", result->tblName);
+  printf("R: %s\n", result->tblName);
   expected->reformedQuery = "create table main.foo(a,b);";
   expected->schemaName = "main";
   checkQueryInfo(result, expected, err);

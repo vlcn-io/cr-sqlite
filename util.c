@@ -168,11 +168,12 @@ char *cfsql_extractWord(
   return tblName;
 }
 
-char *cfsql_extractIdentifier(const char *start) {
+char *cfsql_extractIdentifier(const char *start, int *past) {
   int i = 0;
   char closeQuote = '"';
   const char *splitPoint = 0;
   int len = 0;
+  int _past = 0;
 
   if (cfsql_isIdentifierOpenQuote(*start)) {
     if (*start == '[') {
@@ -194,6 +195,8 @@ char *cfsql_extractIdentifier(const char *start) {
 
     // move past quote
     start += 1;
+    // move after the quote for _past
+    _past = i + 1;
     // move before quote
     i -= 1;
   } else {
@@ -201,6 +204,10 @@ char *cfsql_extractIdentifier(const char *start) {
       if (start[i] == ' ' || start[i] == '(' || start[i] == '.') {
         break;
       }
+    }
+    _past = i;
+    if (start[i] == '.') {
+      _past += 1;
     }
   }
 
@@ -210,6 +217,7 @@ char *cfsql_extractIdentifier(const char *start) {
   char * ret = sqlite3_malloc(len + 1);
   ret[len] = '\0';
   strncpy(ret, start, len);
+  *past = _past;
 
   return ret;
 }

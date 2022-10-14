@@ -18,11 +18,14 @@ cfsql_QueryInfo *cfsql_newQueryInfo()
 
   ret->ifExists = 0;
   ret->ifNotExists = 0;
-  ret->reformedQuery = 0;
+  ret->prefix = 0;
+  ret->suffix = 0;
   ret->schemaName = 0;
   ret->tblName = 0;
   ret->type = 0;
   ret->isTemp = 0;
+  ret->prefix = 0;
+  ret->suffix = 0;
 
   return ret;
 }
@@ -74,13 +77,13 @@ static int determineQueryType(const char *query, char **err)
 }
 
 void cfsql_extractSchemaAndTblName(char * start, cfsql_QueryInfo* ret) {
-  char * identifier1 = cfsql_extractIdentifier(start);
+  int past;
+  char * identifier1 = cfsql_extractIdentifier(start, &past);
   char * identifier2 = 0;
   int id1len = strlen(identifier1);
 
   if (start[id1len] == '.') {
-    // + 1 to skip .
-    identifier2 = cfsql_extractIdentifier(start + id1len + 1);
+    identifier2 = cfsql_extractIdentifier(start + past, &past);
   }
 
   if (identifier2 != 0) {
@@ -207,4 +210,6 @@ void cfsql_freeQueryInfo(cfsql_QueryInfo *queryInfo)
   sqlite3_free(queryInfo->schemaName);
   sqlite3_free(queryInfo->tblName);
   sqlite3_free(queryInfo);
+  sqlite3_free(queryInfo->prefix);
+  sqlite3_free(queryInfo->suffix);
 }

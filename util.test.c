@@ -47,18 +47,19 @@ void testExtractWord()
 }
 
 void testExtractIdentifier() {
+  int past;
   printf("ExtractIdentifier\n");
 
-  assert(strcmp(cfsql_extractIdentifier("[foo].[bar]"), "foo") == 0);
-  assert(strcmp(cfsql_extractIdentifier("foo.bar"), "foo") == 0);
-  assert(strcmp(cfsql_extractIdentifier("[foo]("), "foo") == 0);
-  assert(strcmp(cfsql_extractIdentifier("[foo] "), "foo") == 0);
-  assert(strcmp(cfsql_extractIdentifier("foo "), "foo") == 0);
-  assert(strcmp(cfsql_extractIdentifier("foo ("), "foo") == 0);
-  assert(strcmp(cfsql_extractIdentifier("foo( "), "foo") == 0);
-  assert(strcmp(cfsql_extractIdentifier("\"foo\".bar"), "foo") == 0);
-  assert(strcmp(cfsql_extractIdentifier("`foo`.bar"), "foo") == 0);
-  assert(strcmp(cfsql_extractIdentifier("```foo```.bar"), "``foo``") == 0);
+  assert(strcmp(cfsql_extractIdentifier("[foo].[bar]", &past), "foo") == 0);
+  assert(strcmp(cfsql_extractIdentifier("foo.bar", &past), "foo") == 0);
+  assert(strcmp(cfsql_extractIdentifier("[foo](", &past), "foo") == 0);
+  assert(strcmp(cfsql_extractIdentifier("[foo] ", &past), "foo") == 0);
+  assert(strcmp(cfsql_extractIdentifier("foo ", &past), "foo") == 0);
+  assert(strcmp(cfsql_extractIdentifier("foo (", &past), "foo") == 0);
+  assert(strcmp(cfsql_extractIdentifier("foo( ", &past), "foo") == 0);
+  assert(strcmp(cfsql_extractIdentifier("\"foo\".bar", &past), "foo") == 0);
+  assert(strcmp(cfsql_extractIdentifier("`foo`.bar", &past), "foo") == 0);
+  assert(strcmp(cfsql_extractIdentifier("```foo```.bar", &past), "``foo``") == 0);
 
   printf("\t\e[0;32mSuccess\e[0m\n");
 }

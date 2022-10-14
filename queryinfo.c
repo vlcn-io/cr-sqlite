@@ -106,7 +106,7 @@ cfsql_QueryInfo *queryInfoForCreateTable(char *normalized, char **err)
 {
   cfsql_QueryInfo *ret = cfsql_newQueryInfo();
 
-  // chunk into tokens
+  // +7 for "create "
   char *newStart = normalized + 7;
 
   if (strncmp(newStart, "temporary", 9) == 0)
@@ -148,25 +148,103 @@ cfsql_QueryInfo *queryInfoForCreateTable(char *normalized, char **err)
 
 cfsql_QueryInfo *queryInfoForDropTable(char *normalized, char **err)
 {
-  cfsql_QueryInfo *ret = 0;
+  cfsql_QueryInfo *ret = cfsql_newQueryInfo();
+
+  // +10 for "drop table"
+  char *newStart = normalized + 10;
+
+  if (*newStart == ' ')
+  {
+    newStart += 1;
+  }
+
+  if (strncmp(newStart, "if exists", 9) == 0) {
+    ret->ifExists = 1;
+    newStart += 9;
+  }
+
+  if (*newStart == ' ')
+  {
+    newStart += 1;
+  }
+
+  cfsql_extractSchemaTblNamePrefixSuffix(normalized, newStart, ret);
+  ret->type = DROP_TABLE;
+  ret->reformedQuery = normalized;
   return ret;
 }
 
 cfsql_QueryInfo *queryInfoForAlterTable(char *normalized, char **err)
 {
-  cfsql_QueryInfo *ret = 0;
+  cfsql_QueryInfo *ret = cfsql_newQueryInfo();
+
+  // +11 for "alter table"
+  char *newStart = normalized + 11;
+
+  if (*newStart == ' ')
+  {
+    newStart += 1;
+  }
+
+  cfsql_extractSchemaTblNamePrefixSuffix(normalized, newStart, ret);
+  ret->type = ALTER_TABLE;
+  ret->reformedQuery = normalized;
   return ret;
 }
 
 cfsql_QueryInfo *queryInfoForCreateIndex(char *normalized, char **err)
 {
-  cfsql_QueryInfo *ret = 0;
+  cfsql_QueryInfo *ret = cfsql_newQueryInfo();
+
+  // +7 for "create "
+  char *newStart = normalized + 7;
+
+  if (strncmp(newStart, "unique index", 12) == 0) {
+    // +12 for "unique index"
+    newStart += 12;
+  }
+
+  if (*newStart == ' ')
+  {
+    newStart += 1;
+  }
+
+  if (strncmp(newStart, "if not exists", 13) == 0) {
+    newStart += 13;
+    ret->ifNotExists = 1;
+  }
+
+  if (*newStart == ' ')
+  {
+    newStart += 1;
+  }
+
+  cfsql_extractSchemaTblNamePrefixSuffix(normalized, newStart, ret);
+  ret->type = CREATE_INDEX;
+  ret->reformedQuery = normalized;
   return ret;
 }
 
 cfsql_QueryInfo *queryInfoForDropIndex(char *normalized, char **err)
 {
-  cfsql_QueryInfo *ret = 0;
+  cfsql_QueryInfo *ret = cfsql_newQueryInfo();
+
+  // +10 for "drop index"
+  char *newStart = normalized + 10;
+
+  if (strncmp(newStart, "if exists", 10) == 0) {
+    ret->ifExists = 1;
+    newStart += 10;
+  }
+
+  if (*newStart == ' ')
+  {
+    newStart += 1;
+  }
+
+  cfsql_extractSchemaTblNamePrefixSuffix(normalized, newStart, ret);
+  ret->type = DROP_INDEX;
+  ret->reformedQuery = normalized;
   return ret;
 }
 

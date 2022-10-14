@@ -1,5 +1,6 @@
 todo:
 
+- inserts should... fail if already exists? Or always be upsert given we don't know what might already exist due to replications?
 - e2e tests in c
 - loadable tests in py
 - perf notebook

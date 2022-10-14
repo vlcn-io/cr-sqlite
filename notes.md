@@ -26,6 +26,9 @@ todo:
 - just throw if no primary key is specified on create rather than allowing the create?
 - perf test cases
 - version index?
+- check query optimization / plans against the view. With joins and so on.
+
+  - test index of cl
 
   ```
   sqlite> create table """foo""" (a);

@@ -5,3 +5,5 @@ a.out
 dist/
 bench/
 .ipynb_checkpoints/
+*.db
+__pycache__/

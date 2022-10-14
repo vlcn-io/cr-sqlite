@@ -25,6 +25,13 @@ static void checkQueryInfo(cfsql_QueryInfo *result, cfsql_QueryInfo *expected, c
   {
     assert(strcmp(result->reformedQuery, expected->reformedQuery) == 0);
   }
+  if (result->suffix != expected->suffix) {
+    printf("S: %s\n", result->suffix);
+    assert(strcmp(result->suffix, expected->suffix) == 0);
+  }
+  if (result->prefix != expected->prefix) {
+    assert(strcmp(result->prefix, expected->prefix) == 0);
+  }
   cfsql_freeQueryInfo(result);
 }
 
@@ -54,6 +61,10 @@ void testQueryInfo()
   // printf("R: %s\n", result->tblName);
   expected->reformedQuery = "create table main.foo(a,b);";
   expected->schemaName = "main";
+  checkQueryInfo(result, expected, err);
+
+  result = cfsql_queryInfo("create table \"foo\" (a, b)", &err);
+  expected->reformedQuery = "create table\"foo\"(a,b);";
   checkQueryInfo(result, expected, err);
 
   printf("\t\e[0;32mSuccess\e[0m\n");

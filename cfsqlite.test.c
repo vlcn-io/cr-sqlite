@@ -156,10 +156,34 @@ void testGetCreateCrrIndexQuery()
   cfsql_QueryInfo *queryInfo = cfsql_queryInfo("CREATE INDEX ON foo (a, b)", &err);
   char *query = cfsql_getCreateCrrIndexQuery(queryInfo);
 
+  printf("Q: %s\n", query);
   assert(strcmp(query, "create index  \"main\".\"on__cfsql_crr\"  foo(a,b);") == 0);
 
   printf("\t\e[0;32mSuccess\e[0m\n");
   cfsql_freeQueryInfo(queryInfo);
+}
+
+void teste2e()
+{
+  printf("e2e\n");
+
+  int rc = SQLITE_OK;
+  sqlite3 *db;
+  char *err = 0;
+  cfsql_TableInfo *tableInfo = 0;
+  rc = sqlite3_open(":memory:", &db);
+
+  rc = sqlite3_exec(db, "select cfsql('create table \"foo\" (a, b)')", 0, 0, &err);
+  CHECK_OK
+
+  printf("\t\e[0;32mSuccess\e[0m\n");
+
+fail:
+  printf("err: %s %d\n", err, rc);
+  sqlite3_free(err);
+  cfsql_freeTableInfo(tableInfo);
+  sqlite3_close(db);
+  assert(rc == SQLITE_OK);
 }
 
 void cfsqlTestSuite()
@@ -170,4 +194,5 @@ void cfsqlTestSuite()
   testCreateCrrBaseTable();
   testCreateViewOfCrr();
   testGetCreateCrrIndexQuery();
+  // teste2e();
 }

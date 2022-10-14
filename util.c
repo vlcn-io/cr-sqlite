@@ -205,6 +205,8 @@ char *cfsql_extractIdentifier(char *start, char **past) {
         break;
       }
     }
+    // move before terminator
+    i -= 1;
     _past = i;
   }
 

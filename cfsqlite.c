@@ -388,6 +388,34 @@ int cfsql_addIndicesToCrrBaseTable(
   return SQLITE_OK;
 }
 
+char *cfsql_getCreateCrrBaseTableQuery(cfsql_TableInfo *tableInfo)
+{
+  char *columnDefs = cfsql_asColumnDefinitions(
+      tableInfo->withVersionCols,
+      tableInfo->withVersionColsLen);
+  char *pkList = cfsql_asIdentifierList(
+      tableInfo->pks,
+      tableInfo->pksLen,
+      0);
+  char *ret = sqlite3_mprintf("CREATE TABLE \"%s__cfsql_crr\" (\
+    %s,\
+    __cfsql_cl INT DEFAULT 1,\
+    __cfsql_src INT DEFAULT 0%s\
+    %s %s %s %s\
+  )",
+                              tableInfo->tblName,
+                              columnDefs,
+                              pkList != 0 ? "," : 0,
+                              pkList != 0 ? "PRIMARY KEY" : 0,
+                              pkList != 0 ? "(" : 0,
+                              pkList,
+                              pkList != 0 ? ")" : 0);
+
+  sqlite3_free(pkList);
+  sqlite3_free(columnDefs);
+  return ret;
+}
+
 int cfsql_createCrrBaseTable(
     sqlite3 *db,
     cfsql_TableInfo *tableInfo,
@@ -397,29 +425,7 @@ int cfsql_createCrrBaseTable(
   char *zSql = 0;
   sqlite3_stmt *pStmt = 0;
 
-  char *columnDefs = cfsql_asColumnDefinitions(
-      tableInfo->withVersionCols,
-      tableInfo->withVersionColsLen);
-  char *pkList = cfsql_asIdentifierList(
-      tableInfo->pks,
-      tableInfo->pksLen,
-      0);
-  zSql = sqlite3_mprintf("CREATE TABLE \"%s__cfsql_crr\" (\
-    %s,\
-    __cfsql_cl INT DEFAULT 1,\
-    __cfsql_src INT DEFAULT 0%s\
-    %s %s %s %s\
-  )",
-                         tableInfo->tblName,
-                         columnDefs,
-                         pkList != 0 ? "," : 0,
-                         pkList != 0 ? "PRIMARY KEY" : 0,
-                         pkList != 0 ? "(" : 0,
-                         pkList,
-                         pkList != 0 ? ")" : 0);
-
-  sqlite3_free(pkList);
-  sqlite3_free(columnDefs);
+  zSql = cfsql_getCreateCrrBaseTableQuery(tableInfo);
 
   rc = sqlite3_exec(db, zSql, 0, 0, err);
   sqlite3_free(zSql);
@@ -523,7 +529,7 @@ static void createCrr(
   cfsql_TableInfo *tableInfo = 0;
 
   // convert statement to create temp table prefixed with `cfsql_tmp__`
-  zSql = sqlite3_mprintf("CREATE TEMP TABLE cfsql_tmp__%s %s", query->tblName, query->suffix);
+  zSql = sqlite3_mprintf("CREATE TEMP TABLE \"cfsql_tmp__%s\" %s", query->tblName, query->suffix);
   rc = sqlite3_exec(db, zSql, 0, 0, &err);
 
   if (rc != SQLITE_OK)

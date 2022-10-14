@@ -435,6 +435,18 @@ int cfsql_createCrrBaseTable(
     return rc;
   }
 
+  // zSql = sqlite3_mprintf(
+  //     "CREATE INDEX \"%s__cfsql_crr_cl_idx\" ON \"%s__cfsql_crr\" (__cfsql_cl) WHERE __cfsql_cl % 2 == 1",
+  //     tableInfo->tblName,
+  //     tableInfo->tblName);
+  // rc = sqlite3_exec(db, zSql, 0, 0, err);
+  // sqlite3_free(zSql);
+
+  if (rc != SQLITE_OK)
+  {
+    return rc;
+  }
+
   // We actually never need to do this.
   // Unless we're migrating existing tables.
   // rc = cfsql_addIndicesToCrrBaseTable(
@@ -540,7 +552,6 @@ static void createCrr(
   }
 
   // extract the word after CREATE TEMP TABLE cfsql_tmp__
-  
 
   // TODO: we should get table info from the temp table
   // but use the proper table base name.

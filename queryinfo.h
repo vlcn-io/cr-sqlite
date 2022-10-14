@@ -1,3 +1,6 @@
+#ifndef CFSQLITE_QUERYINFO_H
+#define CFSQLITE_QUERYINFO_H
+
 char *cfsql_normalize(const char *zSql);
 
 typedef enum cfsql_QueryType cfsql_QueryType;
@@ -25,3 +28,5 @@ struct cfsql_QueryInfo {
 
 cfsql_QueryInfo *cfsql_queryInfo(const char *query, char **err);
 void cfsql_freeQueryInfo(cfsql_QueryInfo *queryInfo);
+
+#endif

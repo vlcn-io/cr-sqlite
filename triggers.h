@@ -1,5 +1,5 @@
-#ifndef CFSQLITE_TRIGGERS
-#define CFSQLITE_TRIGGERS
+#ifndef CFSQLITE_TRIGGERS_H
+#define CFSQLITE_TRIGGERS_H
 
 #include "cfsqlite.h"
 #include <ctype.h>

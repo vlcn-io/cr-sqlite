@@ -84,13 +84,13 @@ void testGetVersionUnionQuery()
   query = cfsql_getDbVersionUnionQuery(
       numRows_tc1,
       tableNames_tc1);
-  assert(strcmp(query, "SELECT max(version) FROM (SELECT max(version) FROM \"foo\" WHERE site_id = ?  )") == 0);
+  assert(strcmp(query, "SELECT max(version) as version FROM (SELECT max(__cfsql_version) as version FROM \"foo\" WHERE __cfsql_site_id = ?  )") == 0);
   sqlite3_free(query);
 
   query = cfsql_getDbVersionUnionQuery(
       numRows_tc2,
       tableNames_tc2);
-  assert(strcmp(query, "SELECT max(version) FROM (SELECT max(version) FROM \"foo\" WHERE site_id = ? UNION SELECT max(version) FROM \"bar\" WHERE site_id = ? UNION SELECT max(version) FROM \"baz\" WHERE site_id = ?  )") == 0);
+  assert(strcmp(query, "SELECT max(version) as version FROM (SELECT max(__cfsql_version) as version FROM \"foo\" WHERE __cfsql_site_id = ? UNION SELECT max(__cfsql_version) as version FROM \"bar\" WHERE __cfsql_site_id = ? UNION SELECT max(__cfsql_version) as version FROM \"baz\" WHERE __cfsql_site_id = ?  )") == 0);
   sqlite3_free(query);
 
   printf("\t\e[0;32mSuccess\e[0m\n");

@@ -30,13 +30,13 @@
 
 ## Inserts of new rows
 
-1. [ ] version cols start at 0
-2. [ ] cl starts at 1
-3. [ ] db version incremented
-4. [ ] clock record written with new db version and current site id for current row
+1. [x] version cols start at 0
+2. [x] cl starts at 1
+3. [x] db version incremented
+4. [x] clock record written with new db version and current site id for current row
 5. [ ] db version is not in use on any other row
-6. [ ] cols have the inserted values
-7. [ ] update src is 0
+6. [x] cols have the inserted values
+7. [x] update src is 0
 
 ## Updates of rows
 

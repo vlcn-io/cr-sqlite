@@ -1,11 +1,11 @@
 import pathlib
 from cfsql_correctness import connect, min_db_v
 
-def test_c1():
+def test_c1_min_on_init():
   c = connect(":memory:")
   assert c.execute("SELECT cfsql_dbversion()").fetchone()[0] == min_db_v
 
-def test_c2():
+def test_c2_increments():
   c = connect(":memory:")
   c.execute("select cfsql('create table foo (id primary key, a)')")
   c.execute("insert into foo values (1, 2)");
@@ -15,7 +15,7 @@ def test_c2():
   c.execute("delete from foo where id = 1")
   assert c.execute("SELECT cfsql_dbversion()").fetchone()[0] == min_db_v + 3
 
-def test_c3():
+def test_c3_restored():
   dbfile = "./dbversion_c3.db"
   pathlib.Path(dbfile).unlink(missing_ok=True)
   c = connect(dbfile)

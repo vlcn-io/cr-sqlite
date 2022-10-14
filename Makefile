@@ -100,25 +100,6 @@ $(TARGET_TEST): $(prefix) $(TARGET_SQLITE3_EXTRA_C) tests.c *.test.c $(ext_files
 	$(TARGET_SQLITE3_EXTRA_C) tests.c *.test.c $(ext_files) \
 	-o $@
 
-# test-format: SHELL:=/bin/bash
-# test-format:
-# 	diff -u <(cat $(FORMAT_FILES)) <(clang-format $(FORMAT_FILES))
-
-# test-loadable: $(TARGET_LOADABLE)
-# 	python3 tests/test-loadable.py
-
-# test-loadable-watch: $(TARGET_LOADABLE)
-# 	watchexec -w $(ext_files) -w $(TARGET_LOADABLE) -w tests/test-loadable.py --clear -- make test-loadable
-
-# test-sqlite3: $(TARGET_SQLITE3)
-# 	python3 tests/test-sqlite3.py
-
-# test-sqlite3-watch: $(TARAGET_SQLITE3)
-# 	watchexec -w $(TARAGET_SQLITE3) -w tests/test-sqlite3.py --clear -- make test-sqlite3
-
-# test-sqljs: $(TARGET_SQLJS)
-# 	python3 -m http.server & open http://localhost:8000/tests/test-sqljs.html
-
 .PHONY: all clean format \
 	test test-watch test-format \
 	loadable test-loadable test-loadable-watch

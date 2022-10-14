@@ -89,7 +89,7 @@ $(TARGET_SQLITE3_VANILLA): $(prefix) sqlite/shell.c
 $(TARGET_SQLITE3_EXTRA_C): sqlite/sqlite3.c core_init.c
 	cat sqlite/sqlite3.c core_init.c > $@
 
-$(TARGET_TEST): $(prefix) $(TARGET_SQLITE3_EXTRA_C) tests.c cfsqlite.test.c tableinfo.test.c util.test.c triggers.test.c queryinfo.test.c $(ext_files)
+$(TARGET_TEST): $(prefix) $(TARGET_SQLITE3_EXTRA_C) tests.c *.test.c $(ext_files)
 	gcc -g \
 	$(DEFINE_SQLITE_PATH) \
 	-DSQLITE_THREADSAFE=0 -DSQLITE_OMIT_LOAD_EXTENSION=1 \
@@ -97,7 +97,7 @@ $(TARGET_TEST): $(prefix) $(TARGET_SQLITE3_EXTRA_C) tests.c cfsqlite.test.c tabl
 	-DSQLITE_EXTRA_INIT=core_init \
 	-DUNIT_TEST=1 \
 	-I./ -I./sqlite \
-	$(TARGET_SQLITE3_EXTRA_C) tests.c cfsqlite.test.c tableinfo.test.c util.test.c triggers.test.c queryinfo.test.c $(ext_files) \
+	$(TARGET_SQLITE3_EXTRA_C) tests.c *.test.c $(ext_files) \
 	-o $@
 
 # test-format: SHELL:=/bin/bash

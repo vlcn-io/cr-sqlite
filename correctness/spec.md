@@ -2,27 +2,27 @@
 
 ## DB Version
 
-1. [ ] Min int on first db creation
-2. [ ] Increments with every modification to a crr datum
-3. [ ] Restored from disk on db load
-4. [ ] Always unique across all rows for this site
+1. [x] Min int on first db creation
+2. [x] Increments with every modification to a crr datum
+3. [x] Restored from disk on db load
+4. [x] Always unique across all rows for this site
 
 ## Site id
 
-1. [ ] Initialized to uuid at startup
-2. [ ] Persisted
-3. [ ] Loaded from disk if exists on disk
-4. [ ] Does not ever change after being set, even between restarts
+1. [x] Initialized to a uuid at startup
+2. [x] Persisted
+3. [x] Loaded from disk if exists on disk
+4. [x] Does not ever change after being set, even between restarts
 
 ## Schema modification
 
 1. [ ] create table
-       a. [ ] if not exists support
-       b. [ ] temp table support
-       c. [ ] quoted identifiers
-       d. [ ] no primary keys table
-       e. [ ] compound primary key table
-       f. [ ] single primary key
+   1. [ ] if not exists support
+   2. [ ] temp table support
+   3. [x] quoted identifiers
+   4. [x] no primary keys table
+   5. [x] compound primary key table
+   6. [x] single primary key
 2. [ ] create index
 3. [ ] drop index
 4. [ ] drop table
@@ -82,9 +82,9 @@
 ## Merging remote changes
 
 1. [ ] merges against a row are idempotent
-       a. [ ] merging an old row (by vclock) does not change the new row
-       b. [ ] merging a row with an identical copy of itself does not change the row
-       c. [ ] reapplications of a merge, after the first, does not impact the state of the row
+    1. [ ] merging an old row (by vclock) does not change the new row
+    2. [ ] merging a row with an identical copy of itself does not change the row
+    3. [ ] reapplications of a merge, after the first, does not impact the state of the row
 2. [ ] update src is set to 1
 3. [ ] only columns with higher versions are taken
 4. [ ] if versions match for a column, the greater value is taken

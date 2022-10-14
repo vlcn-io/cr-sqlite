@@ -1,8 +1,5 @@
-import sqlite3
 import pathlib
 from cfsql_correctness import connect, min_db_v
-
-db_file = './correctness.db'
 
 def test_c1():
   c = connect(":memory:")

@@ -196,7 +196,7 @@ char *cfsql_extractIdentifier(char *start, char **past) {
     // move past quote
     start += 1;
     // move after the quote for _past
-    _past = i + 1;
+    _past = i;
     // move before quote
     i -= 1;
   } else {
@@ -205,8 +205,7 @@ char *cfsql_extractIdentifier(char *start, char **past) {
         break;
       }
     }
-    // move before terminator
-    i -= 1;
+    
     _past = i;
   }
 

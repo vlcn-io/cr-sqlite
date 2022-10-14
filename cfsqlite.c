@@ -525,28 +525,26 @@ static void createCrr(
   int rc = SQLITE_OK;
   char *zSql = 0;
   char *err = 0;
-  char *tblName = 0;
   cfsql_TableInfo *tableInfo = 0;
 
   // convert statement to create temp table prefixed with `cfsql_tmp__`
   zSql = sqlite3_mprintf("CREATE TEMP TABLE \"cfsql_tmp__%s\" %s", query->tblName, query->suffix);
   rc = sqlite3_exec(db, zSql, 0, 0, &err);
+  sqlite3_free(zSql);
 
   if (rc != SQLITE_OK)
   {
-    sqlite3_free(zSql);
     sqlite3_result_error(context, err, -1);
     sqlite3_free(err);
     return;
   }
 
   // extract the word after CREATE TEMP TABLE cfsql_tmp__
-  tblName = cfsql_extractWord(CREATE_TEMP_TABLE_CFSQL_LEN, zSql);
-  sqlite3_free(zSql);
+  
 
   // TODO: we should get table info from the temp table
   // but use the proper table base name.
-  char *tmpTblName = sqlite3_mprintf("cfsql_tmp__%s", tblName);
+  char *tmpTblName = sqlite3_mprintf("cfsql_tmp__%s", query->tblName);
   rc = cfsql_getTableInfo(
       db,
       USER_SPACE,
@@ -556,7 +554,6 @@ static void createCrr(
 
   if (rc != SQLITE_OK)
   {
-    sqlite3_free(tblName);
     sqlite3_free(tmpTblName);
     sqlite3_result_error(context, err, -1);
     sqlite3_free(err);
@@ -565,11 +562,10 @@ static void createCrr(
   }
 
   // We only needed the temp table to extract pragma info
-  zSql = sqlite3_mprintf("DROP TABLE temp.cfsql_tmp__%s", tblName);
+  zSql = sqlite3_mprintf("DROP TABLE temp.cfsql_tmp__%s", query->tblName);
   rc = sqlite3_exec(db, zSql, 0, 0, &err);
   sqlite3_free(zSql);
-  tableInfo->tblName = strdup(tblName);
-  sqlite3_free(tblName);
+  tableInfo->tblName = strdup(query->tblName);
   sqlite3_free(tmpTblName);
   if (rc != SQLITE_OK)
   {

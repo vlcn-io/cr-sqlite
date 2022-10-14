@@ -153,11 +153,12 @@ void testGetCreateCrrIndexQuery()
 {
   printf("GetCreateCrrIndexQuery\n");
   char *err;
-  cfsql_QueryInfo *queryInfo = cfsql_queryInfo("CREATE INDEX ON foo (a, b)", &err);
+  cfsql_QueryInfo *queryInfo = cfsql_queryInfo("CREATE INDEX boo ON foo (a, b)", &err);
   char *query = cfsql_getCreateCrrIndexQuery(queryInfo);
 
   printf("Q: %s\n", query);
-  assert(strcmp(query, "create index  \"main\".\"on__cfsql_crr\"  foo(a,b);") == 0);
+  // TODO: this is wrong
+  assert(strcmp(query, "create index  \"main\".\"boo__cfsql_crr\"  on foo(a,b);") == 0);
 
   printf("\t\e[0;32mSuccess\e[0m\n");
   cfsql_freeQueryInfo(queryInfo);
@@ -177,6 +178,7 @@ void teste2e()
   CHECK_OK
 
   printf("\t\e[0;32mSuccess\e[0m\n");
+  return;
 
 fail:
   printf("err: %s %d\n", err, rc);
@@ -194,5 +196,5 @@ void cfsqlTestSuite()
   testCreateCrrBaseTable();
   testCreateViewOfCrr();
   testGetCreateCrrIndexQuery();
-  // teste2e();
+  teste2e();
 }

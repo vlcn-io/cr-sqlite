@@ -51,6 +51,7 @@ void testExtractIdentifier() {
   printf("ExtractIdentifier\n");
 
   assert(strcmp(cfsql_extractIdentifier("[foo].[bar]", &past), "foo") == 0);
+  printf("s %s\n", cfsql_extractIdentifier("foo.bar", &past));
   assert(strcmp(cfsql_extractIdentifier("foo.bar", &past), "foo") == 0);
   assert(strcmp(cfsql_extractIdentifier("[foo](", &past), "foo") == 0);
   assert(strcmp(cfsql_extractIdentifier("[foo] ", &past), "foo") == 0);

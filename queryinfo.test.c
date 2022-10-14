@@ -26,7 +26,6 @@ static void checkQueryInfo(cfsql_QueryInfo *result, cfsql_QueryInfo *expected, c
     assert(strcmp(result->reformedQuery, expected->reformedQuery) == 0);
   }
   if (result->suffix != expected->suffix) {
-    printf("S: %s\n", result->suffix);
     assert(strcmp(result->suffix, expected->suffix) == 0);
   }
   if (result->prefix != expected->prefix) {
@@ -43,7 +42,7 @@ void testQueryInfo()
   char *err = 0;
 
   result = cfsql_queryInfo("CREATE   TABLE [foo] (a, b);", &err);
-  expected->prefix = "create table ";
+  expected->prefix = "create table";
   expected->suffix = "(a,b);";
   expected->tblName = "foo";
   expected->reformedQuery = "create table[foo](a,b);";
@@ -54,6 +53,7 @@ void testQueryInfo()
   checkQueryInfo(result, expected, err);
 
   result = cfsql_queryInfo("create table foo (a, b);", &err);
+  expected->prefix = "create table ";
   expected->reformedQuery = "create table foo(a,b);";
   checkQueryInfo(result, expected, err);
 
@@ -64,6 +64,7 @@ void testQueryInfo()
   checkQueryInfo(result, expected, err);
 
   result = cfsql_queryInfo("create table \"foo\" (a, b)", &err);
+  expected->prefix = "create table";
   expected->reformedQuery = "create table\"foo\"(a,b);";
   checkQueryInfo(result, expected, err);
 

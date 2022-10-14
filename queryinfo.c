@@ -224,6 +224,9 @@ cfsql_QueryInfo *queryInfoForCreateIndex(char *normalized, char **err)
   }
 
   cfsql_extractSchemaTblNamePrefixSuffix(normalized, newStart, ret);
+
+  // TODO: `on` part and table name.
+
   ret->type = CREATE_INDEX;
   ret->reformedQuery = normalized;
   return ret;

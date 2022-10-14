@@ -1,5 +1,9 @@
 todo:
 
+- e2e tests in c
+- loadable tests in py
+- perf notebook
+  https://stackoverflow.com/questions/35545402/how-to-run-an-ipynb-jupyter-notebook-from-terminal
 - test normalization does everything expected in all cases.
   e.g., spaces around `.`
 - remove `` prefix on source files

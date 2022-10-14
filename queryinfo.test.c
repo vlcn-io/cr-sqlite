@@ -36,6 +36,8 @@ void testQueryInfo()
   char *err = 0;
 
   result = cfsql_queryInfo("CREATE   TABLE [foo] (a, b);", &err);
+  expected->prefix = "create table ";
+  expected->suffix = "(a,b);";
   expected->tblName = "foo";
   expected->reformedQuery = "create table[foo](a,b);";
   checkQueryInfo(result, expected, err);
@@ -49,7 +51,7 @@ void testQueryInfo()
   checkQueryInfo(result, expected, err);
 
   result = cfsql_queryInfo("create table main.foo (a, b);", &err);
-  printf("R: %s\n", result->tblName);
+  // printf("R: %s\n", result->tblName);
   expected->reformedQuery = "create table main.foo(a,b);";
   expected->schemaName = "main";
   checkQueryInfo(result, expected, err);

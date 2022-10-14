@@ -168,7 +168,7 @@ char *cfsql_extractWord(
   return tblName;
 }
 
-char *cfsql_extractIdentifier(const char *start, int *past) {
+char *cfsql_extractIdentifier(char *start, char **past) {
   int i = 0;
   char closeQuote = '"';
   const char *splitPoint = 0;
@@ -206,9 +206,6 @@ char *cfsql_extractIdentifier(const char *start, int *past) {
       }
     }
     _past = i;
-    if (start[i] == '.') {
-      _past += 1;
-    }
   }
 
   splitPoint = start + i;
@@ -217,7 +214,7 @@ char *cfsql_extractIdentifier(const char *start, int *past) {
   char * ret = sqlite3_malloc(len + 1);
   ret[len] = '\0';
   strncpy(ret, start, len);
-  *past = _past;
+  *past = start + _past;
 
   return ret;
 }

@@ -38,7 +38,7 @@ cfsql_QueryInfo *cfsql_newQueryInfo()
  * requires unique handling in the crr layer.
  *
  * The provided query must be a normalized query.
- * 
+ *
  * We don't need a full fledge parser yet
  * so we're just scanning through the nomralized query.
  */
@@ -76,22 +76,30 @@ static int determineQueryType(const char *query, char **err)
   return SQLITE_MISUSE;
 }
 
-void cfsql_extractSchemaAndTblName(char * start, cfsql_QueryInfo* ret) {
-  int past;
-  char * identifier1 = cfsql_extractIdentifier(start, &past);
-  char * identifier2 = 0;
+void cfsql_extractSchemaTblNamePrefixSuffix(char *normalized, char *start, cfsql_QueryInfo *ret)
+{
+  char *past = 0;
+  char *identifier1 = cfsql_extractIdentifier(start, &past);
+  char *identifier2 = 0;
   int id1len = strlen(identifier1);
 
-  if (start[id1len] == '.') {
-    identifier2 = cfsql_extractIdentifier(start + past, &past);
+  if (start[id1len] == '.')
+  {
+    identifier2 = cfsql_extractIdentifier(past + 1, &past);
   }
 
-  if (identifier2 != 0) {
+  if (identifier2 != 0)
+  {
     ret->schemaName = identifier1;
     ret->tblName = identifier2;
-  } else {
+  }
+  else
+  {
     ret->tblName = identifier1;
   }
+
+  ret->prefix = strndup(normalized, start - normalized);
+  ret->suffix = strdup(past);
 }
 
 cfsql_QueryInfo *queryInfoForCreateTable(char *normalized, char **err)
@@ -101,10 +109,13 @@ cfsql_QueryInfo *queryInfoForCreateTable(char *normalized, char **err)
   // chunk into tokens
   char *newStart = normalized + 7;
 
-  if (strncmp(newStart, "temporary", 9) == 0) {
+  if (strncmp(newStart, "temporary", 9) == 0)
+  {
     ret->isTemp = 1;
     newStart += 10;
-  } else if (strncmp(newStart, "temp", 4) == 0) {
+  }
+  else if (strncmp(newStart, "temp", 4) == 0)
+  {
     ret->isTemp = 1;
     newStart += 5;
   }
@@ -112,20 +123,23 @@ cfsql_QueryInfo *queryInfoForCreateTable(char *normalized, char **err)
   // skip past "table"
   newStart += 5;
 
-  if (*newStart == ' ') {
+  if (*newStart == ' ')
+  {
     newStart += 1;
   }
 
-  if (strncmp(newStart, "if not exists", 13) == 0) {
+  if (strncmp(newStart, "if not exists", 13) == 0)
+  {
     ret->ifNotExists = 1;
     newStart += 13;
   }
 
-  if (*newStart == ' ') {
+  if (*newStart == ' ')
+  {
     newStart += 1;
   }
 
-  cfsql_extractSchemaAndTblName(newStart, ret);
+  cfsql_extractSchemaTblNamePrefixSuffix(normalized, newStart, ret);
 
   ret->type = CREATE_TABLE;
   ret->reformedQuery = normalized;

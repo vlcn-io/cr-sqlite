@@ -47,7 +47,7 @@ void testExtractWord()
 }
 
 void testExtractIdentifier() {
-  int past;
+  char *past = 0;
   printf("ExtractIdentifier\n");
 
   assert(strcmp(cfsql_extractIdentifier("[foo].[bar]", &past), "foo") == 0);

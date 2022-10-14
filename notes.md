@@ -25,6 +25,7 @@ todo:
 - additional indices on clock tables to facilitate delta extraction?
 - just throw if no primary key is specified on create rather than allowing the create?
 - perf test cases
+- version index?
 
   ```
   sqlite> create table """foo""" (a);

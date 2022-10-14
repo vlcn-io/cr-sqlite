@@ -1,2 +1,4 @@
 sqlite/* linguist-vendored
 wasm/* linguist-vendored
+analyze/* linguist-documentation
+

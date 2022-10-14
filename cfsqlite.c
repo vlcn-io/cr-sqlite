@@ -724,7 +724,7 @@ static void cfsqlFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
   query = (char *)sqlite3_value_text(argv[0]);
   found = strstr(query, ";");
 
-  if (found != NULL)
+  if (found != NULL && *(found + 1) != '\0')
   {
     // TODO: relax this limitation one day
     sqlite3_result_error(context, "You may not pass multiple statements to cfsql yet. Run one statement at a time.", -1);

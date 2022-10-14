@@ -206,7 +206,8 @@ static int initDbVersion(sqlite3 *db)
   }
 
   if (rNumRows == 0)
-  {
+  { 
+    dbVersionSet = 1;
     sqlite3_free_table(rClockTableNames);
     return rc;
   }
@@ -227,19 +228,31 @@ static int initDbVersion(sqlite3 *db)
   for (i = 0; i < rNumRows; ++i)
   {
     // SQLITE_STATIC since the site id never changes.
-    sqlite3_bind_blob(pStmt, i, siteIdBlob, siteIdBlobSize, SQLITE_STATIC);
+    // binds are 1 indexed
+    rc += sqlite3_bind_blob(pStmt, i + 1, siteIdBlob, siteIdBlobSize, SQLITE_STATIC);
+  }
+  if (rc != SQLITE_OK) {
+    sqlite3_finalize(pStmt);
+    return rc;
   }
 
   rc = sqlite3_step(pStmt);
   // No rows? Then we're a fresh DB with the min starting version
-  if (rc != SQLITE_ROW)
+  if (rc == SQLITE_DONE)
   {
     dbVersionSet = 1;
     sqlite3_finalize(pStmt);
     return rc;
   }
 
+  // error condition
+  if (rc != SQLITE_ROW) {
+    sqlite3_finalize(pStmt);
+    return rc;
+  }
+
   // had a row? grab the version returned to us
+  // columns are 0 indexed.
   dbVersion = sqlite3_column_int64(pStmt, 0);
   dbVersionSet = 1;
   sqlite3_finalize(pStmt);

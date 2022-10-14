@@ -240,7 +240,7 @@ char *cfsql_getDbVersionUnionQuery(
   for (i = 0; i < numRows; ++i)
   {
     unionsArr[i] = sqlite3_mprintf(
-        "SELECT max(version) FROM \"%w\" WHERE site_id = ? %s ",
+        "SELECT max(__cfsql_version) as version FROM \"%w\" WHERE __cfsql_site_id = ? %s ",
         // the first result in tableNames is the column heading
         // so skip that
         tableNames[i + 1],
@@ -259,7 +259,7 @@ char *cfsql_getDbVersionUnionQuery(
   // compose the final query
   // and update the pointer to the string to point to it.
   ret = sqlite3_mprintf(
-      "SELECT max(version) FROM (%z)",
+      "SELECT max(version) as version FROM (%z)",
       unionsStr);
   // %z frees unionsStr https://www.sqlite.org/printf.html#percentz
   return ret;

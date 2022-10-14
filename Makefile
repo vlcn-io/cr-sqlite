@@ -49,6 +49,8 @@ $(prefix):
 clean:
 	rm -rf dist/*
 
+FORCE: ;
+
 FORMAT_FILES=$(ext_files) $(ext_headers) core_init.c
 format: $(FORMAT_FILES)
 	clang-format -i $(FORMAT_FILES)
@@ -59,6 +61,8 @@ vanilla: $(TARGET_SQLITE3_VANILLA)
 sqljs: $(TARGET_SQLJS)
 test: $(TARGET_TEST)
 	./dist/test
+correctness: $(TARGET_LOADABLE) FORCE
+	cd ./correctness && pytest
 
 $(TARGET_LOADABLE): $(ext_files)
 	gcc -I./ -I./sqlite \

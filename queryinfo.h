@@ -28,5 +28,6 @@ struct cfsql_QueryInfo {
 
 cfsql_QueryInfo *cfsql_queryInfo(const char *query, char **err);
 void cfsql_freeQueryInfo(cfsql_QueryInfo *queryInfo);
+cfsql_QueryInfo *cfsql_newQueryInfo();
 
 #endif

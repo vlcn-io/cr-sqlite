@@ -12,7 +12,7 @@ SQLITE_EXTENSION_INIT3
 #include <assert.h>
 #include <string.h>
 
-static cfsql_QueryInfo *newQueryInfo()
+cfsql_QueryInfo *cfsql_newQueryInfo()
 {
   cfsql_QueryInfo *ret = sqlite3_malloc(sizeof *ret);
 
@@ -44,12 +44,12 @@ static int determineQueryType(const char *query, char **err)
   int rc = SQLITE_OK;
 
   // https://www.sqlite.org/lang_createtable.html
-  if (strncmp("create temp", query, 12) == 0 || strncmp("create table", query, 13) == 0)
+  if (strncmp("create temp", query, 11) == 0 || strncmp("create table", query, 12) == 0)
   {
     return CREATE_TABLE;
   }
   // https://www.sqlite.org/lang_createindex.html
-  if (strncmp("create unique", query, 14) == 0 || strncmp("create index", query, CREATE_INDEX_LEN) == 0)
+  if (strncmp("create unique", query, 13) == 0 || strncmp("create index", query, CREATE_INDEX_LEN) == 0)
   {
     return CREATE_INDEX;
   }
@@ -70,7 +70,6 @@ static int determineQueryType(const char *query, char **err)
   }
 
   *err = sqlite3_mprintf("Unknown schema modification statement provided: %s", query);
-
   return SQLITE_MISUSE;
 }
 
@@ -80,7 +79,8 @@ void cfsql_extractSchemaAndTblName(char * start, cfsql_QueryInfo* ret) {
   int id1len = strlen(identifier1);
 
   if (start[id1len] == '.') {
-    identifier2 = cfsql_extractIdentifier(start + id1len);
+    // + 1 to skip .
+    identifier2 = cfsql_extractIdentifier(start + id1len + 1);
   }
 
   if (identifier2 != 0) {
@@ -93,7 +93,7 @@ void cfsql_extractSchemaAndTblName(char * start, cfsql_QueryInfo* ret) {
 
 cfsql_QueryInfo *queryInfoForCreateTable(char *normalized, char **err)
 {
-  cfsql_QueryInfo *ret = newQueryInfo();
+  cfsql_QueryInfo *ret = cfsql_newQueryInfo();
 
   // chunk into tokens
   char *newStart = normalized + 7;
@@ -106,15 +106,21 @@ cfsql_QueryInfo *queryInfoForCreateTable(char *normalized, char **err)
     newStart += 5;
   }
 
-  // skip past "table "
-  newStart += 6;
+  // skip past "table"
+  newStart += 5;
 
-  if (strncmp(newStart, "if", 2) == 0) {
-    ret->ifExists = 1;
+  if (*newStart == ' ') {
+    newStart += 1;
   }
 
-  // skip past "if not exist "
-  newStart += 14;
+  if (strncmp(newStart, "if not exists", 13) == 0) {
+    ret->ifNotExists = 1;
+    newStart += 13;
+  }
+
+  if (*newStart == ' ') {
+    newStart += 1;
+  }
 
   cfsql_extractSchemaAndTblName(newStart, ret);
 
@@ -175,14 +181,19 @@ cfsql_QueryInfo *cfsql_queryInfo(const char *query, char **err)
   {
   case CREATE_TABLE:
     ret = queryInfoForCreateTable(normalized, err);
+    break;
   case DROP_TABLE:
     ret = queryInfoForDropTable(normalized, err);
+    break;
   case ALTER_TABLE:
     ret = queryInfoForAlterTable(normalized, err);
+    break;
   case CREATE_INDEX:
     ret = queryInfoForCreateIndex(normalized, err);
+    break;
   case DROP_INDEX:
     ret = queryInfoForDropIndex(normalized, err);
+    break;
   default:
     assert("impossible");
   }

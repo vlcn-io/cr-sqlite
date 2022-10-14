@@ -514,7 +514,7 @@ int cfsql_createPatchView(
 static void createCrr(
     sqlite3_context *context,
     sqlite3 *db,
-    const char *query)
+    cfsql_QueryInfo *query)
 {
   int rc = SQLITE_OK;
   char *zSql = 0;
@@ -523,7 +523,7 @@ static void createCrr(
   cfsql_TableInfo *tableInfo = 0;
 
   // convert statement to create temp table prefixed with `cfsql_tmp__`
-  zSql = sqlite3_mprintf("CREATE TEMP TABLE cfsql_tmp__%s", query + CREATE_TABLE_LEN + 1);
+  zSql = sqlite3_mprintf("CREATE TEMP TABLE cfsql_tmp__%s %s", query->tblName, query->suffix);
   rc = sqlite3_exec(db, zSql, 0, 0, &err);
 
   if (rc != SQLITE_OK)
@@ -607,14 +607,13 @@ static void createCrr(
 static int dropCrr(
     sqlite3_context *context,
     sqlite3 *db,
-    const char *query,
+    cfsql_QueryInfo *query,
     char **err)
 {
   char *zSql = 0;
-  char *tblName = cfsql_extractWord(DROP_TABLE_LEN + 1, query);
   int rc = SQLITE_OK;
 
-  zSql = sqlite3_mprintf("DROP TABLE \"%s\"", tblName);
+  zSql = sqlite3_mprintf("DROP TABLE \"%s\".\"%s\"", query->schemaName, query->tblName);
   rc = sqlite3_exec(db, zSql, 0, 0, err);
   sqlite3_free(zSql);
   if (rc != SQLITE_OK)
@@ -622,7 +621,7 @@ static int dropCrr(
     return rc;
   }
 
-  zSql = sqlite3_mprintf("DROP TABLE \"%s\"__cfsql_clock", tblName);
+  zSql = sqlite3_mprintf("DROP TABLE \"%s\".\"%s\"__cfsql_clock", query->schemaName, query->tblName);
   rc = sqlite3_exec(db, zSql, 0, 0, err);
   sqlite3_free(zSql);
   if (rc != SQLITE_OK)
@@ -634,41 +633,19 @@ static int dropCrr(
 }
 
 char *cfsql_getCreateCrrIndexQuery(
-    const char *query)
+    cfsql_QueryInfo *query)
 {
-  char *onPtr = strcasestr(query, " ON ");
-
-  if (onPtr == 0)
-  {
-    return 0;
-  }
-
-  int queryPrefixLen = (onPtr + 4) - query;
-  char *origTblName = cfsql_extractWord(queryPrefixLen, query);
-  char *newTblName = sqlite3_mprintf("\"%s__cfsql_crr\"", origTblName);
-  // + 11 for len of `__cfsql_crr`
-  int newQueryLen = strlen(query) + 11;
-  // + 1 for null terminator
-  char *newQuery = sqlite3_malloc((newQueryLen + 1) * sizeof(char));
-  newQuery[newQueryLen] = '\0';
-
-  int newTblNameLen = strlen(newTblName);
-  int origTblNameLen = strlen(origTblName);
-
-  // copy from query[0] to query[onPtr + 4] into newQuery
-  memcpy(newQuery, query, queryPrefixLen);
-  // copy newTblName into newQuery
-  memcpy(newQuery + queryPrefixLen, newTblName, newTblNameLen);
-  // copy query[onPtr + 4 + origTblNameLen] into newQuery.
-  memcpy(newQuery + queryPrefixLen + newTblNameLen, query + queryPrefixLen + origTblNameLen, strlen(query) - queryPrefixLen - origTblNameLen);
-
-  return newQuery;
+  return sqlite3_mprintf("%s \"%s\".\"%s__cfsql_crr\" %s",
+                         query->prefix,
+                         query->schemaName,
+                         query->tblName,
+                         query->suffix);
 }
 
 static int createCrrIndex(
     sqlite3_context *context,
     sqlite3 *db,
-    const char *query,
+    cfsql_QueryInfo *query,
     char **err)
 {
   int rc = SQLITE_OK;
@@ -690,10 +667,10 @@ static int createCrrIndex(
 static int dropCrrIndex(
     sqlite3_context *context,
     sqlite3 *db,
-    const char *query,
+    cfsql_QueryInfo *query,
     char **err)
 {
-  return sqlite3_exec(db, query, 0, 0, err);
+  return sqlite3_exec(db, query->reformedQuery, 0, 0, err);
 }
 
 static void alterCrr()
@@ -754,8 +731,9 @@ static void cfsqlFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
     return;
   }
 
-  cfsql_QueryInfo* queryInfo = cfsql_queryInfo(query, &errmsg);
-  if (queryInfo == 0) {
+  cfsql_QueryInfo *queryInfo = cfsql_queryInfo(query, &errmsg);
+  if (queryInfo == 0)
+  {
     return;
   }
 
@@ -773,16 +751,16 @@ static void cfsqlFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
   switch (queryInfo->type)
   {
   case CREATE_TABLE:
-    createCrr(context, db, queryInfo->reformedQuery);
+    createCrr(context, db, queryInfo);
     break;
   case DROP_TABLE:
-    dropCrr(context, db, queryInfo->reformedQuery, &errmsg);
+    dropCrr(context, db, queryInfo, &errmsg);
     break;
   case CREATE_INDEX:
-    createCrrIndex(context, db, queryInfo->reformedQuery, &errmsg);
+    createCrrIndex(context, db, queryInfo, &errmsg);
     break;
   case DROP_INDEX:
-    dropCrrIndex(context, db, queryInfo->reformedQuery, &errmsg);
+    dropCrrIndex(context, db, queryInfo, &errmsg);
     break;
   case ALTER_TABLE:
     alterCrr();

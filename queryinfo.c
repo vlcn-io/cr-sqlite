@@ -20,7 +20,7 @@ cfsql_QueryInfo *cfsql_newQueryInfo()
   ret->ifNotExists = 0;
   ret->prefix = 0;
   ret->suffix = 0;
-  ret->schemaName = 0;
+  ret->schemaName = strdup("main");
   ret->tblName = 0;
   ret->type = 0;
   ret->isTemp = 0;

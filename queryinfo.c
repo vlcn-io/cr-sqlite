@@ -204,6 +204,10 @@ cfsql_QueryInfo *queryInfoForCreateIndex(char *normalized, char **err)
     newStart += 12;
   }
 
+  if (strncmp(newStart, "index", 5) == 0) {
+    newStart += 6;
+  }
+
   if (*newStart == ' ')
   {
     newStart += 1;
@@ -232,7 +236,7 @@ cfsql_QueryInfo *queryInfoForDropIndex(char *normalized, char **err)
   // +10 for "drop index"
   char *newStart = normalized + 10;
 
-  if (strncmp(newStart, "if exists", 10) == 0) {
+  if (strncmp(newStart, "if exists", 9) == 0) {
     ret->ifExists = 1;
     newStart += 10;
   }

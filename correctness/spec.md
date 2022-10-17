@@ -24,9 +24,12 @@
    5. [x] compound primary key table
    6. [x] single primary key
 2. [ ] create index
+   1. [ ] create unique index not allowed
 3. [ ] drop index
 4. [ ] drop table
 5. [ ] alter table
+6. [ ] table constraints
+   1. [ ] fk constraints not allowed
 
 ## Inserts of new rows
 

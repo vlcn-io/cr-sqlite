@@ -670,21 +670,13 @@ static void alterCrr()
 }
 
 /**
- * TODO: write some end to end tests against this function
- * Interface to create and modify crrs.
- *
- * `select cfsql('CREATE TABLE foo (bar)')`
- *
- * Handles:
- * - create table
- * - drop table
- * - create index
- * - drop index
- * - alter table
+ * Takes a table name and turns it into a CRR.
+ * 
+ * This allows users to create and modify tables as normal.
  */
-static void cfsqlFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
+static void cfsqlMakeCrrFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
-  const char *query = 0;
+  const char *tblName = 0;
   int rc = SQLITE_OK;
   char *found = 0;
   int queryType = -1;
@@ -692,21 +684,7 @@ static void cfsqlFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
   char *errmsg = 0;
   char *normalized = 0;
 
-  query = (const char *)sqlite3_value_text(argv[0]);
-  found = strstr(query, ";");
-
-  if (found != NULL && *(found + 1) != '\0')
-  {
-    // TODO: relax this limitation one day
-    sqlite3_result_error(context, "You may not pass multiple statements to cfsql yet. Run one statement at a time.", -1);
-    return;
-  }
-
-  cfsql_QueryInfo *queryInfo = cfsql_queryInfo(query, &errmsg);
-  if (queryInfo == 0)
-  {
-    return;
-  }
+  tblName = (const char *)sqlite3_value_text(argv[0]);
 
   // TODO: likely need this to be a sub-transaction
   rc = sqlite3_exec(db, "BEGIN", 0, 0, &errmsg);
@@ -719,28 +697,27 @@ static void cfsqlFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
   }
 
   // TODO: pass and use errmsg, check return codes
-  switch (queryInfo->type)
-  {
-  case CREATE_TABLE:
-    createCrr(context, db, queryInfo);
-    break;
-  case DROP_TABLE:
-    dropCrr(context, db, queryInfo, &errmsg);
-    break;
-  case CREATE_INDEX:
-    createCrrIndex(context, db, queryInfo, &errmsg);
-    break;
-  case DROP_INDEX:
-    dropCrrIndex(context, db, queryInfo, &errmsg);
-    break;
-  case ALTER_TABLE:
-    alterCrr();
-    break;
-  default:
-    break;
-  }
+  // switch (queryInfo->type)
+  // {
+  // case CREATE_TABLE:
+  //   createCrr(context, db, queryInfo);
+  //   break;
+  // case DROP_TABLE:
+  //   dropCrr(context, db, queryInfo, &errmsg);
+  //   break;
+  // case CREATE_INDEX:
+  //   createCrrIndex(context, db, queryInfo, &errmsg);
+  //   break;
+  // case DROP_INDEX:
+  //   dropCrrIndex(context, db, queryInfo, &errmsg);
+  //   break;
+  // case ALTER_TABLE:
+  //   alterCrr();
+  //   break;
+  // default:
+  //   break;
+  // }
 
-  cfsql_freeQueryInfo(queryInfo);
   sqlite3_exec(db, "COMMIT", 0, 0, 0);
 }
 
@@ -860,12 +837,12 @@ __declspec(dllexport)
     // Only register a commit hook, not update or pre-update, since all rows in the same transaction
     // should have the same clock value.
     // This allows us to replicate them together and ensure more consistency.
-    rc = sqlite3_create_function(db, "cfsql", 1,
+    rc = sqlite3_create_function(db, "cfsql_make_crr", 1,
                                  // cfsql should only ever be used at the top level
                                  // and does a great deal to modify
                                  // existing database state. directonly.
                                  SQLITE_UTF8 | SQLITE_DIRECTONLY,
-                                 0, cfsqlFunc, 0, 0);
+                                 0, cfsqlMakeCrrFunc, 0, 0);
   }
 
   return rc;

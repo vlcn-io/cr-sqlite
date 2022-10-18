@@ -1,4 +1,5 @@
 from cfsql_correctness import connect, min_db_v
+import pprint
 
 # Using this to prototype sync rather than test it.
 
@@ -38,7 +39,11 @@ def insert_data(c):
 
   c.execute("COMMIT")
 
+def get_changes_since(db, version, requestor):
+  return 1
+
 def test_changes_since():
+  pp = pprint.PrettyPrinter(indent=2)
   dbs = init()
   c = dbs[0]
   clock_tables = c.execute("SELECT tbl_name FROM sqlite_master WHERE type='table' AND tbl_name LIKE '%__cfsql_clock'").fetchall()
@@ -47,26 +52,38 @@ def test_changes_since():
 
   # the extension will need to get table info for the clock tables
   # and extract pk columns to quote-concat as pk. ~'~
-  format_str = "SELECT quote(id) as pk, json_group_object(\"__cfsql_col_num\", \"__cfsql_version\") as col_vs, max(rowid) as rid FROM {tbl}__cfsql_clock WHERE __cfsql_site_id != ? AND __cfsql_version > ? GROUP BY pk"
+  format_str = "SELECT quote(id) as pk, '{tbl}' as tbl, json_group_object(\"__cfsql_col_num\", \"__cfsql_version\") as col_vs, max(rowid) as rid FROM {tbl}__cfsql_clock WHERE __cfsql_site_id != x'{siteid}' AND __cfsql_version > {vers} GROUP BY pk"
   unions = [
-    format_str.format(tbl="user"),
-    format_str.format(tbl="deck"),
-    format_str.format(tbl="slide"),
-    format_str.format(tbl="component"),
+    format_str.format(tbl="user", vers=min_db_v, siteid="FF"), # TODO: get the actual site id
+    format_str.format(tbl="deck", vers=min_db_v, siteid="FF"),
+    format_str.format(tbl="slide", vers=min_db_v, siteid="FF"),
+    format_str.format(tbl="component", vers=min_db_v, siteid="FF"),
   ]
-
-  for u in unions:
-    r = c.execute(u, ("to-use-real-site-id", min_db_v)).fetchall()
-    print(r)
   
-  "SELECT pk, col_vs, rid FROM () WHERE "
+  complete_query = "SELECT tbl, pk, rid, col_vs FROM ( {unions} ) ".format(unions=" UNION ".join(unions))
 
-  # for row in clock_tables:
-    # Each table needs special case handling to correctly pull primary keys
-    # unions.append("SELECT __cfsql_version as version, __cfsql_col_num as cid, ")
+  r = c.execute(complete_query, ()).fetchall()
+  pp.pprint(r)
 
   return 1
 
 def test_patch():
-  # ..
+  # unroll each change
+  # apply to table if lww rules pass
+  # do this in a tx
+
+  # also..
+  # may be more easily done against a patch view?
+
+  # Sketch:
+  # for each row,
+  # select that row's clock entries in the target site
+  #
+  # compare to figure out what overwrites. Do not use value based ruling rather us
+  # version and peer id.
+  #
+  # Once we know what overwrites, craft an insert query for those columns on that row
+  #   this requires table info again given we need to go from cid to name?
+  #
+  # do comparison against 
   return 1

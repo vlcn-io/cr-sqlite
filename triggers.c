@@ -107,7 +107,7 @@ char *cfsql_updateClocksStr(cfsql_TableInfo *tableInfo, int isDelete)
       "INSERT INTO \"%s__cfsql_clock\" (\"__cfsql_site_id\", \"__cfsql_version\", %s)\
       VALUES (\
         cfsql_siteid(),\
-        cfsql_nextdbversion(),\
+        cfsql_dbversion(),\
         %s\
       )\
       ON CONFLICT (\"__cfsql_site_id\", %s) DO UPDATE SET\

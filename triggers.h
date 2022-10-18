@@ -4,7 +4,7 @@
 #include "cfsqlite.h"
 #include <ctype.h>
 
-int cfsql_createCrrViewTriggers(
+int cfsql_createCrrTriggers(
     sqlite3 *db,
     cfsql_TableInfo *tableInfo,
     char **err);

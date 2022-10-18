@@ -288,16 +288,11 @@ static void dbVersionFunc(sqlite3_context *context, int argc, sqlite3_value **ar
   sqlite3_result_int64(context, dbVersion);
 }
 
-/**
- * Return the next version of the database for use in inserts/updates/deletes
- *
- * `select cfsql_nextdbversion()`
- */
-static void nextDbVersionFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
+static int commitHook(void *cd)
 {
-  // dbVersion is an atomic int thus `++dbVersion` is a CAS and will always return
-  // a unique version for the given invocation, even under concurrent accesses.
-  sqlite3_result_int64(context, ++dbVersion);
+  // this is an atomic int so this increment is thread safe.
+  dbVersion++;
+  return 0;
 }
 
 /**
@@ -413,7 +408,7 @@ static int createCrr(
   rc = cfsql_createClockTable(db, tableInfo, err);
   if (rc == SQLITE_OK)
   {
-    // rc = cfsql_createCrrTriggers(db, tableInfo, err);
+    rc = cfsql_createCrrTriggers(db, tableInfo, err);
   }
 
   cfsql_freeTableInfo(tableInfo);
@@ -597,13 +592,6 @@ __declspec(dllexport)
                                  SQLITE_UTF8 | SQLITE_INNOCUOUS,
                                  0, dbVersionFunc, 0, 0);
   }
-  if (rc == SQLITE_OK)
-  {
-    rc = sqlite3_create_function(db, "cfsql_nextdbversion", 0,
-                                 // dbversion can change on each invocation.
-                                 SQLITE_UTF8 | SQLITE_INNOCUOUS,
-                                 0, nextDbVersionFunc, 0, 0);
-  }
 
   if (rc == SQLITE_OK)
   {
@@ -616,6 +604,10 @@ __declspec(dllexport)
                                  // existing database state. directonly.
                                  SQLITE_UTF8 | SQLITE_DIRECTONLY,
                                  0, cfsqlMakeCrrFunc, 0, 0);
+  }
+
+  if (rc == SQLITE_OK) {
+    sqlite3_commit_hook(db, commitHook, 0);
   }
 
   return rc;

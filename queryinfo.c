@@ -325,6 +325,7 @@ cfsql_QueryInfo *cfsql_queryInfo(const char *query, char **err)
     assert("impossible");
   }
 
+  ret->origQuery = query;
   return ret;
 }
 

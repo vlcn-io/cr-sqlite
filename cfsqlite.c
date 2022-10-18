@@ -456,13 +456,6 @@ int cfsql_createCrrBaseTable(
     return rc;
   }
 
-  // zSql = sqlite3_mprintf(
-  //     "CREATE INDEX \"%s__cfsql_crr_cl_idx\" ON \"%s__cfsql_crr\" (__cfsql_cl) WHERE __cfsql_cl % 2 == 1",
-  //     tableInfo->tblName,
-  //     tableInfo->tblName);
-  // rc = sqlite3_exec(db, zSql, 0, 0, err);
-  // sqlite3_free(zSql);
-
   if (rc != SQLITE_OK)
   {
     return rc;
@@ -529,10 +522,7 @@ static void createCrr(
   char *err = 0;
   cfsql_TableInfo *tableInfo = 0;
 
-  // convert statement to create temp table prefixed with `cfsql_tmp__`
-  zSql = sqlite3_mprintf("CREATE TEMP TABLE \"cfsql_tmp__%s\" %s", query->tblName, query->suffix);
-  rc = sqlite3_exec(db, zSql, 0, 0, &err);
-  sqlite3_free(zSql);
+  rc = sqlite3_exec(db, query->origQuery, 0, 0, &err);
 
   if (rc != SQLITE_OK)
   {
@@ -541,40 +531,22 @@ static void createCrr(
     return;
   }
 
-  // extract the word after CREATE TEMP TABLE cfsql_tmp__
-
-  // TODO: we should get table info from the temp table
-  // but use the proper table base name.
-  char *tmpTblName = sqlite3_mprintf("cfsql_tmp__%s", query->tblName);
   rc = cfsql_getTableInfo(
       db,
       USER_SPACE,
-      tmpTblName,
+      query->tblName,
       &tableInfo,
       &err);
 
   if (rc != SQLITE_OK)
   {
-    sqlite3_free(tmpTblName);
     sqlite3_result_error(context, err, -1);
     sqlite3_free(err);
     cfsql_freeTableInfo(tableInfo);
     return;
   }
 
-  // We only needed the temp table to extract pragma info
-  zSql = sqlite3_mprintf("DROP TABLE temp.cfsql_tmp__%s", query->tblName);
-  rc = sqlite3_exec(db, zSql, 0, 0, &err);
-  sqlite3_free(zSql);
   tableInfo->tblName = strdup(query->tblName);
-  sqlite3_free(tmpTblName);
-  if (rc != SQLITE_OK)
-  {
-    sqlite3_result_error(context, err, -1);
-    sqlite3_free(err);
-    cfsql_freeTableInfo(tableInfo);
-    return;
-  }
 
   rc = cfsql_createClockTable(db, tableInfo, &err);
   if (rc == SQLITE_OK)
@@ -712,7 +684,7 @@ static void alterCrr()
  */
 static void cfsqlFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
-  char *query = 0;
+  const char *query = 0;
   int rc = SQLITE_OK;
   char *found = 0;
   int queryType = -1;
@@ -720,7 +692,7 @@ static void cfsqlFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
   char *errmsg = 0;
   char *normalized = 0;
 
-  query = (char *)sqlite3_value_text(argv[0]);
+  query = (const char *)sqlite3_value_text(argv[0]);
   found = strstr(query, ";");
 
   if (found != NULL && *(found + 1) != '\0')

@@ -18,12 +18,14 @@ struct cfsql_QueryInfo {
   int ifNotExists;
   int ifExists;
   int isTemp;
+
   char *schemaName;
   char *tblName;
   char *prefix;
   char *suffix;
   char *reformedQuery;
 
+  const char *origQuery;
   // we should extract column numbers if they exist for Aphrodite
   // so we can put them into table info
 };

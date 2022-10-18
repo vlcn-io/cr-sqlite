@@ -6,77 +6,6 @@
 #include <string.h>
 #include <stdio.h>
 
-char *cfsql_conflictSetsStr(cfsql_ColumnInfo *cols, int len)
-{
-  char *sets[len];
-  int resultLen = 0;
-  char *ret = 0;
-
-  if (len == 0)
-  {
-    return ret;
-  }
-
-  for (int i = 0; i < len; ++i)
-  {
-    if (cols[i].versionOf != 0)
-    {
-      sets[i] = sqlite3_mprintf(
-          "\"%s\" = CASE WHEN EXCLUDED.\"%s\" != \"%s\" THEN \"%s\" + 1 ELSE \"%s\" END",
-          cols[i].name,
-          cols[i].versionOf,
-          cols[i].versionOf,
-          cols[i].name,
-          cols[i].name);
-    }
-    else
-    {
-      sets[i] = sqlite3_mprintf("\"%s\" = EXCLUDED.\"%s\"", cols[i].name, cols[i].name);
-    }
-
-    resultLen += strlen(sets[i]);
-  }
-  resultLen += len - 1;
-  ret = sqlite3_malloc(resultLen * sizeof(char) + 1);
-  ret[resultLen] = '\0';
-
-  cfsql_joinWith(ret, sets, len, ',');
-
-  for (int i = 0; i < len; ++i)
-  {
-    sqlite3_free(sets[i]);
-  }
-
-  return ret;
-}
-
-char *cfsql_localInsertOnConflictStr(cfsql_TableInfo *tableInfo)
-{
-  if (tableInfo->pksLen == 0)
-  {
-    // dup given the caller would try to deallocate it and we
-    // cannot deallocate a literal
-    return strdup("");
-  }
-
-  char *pkList = cfsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, 0);
-  char *conflictSets = cfsql_conflictSetsStr(tableInfo->nonPks, tableInfo->nonPksLen);
-
-  char *ret = sqlite3_mprintf(
-      "ON CONFLICT (%s) DO UPDATE SET\
-      %s%s\
-    \"__cfsql_cl\" = CASE WHEN \"__cfsql_cl\" %% 2 = 0 THEN \"__cfsql_cl\" + 1 ELSE \"__cfsql_cl\" END,\
-    \"__cfsql_src\" = 0",
-      pkList,
-      conflictSets,
-      tableInfo->nonPksLen == 0 ? "" : ",");
-
-  sqlite3_free(pkList);
-  sqlite3_free(conflictSets);
-
-  return ret;
-}
-
 char *cfsql_updateClocksStr(cfsql_TableInfo *tableInfo, int isDelete)
 {
   // TODO: if there are now pks we need to use a `rowid` col
@@ -245,49 +174,51 @@ int cfsql_createUpdateTrigger(sqlite3 *db,
                               char **err)
 {
   char *zSql;
-  char *sets = 0;
-  char *pkWhereConditions = 0;
-  char *clockUpdate = 0;
+  char *pkList = 0;
+  char *pkNewList = 0;
   int rc = SQLITE_OK;
 
   if (tableInfo->pksLen == 0)
   {
-    pkWhereConditions = "\"rowid\" = NEW.\"rowid\"";
+    pkList = "\"rowid\"";
+    pkNewList = "NEW.\"rowid\"";
   }
   else
   {
-    pkWhereConditions = cfsql_upTrigWhereConditions(tableInfo->pks, tableInfo->pksLen, 1);
+    pkList = cfsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, 0);
+    pkNewList = cfsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, "NEW.");
   }
 
-  sets = cfsql_upTrigSets(tableInfo->withVersionCols, tableInfo->withVersionColsLen);
-  clockUpdate = cfsql_updateClocksStr(tableInfo, 0);
-  zSql = sqlite3_mprintf(
-      "CREATE TRIGGER \"%s__cfsql_utrig\"\
-      INSTEAD OF UPDATE ON \"%s\"\
+  for (int i = 0; i < tableInfo->nonPksLen; ++i)
+  {
+    zSql = sqlite3_mprintf(
+        "CREATE TRIGGER \"%s__cfsql_utrig\"\
+      AFTER UPDATE ON \"%s\"\
     BEGIN\
-      UPDATE \"%s__cfsql_crr\" SET\
+      INSERT OR REPLACE INTO \"%s__cfsql_clock\" (\
         %s,\
-        \"__cfsql_src\" = 0\
-      WHERE %s;\
-      \
-      %s\
+        __cfsql_col_num,\
+        __cfsql_version,\
+        __cfsql_site_id\
+      ) SELECT (%s, %s, cfsql_dbversion(), 0) WHERE NEW.\"%s\" != OLD.\"%s\";\
     END;\
     ",
-      tableInfo->tblName,
-      tableInfo->tblName,
-      tableInfo->tblName,
-      sets,
-      pkWhereConditions,
-      clockUpdate);
-  rc = sqlite3_exec(db, zSql, 0, 0, err);
-
-  sqlite3_free(zSql);
-  sqlite3_free(sets);
-  sqlite3_free(clockUpdate);
+        tableInfo->tblName,
+        tableInfo->tblName,
+        tableInfo->tblName,
+        pkList,
+        pkNewList,
+        tableInfo->nonPks[i].cid,
+        tableInfo->nonPks[i].name,
+        tableInfo->nonPks[i].name);
+    rc += sqlite3_exec(db, zSql, 0, 0, err);
+    sqlite3_free(zSql);
+  }
 
   if (tableInfo->pksLen != 0)
   {
-    sqlite3_free(pkWhereConditions);
+    sqlite3_free(pkList);
+    sqlite3_free(pkNewList);
   }
 
   return rc;

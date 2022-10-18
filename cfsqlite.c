@@ -224,12 +224,6 @@ static int initDbVersion(sqlite3 *db)
     return rc;
   }
 
-  for (i = 0; i < rNumRows; ++i)
-  {
-    // SQLITE_STATIC since the site id never changes.
-    // binds are 1 indexed
-    rc += sqlite3_bind_blob(pStmt, i + 1, siteIdBlob, siteIdBlobSize, SQLITE_STATIC);
-  }
   if (rc != SQLITE_OK)
   {
     sqlite3_finalize(pStmt);
@@ -308,17 +302,17 @@ static void nextDbVersionFunc(sqlite3_context *context, int argc, sqlite3_value 
 
 /**
  * The clock table holds the versions for each column of a given row.
- * 
+ *
  * These version are set to the dbversion at the time of the write to the column.
- * 
+ *
  * The dbversion is updated on transaction commit.
  * This allows us to find all columns written in the same transaction
  * albeit with caveats.
- * 
+ *
  * The caveats being that two partiall overlapping transactions will
  * clobber the full transaction picture given we only keep latest
  * state and not a full causal history.
- * 
+ *
  * @param tableInfo
  */
 int cfsql_createClockTable(
@@ -330,10 +324,21 @@ int cfsql_createClockTable(
   char *pkList = 0;
   int rc = SQLITE_OK;
 
+  // drop the table if it exists. This will drop versions so we should
+  // put in place a path to preserve versions across schema updates.
+  // copy the data to a temp table, re-create this table, copy it back.
+  // of course if columns were re-ordered versions are pinned to the wrong columns.
+  // TODO: incorporate schema name!
+  zSql = sqlite3_mprintf("DROP TABLE IF EXISTS \"%s__cfsql_clock\"", tableInfo->tblName);
+  rc = sqlite3_exec(db, zSql, 0, 0, err);
+  sqlite3_free(zSql);
+  if (rc != SQLITE_OK) {
+    return rc;
+  }
+
+  // TODO: just forbid tables w/o primary keys?
   if (tableInfo->pksLen == 0)
   {
-    // We never select the clock for a single row by itself
-    // hence that rowid is second in the pk def.
     zSql = sqlite3_mprintf("CREATE TABLE \"%s__cfsql_clock\" (\
       \"rowid\" NOT NULL,\
       \"__cfsql_col_num\" NOT NULL,\
@@ -366,6 +371,13 @@ int cfsql_createClockTable(
   {
     return rc;
   }
+
+  zSql = sqlite3_mprintf(
+      "CREATE INDEX \"%s__cfsql_clock_v_idx\" ON \"%s__cfsql_clock\" (__cfsql_version)",
+      tableInfo->tblName,
+      tableInfo->tblName);
+  sqlite3_exec(db, zSql, 0, 0, err);
+  sqlite3_free(zSql);
 
   return rc;
 }

@@ -154,7 +154,7 @@ char *cfsql_getDbVersionUnionQuery(
   for (i = 0; i < numRows; ++i)
   {
     unionsArr[i] = sqlite3_mprintf(
-        "SELECT max(__cfsql_version) as version FROM \"%w\" WHERE __cfsql_site_id = ? %s ",
+        "SELECT max(__cfsql_version) as version FROM \"%w\" %s ",
         // the first result in tableNames is the column heading
         // so skip that
         tableNames[i + 1],

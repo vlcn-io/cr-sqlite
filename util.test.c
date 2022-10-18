@@ -35,13 +35,13 @@ void testGetVersionUnionQuery()
   query = cfsql_getDbVersionUnionQuery(
       numRows_tc1,
       tableNames_tc1);
-  assert(strcmp(query, "SELECT max(version) as version FROM (SELECT max(__cfsql_version) as version FROM \"foo\" WHERE __cfsql_site_id = ?  )") == 0);
+  assert(strcmp(query, "SELECT max(version) as version FROM (SELECT max(__cfsql_version) as version FROM \"foo\"  )") == 0);
   sqlite3_free(query);
 
   query = cfsql_getDbVersionUnionQuery(
       numRows_tc2,
       tableNames_tc2);
-  assert(strcmp(query, "SELECT max(version) as version FROM (SELECT max(__cfsql_version) as version FROM \"foo\" WHERE __cfsql_site_id = ? UNION SELECT max(__cfsql_version) as version FROM \"bar\" WHERE __cfsql_site_id = ? UNION SELECT max(__cfsql_version) as version FROM \"baz\" WHERE __cfsql_site_id = ?  )") == 0);
+  assert(strcmp(query, "SELECT max(version) as version FROM (SELECT max(__cfsql_version) as version FROM \"foo\" UNION SELECT max(__cfsql_version) as version FROM \"bar\" UNION SELECT max(__cfsql_version) as version FROM \"baz\"  )") == 0);
   sqlite3_free(query);
 
   printf("\t\e[0;32mSuccess\e[0m\n");
@@ -204,7 +204,6 @@ void cfsqlUtilTestSuite()
 {
   printf("\e[47m\e[1;30mSuite: cfsql_util\e[0m\n");
 
-  testExtractWord();
   testGetVersionUnionQuery();
   testDoesTableExist();
   testGetCount();
@@ -212,7 +211,6 @@ void cfsqlUtilTestSuite()
   testGetIndexedCols();
   testAsIdentifierListStr();
   testJoin2();
-  testExtractIdentifier();
 
   // TODO: test pk pulling and correct sorting of pks
   // TODO: create a fn to create test tables for all tests.

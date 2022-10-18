@@ -9,11 +9,6 @@ int cfsql_createCrrTriggers(
     cfsql_TableInfo *tableInfo,
     char **err);
 
-int cfsql_createPatchTrigger(
-    sqlite3 *db,
-    cfsql_TableInfo *tableInfo,
-    char **err);
-
 int cfsql_createInsertTrigger(
     sqlite3 *db,
     cfsql_TableInfo *tableInfo,

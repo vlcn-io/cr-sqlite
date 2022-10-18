@@ -76,7 +76,15 @@ static int determineQueryType(const char *query, char **err)
   return SQLITE_MISUSE;
 }
 
-void cfsql_extractSchemaTblNamePrefixSuffix(char *normalized, char *start, cfsql_QueryInfo *ret)
+/**
+ * Extract schema name and table name from the string starting
+ * at `start`.
+ * 
+ * If schema name is not present, null is filled in for the schema name.
+ * 
+ * Returns a pointer to the character in the string following the schema and table name(s).
+ */
+char *cfsql_extractSchemaTblNamePrefixSuffix(char *normalized, char *start, cfsql_QueryInfo *ret)
 {
   char *past = 0;
   char *identifier1 = cfsql_extractIdentifier(start, &past);
@@ -100,6 +108,8 @@ void cfsql_extractSchemaTblNamePrefixSuffix(char *normalized, char *start, cfsql
 
   ret->prefix = strndup(normalized, start - normalized);
   ret->suffix = strdup(past);
+
+  return past;
 }
 
 cfsql_QueryInfo *queryInfoForCreateTable(char *normalized, char **err)
@@ -223,9 +233,24 @@ cfsql_QueryInfo *queryInfoForCreateIndex(char *normalized, char **err)
     newStart += 1;
   }
 
-  cfsql_extractSchemaTblNamePrefixSuffix(normalized, newStart, ret);
+  // NOTE: this is actually extracting `schame_name.index_name`
+  newStart = cfsql_extractSchemaTblNamePrefixSuffix(normalized, newStart, ret);
 
-  // TODO: `on` part and table name.
+  if (*newStart == ' ')
+  {
+    newStart += 1;
+  }
+
+  // ON
+  newStart += 2;
+
+  if (*newStart == ' ')
+  {
+    newStart += 1;
+  }
+
+  // now get the actual table name and re-write the prefix and suffixes
+  cfsql_extractSchemaTblNamePrefixSuffix(normalized, newStart, ret);
 
   ret->type = CREATE_INDEX;
   ret->reformedQuery = normalized;

@@ -458,6 +458,11 @@ static void cfsqlMakeCrrFunc(sqlite3_context *context, int argc, sqlite3_value *
   sqlite3 *db = sqlite3_context_db_handle(context);
   char *errmsg = 0;
 
+  if (argc == 0) {
+    sqlite3_result_error(context, "Wrong number of args provided to cfsql_crr_from. Provide the schema name and table name or just the table name.", -1);
+    return;
+  }
+
   if (argc == 2)
   {
     schemaName = (const char *)sqlite3_value_text(argv[0]);
@@ -598,7 +603,7 @@ __declspec(dllexport)
     // Only register a commit hook, not update or pre-update, since all rows in the same transaction
     // should have the same clock value.
     // This allows us to replicate them together and ensure more consistency.
-    rc = sqlite3_create_function(db, "cfsql_make_crr", 2,
+    rc = sqlite3_create_function(db, "cfsql_crr_from", -1,
                                  // cfsql should only ever be used at the top level
                                  // and does a great deal to modify
                                  // existing database state. directonly.

@@ -76,7 +76,9 @@ void teste2e()
   cfsql_TableInfo *tableInfo = 0;
   rc = sqlite3_open(":memory:", &db);
 
-  rc = sqlite3_exec(db, "select cfsql('create table \"foo\" (a, b)')", 0, 0, &err);
+  rc = sqlite3_exec(db, "create table foo (a primary key, b);", 0, 0, &err);
+  CHECK_OK
+  rc = sqlite3_exec(db, "select cfsql_crr_from('foo');", 0, 0, &err);
   CHECK_OK
 
   printf("\t\e[0;32mSuccess\e[0m\n");

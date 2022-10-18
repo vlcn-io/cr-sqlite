@@ -16,6 +16,14 @@ int cfsql_createInsertTrigger(
   char *pkList = 0;
   char *pkNewList = 0;
   int rc = SQLITE_OK;
+  char *subTriggers[tableInfo->nonPksLen];
+  char *joinedSubTriggers;
+
+  // TODO: we should track a sentinel create for this case
+  if (tableInfo->nonPksLen == 0)
+  {
+    return rc;
+  }
 
   if (tableInfo->pksLen == 0)
   {
@@ -28,35 +36,45 @@ int cfsql_createInsertTrigger(
     pkNewList = cfsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, "NEW.");
   }
 
-  // for each non pk column
   for (int i = 0; i < tableInfo->nonPksLen; ++i)
   {
-    zSql = sqlite3_mprintf(
-        "CREATE TRIGGER \"%s__cfsql_itrig\"\
-      AFTER INSERT ON \"%s\"\
-    BEGIN\
-      INSERT OR REPLACE INTO \"%s__cfsql_clock\" (\
+    subTriggers[i] = sqlite3_mprintf(
+        "INSERT OR REPLACE INTO \"%s__cfsql_clock\" (\
         %s,\
         __cfsql_col_num,\
         __cfsql_version,\
         __cfsqlite_site_id\
       ) VALUES (\
         %s,\
-        %s,\
+        %d,\
         cfsql_dbversion(),\
         0\
-      );\
-    END;",
-        tableInfo->tblName,
-        tableInfo->tblName,
+      );\n",
         tableInfo->tblName,
         pkList,
         pkNewList,
         tableInfo->nonPks[i].cid);
-
-    rc += sqlite3_exec(db, zSql, 0, 0, err);
-    sqlite3_free(zSql);
   }
+  joinedSubTriggers = cfsql_join(subTriggers, tableInfo->nonPksLen);
+
+  for (int i = 0; i < tableInfo->nonPksLen; ++i)
+  {
+    sqlite3_free(subTriggers[i]);
+  }
+
+  zSql = sqlite3_mprintf("CREATE TRIGGER \"%s__cfsql_itrig\"\
+      AFTER INSERT ON \"%s\"\
+    BEGIN\
+      %s\
+    END;",
+                         tableInfo->tblName,
+                         tableInfo->tblName,
+                         joinedSubTriggers);
+
+  sqlite3_free(joinedSubTriggers);
+
+  rc = sqlite3_exec(db, zSql, 0, 0, err);
+  sqlite3_free(zSql);
 
   if (tableInfo->pksLen != 0)
   {
@@ -75,6 +93,13 @@ int cfsql_createUpdateTrigger(sqlite3 *db,
   char *pkList = 0;
   char *pkNewList = 0;
   int rc = SQLITE_OK;
+  char *subTriggers[tableInfo->nonPksLen];
+  char *joinedSubTriggers;
+
+  if (tableInfo->nonPksLen == 0)
+  {
+    return rc;
+  }
 
   if (tableInfo->pksLen == 0)
   {
@@ -89,29 +114,39 @@ int cfsql_createUpdateTrigger(sqlite3 *db,
 
   for (int i = 0; i < tableInfo->nonPksLen; ++i)
   {
-    zSql = sqlite3_mprintf(
-        "CREATE TRIGGER \"%s__cfsql_utrig\"\
-      AFTER UPDATE ON \"%s\"\
-    BEGIN\
-      INSERT OR REPLACE INTO \"%s__cfsql_clock\" (\
+    subTriggers[i] = sqlite3_mprintf("INSERT OR REPLACE INTO \"%s__cfsql_clock\" (\
         %s,\
         __cfsql_col_num,\
         __cfsql_version,\
         __cfsql_site_id\
-      ) SELECT (%s, %s, cfsql_dbversion(), 0) WHERE NEW.\"%s\" != OLD.\"%s\";\
-    END;\
-    ",
-        tableInfo->tblName,
-        tableInfo->tblName,
-        tableInfo->tblName,
-        pkList,
-        pkNewList,
-        tableInfo->nonPks[i].cid,
-        tableInfo->nonPks[i].name,
-        tableInfo->nonPks[i].name);
-    rc += sqlite3_exec(db, zSql, 0, 0, err);
-    sqlite3_free(zSql);
+      ) SELECT (%s, %d, cfsql_dbversion(), 0) WHERE NEW.\"%s\" != OLD.\"%s\";\n",
+                           tableInfo->tblName,
+                           pkList,
+                           pkNewList,
+                           tableInfo->nonPks[i].cid,
+                           tableInfo->nonPks[i].name,
+                           tableInfo->nonPks[i].name);
   }
+  joinedSubTriggers = cfsql_join(subTriggers, tableInfo->nonPksLen);
+
+  for (int i = 0; i < tableInfo->nonPksLen; ++i)
+  {
+    sqlite3_free(subTriggers[i]);
+  }
+
+  zSql = sqlite3_mprintf("CREATE TRIGGER \"%s__cfsql_utrig\"\
+      AFTER UPDATE ON \"%s\"\
+    BEGIN\
+      %s\
+    END;",
+                  tableInfo->tblName,
+                  tableInfo->tblName,
+                  joinedSubTriggers);
+
+  sqlite3_free(joinedSubTriggers);
+
+  rc = sqlite3_exec(db, zSql, 0, 0, err);
+  sqlite3_free(zSql);
 
   if (tableInfo->pksLen != 0)
   {
@@ -151,7 +186,7 @@ char *cfsql_deleteTriggerQuery(cfsql_TableInfo *tableInfo)
         __cfsqlite_site_id\
       ) VALUES (\
         %s,\
-        %s,\
+        %d,\
         cfsql_dbversion(),\
         0\
       );\

@@ -16,55 +16,6 @@
   }
 #endif
 
-// TODO: use a real unit test framework
-// TODO: updated to use property based testing: https://github.com/silentbicycle/theft
-void testExtractWord()
-{
-  char *word;
-
-  printf("ExtractWord\n");
-  word = cfsql_extractWord(0, "hello there");
-  assert(strcmp(word, "hello") == 0);
-  sqlite3_free(word);
-
-  word = cfsql_extractWord(6, "hello there");
-  assert(strcmp(word, "there") == 0);
-  sqlite3_free(word);
-
-  word = cfsql_extractWord(CREATE_TEMP_TABLE_CFSQL_LEN, "CREATE TEMP TABLE cfsql_tmp__foo ");
-  assert(strcmp(word, "foo") == 0);
-  sqlite3_free(word);
-
-  word = cfsql_extractWord(CREATE_TEMP_TABLE_CFSQL_LEN, "CREATE TEMP TABLE cfsql_tmp__foo");
-  assert(strcmp(word, "foo") == 0);
-  sqlite3_free(word);
-  printf("\t\e[0;32mSuccess\e[0m\n");
-
-  word = cfsql_extractWord(DROP_TABLE_LEN + 1, "DROP TABLE foo");
-  assert(strcmp(word, "foo") == 0);
-  sqlite3_free(word);
-  printf("\t\e[0;32mSuccess\e[0m\n");
-}
-
-void testExtractIdentifier() {
-  char *past = 0;
-  printf("ExtractIdentifier\n");
-
-  assert(strcmp(cfsql_extractIdentifier("[foo].[bar]", &past), "foo") == 0);
-  printf("s %s\n", cfsql_extractIdentifier("foo.bar", &past));
-  assert(strcmp(cfsql_extractIdentifier("foo.bar", &past), "foo") == 0);
-  assert(strcmp(cfsql_extractIdentifier("[foo](", &past), "foo") == 0);
-  assert(strcmp(cfsql_extractIdentifier("[foo] ", &past), "foo") == 0);
-  assert(strcmp(cfsql_extractIdentifier("foo ", &past), "foo") == 0);
-  assert(strcmp(cfsql_extractIdentifier("foo (", &past), "foo") == 0);
-  assert(strcmp(cfsql_extractIdentifier("foo( ", &past), "foo") == 0);
-  assert(strcmp(cfsql_extractIdentifier("\"foo\".bar", &past), "foo") == 0);
-  assert(strcmp(cfsql_extractIdentifier("`foo`.bar", &past), "foo") == 0);
-  assert(strcmp(cfsql_extractIdentifier("```foo```.bar", &past), "``foo``") == 0);
-
-  printf("\t\e[0;32mSuccess\e[0m\n");
-}
-
 void testGetVersionUnionQuery()
 {
   int numRows_tc1 = 1;

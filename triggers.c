@@ -133,43 +133,56 @@ int cfsql_createInsertTrigger(
     char **err)
 {
   char *zSql;
-  char *baseColumnsList = 0;
-  char *baseColumnsNewList = 0;
-  char *conflictResolution = 0;
-  char *updateClocks = 0;
+  char *pkList = 0;
+  char *pkNewList = 0;
   int rc = SQLITE_OK;
 
-  baseColumnsList = cfsql_asIdentifierList(tableInfo->baseCols, tableInfo->baseColsLen, 0);
-  baseColumnsNewList = cfsql_asIdentifierList(tableInfo->baseCols, tableInfo->baseColsLen, "NEW.");
-  conflictResolution = cfsql_localInsertOnConflictStr(tableInfo);
-  updateClocks = cfsql_updateClocksStr(tableInfo, 0);
+  if (tableInfo->pksLen == 0)
+  {
+    pkList = "\"rowid\"";
+    pkNewList = "NEW.\"rowid\"";
+  }
+  else
+  {
+    pkList = cfsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, 0);
+    pkNewList = cfsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, "NEW.");
+  }
 
-  zSql = sqlite3_mprintf(
-      "CREATE TRIGGER \"%s__cfsql_itrig\"\
-      INSTEAD OF INSERT ON \"%s\"\
+  // for each non pk column
+  for (int i = 0; i < tableInfo->nonPksLen; ++i)
+  {
+    zSql = sqlite3_mprintf(
+        "CREATE TRIGGER \"%s__cfsql_itrig\"\
+      AFTER INSERT ON \"%s\"\
     BEGIN\
-      INSERT INTO \"%s__cfsql_crr\" (\
-        %s\
+      INSERT OR REPLACE INTO \"%s__cfsql_clock\" (\
+        %s,\
+        __cfsql_col_num,\
+        __cfsql_version,\
+        __cfsqlite_site_id\
       ) VALUES (\
-        %s\
-      ) %s;\
-      %s\
+        %s,\
+        %s,\
+        cfsql_dbversion(),\
+        0\
+      );\
     END;",
-      tableInfo->tblName,
-      tableInfo->tblName,
-      tableInfo->tblName,
-      baseColumnsList,
-      baseColumnsNewList,
-      conflictResolution,
-      updateClocks);
+        tableInfo->tblName,
+        tableInfo->tblName,
+        tableInfo->tblName,
+        pkList,
+        pkNewList,
+        tableInfo->nonPks[i].cid);
 
-  rc = sqlite3_exec(db, zSql, 0, 0, err);
+    rc += sqlite3_exec(db, zSql, 0, 0, err);
+    sqlite3_free(zSql);
+  }
 
-  sqlite3_free(zSql);
-  sqlite3_free(baseColumnsList);
-  sqlite3_free(baseColumnsNewList);
-  sqlite3_free(conflictResolution);
-  sqlite3_free(updateClocks);
+  if (tableInfo->pksLen != 0)
+  {
+    sqlite3_free(pkList);
+    sqlite3_free(pkNewList);
+  }
 
   return rc;
 }
@@ -309,7 +322,8 @@ char *cfsql_deleteTriggerQuery(cfsql_TableInfo *tableInfo)
       clockUpdate);
 
   // TODO: test cases for pk and no pk and empty tables
-  if (tableInfo->pksLen != 0) {
+  if (tableInfo->pksLen != 0)
+  {
     sqlite3_free(pkWhereConditions);
   }
   sqlite3_free(clockUpdate);
@@ -438,7 +452,8 @@ char *cfsql_patchClockUpdate(cfsql_TableInfo *tableInfo)
       pkNewList,
       pkList);
 
-  if (tableInfo->pksLen != 0) {
+  if (tableInfo->pksLen != 0)
+  {
     sqlite3_free(pkList);
     sqlite3_free(pkNewList);
   }
@@ -479,7 +494,8 @@ char *cfsql_patchTriggerQuery(cfsql_TableInfo *tableInfo)
 
   sqlite3_free(colList);
   sqlite3_free(newValuesList);
-  if (tableInfo->pksLen > 0) {
+  if (tableInfo->pksLen > 0)
+  {
     sqlite3_free(pkList);
   }
   sqlite3_free(conflictSets);

@@ -30,6 +30,7 @@
 5. [ ] alter table
 6. [ ] table constraints
    1. [ ] fk constraints not allowed
+7. [ ] `create_crr` is idempotent
 
 ## Inserts of new rows
 

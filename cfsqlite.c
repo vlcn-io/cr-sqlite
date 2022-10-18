@@ -598,13 +598,15 @@ __declspec(dllexport)
     // Only register a commit hook, not update or pre-update, since all rows in the same transaction
     // should have the same clock value.
     // This allows us to replicate them together and ensure more consistency.
-    rc = sqlite3_create_function(db, "cfsql_make_crr", 1,
+    rc = sqlite3_create_function(db, "cfsql_make_crr", 2,
                                  // cfsql should only ever be used at the top level
                                  // and does a great deal to modify
                                  // existing database state. directonly.
                                  SQLITE_UTF8 | SQLITE_DIRECTONLY,
                                  0, cfsqlMakeCrrFunc, 0, 0);
   }
+
+  // cfsql_changes_since(asking_peer, version, rowid?)
 
   if (rc == SQLITE_OK) {
     sqlite3_commit_hook(db, commitHook, 0);

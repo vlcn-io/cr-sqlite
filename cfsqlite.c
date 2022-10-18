@@ -257,7 +257,8 @@ static int initDbVersion(sqlite3 *db)
     return SQLITE_OK;
   }
 
-  dbVersion = sqlite3_column_int64(pStmt, 0);
+  // +1 since written version is _last_ version
+  dbVersion = sqlite3_column_int64(pStmt, 0) + 1;
   dbVersionSet = 1;
   sqlite3_finalize(pStmt);
 

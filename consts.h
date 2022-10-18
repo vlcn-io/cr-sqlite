@@ -12,6 +12,8 @@
 #define TEMP_LEN 4
 #define SPACE_LEN 1
 
+#define DELETE_CLOCK_SENTINEL -1
+
 #define CRR_SPACE 0
 #define USER_SPACE 1
 

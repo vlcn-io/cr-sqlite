@@ -21,10 +21,6 @@ int cfsql_createCrrBaseTable(
     sqlite3 *db,
     cfsql_TableInfo *tableInfo,
     char **err);
-int cfsql_createViewOfCrr(
-    sqlite3 *db,
-    cfsql_TableInfo *tableInfo,
-    char **err);
 char *cfsql_getCreateCrrIndexQuery(
   cfsql_QueryInfo *query
 );

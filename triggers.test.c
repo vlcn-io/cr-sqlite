@@ -42,10 +42,6 @@ void testCreateViewTriggers()
   }
   if (rc == SQLITE_OK)
   {
-    rc = cfsql_createViewOfCrr(db, tableInfo, &errMsg);
-  }
-  if (rc == SQLITE_OK)
-  {
     rc = cfsql_createInsertTrigger(db, tableInfo, &errMsg);
   }
   if (rc == SQLITE_OK)

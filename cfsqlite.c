@@ -482,37 +482,6 @@ int cfsql_createCrrBaseTable(
   return SQLITE_OK;
 }
 
-/**
- * A view that matches the table as defined by the user
- * and represents the crr to their application.
- */
-int cfsql_createViewOfCrr(
-    sqlite3 *db,
-    cfsql_TableInfo *tableInfo,
-    char **err)
-{
-  int rc = SQLITE_OK;
-  char *zSql = 0;
-  char *columns = cfsql_asIdentifierList(tableInfo->baseCols, tableInfo->baseColsLen, 0);
-
-  zSql = sqlite3_mprintf("CREATE VIEW \"%s\" \
-    AS SELECT %s%s \
-    FROM \
-    \"%s__cfsql_crr\" \
-    WHERE \
-    \"%s__cfsql_crr\".\"__cfsql_cl\" % 2 = 1",
-                         tableInfo->tblName,
-                         tableInfo->pksLen == 0 ? "rowid," : "",
-                         columns,
-                         tableInfo->tblName,
-                         tableInfo->tblName);
-  sqlite3_free(columns);
-
-  rc = sqlite3_exec(db, zSql, 0, 0, err);
-  sqlite3_free(zSql);
-  return rc;
-}
-
 void cfsql_insertConflictResolution()
 {
 }
@@ -611,10 +580,6 @@ static void createCrr(
   if (rc == SQLITE_OK)
   {
     rc = cfsql_createCrrBaseTable(db, tableInfo, &err);
-  }
-  if (rc == SQLITE_OK)
-  {
-    rc = cfsql_createViewOfCrr(db, tableInfo, &err);
   }
   if (rc == SQLITE_OK)
   {

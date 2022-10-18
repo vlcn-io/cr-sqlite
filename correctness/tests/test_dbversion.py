@@ -7,7 +7,7 @@ def test_c1_min_on_init():
 
 def test_c2_increments():
   c = connect(":memory:")
-  c.execute("select cfsql('create table foo (id primary key, a)')")
+  c.execute("create table foo (id primary key, a)")
   c.execute("insert into foo values (1, 2)");
   assert c.execute("SELECT cfsql_dbversion()").fetchone()[0] == min_db_v + 1
   c.execute("update foo set a = 3 where id = 1")
@@ -24,7 +24,7 @@ def test_c3_restored():
   assert c.execute("SELECT cfsql_dbversion()").fetchone()[0] == min_db_v
 
   # close and re-open to check that we work with empty clock tables
-  c.execute("select cfsql('create table foo (id primary key, a)')")
+  c.execute("create table foo (id primary key, a)")
   c.close()
   c = connect(dbfile)
   assert c.execute("SELECT cfsql_dbversion()").fetchone()[0] == min_db_v

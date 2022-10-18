@@ -3,7 +3,7 @@ from cfsql_correctness import connect
 def test_c1_c2_c3_c4_c6_c7_crr_values():
   c = connect(":memory:")
   init_version = c.execute("SELECT cfsql_dbversion()").fetchone()[0]
-  c.execute("select cfsql('create table foo (id primary key, a)')")
+  c.execute("create table foo (id primary key, a)")
 
   c.execute("insert into foo values(1, 2)")
   c.commit()

@@ -89,7 +89,7 @@ void testDeleteTriggerQuery()
       &errMsg);
 
   char *query = cfsql_deleteTriggerQuery(tableInfo);
-  assert(strcmp("CREATE TRIGGER \"foo__cfsql_dtrig\"      AFTER DELETE ON \"foo\"    BEGIN      INSERT OR REPLACE INTO \"foo__cfsql_clock\" (        \"a\",        __cfsql_col_num,        __cfsql_version,        __cfsqlite_site_id      ) VALUES (        OLD.\"a\",        -1,        cfsql_dbversion(),        0      );    END;", query) == 0);
+  assert(strcmp("CREATE TRIGGER \"foo__cfsql_dtrig\"      AFTER DELETE ON \"foo\"    BEGIN      INSERT OR REPLACE INTO \"foo__cfsql_clock\" (        \"a\",        __cfsql_col_num,        __cfsql_version,        __cfsql_site_id      ) VALUES (        OLD.\"a\",        -1,        cfsql_dbversion(),        0      );    END;", query) == 0);
 
   sqlite3_close(db);
   assert(rc == SQLITE_OK);

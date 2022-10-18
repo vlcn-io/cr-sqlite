@@ -1,5 +1,7 @@
 todo:
 
+- invariant on incompatible index types
+- integrity checks by sync service? In case someone migrated a table and did not re-run `crr_from`?
 - if a column gets changed to become part of the primary key set...
   - Need to drop version tracking on it
 - inserts should... fail if already exists? Or always be upsert given we don't know what might already exist due to replications?
@@ -194,3 +196,37 @@ For each table, get primary keys of changes since. Order by version, auto-incr
 Group into same transaction(s).
 Send transaction groups over wire.
 Process 1k rows at a time per table?
+
+---
+
+vtab plan...
+
+Patch vtab:
+insert a patch row at a time...
+Patch row insert looks like:
+
+```sql
+INSERT INTO cfsql_patch (table_name, pkList, col1, col1_v, col2, col2_v, ...) VALUES (...);
+```
+
+^-- can we support varags insertion of vtab?
+
+Changes since vtab:
+
+```sql
+SELECT * FROM cfsql_changes_since WHERE version > $ AND site_id != $ ORDER BY version, rowid ASC;
+```
+
+this would return:
+tbl-name, [pks], [cids], version, rowid?
+
+Well you'd want to group on pks and aggregate in the cids and pks.
+So you get a single row the represent the a row.
+You can json_group_object to collect pks, cids.
+Need to collect versions of each col too.
+
+May be best to prototype this first.
+
+similar to https://www.sqlite.org/unionvtab.html
+
+rowid can be used to break up large changes within a single version

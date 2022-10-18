@@ -30,7 +30,7 @@
 5. [ ] alter table
 6. [ ] table constraints
    1. [ ] fk constraints not allowed
-7. [ ] `create_crr` is idempotent
+7. [ ] `crr_from` is idempotent
 
 ## Inserts of new rows
 
@@ -38,7 +38,7 @@
 2. [x] cl starts at 1
 3. [x] db version incremented
 4. [x] clock record written with new db version and current site id for current row
-5. [ ] db version is not in use on any other row
+5. [ ] ~~db version is not in use on any other row~~
 6. [x] cols have the inserted values
 7. [x] update src is 0
 
@@ -92,7 +92,7 @@
 2. [ ] update src is set to 1
 3. [ ] only columns with higher versions are taken
 4. [ ] if versions match for a column, the greater value is taken
-5. [ ]
+5. [ ] physical deletion is final
 
 ## Computing deltas against remote clock
 

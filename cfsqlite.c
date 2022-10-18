@@ -5,7 +5,6 @@ SQLITE_EXTENSION_INIT1
 #include "tableinfo.h"
 #include "consts.h"
 #include "triggers.h"
-#include "queryinfo.h"
 
 #include <ctype.h>
 #include <stdint.h>
@@ -206,7 +205,7 @@ static int initDbVersion(sqlite3 *db)
   }
 
   if (rNumRows == 0)
-  { 
+  {
     dbVersionSet = 1;
     sqlite3_free_table(rClockTableNames);
     return rc;
@@ -231,7 +230,8 @@ static int initDbVersion(sqlite3 *db)
     // binds are 1 indexed
     rc += sqlite3_bind_blob(pStmt, i + 1, siteIdBlob, siteIdBlobSize, SQLITE_STATIC);
   }
-  if (rc != SQLITE_OK) {
+  if (rc != SQLITE_OK)
+  {
     sqlite3_finalize(pStmt);
     return rc;
   }
@@ -246,7 +246,8 @@ static int initDbVersion(sqlite3 *db)
   }
 
   // error condition
-  if (rc != SQLITE_ROW) {
+  if (rc != SQLITE_ROW)
+  {
     sqlite3_finalize(pStmt);
     return rc;
   }
@@ -254,13 +255,14 @@ static int initDbVersion(sqlite3 *db)
   // had a row? grab the version returned to us
   // columns are 0 indexed.
   int type = sqlite3_column_type(pStmt, 0);
-  if (type == SQLITE_NULL) {
+  if (type == SQLITE_NULL)
+  {
     // No rows. Keep the initial version.
     dbVersionSet = 1;
     sqlite3_finalize(pStmt);
     return SQLITE_OK;
   }
-  
+
   dbVersion = sqlite3_column_int64(pStmt, 0);
   dbVersionSet = 1;
   sqlite3_finalize(pStmt);
@@ -364,227 +366,55 @@ int cfsql_createClockTable(
   return rc;
 }
 
-int cfsql_addIndicesToCrrBaseTable(
-    sqlite3 *db,
-    cfsql_TableInfo *tableInfo,
-    char **err)
-{
-  int rc = SQLITE_OK;
-  cfsql_IndexInfo *indexInfo = tableInfo->indexInfo;
-  int indexInfoLen = tableInfo->indexInfoLen;
-  char *identifierList;
-  char *zSql;
-
-  if (indexInfoLen == 0)
-  {
-    return rc;
-  }
-
-  for (int i = 0; i < indexInfoLen; ++i)
-  {
-    int isPk = strcmp(indexInfo[i].origin, "pk") == 0;
-    if (isPk)
-    {
-      // we create primary keys in the table creation statement
-      continue;
-    }
-
-    // TODO: we don't yet handle indices created with where clauses
-    identifierList = cfsql_asIdentifierListStr(indexInfo[i].indexedCols, indexInfo[i].indexedColsLen, ',');
-    zSql = sqlite3_mprintf(
-        "CREATE INDEX \"%s\" ON \"%s__cfsql_crr\" (%s)",
-        indexInfo[i].name,
-        tableInfo->tblName,
-        identifierList);
-    sqlite3_free(identifierList);
-
-    rc = sqlite3_exec(db, zSql, 0, 0, err);
-    sqlite3_free(zSql);
-    if (rc != SQLITE_OK)
-    {
-      return rc;
-    }
-  }
-
-  return SQLITE_OK;
-}
-
-char *cfsql_getCreateCrrBaseTableQuery(cfsql_TableInfo *tableInfo)
-{
-  char *columnDefs = cfsql_asColumnDefinitions(
-      tableInfo->withVersionCols,
-      tableInfo->withVersionColsLen);
-  char *pkList = cfsql_asIdentifierList(
-      tableInfo->pks,
-      tableInfo->pksLen,
-      0);
-  char *ret = sqlite3_mprintf("CREATE TABLE \"%s__cfsql_crr\" (\
-    %s,\
-    __cfsql_cl INT DEFAULT 1,\
-    __cfsql_src INT DEFAULT 0%s\
-    %s %s %s %s\
-  )",
-                              tableInfo->tblName,
-                              columnDefs,
-                              pkList != 0 ? "," : 0,
-                              pkList != 0 ? "PRIMARY KEY" : 0,
-                              pkList != 0 ? "(" : 0,
-                              pkList,
-                              pkList != 0 ? ")" : 0);
-
-  sqlite3_free(pkList);
-  sqlite3_free(columnDefs);
-  return ret;
-}
-
-int cfsql_createCrrBaseTable(
-    sqlite3 *db,
-    cfsql_TableInfo *tableInfo,
-    char **err)
-{
-  int rc = SQLITE_OK;
-  char *zSql = 0;
-  sqlite3_stmt *pStmt = 0;
-
-  zSql = cfsql_getCreateCrrBaseTableQuery(tableInfo);
-
-  rc = sqlite3_exec(db, zSql, 0, 0, err);
-  sqlite3_free(zSql);
-
-  if (rc != SQLITE_OK)
-  {
-    return rc;
-  }
-
-  if (rc != SQLITE_OK)
-  {
-    return rc;
-  }
-
-  // We actually never need to do this.
-  // Unless we're migrating existing tables.
-  // rc = cfsql_addIndicesToCrrBaseTable(
-  //     db,
-  //     tableInfo,
-  //     err);
-  // if (rc != SQLITE_OK)
-  // {
-  //   return rc;
-  // }
-
-  return SQLITE_OK;
-}
-
-void cfsql_insertConflictResolution()
-{
-}
-
-/**
- * The patch view provides an interface for applying patches
- * to a crr.
- *
- * I.e., inserts can be made
- * against the patch view to sync data from
- * a peer.
- */
-int cfsql_createPatchView(
-    sqlite3 *db,
-    cfsql_TableInfo *tableInfo,
-    char **err)
-{
-  char *zSql = 0;
-  int rc = SQLITE_OK;
-
-  zSql = sqlite3_mprintf("CREATE VIEW \"%s__cfsql_patch\" AS SELECT\
-    \"%s__cfsql_crr\".*,\
-    '{\"fake\": 1}' as __cfsql_clock\
-  FROM \"%s__cfsql_crr\"",
-                         tableInfo->tblName,
-                         tableInfo->tblName,
-                         tableInfo->tblName);
-
-  rc = sqlite3_exec(db, zSql, 0, 0, err);
-  sqlite3_free(zSql);
-  return rc;
-}
-
 /**
  * Create a new crr --
  * all triggers, views, tables
  */
-static void createCrr(
+static int createCrr(
     sqlite3_context *context,
     sqlite3 *db,
-    cfsql_QueryInfo *query)
+    const char *schemaName,
+    const char *tblName,
+    char **err)
 {
   int rc = SQLITE_OK;
   char *zSql = 0;
-  char *err = 0;
   cfsql_TableInfo *tableInfo = 0;
-
-  rc = sqlite3_exec(db, query->origQuery, 0, 0, &err);
-
-  if (rc != SQLITE_OK)
-  {
-    sqlite3_result_error(context, err, -1);
-    sqlite3_free(err);
-    return;
-  }
 
   rc = cfsql_getTableInfo(
       db,
       USER_SPACE,
-      query->tblName,
+      strdup(tblName),
       &tableInfo,
-      &err);
+      err);
 
   if (rc != SQLITE_OK)
   {
-    sqlite3_result_error(context, err, -1);
-    sqlite3_free(err);
     cfsql_freeTableInfo(tableInfo);
-    return;
+    return rc;
   }
 
-  tableInfo->tblName = strdup(query->tblName);
-
-  rc = cfsql_createClockTable(db, tableInfo, &err);
+  rc = cfsql_createClockTable(db, tableInfo, err);
   if (rc == SQLITE_OK)
   {
-    rc = cfsql_createCrrBaseTable(db, tableInfo, &err);
-  }
-  if (rc == SQLITE_OK)
-  {
-    rc = cfsql_createPatchView(db, tableInfo, &err);
-  }
-  if (rc == SQLITE_OK)
-  {
-    rc = cfsql_createCrrViewTriggers(db, tableInfo, &err);
-  }
-  if (rc == SQLITE_OK)
-  {
-    rc = cfsql_createPatchTrigger(db, tableInfo, &err);
-  }
-  if (rc == SQLITE_OK)
-  {
-    cfsql_freeTableInfo(tableInfo);
-    return;
+    // rc = cfsql_createCrrTriggers(db, tableInfo, err);
   }
 
-  sqlite3_result_error(context, err, -1);
-  sqlite3_free(err);
+  cfsql_freeTableInfo(tableInfo);
+  return rc;
 }
 
 static int dropCrr(
     sqlite3_context *context,
     sqlite3 *db,
-    cfsql_QueryInfo *query,
+    const char *schemaName,
+    const char *tblName,
     char **err)
 {
   char *zSql = 0;
   int rc = SQLITE_OK;
 
-  zSql = sqlite3_mprintf("DROP TABLE \"%s\".\"%s\"", query->schemaName, query->tblName);
+  zSql = sqlite3_mprintf("DROP TABLE IF EXISTS \"%s\".\"%s\"", schemaName, tblName);
   rc = sqlite3_exec(db, zSql, 0, 0, err);
   sqlite3_free(zSql);
   if (rc != SQLITE_OK)
@@ -592,7 +422,7 @@ static int dropCrr(
     return rc;
   }
 
-  zSql = sqlite3_mprintf("DROP TABLE \"%s\".\"%s\"__cfsql_clock", query->schemaName, query->tblName);
+  zSql = sqlite3_mprintf("DROP TABLE \"%s\".\"%s\"__cfsql_clock", schemaName, tblName);
   rc = sqlite3_exec(db, zSql, 0, 0, err);
   sqlite3_free(zSql);
   if (rc != SQLITE_OK)
@@ -601,90 +431,32 @@ static int dropCrr(
   }
 
   return rc;
-}
-
-char *cfsql_getCreateCrrIndexQuery(
-    cfsql_QueryInfo *query)
-{
-  return sqlite3_mprintf("%s \"%s\".\"%s__cfsql_crr\" %s",
-                         query->prefix,
-                         query->schemaName,
-                         query->tblName,
-                         query->suffix);
-}
-
-static int createCrrIndex(
-    sqlite3_context *context,
-    sqlite3 *db,
-    cfsql_QueryInfo *query,
-    char **err)
-{
-  int rc = SQLITE_OK;
-  // https://www.sqlite.org/lang_createindex.html
-  char *newQuery = cfsql_getCreateCrrIndexQuery(query);
-
-  if (newQuery == 0)
-  {
-    *err = strdup("Missing `ON` in create index statement");
-    return SQLITE_ERROR;
-  }
-
-  rc = sqlite3_exec(db, newQuery, 0, 0, err);
-  sqlite3_free(newQuery);
-
-  return rc;
-}
-
-static int dropCrrIndex(
-    sqlite3_context *context,
-    sqlite3 *db,
-    cfsql_QueryInfo *query,
-    char **err)
-{
-  return sqlite3_exec(db, query->reformedQuery, 0, 0, err);
-}
-
-static void alterCrr()
-{
-  // create crr in tmp table
-  // run alter againt tmp crr
-  // diff pragma of orig crr and tmp crr
-  // determine:
-  // - col add
-  // - col drop
-  // - col rename
-  // add: +1
-  // rm: -1
-  // rename: delta on one
-  //
-  // rename:
-  // drop triggers and views
-  // rename col on base crr (and version col.. if need be)
-  // recreate triggers and views based on new crr pragma
-  //
-  // add:
-  // same as above but add col on step 2
-  //
-  // remove:
-  // remove col on step 2
 }
 
 /**
  * Takes a table name and turns it into a CRR.
- * 
+ *
  * This allows users to create and modify tables as normal.
  */
 static void cfsqlMakeCrrFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
   const char *tblName = 0;
+  const char *schemaName = 0;
   int rc = SQLITE_OK;
   char *found = 0;
-  int queryType = -1;
   sqlite3 *db = sqlite3_context_db_handle(context);
   char *errmsg = 0;
-  char *normalized = 0;
 
-  tblName = (const char *)sqlite3_value_text(argv[0]);
+  if (argc == 2)
+  {
+    schemaName = (const char *)sqlite3_value_text(argv[0]);
+    tblName = (const char *)sqlite3_value_text(argv[1]);
+  }
+  else
+  {
+    schemaName = "main";
+    tblName = (const char *)sqlite3_value_text(argv[0]);
+  }
 
   // TODO: likely need this to be a sub-transaction
   rc = sqlite3_exec(db, "BEGIN", 0, 0, &errmsg);
@@ -692,38 +464,23 @@ static void cfsqlMakeCrrFunc(sqlite3_context *context, int argc, sqlite3_value *
   {
     sqlite3_result_error(context, errmsg, -1);
     sqlite3_free(errmsg);
-    sqlite3_free(normalized);
     return;
   }
 
-  // TODO: pass and use errmsg, check return codes
-  // switch (queryInfo->type)
-  // {
-  // case CREATE_TABLE:
-  //   createCrr(context, db, queryInfo);
-  //   break;
-  // case DROP_TABLE:
-  //   dropCrr(context, db, queryInfo, &errmsg);
-  //   break;
-  // case CREATE_INDEX:
-  //   createCrrIndex(context, db, queryInfo, &errmsg);
-  //   break;
-  // case DROP_INDEX:
-  //   dropCrrIndex(context, db, queryInfo, &errmsg);
-  //   break;
-  // case ALTER_TABLE:
-  //   alterCrr();
-  //   break;
-  // default:
-  //   break;
-  // }
+  rc = createCrr(context, db, schemaName, tblName, &errmsg);
+  if (rc != SQLITE_OK)
+  {
+    sqlite3_result_error(context, errmsg, -1);
+    sqlite3_free(errmsg);
+    sqlite3_exec(db, "ROLLBACK", 0, 0, 0);
+    return;
+  }
 
   sqlite3_exec(db, "COMMIT", 0, 0, 0);
 }
 
 // TODO: install a commit_hook to advance the dbversion on every tx commit
 // get_changes_since function
-// vector_short -- centralized resolver(s)
 
 #ifdef _WIN32
 __declspec(dllexport)

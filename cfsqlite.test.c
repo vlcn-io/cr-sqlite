@@ -66,66 +66,6 @@ fail:
   assert(rc == SQLITE_OK);
 }
 
-// TODO: create a method that generates all the table conditions
-// we're interested in and runs these tests over them.
-void testCreateCrrBaseTable()
-{
-  printf("CreateCrrBaseTable\n");
-
-  int rc = SQLITE_OK;
-  sqlite3 *db;
-  char *err = 0;
-  cfsql_TableInfo *tableInfo = 0;
-  rc = sqlite3_open(":memory:", &db);
-
-  rc = sqlite3_exec(db, "CREATE TABLE foo (a primary key, b DEFAULT 0)", 0, 0, &err);
-  CHECK_OK
-  // using the crr interface, it'd be impossible to have a new table
-  // creation that includes an index. Index additions would be
-  // statements after crr creation and thus can be added simply by
-  // changing the target table of the user's create index statement to the crr table.
-  // rc = sqlite3_exec(db, "CREATE INDEX foo_b ON foo (b)", 0, 0, &err);
-  // CHECK_OK
-
-  rc = cfsql_getTableInfo(db, USER_SPACE, "foo", &tableInfo, &err);
-  CHECK_OK
-  rc = cfsql_createCrrBaseTable(db, tableInfo, &err);
-  CHECK_OK
-
-  // now select the base table sql and check it is what is expected.
-
-  printf("\t\e[0;32mSuccess\e[0m\n");
-
-  // sqlite3_stmt *pStmt = 0;
-  // char *zSql = "CREATE TABLE [boo] (a, b)";
-  // rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
-  // printf("CODE: %d\n", rc);
-  // printf("NORMA: %s!\n", sqlite3_normalized_sql(pStmt));
-
-  sqlite3_close(db);
-  return;
-
-fail:
-  sqlite3_close(db);
-  printf("err: %s %d\n", err, rc);
-  sqlite3_free(err);
-  cfsql_freeTableInfo(tableInfo);
-  assert(rc == SQLITE_OK);
-}
-
-void testGetCreateCrrIndexQuery()
-{
-  printf("GetCreateCrrIndexQuery\n");
-  char *err;
-  cfsql_QueryInfo *queryInfo = cfsql_queryInfo("CREATE INDEX boo ON foo (a, b)", &err);
-  char *query = cfsql_getCreateCrrIndexQuery(queryInfo);
-
-  assert(strcmp(query, "create index boo on  \"main\".\"foo__cfsql_crr\" (a,b);") == 0);
-
-  printf("\t\e[0;32mSuccess\e[0m\n");
-  cfsql_freeQueryInfo(queryInfo);
-}
-
 void teste2e()
 {
   printf("e2e\n");
@@ -155,7 +95,5 @@ void cfsqlTestSuite()
   printf("\e[47m\e[1;30mSuite: cfsql\e[0m\n");
 
   testCreateClockTable();
-  testCreateCrrBaseTable();
-  testGetCreateCrrIndexQuery();
   teste2e();
 }

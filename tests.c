@@ -2,7 +2,6 @@ void cfsqlUtilTestSuite();
 void cfsqlTableInfoTestSuite();
 void cfsqlTestSuite();
 void cfsqlTriggersTestSuite();
-void cfsqlQueryInfoTestSuite();
 
 int main(int argc, char *argv[])
 {
@@ -10,5 +9,4 @@ int main(int argc, char *argv[])
   cfsqlTableInfoTestSuite();
   cfsqlTestSuite();
   cfsqlTriggersTestSuite();
-  cfsqlQueryInfoTestSuite();
 }

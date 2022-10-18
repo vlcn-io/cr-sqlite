@@ -331,7 +331,7 @@ int cfsql_createDeleteTrigger(
   return rc;
 }
 
-int cfsql_createCrrViewTriggers(
+int cfsql_createCrrTriggers(
     sqlite3 *db,
     cfsql_TableInfo *tableInfo,
     char **err)

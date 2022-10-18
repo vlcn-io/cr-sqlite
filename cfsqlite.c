@@ -307,16 +307,18 @@ static void nextDbVersionFunc(sqlite3_context *context, int argc, sqlite3_value 
 }
 
 /**
- * The clock table holds the snapshot
- * of the vector clock at the time there was
- * a mutation for a given row.
- *
- * The clock table is structured as a junction table.
- * | rowid | site_id | version
- * +--------+---------+--------
- *   1          a         1
- *   1          b         2
- * ----------------------------
+ * The clock table holds the versions for each column of a given row.
+ * 
+ * These version are set to the dbversion at the time of the write to the column.
+ * 
+ * The dbversion is updated on transaction commit.
+ * This allows us to find all columns written in the same transaction
+ * albeit with caveats.
+ * 
+ * The caveats being that two partiall overlapping transactions will
+ * clobber the full transaction picture given we only keep latest
+ * state and not a full causal history.
+ * 
  * @param tableInfo
  */
 int cfsql_createClockTable(
@@ -334,9 +336,10 @@ int cfsql_createClockTable(
     // hence that rowid is second in the pk def.
     zSql = sqlite3_mprintf("CREATE TABLE \"%s__cfsql_clock\" (\
       \"rowid\" NOT NULL,\
-      \"__cfsql_site_id\" NOT NULL,\
+      \"__cfsql_col_num\" NOT NULL,\
       \"__cfsql_version\" NOT NULL,\
-      PRIMARY KEY (\"__cfsql_site_id\", \"rowid\")\
+      \"__cfsql_site_id\" NOT NULL,\
+      PRIMARY KEY (\"rowid\", \"__cfsql_col_num\")\
     )",
                            tableInfo->tblName);
   }
@@ -348,9 +351,10 @@ int cfsql_createClockTable(
         0);
     zSql = sqlite3_mprintf("CREATE TABLE \"%s__cfsql_clock\" (\
       %s,\
-      \"__cfsql_site_id\" NOT NULL,\
+      \"__cfsql_col_num\" NOT NULL,\
       \"__cfsql_version\" NOT NULL,\
-      PRIMARY KEY (\"__cfsql_site_id\", %s)\
+      \"__cfsql_site_id\" NOT NULL,\
+      PRIMARY KEY (%s, __cfsql_col_num)\
     )",
                            tableInfo->tblName, pkList, pkList);
     sqlite3_free(pkList);

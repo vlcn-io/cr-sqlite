@@ -395,7 +395,7 @@ static int createCrr(
   rc = cfsql_getTableInfo(
       db,
       USER_SPACE,
-      strdup(tblName),
+      tblName,
       &tableInfo,
       err);
 

@@ -46,62 +46,9 @@ char *cfsql_asIdentifierList(cfsql_ColumnInfo *in, size_t inlen, char* prefix)
   return ret;
 }
 
-char * cfsql_getDfltStr(sqlite3_value *val) {
-  if (val == 0) {
-    return 0;
-  }
-  int type = sqlite3_value_type(val);
-
-  // TODO: test all possible combinations -- especially blobs
-  if (type == SQLITE_NULL) {
-    return strdup("DEFAULT NULL");
-  } else if (type == SQLITE_INTEGER || type == SQLITE_FLOAT) {
-    return sqlite3_mprintf("DEFAULT %d", sqlite3_value_int(val));
-  } else if (type == SQLITE_BLOB) {
-    return sqlite3_mprintf("DEFAULT x%Q", sqlite3_value_text(val));
-  } else {
-    return 0;
-  }
-}
-
-char *cfsql_asColumnDefinitions(cfsql_ColumnInfo *in, size_t inlen)
-{
-  char *ret = 0;
-  int finalLen = 0;
-  char **mapped = sqlite3_malloc(inlen * sizeof(char *));
-
-  for (int i = 0; i < inlen; ++i)
-  {
-    char *dfltStr = cfsql_getDfltStr(in[i].dfltValue);
-    mapped[i] = sqlite3_mprintf("\"%w\" %s %s",
-                                in[i].name,
-                                in[i].type,
-                                dfltStr != 0 ? dfltStr : in[i].versionOf != 0 ? "DEFAULT 0" : 0);
-    sqlite3_free(dfltStr);
-    finalLen += strlen(mapped[i]);
-  }
-  finalLen += inlen - 1;
-
-  ret = sqlite3_malloc(finalLen * sizeof(char) + 1);
-  ret[finalLen] = '\0';
-
-  cfsql_joinWith(ret, mapped, inlen, ',');
-
-  // free everything we allocated, except ret.
-  // caller will free ret.
-  for (int i = 0; i < inlen; ++i)
-  {
-    sqlite3_free(mapped[i]);
-  }
-  sqlite3_free(mapped);
-
-  return ret;
-}
-
 void cfsql_freeColumnInfoContents(cfsql_ColumnInfo *columnInfo)
 {
   sqlite3_free(columnInfo->name);
-  sqlite3_value_free(columnInfo->dfltValue);
   if (columnInfo->versionOf == 0)
   {
     // if versionOf is set then type points to a literal
@@ -205,51 +152,6 @@ int cfsql_numPks(
   return ret;
 }
 
-/**
- * Returns a copy of colInfos that is filled in with the version columns
- * required to support LWW.
- */
-cfsql_ColumnInfo *cfsql_addVersionCols(
-    cfsql_ColumnInfo *colInfos,
-    int colInfosLen,
-    int *pCrrColsLen)
-{
-  // Primary key columns do not participate in versioning
-  // * 2 since we add a col for every non pk col
-  // + numPks since they are still part of the final table
-  int numPks = cfsql_numPks(colInfos, colInfosLen);
-  int totalCols = (colInfosLen - numPks) * 2 + numPks;
-  cfsql_ColumnInfo *ret = sqlite3_malloc(totalCols * sizeof *ret);
-  *pCrrColsLen = totalCols;
-  int i = 0;
-  int j = 0;
-
-  for (i = 0; i < colInfosLen; ++i)
-  {
-    ret[j] = colInfos[i];
-    ++j;
-    if (colInfos[i].pk == 0)
-    {
-      // add a version col
-      assert(j < totalCols);
-
-      ret[j].cid = -1;
-      ret[j].name = sqlite3_mprintf(
-          "%s__cfsql_v",
-          colInfos[i].name);
-      ret[j].notnull = 0;
-      ret[j].pk = 0;
-      ret[j].type = "INTEGER";
-      ret[j].versionOf = colInfos[i].name;
-      ret[j].dfltValue = 0;
-      ++j;
-    }
-  }
-
-  assert(j == totalCols);
-  return ret;
-}
-
 static int cmpPks(const void *a, const void *b)
 {
   return (((cfsql_ColumnInfo *)a)->pk - ((cfsql_ColumnInfo *)b)->pk);
@@ -332,25 +234,8 @@ static cfsql_TableInfo *cfsql_tableInfo(
   cfsql_TableInfo *ret = sqlite3_malloc(sizeof *ret);
   int tmpLen = 0;
 
-  if (tblType == CRR_SPACE)
-  {
-    ret->withVersionCols = colInfos;
-    ret->withVersionColsLen = colInfosLen;
-    ret->baseCols = cfsql_extractBaseCols(colInfos, colInfosLen, &(ret->baseColsLen));
-  }
-  else if (tblType == USER_SPACE)
-  {
-    ret->baseCols = colInfos;
-    ret->baseColsLen = colInfosLen;
-    ret->withVersionCols = cfsql_addVersionCols(colInfos, colInfosLen, &(ret->withVersionColsLen));
-  }
-  else
-  {
-    // should be impossible to get here
-    sqlite3_free(ret);
-    cfsql_freeColumnInfos(colInfos, colInfosLen);
-    return 0;
-  }
+  ret->baseCols = colInfos;
+  ret->baseColsLen = colInfosLen;
 
   ret->tblName = strdup(tblName);
 
@@ -383,7 +268,7 @@ int cfsql_getIndexList(
   cfsql_IndexInfo *indexInfos = 0;
   int i = 0;
 
-  zSql = sqlite3_mprintf("select count(*) from temp.pragma_index_list('%s')", tblName);
+  zSql = sqlite3_mprintf("select count(*) from pragma_index_list('%s')", tblName);
   numIndices = cfsql_getCount(db, zSql);
   sqlite3_free(zSql);
 
@@ -394,7 +279,7 @@ int cfsql_getIndexList(
   }
 
   zSql = sqlite3_mprintf(
-      "SELECT \"seq\", \"name\", \"unique\", \"origin\", \"partial\" FROM temp.pragma_index_list('%s')",
+      "SELECT \"seq\", \"name\", \"unique\", \"origin\", \"partial\" FROM pragma_index_list('%s')",
       tblName);
   rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
   sqlite3_free(zSql);
@@ -480,7 +365,7 @@ int cfsql_getTableInfo(
   int i = 0;
   cfsql_ColumnInfo *columnInfos = 0;
 
-  zSql = sqlite3_mprintf("select count(*) from temp.pragma_table_info(\"%s\")", tblName);
+  zSql = sqlite3_mprintf("select count(*) from pragma_table_info(\"%s\")", tblName);
   numColInfos = cfsql_getCount(db, zSql);
   sqlite3_free(zSql);
 
@@ -490,14 +375,14 @@ int cfsql_getTableInfo(
     return numColInfos;
   }
 
-  zSql = sqlite3_mprintf("select \"cid\", \"name\", \"type\", \"notnull\", \"pk\", \"dflt_value\" from temp.pragma_table_info(\"%s\")",
+  zSql = sqlite3_mprintf("select \"cid\", \"name\", \"type\", \"notnull\", \"pk\" from pragma_table_info(\"%s\")",
                          tblName);
   rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
   sqlite3_free(zSql);
 
   if (rc != SQLITE_OK)
   {
-    *pErrMsg = sqlite3_mprintf("Failed to prepare select for ccr -- %s", tblName);
+    *pErrMsg = sqlite3_mprintf("Failed to prepare select for crr -- %s", tblName);
     sqlite3_finalize(pStmt);
     return rc;
   }
@@ -521,12 +406,6 @@ int cfsql_getTableInfo(
 
     columnInfos[i].notnull = sqlite3_column_int(pStmt, 3);
     columnInfos[i].pk = sqlite3_column_int(pStmt, 4);
-    sqlite3_value *dflt = sqlite3_column_value(pStmt, 5);
-    if (sqlite3_value_type(dflt) == SQLITE_NULL) {
-      columnInfos[i].dfltValue = 0;
-    } else {
-      columnInfos[i].dfltValue = sqlite3_value_dup(dflt);
-    }
     
     columnInfos[i].versionOf = 0;
 
@@ -538,7 +417,7 @@ int cfsql_getTableInfo(
   cfsql_IndexInfo *indexInfos;
   int numIndexInfos;
 
-  // TODO: we don't need to extract the index list.
+  // TODO: validate indices are compatible with CRR properties
   rc = cfsql_getIndexList(
       db,
       tblName,
@@ -561,13 +440,12 @@ void cfsql_freeTableInfo(cfsql_TableInfo *tableInfo)
   if (tableInfo == 0) {
     return;
   }
-  // withVersionCols is a superset of all other col arrays
+  // baseCols is a superset of all other col arrays
   // and will free their contents.
-  cfsql_freeColumnInfos(tableInfo->withVersionCols, tableInfo->withVersionColsLen);
+  cfsql_freeColumnInfos(tableInfo->baseCols, tableInfo->baseColsLen);
 
   // the arrays themselves of course still need freeing
   sqlite3_free(tableInfo->tblName);
-  sqlite3_free(tableInfo->baseCols);
   sqlite3_free(tableInfo->pks);
   sqlite3_free(tableInfo->nonPks);
 

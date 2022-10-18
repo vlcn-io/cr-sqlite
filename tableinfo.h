@@ -15,7 +15,6 @@ struct cfsql_ColumnInfo
   int notnull;
   int pk;
   char *versionOf;
-  sqlite3_value *dfltValue;
 };
 
 typedef struct cfsql_IndexInfo cfsql_IndexInfo;
@@ -42,11 +41,6 @@ struct cfsql_TableInfo {
 
   cfsql_ColumnInfo *nonPks;
   int nonPksLen;
-  // Superset of all other ColumnInfo members.
-  // Freeing the column infos contained in this array frees
-  // the column infos inside of all the other arrays.
-  cfsql_ColumnInfo *withVersionCols;
-  int withVersionColsLen;
 
   cfsql_IndexInfo *indexInfo;
   int indexInfoLen;
@@ -59,11 +53,6 @@ cfsql_ColumnInfo *cfsql_extractBaseCols(
 
 void cfsql_freeColumnInfoContents(cfsql_ColumnInfo *columnInfo);
 
-cfsql_ColumnInfo *cfsql_addVersionCols(
-    cfsql_ColumnInfo *colInfos,
-    int colInfosLen,
-    int *pCrrColsLen);
-
 void cfsql_freeTableInfo(cfsql_TableInfo *tableInfo);
 
 int cfsql_getTableInfo(
@@ -72,8 +61,6 @@ int cfsql_getTableInfo(
     const char *tblName,
     cfsql_TableInfo **pTableInfo,
     char **pErrMsg);
-
-char *cfsql_asColumnDefinitions(cfsql_ColumnInfo *in, size_t inlen);
 
 char *cfsql_asIdentifierList(cfsql_ColumnInfo *in, size_t inlen, char *prefix);
 

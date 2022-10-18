@@ -17,7 +17,7 @@ void testGetTableInfo()
 
   rc = sqlite3_open(":memory:", &db);
 
-  sqlite3_exec(db, "CREATE TEMP TABLE foo (a INT NOT NULL, b)", 0, 0, 0);
+  sqlite3_exec(db, "CREATE TABLE foo (a INT NOT NULL, b)", 0, 0, 0);
   rc = cfsql_getTableInfo(db, USER_SPACE, "foo", &tableInfo, &errMsg);
 
   if (rc != SQLITE_OK)
@@ -45,11 +45,9 @@ void testGetTableInfo()
   assert(tableInfo->nonPks[0].notnull == 1);
   assert(tableInfo->nonPks[0].pk == 0);
 
-  assert(tableInfo->withVersionColsLen == 4);
-
   cfsql_freeTableInfo(tableInfo);
 
-  sqlite3_exec(db, "CREATE TEMP TABLE bar (a PRIMARY KEY, b)", 0, 0, 0);
+  sqlite3_exec(db, "CREATE TABLE bar (a PRIMARY KEY, b)", 0, 0, 0);
   rc = cfsql_getTableInfo(db, USER_SPACE, "bar", &tableInfo, &errMsg);
   if (rc != SQLITE_OK)
   {
@@ -69,7 +67,6 @@ void testGetTableInfo()
   assert(tableInfo->pksLen == 1);
   assert(tableInfo->nonPksLen == 1);
 
-  assert(tableInfo->withVersionColsLen == 3);
   assert(tableInfo->indexInfoLen == 1);
   assert(strcmp(tableInfo->indexInfo[0].indexedCols[0], "a") == 0);
 
@@ -96,7 +93,6 @@ void testExtractBaseCols()
     colInfos[i].notnull = 0;
     colInfos[i].pk = 0;
     colInfos[i].versionOf = 0;
-    colInfos[i].dfltValue = 0;
   }
 
   extracted = cfsql_extractBaseCols(colInfos, numInfos, &extractedLen);
@@ -116,7 +112,6 @@ void testExtractBaseCols()
     colInfos[i].type = sqlite3_mprintf("");
     colInfos[i].notnull = 0;
     colInfos[i].pk = 0;
-    colInfos[i].dfltValue = 0;
     if (i % 2 == 1)
     {
       colInfos[i].versionOf = colInfos[i - 1].name;
@@ -135,48 +130,6 @@ void testExtractBaseCols()
     cfsql_freeColumnInfoContents(&colInfos[i]);
   }
   sqlite3_free(extracted);
-
-  printf("\t\e[0;32mSuccess\e[0m\n");
-}
-
-void testAddVersionCols()
-{
-  int numInfos = 4;
-  cfsql_ColumnInfo colInfos[numInfos];
-  cfsql_ColumnInfo *versioned;
-  int i = 0;
-  int versionedLen = 0;
-  printf("AddVersionCols\n");
-
-  // no columns are version columns
-  for (i = 0; i < numInfos; ++i)
-  {
-    colInfos[i].cid = i;
-    colInfos[i].name = sqlite3_mprintf("c_%d", i);
-    colInfos[i].type = sqlite3_mprintf("");
-    colInfos[i].notnull = 0;
-    colInfos[i].pk = 0;
-    colInfos[i].versionOf = 0;
-    colInfos[i].dfltValue = 0;
-  }
-
-  versioned = cfsql_addVersionCols(colInfos, numInfos, &versionedLen);
-  assert(versionedLen == 8);
-  for (i = 0; i < versionedLen; ++i)
-  {
-    if (i % 2 == 1)
-    {
-      assert(versioned[i].versionOf != 0);
-      assert(versioned[i].cid == -1);
-    }
-    else
-    {
-      assert(versioned[i].versionOf == 0);
-    }
-
-    cfsql_freeColumnInfoContents(&versioned[i]);
-  }
-  sqlite3_free(versioned);
 
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
@@ -211,29 +164,6 @@ void testAsIdentifierList()
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
-void testAsColumnDefinitions() {
-  printf("AsColumnDefinitions\n");
-
-  int numInfos = 4;
-  cfsql_ColumnInfo colInfos[numInfos];
-  for (int i = 0; i < numInfos; ++i)
-  {
-    colInfos[i].cid = i;
-    colInfos[i].name = sqlite3_mprintf("c_%d", i);
-    colInfos[i].type = sqlite3_mprintf("");
-    colInfos[i].notnull = 0;
-    colInfos[i].pk = 0;
-    colInfos[i].versionOf = 0;
-    colInfos[i].dfltValue = 0;
-  }
-
-  char * defs = cfsql_asColumnDefinitions(colInfos, numInfos);
-  assert(strcmp(defs, "\"c_0\"  ,\"c_1\"  ,\"c_2\"  ,\"c_3\"  ") == 0);
-  sqlite3_free(defs);
-
-  printf("\t\e[0;32mSuccess\e[0m\n");
-}
-
 void testGetIndexList() {
   printf("GetIndexList\n");
   sqlite3 *db = 0;
@@ -241,7 +171,7 @@ void testGetIndexList() {
   int indexInfosLen;
   int rc = sqlite3_open(":memory:", &db);
 
-  sqlite3_exec(db, "CREATE TEMP TABLE foo (a)", 0, 0, 0);
+  sqlite3_exec(db, "CREATE TABLE foo (a)", 0, 0, 0);
 
   rc = cfsql_getIndexList(
     db,
@@ -255,7 +185,7 @@ void testGetIndexList() {
   assert(indexInfos == 0);
   assert(indexInfosLen == 0);
 
-  sqlite3_exec(db, "CREATE TEMP TABLE bar (a primary key)", 0, 0, 0);
+  sqlite3_exec(db, "CREATE TABLE bar (a primary key)", 0, 0, 0);
 
   rc = cfsql_getIndexList(
     db,
@@ -280,9 +210,7 @@ void testGetIndexList() {
 void cfsqlTableInfoTestSuite() {
   printf("\e[47m\e[1;30mSuite: cfsql_tableInfo\e[0m\n");
 
-  testAsColumnDefinitions();
   testAsIdentifierList();
-  testAddVersionCols();
   testExtractBaseCols();
   testGetTableInfo();
   testGetIndexList();

@@ -29,7 +29,7 @@ def test_c3_restored():
 
   # close and re-open to check that we work with empty clock tables
   c.execute("create table foo (id primary key, a)")
-  c.execute("select cfsql_crr_from('foo')")
+  c.execute("select cfsql_as_crr('foo')")
   c.close()
   c = connect(dbfile)
   assert c.execute("SELECT cfsql_dbversion()").fetchone()[0] == min_db_v

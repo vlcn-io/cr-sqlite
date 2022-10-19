@@ -20,10 +20,10 @@ def create_schema(c):
   c.execute("CREATE TABLE slide (id primary key, deck_id, \"order\")")
   c.execute("CREATE TABLE component (id primary key, type, slide_id, content)")
 
-  c.execute("select cfsql_crr_from('user')")
-  c.execute("select cfsql_crr_from('deck')")
-  c.execute("select cfsql_crr_from('slide')")
-  c.execute("select cfsql_crr_from('component')")
+  c.execute("select cfsql_as_crr('user')")
+  c.execute("select cfsql_as_crr('deck')")
+  c.execute("select cfsql_as_crr('slide')")
+  c.execute("select cfsql_as_crr('component')")
 
 def insert_data(c):
   c.execute("INSERT INTO user VALUES (1, 'Javi')")

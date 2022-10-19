@@ -78,7 +78,7 @@ void teste2e()
 
   rc = sqlite3_exec(db, "create table foo (a primary key, b);", 0, 0, &err);
   CHECK_OK
-  rc = sqlite3_exec(db, "select cfsql_crr_from('foo');", 0, 0, &err);
+  rc = sqlite3_exec(db, "select cfsql_as_crr('foo');", 0, 0, &err);
   CHECK_OK
 
   printf("\t\e[0;32mSuccess\e[0m\n");

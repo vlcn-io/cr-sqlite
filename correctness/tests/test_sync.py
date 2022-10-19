@@ -60,12 +60,22 @@ def test_changes_since():
     format_str.format(tbl="component", vers=min_db_v, siteid="FF"),
   ]
   
-  complete_query = "SELECT tbl, pk, rid, col_vs FROM ( {unions} ) ".format(unions=" UNION ".join(unions))
+  complete_query = "SELECT tbl, pk, rid, col_vs FROM ( {unions} ) ORDER BY col_vs, tbl, rid".format(unions=" UNION ".join(unions))
 
-  r = c.execute(complete_query, ()).fetchall()
-  pp.pprint(r)
+  changes = c.execute(complete_query, ()).fetchall()
 
-  return 1
+  # then gather patch sets...
+
+  # for each row query for:
+  # that row w/ given cols
+  # join version cols in
+
+  for row in changes:
+    break
+    # map cids to col names
+    q = "SELECT col_names, col_v_literals as col_name_vs FROM tbl WHERE pkWhereList"
+
+  # collect into patches for tables
 
 def test_patch():
   # unroll each change

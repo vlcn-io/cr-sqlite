@@ -42,12 +42,6 @@ struct cfsql_ChangesSince_cursor
   // of what has changed
   sqlite3_stmt *pChangesStmt;
 
-  // The statement that fetches the singular row for what change is
-  // currently being processed
-  // we actually likely don't need to save it here
-  // since we're custom packing returned values from rows.
-  sqlite3_stmt *pRowStmt;
-
   // char *tbl;
   // char *pks;
   // char *colVals;
@@ -131,9 +125,7 @@ static int changesSinceCrsrFinalize(cfsql_ChangesSince_cursor *crsr)
 {
   int rc = SQLITE_OK;
   rc += sqlite3_finalize(crsr->pChangesStmt);
-  rc += sqlite3_finalize(crsr->pRowStmt);
   crsr->pChangesStmt = 0;
-  crsr->pRowStmt = 0;
   for (int i = 0; i < crsr->tableInfosLen; ++i)
   {
     cfsql_freeTableInfo(crsr->tableInfos[i]);
@@ -162,24 +154,26 @@ static int changesSinceNext(sqlite3_vtab_cursor *cur)
   cfsql_ChangesSince_cursor *pCur = (cfsql_ChangesSince_cursor *)cur;
   int rc = SQLITE_OK;
 
-  // finalize the prior row statement if it exists
-  rc = sqlite3_finalize(pCur->pRowStmt);
+  if (pCur->pChangesStmt == 0)
+  {
+    return SQLITE_ERROR;
+  }
 
   // step to next
   // if not row, tear down (finalize) statements
   // set statements to null
-  if (rc != SQLITE_OK || pCur->pChangesStmt == 0)
-  {
-    return rc || SQLITE_ERROR;
-  }
-
   if (sqlite3_step(pCur->pChangesStmt) != SQLITE_ROW)
   {
     // tear down since we're done
     return changesSinceCrsrFinalize(pCur);
   }
 
-  // else -- prep row statement based on changeSrc columns
+  // else -- create row statement for the current row
+  // fetch the data
+  // pack it
+  // finalize the row statement
+  // fill our cursor
+  // return
 
   return rc;
 }
@@ -195,7 +189,8 @@ static int changesSinceColumn(
 )
 {
   cfsql_ChangesSince_cursor *pCur = (cfsql_ChangesSince_cursor *)cur;
-  sqlite3_result_value(ctx, sqlite3_column_value(pCur->pRowStmt, i));
+  // switch on i to return the appropriate packed value from our struct
+  // sqlite3_result_value(ctx, sqlite3_column_value(pCur->pRowStmt, i));
   return SQLITE_OK;
 }
 
@@ -327,7 +322,6 @@ static int changesSinceFilter(
   if (rNumRows == 0)
   {
     pCrsr->pChangesStmt = 0;
-    pCrsr->pRowStmt = 0;
     sqlite3_free_table(rClockTableNames);
     return rc;
   }

@@ -79,6 +79,7 @@ static int changesSinceConnect(
 #define CHANGES_SINCE_VTAB_COL_VALS 2
 #define CHANGES_SINCE_VTAB_COL_VRSNS 3
 #define CHANGES_SINCE_VTAB_VRSN 4
+#define CHANGES_SINCE_VTAB_RQSTR 5
   if (rc == SQLITE_OK)
   {
     pNew = sqlite3_malloc(sizeof(*pNew));
@@ -245,7 +246,6 @@ char *cfsql_changesUnionQuery(
   // %z frees unionsStr https://www.sqlite.org/printf.html#percentz
 }
 
-
 /*
 ** Advance a ChangesSince_cursor to its next row of output.
 */
@@ -274,9 +274,9 @@ static int changesSinceNext(sqlite3_vtab_cursor *cur)
   // finalize the row statement
   // fill our cursor
   // return
-  const char *tbl = (const char*)sqlite3_column_text(pCur->pChangesStmt, TBL);
-  const char *pks = (const char*)sqlite3_column_text(pCur->pChangesStmt, PKS);
-  const char *colVrsns = (const char*)sqlite3_column_text(pCur->pChangesStmt, COL_VRSNS);
+  const char *tbl = (const char *)sqlite3_column_text(pCur->pChangesStmt, TBL);
+  const char *pks = (const char *)sqlite3_column_text(pCur->pChangesStmt, PKS);
+  const char *colVrsns = (const char *)sqlite3_column_text(pCur->pChangesStmt, COL_VRSNS);
   sqlite3_int64 minv = sqlite3_column_int64(pCur->pChangesStmt, MIN_V);
 
   pCur->version = minv;
@@ -285,10 +285,10 @@ static int changesSinceNext(sqlite3_vtab_cursor *cur)
   // create pkWhereList
   // select all non pk columns (since we alrdy have pk pack)
   // also handle the delete special case
-  
+
   // the concated pks should be in tableinfo pk order...
   // split them to get quoted pk values
-  // 
+  //
 
   return rc;
 }
@@ -330,7 +330,6 @@ static int changesSinceColumn(
   // sqlite3_result_value(ctx, sqlite3_column_value(pCur->pRowStmt, i));
   return SQLITE_OK;
 }
-
 
 /*
 ** This method is called to "rewind" the templatevtab_cursor object back
@@ -405,7 +404,8 @@ static int changesSinceFilter(
 
   sqlite3_stmt *pStmt = 0;
   rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
-  if (rc != SQLITE_OK) {
+  if (rc != SQLITE_OK)
+  {
     cfsql_freeAllTableInfos(tableInfos, rNumRows);
     sqlite3_finalize(pStmt);
     return rc;
@@ -429,12 +429,76 @@ static int changesSinceFilter(
 ** a query plan for each invocation and compute an estimated cost for that
 ** plan.
 */
-static int templatevtabBestIndex(
+static int changesSinceBestIndex(
     sqlite3_vtab *tab,
     sqlite3_index_info *pIdxInfo)
 {
-  pIdxInfo->estimatedCost = (double)10;
-  pIdxInfo->estimatedRows = 10;
+  int idxNum = 0;
+  int versionIdx = -1;
+  int requestorIdx = -1;
+
+  for (int i = 0; i < pIdxInfo->nConstraint; i++)
+  {
+    const struct sqlite3_index_constraint *pConstraint = &pIdxInfo->aConstraint[i];
+    switch (pConstraint->iColumn)
+    {
+    case CHANGES_SINCE_VTAB_VRSN:
+      if (pConstraint->op != SQLITE_INDEX_CONSTRAINT_GT)
+      {
+        return SQLITE_CONSTRAINT;
+      }
+      versionIdx = i;
+      idxNum |= 2;
+      break;
+    case CHANGES_SINCE_VTAB_RQSTR:
+      if (pConstraint->op != SQLITE_INDEX_CONSTRAINT_EQ)
+      {
+        return SQLITE_CONSTRAINT;
+      }
+      requestorIdx = i;
+      pIdxInfo->aConstraintUsage[i].argvIndex = 2;
+      pIdxInfo->aConstraintUsage[i].omit = 1;
+      idxNum |= 4;
+      break;
+    }
+  }
+
+  // both constraints are present
+  if ((idxNum & 6) == 6)
+  {
+    pIdxInfo->estimatedCost = (double)1;
+    pIdxInfo->estimatedRows = 1;
+
+    pIdxInfo->aConstraintUsage[versionIdx].argvIndex = 1;
+    pIdxInfo->aConstraintUsage[versionIdx].omit = 1;
+    pIdxInfo->aConstraintUsage[requestorIdx].argvIndex = 2;
+    pIdxInfo->aConstraintUsage[requestorIdx].omit = 1;
+  }
+  // only the version constraint is present
+  else if ((idxNum & 2) == 2)
+  {
+    pIdxInfo->estimatedCost = (double)10;
+    pIdxInfo->estimatedRows = 10;
+
+    pIdxInfo->aConstraintUsage[versionIdx].argvIndex = 1;
+    pIdxInfo->aConstraintUsage[versionIdx].omit = 1;
+  }
+  // only the requestor constraint is present
+  else if ((idxNum & 4) == 4)
+  {
+    pIdxInfo->estimatedCost = (double)2147483647;
+    pIdxInfo->estimatedRows = 2147483647;
+
+    pIdxInfo->aConstraintUsage[requestorIdx].argvIndex = 1;
+    pIdxInfo->aConstraintUsage[requestorIdx].omit = 1;
+  }
+  // no constraints are present
+  else
+  {
+    pIdxInfo->estimatedCost = (double)2147483647;
+    pIdxInfo->estimatedRows = 2147483647;
+  }
+
   return SQLITE_OK;
 }
 
@@ -446,7 +510,7 @@ static sqlite3_module templatevtabModule = {
     /* iVersion    */ 0,
     /* xCreate     */ 0,
     /* xConnect    */ changesSinceConnect,
-    /* xBestIndex  */ templatevtabBestIndex,
+    /* xBestIndex  */ changesSinceBestIndex,
     /* xDisconnect */ changesSinceDisconnect,
     /* xDestroy    */ 0,
     /* xOpen       */ changesSinceOpen,

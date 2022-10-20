@@ -40,7 +40,7 @@ static const size_t siteIdBlobSize = sizeof(siteIdBlob);
  * as a data type and we do eventually write db version(s) to the db.
  *
  */
-static _Atomic int64_t dbVersion = -9223372036854775807L;
+static _Atomic int64_t dbVersion = MIN_POSSIBLE_DB_VERSION;
 static int dbVersionSet = 0;
 
 static sqlite3_mutex *globalsInitMutex = 0;

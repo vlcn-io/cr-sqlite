@@ -4,7 +4,7 @@
 #if !defined(SQLITEINT_H)
 #include "sqlite3ext.h"
 #endif
-SQLITE_EXTENSION_INIT1
+SQLITE_EXTENSION_INIT3
 #include <string.h>
 #include <assert.h>
 
@@ -24,9 +24,19 @@ struct cfsql_ChangesSince_vtab {
 typedef struct cfsql_ChangesSince_cursor cfsql_ChangesSince_cursor;
 struct cfsql_ChangesSince_cursor {
   sqlite3_vtab_cursor base;  /* Base class - must be first */
-  /* Insert new fields here.  For this templatevtab we only keep track
-  ** of the rowid */
-  sqlite3_int64 iRowid;      /* The rowid */
+
+  // The statement that is returning what identifiers
+  // of what has changed
+  sqlite3_stmt *pChangeSrc;
+  // The statement that fetches the singular row for what change is
+  // currently being processed
+  sqlite3_stmt *pRowStmt;
+
+  // char *tbl;
+  // char *pks;
+  // char *colVals;
+  // char *colVsns;
+  // sqlite3_int64 minv;
 };
 
 /*
@@ -42,7 +52,7 @@ struct cfsql_ChangesSince_cursor {
 **    (2) Tell SQLite (via the sqlite3_declare_vtab() interface) what the
 **        result set of queries against the virtual table will look like.
 */
-static int changesSinceVtabConnect(
+static int changesSinceConnect(
   sqlite3 *db,
   void *pAux,
   int argc, const char *const*argv,
@@ -73,7 +83,7 @@ static int changesSinceVtabConnect(
 /*
 ** Destructor for ChangesSince_vtab objects
 */
-static int changesSinceVtabDisconnect(sqlite3_vtab *pVtab){
+static int changesSinceDisconnect(sqlite3_vtab *pVtab){
   cfsql_ChangesSince_vtab *p = (cfsql_ChangesSince_vtab*)pVtab;
   sqlite3_free(p);
   return SQLITE_OK;
@@ -82,7 +92,7 @@ static int changesSinceVtabDisconnect(sqlite3_vtab *pVtab){
 /*
 ** Constructor for a new ChangesSince cursors object.
 */
-static int templatevtabOpen(sqlite3_vtab *p, sqlite3_vtab_cursor **ppCursor){
+static int changesSinceOpen(sqlite3_vtab *p, sqlite3_vtab_cursor **ppCursor){
   cfsql_ChangesSince_cursor *pCur;
   pCur = sqlite3_malloc( sizeof(*pCur) );
   if( pCur==0 ) return SQLITE_NOMEM;
@@ -106,7 +116,10 @@ static int templatevtabClose(sqlite3_vtab_cursor *cur){
 */
 static int templatevtabNext(sqlite3_vtab_cursor *cur){
   cfsql_ChangesSince_cursor *pCur = (cfsql_ChangesSince_cursor*)cur;
-  pCur->iRowid++;
+  // here we call `step` on `changeSrc`
+  // then, with what that gives us, populate 
+  // pRowStmt
+  // pCur->iRowid++;
   return SQLITE_OK;
 }
 
@@ -114,34 +127,13 @@ static int templatevtabNext(sqlite3_vtab_cursor *cur){
 ** Return values of columns for the row at which the templatevtab_cursor
 ** is currently pointing.
 */
-static int templatevtabColumn(
+static int changesSinceColumn(
   sqlite3_vtab_cursor *cur,   /* The cursor */
   sqlite3_context *ctx,       /* First argument to sqlite3_result_...() */
   int i                       /* Which column to return */
 ){
   cfsql_ChangesSince_cursor *pCur = (cfsql_ChangesSince_cursor*)cur;
-  switch( i ){
-    case CHANGES_SINCE_VTAB_TBL:
-      sqlite3_result_text(ctx, pCur->tbl);
-      break;
-    case CHANGES_SINCE_VTAB_PKS:
-      sqlite3_result_text(ctx, pCur->pks);
-      break;
-    case CHANGES_SINCE_VTAB_COL_VALS:
-      // TODO: set to a blob for future efficiency
-      sqlite3_result_text(ctx, pCur->vals);
-      break;
-    case CHANGES_SINCE_VTAB_COL_VSNS:
-      // TODO: set to a blob for future efficiency
-      sqlite3_result_text(ctx, pCur->vsns);
-      break;
-    case CHANGES_SINCE_VTAB_MIN_V:
-      sqlite3_result_int64(ctx, pCur->minv);
-      break;
-    default:
-      return SQLITE_MISUSE;
-      break;
-  }
+  sqlite3_result_value(ctx, sqlite3_column_value(pCur->pRowStmt, i));
   return SQLITE_OK;
 }
 
@@ -151,7 +143,7 @@ static int templatevtabColumn(
 */
 static int templatevtabRowid(sqlite3_vtab_cursor *cur, sqlite_int64 *pRowid){
   cfsql_ChangesSince_cursor *pCur = (cfsql_ChangesSince_cursor*)cur;
-  *pRowid = pCur->minv;
+  // *pRowid = pCur->minv;
   return SQLITE_OK;
 }
 
@@ -159,9 +151,9 @@ static int templatevtabRowid(sqlite3_vtab_cursor *cur, sqlite_int64 *pRowid){
 ** Return TRUE if the cursor has been moved off of the last
 ** row of output.
 */
-static int templatevtabEof(sqlite3_vtab_cursor *cur){
-  templatevtab_cursor *pCur = (templatevtab_cursor*)cur;
-  return pCur->iRowid>=10;
+static int changesSinceEof(sqlite3_vtab_cursor *cur){
+  cfsql_ChangesSince_cursor *pCur = (cfsql_ChangesSince_cursor*)cur;
+  return pCur->pChangeSrc == 0;
 }
 
 /*
@@ -175,8 +167,10 @@ static int templatevtabFilter(
   int idxNum, const char *idxStr,
   int argc, sqlite3_value **argv
 ){
-  templatevtab_cursor *pCur = (templatevtab_cursor *)pVtabCursor;
-  pCur->iRowid = 1;
+  // run our query here??
+  // https://sqlite.org/src/file/ext/misc/unionvtab.c
+  // templatevtab_cursor *pCur = (templatevtab_cursor *)pVtabCursor;
+  // pCur->iRowid = 1;
   return SQLITE_OK;
 }
 
@@ -202,16 +196,16 @@ static int templatevtabBestIndex(
 static sqlite3_module templatevtabModule = {
   /* iVersion    */ 0,
   /* xCreate     */ 0,
-  /* xConnect    */ templatevtabConnect,
+  /* xConnect    */ changesSinceConnect,
   /* xBestIndex  */ templatevtabBestIndex,
-  /* xDisconnect */ templatevtabDisconnect,
+  /* xDisconnect */ changesSinceDisconnect,
   /* xDestroy    */ 0,
-  /* xOpen       */ templatevtabOpen,
+  /* xOpen       */ changesSinceOpen,
   /* xClose      */ templatevtabClose,
   /* xFilter     */ templatevtabFilter,
   /* xNext       */ templatevtabNext,
-  /* xEof        */ templatevtabEof,
-  /* xColumn     */ templatevtabColumn,
+  /* xEof        */ changesSinceEof,
+  /* xColumn     */ changesSinceColumn,
   /* xRowid      */ templatevtabRowid,
   /* xUpdate     */ 0,
   /* xBegin      */ 0,
@@ -227,16 +221,16 @@ static sqlite3_module templatevtabModule = {
 };
 
 
-#ifdef _WIN32
-__declspec(dllexport)
-#endif
-int sqlite3_templatevtab_init(
-  sqlite3 *db, 
-  char **pzErrMsg, 
-  const sqlite3_api_routines *pApi
-){
-  int rc = SQLITE_OK;
-  SQLITE_EXTENSION_INIT2(pApi);
-  rc = sqlite3_create_module(db, "templatevtab", &templatevtabModule, 0);
-  return rc;
-}
+// #ifdef _WIN32
+// __declspec(dllexport)
+// #endif
+// int sqlite3_templatevtab_init(
+//   sqlite3 *db, 
+//   char **pzErrMsg, 
+//   const sqlite3_api_routines *pApi
+// ){
+//   int rc = SQLITE_OK;
+//   SQLITE_EXTENSION_INIT2(pApi);
+//   rc = sqlite3_create_module(db, "templatevtab", &templatevtabModule, 0);
+//   return rc;
+// }

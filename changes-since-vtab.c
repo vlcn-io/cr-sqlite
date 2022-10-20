@@ -12,8 +12,9 @@ SQLITE_EXTENSION_INIT3
 ** underlying representation of the virtual table
 */
 typedef struct cfsql_ChangesSince_vtab cfsql_ChangesSince_vtab;
-struct cfsql_ChangesSince_vtab {
-  sqlite3_vtab base;  /* Base class - must be first */
+struct cfsql_ChangesSince_vtab
+{
+  sqlite3_vtab base; /* Base class - must be first */
   /* Add new fields here, as necessary */
 };
 
@@ -22,8 +23,9 @@ struct cfsql_ChangesSince_vtab {
 ** over rows of the result
 */
 typedef struct cfsql_ChangesSince_cursor cfsql_ChangesSince_cursor;
-struct cfsql_ChangesSince_cursor {
-  sqlite3_vtab_cursor base;  /* Base class - must be first */
+struct cfsql_ChangesSince_cursor
+{
+  sqlite3_vtab_cursor base; /* Base class - must be first */
 
   // The statement that is returning what identifiers
   // of what has changed
@@ -53,28 +55,29 @@ struct cfsql_ChangesSince_cursor {
 **        result set of queries against the virtual table will look like.
 */
 static int changesSinceConnect(
-  sqlite3 *db,
-  void *pAux,
-  int argc, const char *const*argv,
-  sqlite3_vtab **ppVtab,
-  char **pzErr
-){
+    sqlite3 *db,
+    void *pAux,
+    int argc, const char *const *argv,
+    sqlite3_vtab **ppVtab,
+    char **pzErr)
+{
   cfsql_ChangesSince_vtab *pNew;
   int rc;
 
   // TODO: future improvement to include txid
   rc = sqlite3_declare_vtab(db,
-           "CREATE TABLE x([tbl], [pks], [col_vals], [col_vsns], [min_v])"
-       );
-#define CHANGES_SINCE_VTAB_TBL  0
-#define CHANGES_SINCE_VTAB_PKS  1
+                            "CREATE TABLE x([tbl], [pks], [col_vals], [col_vsns], [min_v])");
+#define CHANGES_SINCE_VTAB_TBL 0
+#define CHANGES_SINCE_VTAB_PKS 1
 #define CHANGES_SINCE_VTAB_COL_VALS 2
 #define CHANGES_SINCE_VTAB_COL_VSNS 3
 #define CHANGES_SINCE_VTAB_MIN_V 4
-  if( rc==SQLITE_OK ){
-    pNew = sqlite3_malloc( sizeof(*pNew) );
-    *ppVtab = (sqlite3_vtab*)pNew;
-    if( pNew==0 ) return SQLITE_NOMEM;
+  if (rc == SQLITE_OK)
+  {
+    pNew = sqlite3_malloc(sizeof(*pNew));
+    *ppVtab = (sqlite3_vtab *)pNew;
+    if (pNew == 0)
+      return SQLITE_NOMEM;
     memset(pNew, 0, sizeof(*pNew));
   }
   return rc;
@@ -83,8 +86,9 @@ static int changesSinceConnect(
 /*
 ** Destructor for ChangesSince_vtab objects
 */
-static int changesSinceDisconnect(sqlite3_vtab *pVtab){
-  cfsql_ChangesSince_vtab *p = (cfsql_ChangesSince_vtab*)pVtab;
+static int changesSinceDisconnect(sqlite3_vtab *pVtab)
+{
+  cfsql_ChangesSince_vtab *p = (cfsql_ChangesSince_vtab *)pVtab;
   sqlite3_free(p);
   return SQLITE_OK;
 }
@@ -92,35 +96,68 @@ static int changesSinceDisconnect(sqlite3_vtab *pVtab){
 /*
 ** Constructor for a new ChangesSince cursors object.
 */
-static int changesSinceOpen(sqlite3_vtab *p, sqlite3_vtab_cursor **ppCursor){
+static int changesSinceOpen(sqlite3_vtab *p, sqlite3_vtab_cursor **ppCursor)
+{
   cfsql_ChangesSince_cursor *pCur;
-  pCur = sqlite3_malloc( sizeof(*pCur) );
-  if( pCur==0 ) return SQLITE_NOMEM;
+  pCur = sqlite3_malloc(sizeof(*pCur));
+  if (pCur == 0)
+    return SQLITE_NOMEM;
   memset(pCur, 0, sizeof(*pCur));
   *ppCursor = &pCur->base;
+  pCur->pChangeSrc = 0;
+  pCur->pRowStmt = 0;
   return SQLITE_OK;
+}
+
+static int changesSinceCrsrFinalize(cfsql_ChangesSince_cursor *crsr)
+{
+  int rc = SQLITE_OK;
+  rc += sqlite3_finalize(crsr->pChangeSrc);
+  rc += sqlite3_finalize(crsr->pRowStmt);
+  crsr->pChangeSrc = 0;
+  crsr->pRowStmt = 0;
+  return rc;
 }
 
 /*
 ** Destructor for a ChangesSince cursor.
 */
-static int templatevtabClose(sqlite3_vtab_cursor *cur){
-  cfsql_ChangesSince_cursor *pCur = (cfsql_ChangesSince_cursor*)cur;
+static int changesSinceClose(sqlite3_vtab_cursor *cur)
+{
+  cfsql_ChangesSince_cursor *pCur = (cfsql_ChangesSince_cursor *)cur;
+  changesSinceCrsrFinalize(pCur);
   sqlite3_free(pCur);
   return SQLITE_OK;
 }
 
-
 /*
 ** Advance a ChangesSince_cursor to its next row of output.
 */
-static int templatevtabNext(sqlite3_vtab_cursor *cur){
-  cfsql_ChangesSince_cursor *pCur = (cfsql_ChangesSince_cursor*)cur;
-  // here we call `step` on `changeSrc`
-  // then, with what that gives us, populate 
-  // pRowStmt
-  // pCur->iRowid++;
-  return SQLITE_OK;
+static int templatevtabNext(sqlite3_vtab_cursor *cur)
+{
+  cfsql_ChangesSince_cursor *pCur = (cfsql_ChangesSince_cursor *)cur;
+  int rc = SQLITE_OK;
+
+  // finalize the prior row statement if it exists
+  rc = sqlite3_finalize(pCur->pRowStmt);
+
+  // step to next
+  // if not row, tear down (finalize) statements
+  // set statements to null
+  if (rc != SQLITE_OK || pCur->pChangeSrc == 0)
+  {
+    return rc || SQLITE_ERROR;
+  }
+
+  if (sqlite3_step(pCur->pChangeSrc) != SQLITE_ROW)
+  {
+    // tear down since we're done
+    return changesSinceFinalize(pCur);
+  }
+
+  // else -- prep row statement based on changeSrc columns
+
+  return rc;
 }
 
 /*
@@ -128,11 +165,12 @@ static int templatevtabNext(sqlite3_vtab_cursor *cur){
 ** is currently pointing.
 */
 static int changesSinceColumn(
-  sqlite3_vtab_cursor *cur,   /* The cursor */
-  sqlite3_context *ctx,       /* First argument to sqlite3_result_...() */
-  int i                       /* Which column to return */
-){
-  cfsql_ChangesSince_cursor *pCur = (cfsql_ChangesSince_cursor*)cur;
+    sqlite3_vtab_cursor *cur, /* The cursor */
+    sqlite3_context *ctx,     /* First argument to sqlite3_result_...() */
+    int i                     /* Which column to return */
+)
+{
+  cfsql_ChangesSince_cursor *pCur = (cfsql_ChangesSince_cursor *)cur;
   sqlite3_result_value(ctx, sqlite3_column_value(pCur->pRowStmt, i));
   return SQLITE_OK;
 }
@@ -141,8 +179,9 @@ static int changesSinceColumn(
 ** Return the rowid for the current row.  In this implementation, the
 ** rowid is the same as the output value.
 */
-static int templatevtabRowid(sqlite3_vtab_cursor *cur, sqlite_int64 *pRowid){
-  cfsql_ChangesSince_cursor *pCur = (cfsql_ChangesSince_cursor*)cur;
+static int templatevtabRowid(sqlite3_vtab_cursor *cur, sqlite_int64 *pRowid)
+{
+  cfsql_ChangesSince_cursor *pCur = (cfsql_ChangesSince_cursor *)cur;
   // *pRowid = pCur->minv;
   return SQLITE_OK;
 }
@@ -151,22 +190,23 @@ static int templatevtabRowid(sqlite3_vtab_cursor *cur, sqlite_int64 *pRowid){
 ** Return TRUE if the cursor has been moved off of the last
 ** row of output.
 */
-static int changesSinceEof(sqlite3_vtab_cursor *cur){
-  cfsql_ChangesSince_cursor *pCur = (cfsql_ChangesSince_cursor*)cur;
+static int changesSinceEof(sqlite3_vtab_cursor *cur)
+{
+  cfsql_ChangesSince_cursor *pCur = (cfsql_ChangesSince_cursor *)cur;
   return pCur->pChangeSrc == 0;
 }
 
 /*
 ** This method is called to "rewind" the templatevtab_cursor object back
 ** to the first row of output.  This method is always called at least
-** once prior to any call to templatevtabColumn() or templatevtabRowid() or 
+** once prior to any call to templatevtabColumn() or templatevtabRowid() or
 ** templatevtabEof().
 */
 static int templatevtabFilter(
-  sqlite3_vtab_cursor *pVtabCursor, 
-  int idxNum, const char *idxStr,
-  int argc, sqlite3_value **argv
-){
+    sqlite3_vtab_cursor *pVtabCursor,
+    int idxNum, const char *idxStr,
+    int argc, sqlite3_value **argv)
+{
   // run our query here??
   // https://sqlite.org/src/file/ext/misc/unionvtab.c
   // templatevtab_cursor *pCur = (templatevtab_cursor *)pVtabCursor;
@@ -181,52 +221,50 @@ static int templatevtabFilter(
 ** plan.
 */
 static int templatevtabBestIndex(
-  sqlite3_vtab *tab,
-  sqlite3_index_info *pIdxInfo
-){
+    sqlite3_vtab *tab,
+    sqlite3_index_info *pIdxInfo)
+{
   pIdxInfo->estimatedCost = (double)10;
   pIdxInfo->estimatedRows = 10;
   return SQLITE_OK;
 }
 
 /*
-** This following structure defines all the methods for the 
+** This following structure defines all the methods for the
 ** virtual table.
 */
 static sqlite3_module templatevtabModule = {
-  /* iVersion    */ 0,
-  /* xCreate     */ 0,
-  /* xConnect    */ changesSinceConnect,
-  /* xBestIndex  */ templatevtabBestIndex,
-  /* xDisconnect */ changesSinceDisconnect,
-  /* xDestroy    */ 0,
-  /* xOpen       */ changesSinceOpen,
-  /* xClose      */ templatevtabClose,
-  /* xFilter     */ templatevtabFilter,
-  /* xNext       */ templatevtabNext,
-  /* xEof        */ changesSinceEof,
-  /* xColumn     */ changesSinceColumn,
-  /* xRowid      */ templatevtabRowid,
-  /* xUpdate     */ 0,
-  /* xBegin      */ 0,
-  /* xSync       */ 0,
-  /* xCommit     */ 0,
-  /* xRollback   */ 0,
-  /* xFindMethod */ 0,
-  /* xRename     */ 0,
-  /* xSavepoint  */ 0,
-  /* xRelease    */ 0,
-  /* xRollbackTo */ 0,
-  /* xShadowName */ 0
-};
-
+    /* iVersion    */ 0,
+    /* xCreate     */ 0,
+    /* xConnect    */ changesSinceConnect,
+    /* xBestIndex  */ templatevtabBestIndex,
+    /* xDisconnect */ changesSinceDisconnect,
+    /* xDestroy    */ 0,
+    /* xOpen       */ changesSinceOpen,
+    /* xClose      */ changesSinceClose,
+    /* xFilter     */ templatevtabFilter,
+    /* xNext       */ templatevtabNext,
+    /* xEof        */ changesSinceEof,
+    /* xColumn     */ changesSinceColumn,
+    /* xRowid      */ templatevtabRowid,
+    /* xUpdate     */ 0,
+    /* xBegin      */ 0,
+    /* xSync       */ 0,
+    /* xCommit     */ 0,
+    /* xRollback   */ 0,
+    /* xFindMethod */ 0,
+    /* xRename     */ 0,
+    /* xSavepoint  */ 0,
+    /* xRelease    */ 0,
+    /* xRollbackTo */ 0,
+    /* xShadowName */ 0};
 
 // #ifdef _WIN32
 // __declspec(dllexport)
 // #endif
 // int sqlite3_templatevtab_init(
-//   sqlite3 *db, 
-//   char **pzErrMsg, 
+//   sqlite3 *db,
+//   char **pzErrMsg,
 //   const sqlite3_api_routines *pApi
 // ){
 //   int rc = SQLITE_OK;

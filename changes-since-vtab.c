@@ -289,6 +289,8 @@ static int changesSinceNext(sqlite3_vtab_cursor *cur)
   // the concated pks should be in tableinfo pk order...
   // split them to get quoted pk values
   //
+  pCur->colVals = sqlite3_mprintf("todo vals");
+  pCur->colVrsns = sqlite3_mprintf("todo versions");
 
   return rc;
 }
@@ -351,6 +353,11 @@ static int changesSinceFilter(
   int rNumCols = 0;
   char *err = 0;
 
+  if (pCrsr->pChangesStmt) {
+    sqlite3_finalize(pCrsr->pChangesStmt);
+    pCrsr->pChangesStmt = 0;
+  }
+
   // Find all clock tables
   rc = sqlite3_get_table(
       db,
@@ -360,15 +367,8 @@ static int changesSinceFilter(
       &rNumCols,
       0);
 
-  if (rc != SQLITE_OK)
+  if (rc != SQLITE_OK || rNumRows == 0)
   {
-    sqlite3_free_table(rClockTableNames);
-    return rc;
-  }
-
-  if (rNumRows == 0)
-  {
-    pCrsr->pChangesStmt = 0;
     sqlite3_free_table(rClockTableNames);
     return rc;
   }
@@ -381,6 +381,7 @@ static int changesSinceFilter(
   memset(tableInfos, 0, rNumRows * sizeof(cfsql_TableInfo *));
   for (int i = 0; i < rNumRows; ++i)
   {
+    // +1 since tableNames includes a row for column headers
     rc = cfsql_getTableInfo(db, rClockTableNames[i + 1], &tableInfos[i], &err);
 
     if (rc != SQLITE_OK)
@@ -410,12 +411,48 @@ static int changesSinceFilter(
     sqlite3_finalize(pStmt);
     return rc;
   }
+
+  // pull user provided params to `getChangesSince`
+  int i = 0;
+  sqlite3_int64 versionBound = MIN_POSSIBLE_DB_VERSION;
+  char *requestorSiteId = 0x10;
+  int requestorSiteIdLen = 1;
+  int bRequestorSiteIdStatic = 1;
+  if (idxNum & 2)
+  {
+    versionBound = sqlite3_value_int64(argv[i]);
+    ++i;
+  }
+  if (idxNum & 4)
+  {
+    requestorSiteIdLen = sqlite3_value_bytes(argv[i]);
+    if (requestorSiteIdLen != 0)
+    {
+      requestorSiteId = sqlite3_value_blob(argv[i]);
+      bRequestorSiteIdStatic = 0;
+    }
+    else
+    {
+      requestorSiteIdLen = 1;
+    }
+    ++i;
+  }
+
   // now bind the params.
   // for each table info we need to bind 2 params:
   // 1. the site id
   // 2. the version
-  //
-  // we need to fetch those args from argv?
+  for (i = 0; i < rNumRows; ++i)
+  {
+    if (i % 2 == 0)
+    {
+      sqlite3_bind_blob(pStmt, i + 1, requestorSiteId, requestorSiteIdLen, SQLITE_STATIC);
+    }
+    else
+    {
+      sqlite3_bind_int64(pStmt, i + 1, versionBound);
+    }
+  }
 
   // put table infos into our cursor for later use on row fetches
   pCrsr->tableInfos = tableInfos;

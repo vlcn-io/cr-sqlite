@@ -10,7 +10,7 @@
 #include <stdio.h>
 
 // Bug here? see cfsql_asIdentifierListStr
-char *cfsql_asIdentifierList(cfsql_ColumnInfo *in, size_t inlen, char* prefix)
+char *cfsql_asIdentifierList(cfsql_ColumnInfo *in, size_t inlen, char *prefix)
 {
   if (inlen <= 0)
   {
@@ -72,13 +72,15 @@ void cfsql_freeIndexInfoContents(cfsql_IndexInfo *indexInfo)
   sqlite3_free(indexInfo->indexedCols);
 }
 
-
-void cfsql_freeIndexInfos(cfsql_IndexInfo *indexInfos, int indexInfosLen) {
-  if (indexInfos == 0) {
+void cfsql_freeIndexInfos(cfsql_IndexInfo *indexInfos, int indexInfosLen)
+{
+  if (indexInfos == 0)
+  {
     return;
   }
 
-  for (int i = 0; i < indexInfosLen; ++i) {
+  for (int i = 0; i < indexInfosLen; ++i)
+  {
     cfsql_freeIndexInfoContents(&indexInfos[i]);
   }
 
@@ -87,7 +89,8 @@ void cfsql_freeIndexInfos(cfsql_IndexInfo *indexInfos, int indexInfosLen) {
 
 static void cfsql_freeColumnInfos(cfsql_ColumnInfo *columnInfos, int len)
 {
-  if (columnInfos == 0) {
+  if (columnInfos == 0)
+  {
     return;
   }
 
@@ -271,7 +274,8 @@ int cfsql_getIndexList(
   numIndices = cfsql_getCount(db, zSql);
   sqlite3_free(zSql);
 
-  if (numIndices == 0) {
+  if (numIndices == 0)
+  {
     *pIndexInfos = 0;
     *pIndexInfosLen = 0;
     return SQLITE_OK;
@@ -404,7 +408,7 @@ int cfsql_getTableInfo(
 
     columnInfos[i].notnull = sqlite3_column_int(pStmt, 3);
     columnInfos[i].pk = sqlite3_column_int(pStmt, 4);
-    
+
     columnInfos[i].versionOf = 0;
 
     ++i;
@@ -435,7 +439,8 @@ int cfsql_getTableInfo(
 
 void cfsql_freeTableInfo(cfsql_TableInfo *tableInfo)
 {
-  if (tableInfo == 0) {
+  if (tableInfo == 0)
+  {
     return;
   }
   // baseCols is a superset of all other col arrays
@@ -449,4 +454,13 @@ void cfsql_freeTableInfo(cfsql_TableInfo *tableInfo)
 
   cfsql_freeIndexInfos(tableInfo->indexInfo, tableInfo->indexInfoLen);
   sqlite3_free(tableInfo);
+}
+
+void cfsql_freeAllTableInfos(cfsql_TableInfo **tableInfos, int len)
+{
+  for (int i = 0; i < len; ++i)
+  {
+    cfsql_freeTableInfo(tableInfos[i]);
+  }
+  sqlite3_free(tableInfos);
 }

@@ -70,4 +70,6 @@ int cfsql_getIndexList(
     int *pIndexInfosLen,
     char **pErrMsg);
 
+void cfsql_freeAllTableInfos(cfsql_TableInfo **tableInfos, int len);
+
 #endif

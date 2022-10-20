@@ -285,6 +285,10 @@ static int changesSinceNext(sqlite3_vtab_cursor *cur)
   // create pkWhereList
   // select all non pk columns (since we alrdy have pk pack)
   // also handle the delete special case
+  
+  // the concated pks should be in tableinfo pk order...
+  // split them to get quoted pk values
+  // 
 
   return rc;
 }
@@ -382,11 +386,7 @@ static int changesSinceFilter(
 
     if (rc != SQLITE_OK)
     {
-      for (int j = 0; j < rNumRows; ++j)
-      {
-        cfsql_freeTableInfo(tableInfos[j]);
-      }
-      sqlite3_free(tableInfos);
+      cfsql_freeAllTableInfos(tableInfos, rNumRows);
       sqlite3_free(err);
       return rc;
     }
@@ -399,21 +399,27 @@ static int changesSinceFilter(
 
   if (zSql == 0)
   {
-    for (int j = 0; j < rNumRows; ++j)
-    {
-      cfsql_freeTableInfo(tableInfos[j]);
-    }
-    sqlite3_free(tableInfos);
+    cfsql_freeAllTableInfos(tableInfos, rNumRows);
     return SQLITE_ERROR;
   }
 
-  // run our query here??
-  // https://sqlite.org/src/file/ext/misc/unionvtab.c
-  // templatevtab_cursor *pCur = (templatevtab_cursor *)pVtabCursor;
-  // pCur->iRowid = 1;
+  sqlite3_stmt *pStmt = 0;
+  rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
+  if (rc != SQLITE_OK) {
+    cfsql_freeAllTableInfos(tableInfos, rNumRows);
+    sqlite3_finalize(pStmt);
+    return rc;
+  }
+  // now bind the params.
+  // for each table info we need to bind 2 params:
+  // 1. the site id
+  // 2. the version
+  //
+  // we need to fetch those args from argv?
 
   // put table infos into our cursor for later use on row fetches
   pCrsr->tableInfos = tableInfos;
+  pCrsr->pChangesStmt = pStmt;
   return SQLITE_OK;
 }
 

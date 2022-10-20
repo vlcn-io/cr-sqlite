@@ -35,11 +35,17 @@ struct cfsql_ChangesSince_cursor
   sqlite3_vtab_cursor base; /* Base class - must be first */
 
   cfsql_ChangesSince_vtab *pTab;
-  // The statement that is returning what identifiers
+  cfsql_TableInfo **tableInfos;
+  int tableInfosLen;
+
+  // The statement that is returning the identifiers
   // of what has changed
   sqlite3_stmt *pChangesStmt;
+
   // The statement that fetches the singular row for what change is
   // currently being processed
+  // we actually likely don't need to save it here
+  // since we're custom packing returned values from rows.
   sqlite3_stmt *pRowStmt;
 
   // char *tbl;
@@ -118,9 +124,6 @@ static int changesSinceOpen(sqlite3_vtab *p, sqlite3_vtab_cursor **ppCursor)
   }
   memset(pCur, 0, sizeof(*pCur));
   *ppCursor = &pCur->base;
-  pCur->pChangesStmt = 0;
-  pCur->pRowStmt = 0;
-  pCur->pTab = (cfsql_ChangesSince_vtab *)p;
   return SQLITE_OK;
 }
 
@@ -131,6 +134,11 @@ static int changesSinceCrsrFinalize(cfsql_ChangesSince_cursor *crsr)
   rc += sqlite3_finalize(crsr->pRowStmt);
   crsr->pChangesStmt = 0;
   crsr->pRowStmt = 0;
+  for (int i = 0; i < crsr->tableInfosLen; ++i) {
+    cfsql_freeTableInfo(crsr->tableInfos[i]);
+  }
+  sqlite3_free(crsr->tableInfos);
+  
   return rc;
 }
 
@@ -262,14 +270,15 @@ static int changesSinceFilter(
   int rc = SQLITE_OK;
   cfsql_ChangesSince_cursor *pCrsr = (cfsql_ChangesSince_cursor *)pVtabCursor;
   cfsql_ChangesSince_vtab *pTab = pCrsr->pTab;
-  sqlite3 *pDb = pTab->db;
+  sqlite3 *db = pTab->db;
   char **rClockTableNames = 0;
   int rNumRows = 0;
   int rNumCols = 0;
+  char *err = 0;
 
   // Find all clock tables
   rc = sqlite3_get_table(
-      pDb,
+      db,
       CLOCK_TABLES_SELECT,
       &rClockTableNames,
       &rNumRows,
@@ -294,8 +303,26 @@ static int changesSinceFilter(
   // we'll need to attach these table infos
   // to our cursor
   // we should preclude index info from them
+  cfsql_TableInfo **tableInfos = sqlite3_malloc(rNumRows * sizeof(cfsql_TableInfo*));
+  memset(tableInfos, 0, rNumRows * sizeof *tableInfos);
+  for (int i = 0; i < rNumRows; ++i) {
+    rc = cfsql_getTableInfo(db, rClockTableNames[i + 1], &tableInfos[i], &err);
 
-  // now construct our union which grabs
+    if (rc != SQLITE_OK) {
+      for (int j = 0; j < rNumRows; ++j) {
+        cfsql_freeTableInfo(tableInfos[j]);
+      }
+      sqlite3_free(tableInfos);
+      sqlite3_free(err);
+      return rc;
+    }
+  }
+
+  // put table infos into our cursor for later use on row fetches
+  pCrsr->tableInfos = tableInfos;
+
+  // now construct and prepare our union for fetching changes
+  // union gets:
   // 1. name of table
   // 2. pks of changed row
   // 3. column versions

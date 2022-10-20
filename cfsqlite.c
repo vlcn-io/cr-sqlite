@@ -40,7 +40,7 @@ static const size_t siteIdBlobSize = sizeof(siteIdBlob);
  * as a data type and we do eventually write db version(s) to the db.
  *
  */
-static _Atomic int64_t dbVersion = -9223372036854775807L + 1;
+static _Atomic int64_t dbVersion = -9223372036854775807L;
 static int dbVersionSet = 0;
 
 static sqlite3_mutex *globalsInitMutex = 0;
@@ -257,8 +257,9 @@ static int initDbVersion(sqlite3 *db)
     return SQLITE_OK;
   }
 
-  // +1 since written version is _last_ version
-  dbVersion = sqlite3_column_int64(pStmt, 0) + 1;
+  // dbVersion is last version written but we always call `nextDbVersion` before writing
+  // a dbversion. Hence no +1.
+  dbVersion = sqlite3_column_int64(pStmt, 0);
   dbVersionSet = 1;
   sqlite3_finalize(pStmt);
 
@@ -289,11 +290,16 @@ static void dbVersionFunc(sqlite3_context *context, int argc, sqlite3_value **ar
   sqlite3_result_int64(context, dbVersion);
 }
 
-static int commitHook(void *cd)
+/**
+ * Return the next version of the database for use in inserts/updates/deletes
+ *
+ * `select cfsql_nextdbversion()`
+ */
+static void nextDbVersionFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
-  // this is an atomic int so this increment is thread safe.
-  dbVersion++;
-  return 0;
+  // dbVersion is an atomic int thus `++dbVersion` is a CAS and will always return
+  // a unique version for the given invocation, even under concurrent accesses.
+  sqlite3_result_int64(context, ++dbVersion);
 }
 
 /**
@@ -598,6 +604,13 @@ __declspec(dllexport)
                                  SQLITE_UTF8 | SQLITE_INNOCUOUS,
                                  0, dbVersionFunc, 0, 0);
   }
+  if (rc == SQLITE_OK)
+  {
+    rc = sqlite3_create_function(db, "cfsql_nextdbversion", 0,
+                                 // dbversion can change on each invocation.
+                                 SQLITE_UTF8 | SQLITE_INNOCUOUS,
+                                 0, nextDbVersionFunc, 0, 0);
+  }
 
   if (rc == SQLITE_OK)
   {
@@ -614,9 +627,9 @@ __declspec(dllexport)
 
   // cfsql_changes_since(asking_peer, version, rowid?)
 
-  if (rc == SQLITE_OK) {
-    sqlite3_commit_hook(db, commitHook, 0);
-  }
+  // if (rc == SQLITE_OK) {
+  //   sqlite3_commit_hook(db, commitHook, 0);
+  // }
 
   return rc;
 }

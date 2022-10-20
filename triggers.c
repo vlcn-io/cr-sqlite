@@ -47,7 +47,7 @@ int cfsql_createInsertTrigger(
       ) VALUES (\
         %s,\
         %d,\
-        cfsql_dbversion(),\
+        cfsql_nextdbversion(),\
         0\
       );\n",
         tableInfo->tblName,
@@ -119,7 +119,7 @@ int cfsql_createUpdateTrigger(sqlite3 *db,
         __cfsql_col_num,\
         __cfsql_version,\
         __cfsql_site_id\
-      ) SELECT %s, %d, cfsql_dbversion(), 0 WHERE NEW.\"%s\" != OLD.\"%s\";\n",
+      ) SELECT %s, %d, cfsql_nextdbversion(), 0 WHERE NEW.\"%s\" != OLD.\"%s\";\n",
                            tableInfo->tblName,
                            pkList,
                            pkNewList,
@@ -187,7 +187,7 @@ char *cfsql_deleteTriggerQuery(cfsql_TableInfo *tableInfo)
       ) VALUES (\
         %s,\
         %d,\
-        cfsql_dbversion(),\
+        cfsql_nextdbversion(),\
         0\
       );\
     END;",

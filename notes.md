@@ -1,5 +1,7 @@
 todo:
 
+- throw if pk is not defined -- don't use rowid. See:
+  - https://www.sqlabs.com/blog/2010/12/sqlite-and-unique-rowid-something-you-really-need-to-know/
 - invariant on incompatible index types
 - integrity checks by sync service? In case someone migrated a table and did not re-run `crr_from`?
 - if a column gets changed to become part of the primary key set...

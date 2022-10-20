@@ -39,6 +39,11 @@ def insert_data(c):
 
   c.execute("COMMIT")
 
+def update_data(c):
+  c.execute("UPDATE user SET name = 'Maestro' WHERE id = 1")
+  c.execute("UPDATE deck SET title = 'Presto' WHERE id = 1")
+  c.execute("COMMIT")
+
 def get_changes_since(db, version, requestor):
   return 1
 
@@ -46,13 +51,15 @@ def test_changes_since():
   pp = pprint.PrettyPrinter(indent=2)
   dbs = init()
   c = dbs[0]
+  update_data(c)
   clock_tables = c.execute("SELECT tbl_name FROM sqlite_master WHERE type='table' AND tbl_name LIKE '%__cfsql_clock'").fetchall()
-
-  print(clock_tables)
 
   # the extension will need to get table info for the clock tables
   # and extract pk columns to quote-concat as pk. ~'~
-  format_str = "SELECT quote(id) as pk, '{tbl}' as tbl, json_group_object(\"__cfsql_col_num\", \"__cfsql_version\") as col_vs, max(rowid) as rid FROM {tbl}__cfsql_clock WHERE __cfsql_site_id != x'{siteid}' AND __cfsql_version > {vers} GROUP BY pk"
+  # do you really want to group by pk?
+  # you'll collapse disparate transactiosn...
+  # you want to group by pk where all version for the column match?
+  format_str = "SELECT quote(id) as pk, '{tbl}' as tbl, json_group_object(\"__cfsql_col_num\", \"__cfsql_version\") as col_vsns, min(__cfsql_version) as min_v, max(rowid) as rid FROM {tbl}__cfsql_clock WHERE __cfsql_site_id != x'{siteid}' AND __cfsql_version > {vers} GROUP BY pk"
   unions = [
     format_str.format(tbl="user", vers=min_db_v, siteid="FF"), # TODO: get the actual site id
     format_str.format(tbl="deck", vers=min_db_v, siteid="FF"),
@@ -60,9 +67,10 @@ def test_changes_since():
     format_str.format(tbl="component", vers=min_db_v, siteid="FF"),
   ]
   
-  complete_query = "SELECT tbl, pk, rid, col_vs FROM ( {unions} ) ORDER BY col_vs, tbl, rid".format(unions=" UNION ".join(unions))
+  complete_query = "SELECT tbl, pk, rid, col_vsns, min_v FROM ( {unions} ) ORDER BY min_v, tbl, rid".format(unions=" UNION ".join(unions))
 
   changes = c.execute(complete_query, ()).fetchall()
+  pp.pprint(changes)
 
   # then gather patch sets...
 

@@ -1,6 +1,3 @@
-// https://www.sqlite.org/unionvtab.html
-// https://www.sqlite.org/swarmvtab.html#overview
-// https://www.sqlite.org/carray.html
 #include "changes-since-vtab.h"
 #include <string.h>
 #include <assert.h>
@@ -539,10 +536,6 @@ static int changesSinceBestIndex(
   return SQLITE_OK;
 }
 
-/*
-** This following structure defines all the methods for the
-** virtual table.
-*/
 sqlite3_module cfsql_changesSinceModule = {
     /* iVersion    */ 0,
     /* xCreate     */ 0,
@@ -568,17 +561,3 @@ sqlite3_module cfsql_changesSinceModule = {
     /* xRelease    */ 0,
     /* xRollbackTo */ 0,
     /* xShadowName */ 0};
-
-// #ifdef _WIN32
-// __declspec(dllexport)
-// #endif
-// int sqlite3_templatevtab_init(
-//   sqlite3 *db,
-//   char **pzErrMsg,
-//   const sqlite3_api_routines *pApi
-// ){
-//   int rc = SQLITE_OK;
-//   SQLITE_EXTENSION_INIT2(pApi);
-//   rc = sqlite3_create_module(db, "cfsql_changes", &templatevtabModule, 0);
-//   return rc;
-// }

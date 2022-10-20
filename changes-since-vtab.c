@@ -42,11 +42,11 @@ struct cfsql_ChangesSince_cursor
   // of what has changed
   sqlite3_stmt *pChangesStmt;
 
-  // char *tbl;
-  // char *pks;
-  // char *colVals;
-  // char *colVsns;
-  // sqlite3_int64 minv;
+  char *tbl;
+  char *pks;
+  char *colVals;
+  char *colVrsns;
+  sqlite3_int64 version;
 };
 
 /*
@@ -75,10 +75,10 @@ static int changesSinceConnect(
   // TODO: future improvement to include txid
   rc = sqlite3_declare_vtab(
       db,
-      "CREATE TABLE x([table], [pks], [col_vals], [col_versions], [curr_version], [requestor] hidden)");
+      "CREATE TABLE x([table], [pk], [col_vals], [col_versions], [curr_version], [requestor] hidden)");
 #define CHANGES_SINCE_VTAB_TBL 0
-#define CHANGES_SINCE_VTAB_PKS 1
-#define CHANGES_SINCE_VTAB_COL_VLS 2
+#define CHANGES_SINCE_VTAB_PK 1
+#define CHANGES_SINCE_VTAB_COL_VALS 2
 #define CHANGES_SINCE_VTAB_COL_VRSNS 3
 #define CHANGES_SINCE_VTAB_VRSN 4
   if (rc == SQLITE_OK)
@@ -132,6 +132,11 @@ static int changesSinceCrsrFinalize(cfsql_ChangesSince_cursor *crsr)
   }
   sqlite3_free(crsr->tableInfos);
 
+  sqlite3_free(crsr->colVals);
+  sqlite3_free(crsr->colVrsns);
+  sqlite3_free(crsr->pks);
+  sqlite3_free(crsr->tbl);
+
   return rc;
 }
 
@@ -160,7 +165,7 @@ static int changesSinceNext(sqlite3_vtab_cursor *cur)
   }
 
   // step to next
-  // if not row, tear down (finalize) statements
+  // if no row, tear down (finalize) statements
   // set statements to null
   if (sqlite3_step(pCur->pChangesStmt) != SQLITE_ROW)
   {
@@ -174,6 +179,11 @@ static int changesSinceNext(sqlite3_vtab_cursor *cur)
   // finalize the row statement
   // fill our cursor
   // return
+
+  // need to split pk list...
+  // create pkWhereList
+  // select all non pk columns (since we alrdy have pk pack)
+  // also handle the delete special case
 
   return rc;
 }
@@ -189,7 +199,29 @@ static int changesSinceColumn(
 )
 {
   cfsql_ChangesSince_cursor *pCur = (cfsql_ChangesSince_cursor *)cur;
-  // switch on i to return the appropriate packed value from our struct
+  // TODO: in the future, return a protobuf.
+  switch (i)
+  {
+    // we clean up the cursor on moving to the next result
+    // so no need to tell sqlite to free these values.
+  case CHANGES_SINCE_VTAB_TBL:
+    sqlite3_result_text(ctx, pCur->tbl, -1, 0);
+    break;
+  case CHANGES_SINCE_VTAB_PK:
+    sqlite3_result_text(ctx, pCur->pks, -1, 0);
+    break;
+  case CHANGES_SINCE_VTAB_COL_VALS:
+    sqlite3_result_text(ctx, pCur->colVals, -1, 0);
+    break;
+  case CHANGES_SINCE_VTAB_COL_VRSNS:
+    sqlite3_result_text(ctx, pCur->colVrsns, -1, 0);
+    break;
+  case CHANGES_SINCE_VTAB_VRSN:
+    sqlite3_result_int64(ctx, pCur->version);
+    break;
+  default:
+    return SQLITE_ERROR;
+  }
   // sqlite3_result_value(ctx, sqlite3_column_value(pCur->pRowStmt, i));
   return SQLITE_OK;
 }
@@ -201,7 +233,7 @@ static int changesSinceColumn(
 static int changesSinceRowid(sqlite3_vtab_cursor *cur, sqlite_int64 *pRowid)
 {
   cfsql_ChangesSince_cursor *pCur = (cfsql_ChangesSince_cursor *)cur;
-  // *pRowid = pCur->minv;
+  *pRowid = pCur->version;
   return SQLITE_OK;
 }
 
@@ -215,26 +247,30 @@ static int changesSinceEof(sqlite3_vtab_cursor *cur)
   return pCur->pChangesStmt == 0;
 }
 
-char *quote(const char *in) {
+static char *quote(const char *in)
+{
   return sqlite3_mprintf("quote(\"%s\")", in);
 }
 
-char *cfsql_changeQueryForTable(cfsql_TableInfo *tableInfo) {
-  if (tableInfo->pksLen == 0) {
+char *cfsql_changeQueryForTable(cfsql_TableInfo *tableInfo)
+{
+  if (tableInfo->pksLen == 0)
+  {
     return 0;
   }
 
   char *pkConcatList = 0;
 
   char *pks[tableInfo->pksLen];
-  for (int i = 0; i < tableInfo->pksLen; ++i) {
+  for (int i = 0; i < tableInfo->pksLen; ++i)
+  {
     pks[i] = tableInfo->pks[i].name;
   }
 
   pkConcatList = cfsql_join2(&quote, pks, tableInfo->pksLen, " || ");
 
-  char * zSql = sqlite3_mprintf(
-    "SELECT\
+  char *zSql = sqlite3_mprintf(
+      "SELECT\
       %z as pks,\
       '%s' as tbl,\
       json_group_object(__cfsql_col_num, __cfsql_version) as col_vrsns,\
@@ -245,10 +281,9 @@ char *cfsql_changeQueryForTable(cfsql_TableInfo *tableInfo) {
     AND\
       __cfsql_version > ?\
     GROUP BY pks",
-    pkConcatList,
-    tableInfo->tblName,
-    tableInfo->tblName
-  );
+      pkConcatList,
+      tableInfo->tblName,
+      tableInfo->tblName);
 
   return zSql;
 }
@@ -264,7 +299,8 @@ char *cfsql_changesUnionQuery(
   for (i = 0; i < tableInfosLen; ++i)
   {
     unionsArr[i] = cfsql_changeQueryForTable(tableInfos[i]);
-    if (unionsArr[i] == 0) {
+    if (unionsArr[i] == 0)
+    {
       return 0;
     }
   }
@@ -353,7 +389,8 @@ static int changesSinceFilter(
   // now construct and prepare our union for fetching changes
   char *zSql = cfsql_changesUnionQuery(tableInfos, rNumRows);
 
-  if (zSql == 0) {
+  if (zSql == 0)
+  {
     for (int j = 0; j < rNumRows; ++j)
     {
       cfsql_freeTableInfo(tableInfos[j]);

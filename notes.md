@@ -239,5 +239,5 @@ rowid can be used to break up large changes within a single version
 create table foo (a primary key, b);
 select cfsql_as_crr('foo');
 insert into foo values (1,2);
-select * from cfsql_changes;
+select * from cfsql_changes where version > 0;
 ```

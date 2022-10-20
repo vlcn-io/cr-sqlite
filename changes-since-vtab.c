@@ -419,7 +419,6 @@ static int changesSinceFilter(
   sqlite3_int64 versionBound = MIN_POSSIBLE_DB_VERSION;
   const char *requestorSiteId = "aa";
   int requestorSiteIdLen = 1;
-  int bRequestorSiteIdStatic = 1;
   if (idxNum & 2)
   {
     versionBound = sqlite3_value_int64(argv[i]);
@@ -431,7 +430,6 @@ static int changesSinceFilter(
     if (requestorSiteIdLen != 0)
     {
       requestorSiteId = (const char*)sqlite3_value_blob(argv[i]);
-      bRequestorSiteIdStatic = 0;
     }
     else
     {
@@ -537,6 +535,7 @@ static int changesSinceBestIndex(
     pIdxInfo->estimatedRows = 2147483647;
   }
 
+  pIdxInfo->idxNum = idxNum;
   return SQLITE_OK;
 }
 

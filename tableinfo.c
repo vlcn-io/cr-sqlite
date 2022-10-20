@@ -464,3 +464,13 @@ void cfsql_freeAllTableInfos(cfsql_TableInfo **tableInfos, int len)
   }
   sqlite3_free(tableInfos);
 }
+
+cfsql_TableInfo *cfsql_findTableInfo(cfsql_TableInfo **tblInfos, int len, const char * tblName) {
+  for (int i = 0; i < len; ++i) {
+    if (strcmp(tblInfos[i]->tblName, tblName) == 0) {
+      return tblInfos[i];
+    }
+  }
+
+  return 0;
+}

@@ -101,6 +101,40 @@ char *cfsql_join2(char *(*map)(const char *), char **in, size_t len, char *delim
   return ret;
 }
 
+/**
+ * Caller must free all entries in the returned array
+ * as well as the returned array
+ */
+char **cfsql_split(const char *in, char *delim, int partsLen)
+{
+  char *ptr = strstr(in, delim);
+  char **ret = sqlite3_malloc(partsLen * sizeof(char *));
+  int i = 0;
+  while (ptr != 0 && i < partsLen)
+  {
+    ret[i] = strndup(in, ptr - in);
+    // move past found delimiter
+    ptr += PK_DELIM_LEN;
+    in = ptr;
+    ptr = strstr(in, delim);
+    ++i;
+  }
+
+  if (i != partsLen)
+  {
+    // unexpected number of parts
+    // free it all and return null
+    for (i = 0; i < partsLen; ++i)
+    {
+      sqlite3_free(ret[i]);
+    }
+    sqlite3_free(ret);
+    ret = 0;
+  }
+
+  return ret;
+}
+
 // TODO:
 // have this take a function pointer that extracts the string so we can
 // delete cfsql_asIdentifierList

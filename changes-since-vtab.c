@@ -277,14 +277,54 @@ static int changesSinceNext(sqlite3_vtab_cursor *cur)
 
   pCur->version = minv;
 
-  // need to split pk list...
-  // create pkWhereList
-  // select all non pk columns (since we alrdy have pk pack)
-  // also handle the delete special case
+  cfsql_TableInfo *tblInfo = cfsql_findTableInfo(pCur->tableInfos, pCur->tableInfosLen, tbl);
+  if (tblInfo == 0) {
+    changesSinceCrsrFinalize(pCur);
+    return SQLITE_ERROR;
+  }
 
-  // the concated pks should be in tableinfo pk order...
-  // split them to get quoted pk values
-  //
+  if (tblInfo->pksLen == 0) {
+    // TODO set error msg
+    // require pks in `cfsql_as_crr`
+    return SQLITE_ERROR;
+  }
+
+  char **pksArr = 0;
+  if (tblInfo->pksLen == 1) {
+    pksArr = sqlite3_malloc(1 * sizeof(char *));
+    pksArr[0] = strdup(pks);
+  } else {
+    // split it up and assign
+    pksArr = cfsql_split(pks, PK_DELIM, tblInfo->pksLen);
+  }
+
+  if (pksArr == 0) {
+    // TODO set error msg
+    return SQLITE_ERROR;
+  }
+
+  for (int i = 0; i < tblInfo->pksLen; ++i) {
+    // this is safe since pks are extracted as `quote` in the prior queries
+    // %z will de-allocate pksArr[i] so we can re-allocate it in the assignment
+    pksArr[i] = sqlite3_mprintf("\"%s\" = %z", tblInfo->pks[i].name, pksArr[i]);
+  }
+
+  char *zSql = sqlite3_mprintf(
+    "SELECT %z FROM \"%s\" WHERE %z",
+    // TODO: we should only pull those with returned changes from colVrsns
+    cfsql_asIdentifierList(tblInfo->nonPks, tblInfo->nonPksLen, 0),
+    tblInfo->tblName,
+    // given identity is a pass-thru, pksArr will have its contents freed after calling this
+    cfsql_join2((char *(*)(const char *)) &cfsql_identity, pksArr, tblInfo->pksLen, " AND ")
+  );
+
+  // contents of pksArr was already freed via join2 and cfsql_identity. See above.
+  sqlite3_free(pksArr);
+  
+  // (3) create pk where list -- can insert directly since strings are quoted
+  // (4) select all columns in the versioned column list
+  //   this is done by filtering by cid in the table info list
+  // (5) json-encode {name: [val, version]} of columns
   pCur->colVals = sqlite3_mprintf("todo vals");
   pCur->colVrsns = sqlite3_mprintf("todo versions");
 

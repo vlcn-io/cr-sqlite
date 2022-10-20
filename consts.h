@@ -14,6 +14,8 @@
 #define TEMP_LEN 4
 #define SPACE_LEN 1
 #define __CFSQL_CLOCK_LEN 13
+#define PK_DELIM "~'~"
+#define PK_DELIM_LEN 3
 
 #define DELETE_CLOCK_SENTINEL -1
 

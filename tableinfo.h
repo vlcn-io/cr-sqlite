@@ -71,5 +71,6 @@ int cfsql_getIndexList(
     char **pErrMsg);
 
 void cfsql_freeAllTableInfos(cfsql_TableInfo **tableInfos, int len);
+cfsql_TableInfo *cfsql_findTableInfo(cfsql_TableInfo **tblInfos, int len, const char * tblName);
 
 #endif

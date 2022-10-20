@@ -42,8 +42,6 @@ struct cfsql_ChangesSince_cursor
   // of what has changed
   sqlite3_stmt *pChangesStmt;
 
-  char *tbl;
-  char *pks;
   char *colVals;
   char *colVrsns;
   sqlite3_int64 version;
@@ -134,8 +132,6 @@ static int changesSinceCrsrFinalize(cfsql_ChangesSince_cursor *crsr)
 
   sqlite3_free(crsr->colVals);
   sqlite3_free(crsr->colVrsns);
-  sqlite3_free(crsr->pks);
-  sqlite3_free(crsr->tbl);
 
   return rc;
 }
@@ -148,81 +144,6 @@ static int changesSinceClose(sqlite3_vtab_cursor *cur)
   cfsql_ChangesSince_cursor *pCur = (cfsql_ChangesSince_cursor *)cur;
   changesSinceCrsrFinalize(pCur);
   sqlite3_free(pCur);
-  return SQLITE_OK;
-}
-
-/*
-** Advance a ChangesSince_cursor to its next row of output.
-*/
-static int changesSinceNext(sqlite3_vtab_cursor *cur)
-{
-  cfsql_ChangesSince_cursor *pCur = (cfsql_ChangesSince_cursor *)cur;
-  int rc = SQLITE_OK;
-
-  if (pCur->pChangesStmt == 0)
-  {
-    return SQLITE_ERROR;
-  }
-
-  // step to next
-  // if no row, tear down (finalize) statements
-  // set statements to null
-  if (sqlite3_step(pCur->pChangesStmt) != SQLITE_ROW)
-  {
-    // tear down since we're done
-    return changesSinceCrsrFinalize(pCur);
-  }
-
-  // else -- create row statement for the current row
-  // fetch the data
-  // pack it
-  // finalize the row statement
-  // fill our cursor
-  // return
-
-  // need to split pk list...
-  // create pkWhereList
-  // select all non pk columns (since we alrdy have pk pack)
-  // also handle the delete special case
-
-  return rc;
-}
-
-/*
-** Return values of columns for the row at which the templatevtab_cursor
-** is currently pointing.
-*/
-static int changesSinceColumn(
-    sqlite3_vtab_cursor *cur, /* The cursor */
-    sqlite3_context *ctx,     /* First argument to sqlite3_result_...() */
-    int i                     /* Which column to return */
-)
-{
-  cfsql_ChangesSince_cursor *pCur = (cfsql_ChangesSince_cursor *)cur;
-  // TODO: in the future, return a protobuf.
-  switch (i)
-  {
-    // we clean up the cursor on moving to the next result
-    // so no need to tell sqlite to free these values.
-  case CHANGES_SINCE_VTAB_TBL:
-    sqlite3_result_text(ctx, pCur->tbl, -1, 0);
-    break;
-  case CHANGES_SINCE_VTAB_PK:
-    sqlite3_result_text(ctx, pCur->pks, -1, 0);
-    break;
-  case CHANGES_SINCE_VTAB_COL_VALS:
-    sqlite3_result_text(ctx, pCur->colVals, -1, 0);
-    break;
-  case CHANGES_SINCE_VTAB_COL_VRSNS:
-    sqlite3_result_text(ctx, pCur->colVrsns, -1, 0);
-    break;
-  case CHANGES_SINCE_VTAB_VRSN:
-    sqlite3_result_int64(ctx, pCur->version);
-    break;
-  default:
-    return SQLITE_ERROR;
-  }
-  // sqlite3_result_value(ctx, sqlite3_column_value(pCur->pRowStmt, i));
   return SQLITE_OK;
 }
 
@@ -314,11 +235,98 @@ char *cfsql_changesUnionQuery(
   }
 
   // compose the final query
+#define TBL 0
+#define PKS 1
+#define COL_VRSNS 2
+#define MIN_V 3
   return sqlite3_mprintf(
       "SELECT tbl, pks, col_vrsns, min_v FROM (%z) ORDER BY min_v, tbl ASC",
       unionsStr);
   // %z frees unionsStr https://www.sqlite.org/printf.html#percentz
 }
+
+
+/*
+** Advance a ChangesSince_cursor to its next row of output.
+*/
+static int changesSinceNext(sqlite3_vtab_cursor *cur)
+{
+  cfsql_ChangesSince_cursor *pCur = (cfsql_ChangesSince_cursor *)cur;
+  int rc = SQLITE_OK;
+
+  if (pCur->pChangesStmt == 0)
+  {
+    return SQLITE_ERROR;
+  }
+
+  // step to next
+  // if no row, tear down (finalize) statements
+  // set statements to null
+  if (sqlite3_step(pCur->pChangesStmt) != SQLITE_ROW)
+  {
+    // tear down since we're done
+    return changesSinceCrsrFinalize(pCur);
+  }
+
+  // else -- create row statement for the current row
+  // fetch the data
+  // pack it
+  // finalize the row statement
+  // fill our cursor
+  // return
+  const char *tbl = (const char*)sqlite3_column_text(pCur->pChangesStmt, TBL);
+  const char *pks = (const char*)sqlite3_column_text(pCur->pChangesStmt, PKS);
+  const char *colVrsns = (const char*)sqlite3_column_text(pCur->pChangesStmt, COL_VRSNS);
+  sqlite3_int64 minv = sqlite3_column_int64(pCur->pChangesStmt, MIN_V);
+
+  pCur->version = minv;
+
+  // need to split pk list...
+  // create pkWhereList
+  // select all non pk columns (since we alrdy have pk pack)
+  // also handle the delete special case
+
+  return rc;
+}
+
+/*
+** Return values of columns for the row at which the templatevtab_cursor
+** is currently pointing.
+*/
+static int changesSinceColumn(
+    sqlite3_vtab_cursor *cur, /* The cursor */
+    sqlite3_context *ctx,     /* First argument to sqlite3_result_...() */
+    int i                     /* Which column to return */
+)
+{
+  cfsql_ChangesSince_cursor *pCur = (cfsql_ChangesSince_cursor *)cur;
+  // TODO: in the future, return a protobuf.
+  switch (i)
+  {
+    // we clean up the cursor on moving to the next result
+    // so no need to tell sqlite to free these values.
+  case CHANGES_SINCE_VTAB_TBL:
+    sqlite3_result_value(ctx, sqlite3_column_value(pCur->pChangesStmt, TBL));
+    break;
+  case CHANGES_SINCE_VTAB_PK:
+    sqlite3_result_value(ctx, sqlite3_column_value(pCur->pChangesStmt, PKS));
+    break;
+  case CHANGES_SINCE_VTAB_COL_VALS:
+    sqlite3_result_text(ctx, pCur->colVals, -1, 0);
+    break;
+  case CHANGES_SINCE_VTAB_COL_VRSNS:
+    sqlite3_result_text(ctx, pCur->colVrsns, -1, 0);
+    break;
+  case CHANGES_SINCE_VTAB_VRSN:
+    sqlite3_result_int64(ctx, pCur->version);
+    break;
+  default:
+    return SQLITE_ERROR;
+  }
+  // sqlite3_result_value(ctx, sqlite3_column_value(pCur->pRowStmt, i));
+  return SQLITE_OK;
+}
+
 
 /*
 ** This method is called to "rewind" the templatevtab_cursor object back

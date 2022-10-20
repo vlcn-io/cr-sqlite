@@ -5,6 +5,7 @@ SQLITE_EXTENSION_INIT1
 #include "tableinfo.h"
 #include "consts.h"
 #include "triggers.h"
+#include "changes-since-vtab.h"
 
 #include <ctype.h>
 #include <stdint.h>
@@ -624,7 +625,9 @@ __declspec(dllexport)
                                  0, cfsqlMakeCrrFunc, 0, 0);
   }
 
-  // cfsql_changes_since(asking_peer, version, rowid?)
+  if (rc == SQLITE_OK) {
+    rc = sqlite3_create_module(db, "cfsql_changes", &cfsql_changesSinceModule, 0);
+  }
 
   // if (rc == SQLITE_OK) {
   //   sqlite3_commit_hook(db, commitHook, 0);

@@ -1,10 +1,7 @@
 // https://www.sqlite.org/unionvtab.html
 // https://www.sqlite.org/swarmvtab.html#overview
 // https://www.sqlite.org/carray.html
-#if !defined(SQLITEINT_H)
-#include "sqlite3ext.h"
-#endif
-SQLITE_EXTENSION_INIT3
+#include "changes-since-vtab.h"
 #include <string.h>
 #include <assert.h>
 #include "consts.h"
@@ -415,7 +412,7 @@ static int changesSinceFilter(
   // pull user provided params to `getChangesSince`
   int i = 0;
   sqlite3_int64 versionBound = MIN_POSSIBLE_DB_VERSION;
-  char *requestorSiteId = 0x10;
+  const char *requestorSiteId = "aa";
   int requestorSiteIdLen = 1;
   int bRequestorSiteIdStatic = 1;
   if (idxNum & 2)
@@ -428,7 +425,7 @@ static int changesSinceFilter(
     requestorSiteIdLen = sqlite3_value_bytes(argv[i]);
     if (requestorSiteIdLen != 0)
     {
-      requestorSiteId = sqlite3_value_blob(argv[i]);
+      requestorSiteId = (const char*)sqlite3_value_blob(argv[i]);
       bRequestorSiteIdStatic = 0;
     }
     else
@@ -543,7 +540,7 @@ static int changesSinceBestIndex(
 ** This following structure defines all the methods for the
 ** virtual table.
 */
-static sqlite3_module templatevtabModule = {
+sqlite3_module cfsql_changesSinceModule = {
     /* iVersion    */ 0,
     /* xCreate     */ 0,
     /* xConnect    */ changesSinceConnect,
@@ -579,6 +576,6 @@ static sqlite3_module templatevtabModule = {
 // ){
 //   int rc = SQLITE_OK;
 //   SQLITE_EXTENSION_INIT2(pApi);
-//   rc = sqlite3_create_module(db, "templatevtab", &templatevtabModule, 0);
+//   rc = sqlite3_create_module(db, "cfsql_changes", &templatevtabModule, 0);
 //   return rc;
 // }

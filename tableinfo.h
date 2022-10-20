@@ -57,7 +57,6 @@ void cfsql_freeTableInfo(cfsql_TableInfo *tableInfo);
 
 int cfsql_getTableInfo(
     sqlite3 *db,
-    int tblType,
     const char *tblName,
     cfsql_TableInfo **pTableInfo,
     char **pErrMsg);

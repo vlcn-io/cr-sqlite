@@ -35,13 +35,13 @@ void testCreateClockTable()
   sqlite3_exec(db, "CREATE TABLE baz (a primary key, b)", 0, 0, 0);
   sqlite3_exec(db, "CREATE TABLE boo (a primary key, b, c)", 0, 0, 0);
 
-  rc = cfsql_getTableInfo(db, USER_SPACE, "foo", &tc1, &err);
+  rc = cfsql_getTableInfo(db, "foo", &tc1, &err);
   CHECK_OK
-  rc = cfsql_getTableInfo(db, USER_SPACE, "bar", &tc2, &err);
+  rc = cfsql_getTableInfo(db, "bar", &tc2, &err);
   CHECK_OK
-  rc = cfsql_getTableInfo(db, USER_SPACE, "baz", &tc3, &err);
+  rc = cfsql_getTableInfo(db, "baz", &tc3, &err);
   CHECK_OK
-  rc = cfsql_getTableInfo(db, USER_SPACE, "boo", &tc4, &err);
+  rc = cfsql_getTableInfo(db, "boo", &tc4, &err);
   CHECK_OK
 
   rc = cfsql_createClockTable(db, tc1, &err);

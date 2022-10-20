@@ -7,18 +7,25 @@
 SQLITE_EXTENSION_INIT3
 #include <string.h>
 #include <assert.h>
+#include "consts.h"
+#include "util.h"
 
-/* templatevtab_vtab is a subclass of sqlite3_vtab which is
-** underlying representation of the virtual table
-*/
+/**
+ * vtab usage:
+ * SELECT * FROM cfsql_chages WHERE requestor = SITE_ID AND curr_version > V
+ *
+ * returns:
+ * table_name, quote-concated pks ~'~, json-encoded vals, json-encoded versions, curr version
+ */
+
 typedef struct cfsql_ChangesSince_vtab cfsql_ChangesSince_vtab;
 struct cfsql_ChangesSince_vtab
 {
   sqlite3_vtab base; /* Base class - must be first */
-  /* Add new fields here, as necessary */
+  sqlite3 *db;
 };
 
-/* templatevtab_cursor is a subclass of sqlite3_vtab_cursor which will
+/* A subclass of sqlite3_vtab_cursor which will
 ** serve as the underlying representation of a cursor that scans
 ** over rows of the result
 */
@@ -27,9 +34,10 @@ struct cfsql_ChangesSince_cursor
 {
   sqlite3_vtab_cursor base; /* Base class - must be first */
 
+  cfsql_ChangesSince_vtab *pTab;
   // The statement that is returning what identifiers
   // of what has changed
-  sqlite3_stmt *pChangeSrc;
+  sqlite3_stmt *pChangesStmt;
   // The statement that fetches the singular row for what change is
   // currently being processed
   sqlite3_stmt *pRowStmt;
@@ -65,20 +73,24 @@ static int changesSinceConnect(
   int rc;
 
   // TODO: future improvement to include txid
-  rc = sqlite3_declare_vtab(db,
-                            "CREATE TABLE x([tbl], [pks], [col_vals], [col_vsns], [min_v])");
+  rc = sqlite3_declare_vtab(
+      db,
+      "CREATE TABLE x([table], [pks], [col_vals], [col_versions], [curr_version], [requestor] hidden)");
 #define CHANGES_SINCE_VTAB_TBL 0
 #define CHANGES_SINCE_VTAB_PKS 1
-#define CHANGES_SINCE_VTAB_COL_VALS 2
-#define CHANGES_SINCE_VTAB_COL_VSNS 3
-#define CHANGES_SINCE_VTAB_MIN_V 4
+#define CHANGES_SINCE_VTAB_COL_VLS 2
+#define CHANGES_SINCE_VTAB_COL_VRSNS 3
+#define CHANGES_SINCE_VTAB_VRSN 4
   if (rc == SQLITE_OK)
   {
     pNew = sqlite3_malloc(sizeof(*pNew));
     *ppVtab = (sqlite3_vtab *)pNew;
     if (pNew == 0)
+    {
       return SQLITE_NOMEM;
+    }
     memset(pNew, 0, sizeof(*pNew));
+    pNew->db = db;
   }
   return rc;
 }
@@ -101,20 +113,23 @@ static int changesSinceOpen(sqlite3_vtab *p, sqlite3_vtab_cursor **ppCursor)
   cfsql_ChangesSince_cursor *pCur;
   pCur = sqlite3_malloc(sizeof(*pCur));
   if (pCur == 0)
+  {
     return SQLITE_NOMEM;
+  }
   memset(pCur, 0, sizeof(*pCur));
   *ppCursor = &pCur->base;
-  pCur->pChangeSrc = 0;
+  pCur->pChangesStmt = 0;
   pCur->pRowStmt = 0;
+  pCur->pTab = (cfsql_ChangesSince_vtab *)p;
   return SQLITE_OK;
 }
 
 static int changesSinceCrsrFinalize(cfsql_ChangesSince_cursor *crsr)
 {
   int rc = SQLITE_OK;
-  rc += sqlite3_finalize(crsr->pChangeSrc);
+  rc += sqlite3_finalize(crsr->pChangesStmt);
   rc += sqlite3_finalize(crsr->pRowStmt);
-  crsr->pChangeSrc = 0;
+  crsr->pChangesStmt = 0;
   crsr->pRowStmt = 0;
   return rc;
 }
@@ -133,7 +148,7 @@ static int changesSinceClose(sqlite3_vtab_cursor *cur)
 /*
 ** Advance a ChangesSince_cursor to its next row of output.
 */
-static int templatevtabNext(sqlite3_vtab_cursor *cur)
+static int changesSinceNext(sqlite3_vtab_cursor *cur)
 {
   cfsql_ChangesSince_cursor *pCur = (cfsql_ChangesSince_cursor *)cur;
   int rc = SQLITE_OK;
@@ -144,15 +159,15 @@ static int templatevtabNext(sqlite3_vtab_cursor *cur)
   // step to next
   // if not row, tear down (finalize) statements
   // set statements to null
-  if (rc != SQLITE_OK || pCur->pChangeSrc == 0)
+  if (rc != SQLITE_OK || pCur->pChangesStmt == 0)
   {
     return rc || SQLITE_ERROR;
   }
 
-  if (sqlite3_step(pCur->pChangeSrc) != SQLITE_ROW)
+  if (sqlite3_step(pCur->pChangesStmt) != SQLITE_ROW)
   {
     // tear down since we're done
-    return changesSinceFinalize(pCur);
+    return changesSinceCrsrFinalize(pCur);
   }
 
   // else -- prep row statement based on changeSrc columns
@@ -179,7 +194,7 @@ static int changesSinceColumn(
 ** Return the rowid for the current row.  In this implementation, the
 ** rowid is the same as the output value.
 */
-static int templatevtabRowid(sqlite3_vtab_cursor *cur, sqlite_int64 *pRowid)
+static int changesSinceRowid(sqlite3_vtab_cursor *cur, sqlite_int64 *pRowid)
 {
   cfsql_ChangesSince_cursor *pCur = (cfsql_ChangesSince_cursor *)cur;
   // *pRowid = pCur->minv;
@@ -193,7 +208,44 @@ static int templatevtabRowid(sqlite3_vtab_cursor *cur, sqlite_int64 *pRowid)
 static int changesSinceEof(sqlite3_vtab_cursor *cur)
 {
   cfsql_ChangesSince_cursor *pCur = (cfsql_ChangesSince_cursor *)cur;
-  return pCur->pChangeSrc == 0;
+  return pCur->pChangesStmt == 0;
+}
+
+char *cfsql_changesUnionQuery(
+    int numRows,
+    char **tableNames)
+{
+  char *unionsArr[numRows];
+  char *unionsStr;
+  char *ret;
+  int i = 0;
+
+  for (i = 0; i < numRows; ++i)
+  {
+    unionsArr[i] = sqlite3_mprintf(
+        "SELECT max(__cfsql_version) as version FROM \"%w\" %s ",
+        // the first result in tableNames is the column heading
+        // so skip that
+        tableNames[i + 1],
+        // If we have more tables to process, union them in
+        i < numRows - 1 ? UNION : "");
+  }
+
+  // move the array of strings into a single string
+  unionsStr = cfsql_join(unionsArr, numRows);
+  // free the array of strings
+  for (i = 0; i < numRows; ++i)
+  {
+    sqlite3_free(unionsArr[i]);
+  }
+
+  // compose the final query
+  // and update the pointer to the string to point to it.
+  ret = sqlite3_mprintf(
+      "SELECT max(version) as version FROM (%z)",
+      unionsStr);
+  // %z frees unionsStr https://www.sqlite.org/printf.html#percentz
+  return ret;
 }
 
 /*
@@ -202,11 +254,54 @@ static int changesSinceEof(sqlite3_vtab_cursor *cur)
 ** once prior to any call to templatevtabColumn() or templatevtabRowid() or
 ** templatevtabEof().
 */
-static int templatevtabFilter(
+static int changesSinceFilter(
     sqlite3_vtab_cursor *pVtabCursor,
     int idxNum, const char *idxStr,
     int argc, sqlite3_value **argv)
 {
+  int rc = SQLITE_OK;
+  cfsql_ChangesSince_cursor *pCrsr = (cfsql_ChangesSince_cursor *)pVtabCursor;
+  cfsql_ChangesSince_vtab *pTab = pCrsr->pTab;
+  sqlite3 *pDb = pTab->db;
+  char **rClockTableNames = 0;
+  int rNumRows = 0;
+  int rNumCols = 0;
+
+  // Find all clock tables
+  rc = sqlite3_get_table(
+      pDb,
+      CLOCK_TABLES_SELECT,
+      &rClockTableNames,
+      &rNumRows,
+      &rNumCols,
+      0);
+
+  if (rc != SQLITE_OK)
+  {
+    sqlite3_free_table(rClockTableNames);
+    return rc;
+  }
+
+  if (rNumRows == 0)
+  {
+    pCrsr->pChangesStmt = 0;
+    pCrsr->pRowStmt = 0;
+    sqlite3_free_table(rClockTableNames);
+    return rc;
+  }
+
+  // construct table infos for each table
+  // we'll need to attach these table infos
+  // to our cursor
+  // we should preclude index info from them
+
+  // now construct our union which grabs
+  // 1. name of table
+  // 2. pks of changed row
+  // 3. column versions
+  // 4. originator (or 0 for local)
+  // char *zSql = cfsql_changesUnionQuery();
+
   // run our query here??
   // https://sqlite.org/src/file/ext/misc/unionvtab.c
   // templatevtab_cursor *pCur = (templatevtab_cursor *)pVtabCursor;
@@ -242,11 +337,11 @@ static sqlite3_module templatevtabModule = {
     /* xDestroy    */ 0,
     /* xOpen       */ changesSinceOpen,
     /* xClose      */ changesSinceClose,
-    /* xFilter     */ templatevtabFilter,
-    /* xNext       */ templatevtabNext,
+    /* xFilter     */ changesSinceFilter,
+    /* xNext       */ changesSinceNext,
     /* xEof        */ changesSinceEof,
     /* xColumn     */ changesSinceColumn,
-    /* xRowid      */ templatevtabRowid,
+    /* xRowid      */ changesSinceRowid,
     /* xUpdate     */ 0,
     /* xBegin      */ 0,
     /* xSync       */ 0,

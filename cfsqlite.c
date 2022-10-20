@@ -192,7 +192,7 @@ static int initDbVersion(sqlite3 *db)
   // find all `clock` tables
   rc = sqlite3_get_table(
       db,
-      "SELECT tbl_name FROM sqlite_master WHERE type='table' AND tbl_name LIKE '%__cfsql_clock'",
+      CLOCK_TABLES_SELECT,
       &rClockTableNames,
       &rNumRows,
       &rNumCols,
@@ -401,7 +401,6 @@ static int createCrr(
 
   rc = cfsql_getTableInfo(
       db,
-      USER_SPACE,
       tblName,
       &tableInfo,
       err);

@@ -224,7 +224,6 @@ cfsql_ColumnInfo *cfsql_nonPks(cfsql_ColumnInfo *colInfos,
  * statements against the base table.
  */
 static cfsql_TableInfo *cfsql_tableInfo(
-    int tblType,
     const char *tblName,
     cfsql_ColumnInfo *colInfos,
     int colInfosLen,
@@ -353,7 +352,6 @@ FAIL:
  */
 int cfsql_getTableInfo(
     sqlite3 *db,
-    int tblType,
     const char *tblName,
     cfsql_TableInfo **pTableInfo,
     char **pErrMsg)
@@ -414,8 +412,8 @@ int cfsql_getTableInfo(
   }
   sqlite3_finalize(pStmt);
 
-  cfsql_IndexInfo *indexInfos;
-  int numIndexInfos;
+  cfsql_IndexInfo *indexInfos = 0;
+  int numIndexInfos = 0;
 
   // TODO: validate indices are compatible with CRR properties
   rc = cfsql_getIndexList(
@@ -430,7 +428,7 @@ int cfsql_getTableInfo(
     return rc;
   }
 
-  *pTableInfo = cfsql_tableInfo(tblType, tblName, columnInfos, numColInfos, indexInfos, numIndexInfos);
+  *pTableInfo = cfsql_tableInfo(tblName, columnInfos, numColInfos, indexInfos, numIndexInfos);
 
   return SQLITE_OK;
 }

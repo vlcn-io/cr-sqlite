@@ -20,8 +20,10 @@
 // CREATE TEMP TABLE cfsql_tmp__
 #define CREATE_TEMP_TABLE_CFSQL_LEN CREATE_TEMP_TABLE_LEN + SPACE_LEN + CFSQL_TMP__LEN
 
-static const char *const TBL_SITE_ID = "__cfsql_siteid";
-static const char *const TBL_DB_VERSION = "__cfsql_dbversion";
-static const char *const UNION = "UNION";
+#define CLOCK_TABLES_SELECT "SELECT tbl_name FROM sqlite_master WHERE type='table' AND tbl_name LIKE '%__cfsql_clock'"
+
+#define TBL_SITE_ID "__cfsql_siteid"
+#define TBL_DB_VERSION "__cfsql_dbversion"
+#define UNION "UNION"
 
 #endif

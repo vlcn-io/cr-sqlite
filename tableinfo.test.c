@@ -18,7 +18,7 @@ void testGetTableInfo()
   rc = sqlite3_open(":memory:", &db);
 
   sqlite3_exec(db, "CREATE TABLE foo (a INT NOT NULL, b)", 0, 0, 0);
-  rc = cfsql_getTableInfo(db, USER_SPACE, "foo", &tableInfo, &errMsg);
+  rc = cfsql_getTableInfo(db, "foo", &tableInfo, &errMsg);
 
   if (rc != SQLITE_OK)
   {
@@ -48,7 +48,7 @@ void testGetTableInfo()
   cfsql_freeTableInfo(tableInfo);
 
   sqlite3_exec(db, "CREATE TABLE bar (a PRIMARY KEY, b)", 0, 0, 0);
-  rc = cfsql_getTableInfo(db, USER_SPACE, "bar", &tableInfo, &errMsg);
+  rc = cfsql_getTableInfo(db, "bar", &tableInfo, &errMsg);
   if (rc != SQLITE_OK)
   {
     printf("err: %s %d\n", errMsg, rc);

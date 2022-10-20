@@ -28,7 +28,7 @@ void testCreateTriggers()
       0,
       0,
       &errMsg);
-  rc = cfsql_getTableInfo(db, USER_SPACE, "foo", &tableInfo, &errMsg);
+  rc = cfsql_getTableInfo(db, "foo", &tableInfo, &errMsg);
 
   if (rc == SQLITE_OK)
   {
@@ -80,7 +80,7 @@ void testDeleteTriggerQuery()
       0,
       0,
       &errMsg);
-  rc += cfsql_getTableInfo(db, USER_SPACE, "foo", &tableInfo, &errMsg);
+  rc += cfsql_getTableInfo(db, "foo", &tableInfo, &errMsg);
   rc += sqlite3_exec(
       db,
       "DROP TABLE foo",

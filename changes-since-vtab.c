@@ -9,7 +9,7 @@
 
 /**
  * vtab usage:
- * SELECT * FROM cfsql_chages WHERE requestor = SITE_ID AND curr_version > V
+ * SELECT * FROM cfsql_chages WHERE requestor = SITE_ID AND version > V
  *
  * returns:
  * table_name, quote-concated pks ~'~, json-encoded vals, json-encoded versions, curr version
@@ -70,7 +70,7 @@ static int changesSinceConnect(
   // TODO: future improvement to include txid
   rc = sqlite3_declare_vtab(
       db,
-      "CREATE TABLE x([table], [pk], [col_vals], [col_versions], [curr_version], [requestor] hidden)");
+      "CREATE TABLE x([table], [pk], [col_vals], [col_versions], [version], [requestor] hidden)");
 #define CHANGES_SINCE_VTAB_TBL 0
 #define CHANGES_SINCE_VTAB_PK 1
 #define CHANGES_SINCE_VTAB_COL_VALS 2
@@ -114,22 +114,25 @@ static int changesSinceOpen(sqlite3_vtab *p, sqlite3_vtab_cursor **ppCursor)
   }
   memset(pCur, 0, sizeof(*pCur));
   *ppCursor = &pCur->base;
+  pCur->pTab = (cfsql_ChangesSince_vtab *)p;
   return SQLITE_OK;
 }
 
 static int changesSinceCrsrFinalize(cfsql_ChangesSince_cursor *crsr)
 {
+  // Assign pointers to null after freeing
+  // since we can get into this twice for the same object.
   int rc = SQLITE_OK;
   rc += sqlite3_finalize(crsr->pChangesStmt);
   crsr->pChangesStmt = 0;
-  for (int i = 0; i < crsr->tableInfosLen; ++i)
-  {
-    cfsql_freeTableInfo(crsr->tableInfos[i]);
-  }
-  sqlite3_free(crsr->tableInfos);
+  cfsql_freeAllTableInfos(crsr->tableInfos, crsr->tableInfosLen);
+  crsr->tableInfos = 0;
+  crsr->tableInfosLen = 0;
 
   sqlite3_free(crsr->colVals);
+  crsr->colVals = 0;
   sqlite3_free(crsr->colVrsns);
+  crsr->colVrsns = 0;
 
   return rc;
 }
@@ -146,8 +149,7 @@ static int changesSinceClose(sqlite3_vtab_cursor *cur)
 }
 
 /*
-** Return the rowid for the current row.  In this implementation, the
-** rowid is the same as the output value.
+** Return the rowid for the current row.
 */
 static int changesSinceRowid(sqlite3_vtab_cursor *cur, sqlite_int64 *pRowid)
 {
@@ -193,7 +195,7 @@ char *cfsql_changeQueryForTable(cfsql_TableInfo *tableInfo)
       %z as pks,\
       '%s' as tbl,\
       json_group_object(__cfsql_col_num, __cfsql_version) as col_vrsns,\
-      min(__cfsql__version) as min_v\
+      min(__cfsql_version) as min_v\
     FROM \"%s__cfsql_clock\"\
     WHERE\
       __cfsql_site_id != ?\
@@ -378,8 +380,11 @@ static int changesSinceFilter(
   memset(tableInfos, 0, rNumRows * sizeof(cfsql_TableInfo *));
   for (int i = 0; i < rNumRows; ++i)
   {
+    // Strip __cfsql_clock suffix.
     // +1 since tableNames includes a row for column headers
-    rc = cfsql_getTableInfo(db, rClockTableNames[i + 1], &tableInfos[i], &err);
+    char * baseTableName = strndup(rClockTableNames[i + 1], strlen(rClockTableNames[i + 1]) - __CFSQL_CLOCK_LEN);
+    rc = cfsql_getTableInfo(db, baseTableName, &tableInfos[i], &err);
+    sqlite3_free(baseTableName);
 
     if (rc != SQLITE_OK)
     {
@@ -439,22 +444,21 @@ static int changesSinceFilter(
   // for each table info we need to bind 2 params:
   // 1. the site id
   // 2. the version
+  int j = 1;
   for (i = 0; i < rNumRows; ++i)
   {
-    if (i % 2 == 0)
-    {
-      sqlite3_bind_blob(pStmt, i + 1, requestorSiteId, requestorSiteIdLen, SQLITE_STATIC);
-    }
-    else
-    {
-      sqlite3_bind_int64(pStmt, i + 1, versionBound);
-    }
+      sqlite3_bind_blob(pStmt, j++, requestorSiteId, requestorSiteIdLen, SQLITE_STATIC);
+      sqlite3_bind_int64(pStmt, j++, versionBound);
   }
 
   // put table infos into our cursor for later use on row fetches
   pCrsr->tableInfos = tableInfos;
+  pCrsr->tableInfosLen = rNumRows;
   pCrsr->pChangesStmt = pStmt;
-  return SQLITE_OK;
+
+  return changesSinceNext((sqlite3_vtab_cursor *)pCrsr);
+
+  // return SQLITE_OK;
 }
 
 /*

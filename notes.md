@@ -232,3 +232,12 @@ May be best to prototype this first.
 similar to https://www.sqlite.org/unionvtab.html
 
 rowid can be used to break up large changes within a single version
+
+---
+
+```sql
+create table foo (a primary key, b);
+select cfsql_as_crr('foo');
+insert into foo values (1,2);
+select * from cfsql_changes;
+```

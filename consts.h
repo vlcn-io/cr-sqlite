@@ -13,6 +13,7 @@
 #define CFSQL_TMP__LEN 11
 #define TEMP_LEN 4
 #define SPACE_LEN 1
+#define __CFSQL_CLOCK_LEN 13
 
 #define DELETE_CLOCK_SENTINEL -1
 

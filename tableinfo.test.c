@@ -214,4 +214,6 @@ void cfsqlTableInfoTestSuite() {
   testExtractBaseCols();
   testGetTableInfo();
   testGetIndexList();
+
+  // TODO: memory test -- allocate and deallocate no leaks.
 }

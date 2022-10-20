@@ -134,11 +134,12 @@ static int changesSinceCrsrFinalize(cfsql_ChangesSince_cursor *crsr)
   rc += sqlite3_finalize(crsr->pRowStmt);
   crsr->pChangesStmt = 0;
   crsr->pRowStmt = 0;
-  for (int i = 0; i < crsr->tableInfosLen; ++i) {
+  for (int i = 0; i < crsr->tableInfosLen; ++i)
+  {
     cfsql_freeTableInfo(crsr->tableInfos[i]);
   }
   sqlite3_free(crsr->tableInfos);
-  
+
   return rc;
 }
 
@@ -219,41 +220,73 @@ static int changesSinceEof(sqlite3_vtab_cursor *cur)
   return pCur->pChangesStmt == 0;
 }
 
+char *quote(const char *in) {
+  return sqlite3_mprintf("quote(\"%s\")", in);
+}
+
+char *cfsql_changeQueryForTable(cfsql_TableInfo *tableInfo) {
+  if (tableInfo->pksLen == 0) {
+    return 0;
+  }
+
+  char *pkConcatList = 0;
+
+  char *pks[tableInfo->pksLen];
+  for (int i = 0; i < tableInfo->pksLen; ++i) {
+    pks[i] = tableInfo->pks[i].name;
+  }
+
+  pkConcatList = cfsql_join2(&quote, pks, tableInfo->pksLen, " || ");
+
+  char * zSql = sqlite3_mprintf(
+    "SELECT\
+      %z as pks,\
+      '%s' as tbl,\
+      json_group_object(__cfsql_col_num, __cfsql_version) as col_vrsns,\
+      min(__cfsql__version) as min_v\
+    FROM \"%s__cfsql_clock\"\
+    WHERE\
+      __cfsql_site_id != ?\
+    AND\
+      __cfsql_version > ?\
+    GROUP BY pks",
+    pkConcatList,
+    tableInfo->tblName,
+    tableInfo->tblName
+  );
+
+  return zSql;
+}
+
 char *cfsql_changesUnionQuery(
-    int numRows,
-    char **tableNames)
+    cfsql_TableInfo **tableInfos,
+    int tableInfosLen)
 {
-  char *unionsArr[numRows];
-  char *unionsStr;
-  char *ret;
+  char *unionsArr[tableInfosLen];
+  char *unionsStr = 0;
   int i = 0;
 
-  for (i = 0; i < numRows; ++i)
+  for (i = 0; i < tableInfosLen; ++i)
   {
-    unionsArr[i] = sqlite3_mprintf(
-        "SELECT max(__cfsql_version) as version FROM \"%w\" %s ",
-        // the first result in tableNames is the column heading
-        // so skip that
-        tableNames[i + 1],
-        // If we have more tables to process, union them in
-        i < numRows - 1 ? UNION : "");
+    unionsArr[i] = cfsql_changeQueryForTable(tableInfos[i]);
+    if (unionsArr[i] == 0) {
+      return 0;
+    }
   }
 
   // move the array of strings into a single string
-  unionsStr = cfsql_join(unionsArr, numRows);
-  // free the array of strings
-  for (i = 0; i < numRows; ++i)
+  unionsStr = cfsql_join(unionsArr, tableInfosLen);
+  // free the strings in the array
+  for (i = 0; i < tableInfosLen; ++i)
   {
     sqlite3_free(unionsArr[i]);
   }
 
   // compose the final query
-  // and update the pointer to the string to point to it.
-  ret = sqlite3_mprintf(
-      "SELECT max(version) as version FROM (%z)",
+  return sqlite3_mprintf(
+      "SELECT tbl, pks, col_vrsns, min_v FROM (%z) ORDER BY min_v, tbl ASC",
       unionsStr);
   // %z frees unionsStr https://www.sqlite.org/printf.html#percentz
-  return ret;
 }
 
 /*
@@ -302,14 +335,17 @@ static int changesSinceFilter(
   // construct table infos for each table
   // we'll need to attach these table infos
   // to our cursor
-  // we should preclude index info from them
-  cfsql_TableInfo **tableInfos = sqlite3_malloc(rNumRows * sizeof(cfsql_TableInfo*));
-  memset(tableInfos, 0, rNumRows * sizeof *tableInfos);
-  for (int i = 0; i < rNumRows; ++i) {
+  // TODO: we should preclude index info from them
+  cfsql_TableInfo **tableInfos = sqlite3_malloc(rNumRows * sizeof(cfsql_TableInfo *));
+  memset(tableInfos, 0, rNumRows * sizeof(cfsql_TableInfo *));
+  for (int i = 0; i < rNumRows; ++i)
+  {
     rc = cfsql_getTableInfo(db, rClockTableNames[i + 1], &tableInfos[i], &err);
 
-    if (rc != SQLITE_OK) {
-      for (int j = 0; j < rNumRows; ++j) {
+    if (rc != SQLITE_OK)
+    {
+      for (int j = 0; j < rNumRows; ++j)
+      {
         cfsql_freeTableInfo(tableInfos[j]);
       }
       sqlite3_free(tableInfos);
@@ -318,21 +354,27 @@ static int changesSinceFilter(
     }
   }
 
-  // put table infos into our cursor for later use on row fetches
-  pCrsr->tableInfos = tableInfos;
+  sqlite3_free_table(rClockTableNames);
 
   // now construct and prepare our union for fetching changes
-  // union gets:
-  // 1. name of table
-  // 2. pks of changed row
-  // 3. column versions
-  // 4. originator (or 0 for local)
-  // char *zSql = cfsql_changesUnionQuery();
+  char *zSql = cfsql_changesUnionQuery(tableInfos, rNumRows);
+
+  if (zSql == 0) {
+    for (int j = 0; j < rNumRows; ++j)
+    {
+      cfsql_freeTableInfo(tableInfos[j]);
+    }
+    sqlite3_free(tableInfos);
+    return SQLITE_ERROR;
+  }
 
   // run our query here??
   // https://sqlite.org/src/file/ext/misc/unionvtab.c
   // templatevtab_cursor *pCur = (templatevtab_cursor *)pVtabCursor;
   // pCur->iRowid = 1;
+
+  // put table infos into our cursor for later use on row fetches
+  pCrsr->tableInfos = tableInfos;
   return SQLITE_OK;
 }
 

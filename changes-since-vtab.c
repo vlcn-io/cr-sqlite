@@ -165,27 +165,12 @@ static int changesSinceEof(sqlite3_vtab_cursor *cur)
   return pCur->pChangesStmt == 0;
 }
 
-static char *quote(const char *in)
-{
-  return sqlite3_mprintf("quote(\"%s\")", in);
-}
-
 char *cfsql_changeQueryForTable(cfsql_TableInfo *tableInfo)
 {
   if (tableInfo->pksLen == 0)
   {
     return 0;
   }
-
-  char *pkConcatList = 0;
-
-  char *pks[tableInfo->pksLen];
-  for (int i = 0; i < tableInfo->pksLen; ++i)
-  {
-    pks[i] = tableInfo->pks[i].name;
-  }
-
-  pkConcatList = cfsql_join2(&quote, pks, tableInfo->pksLen, " || ");
 
   char *zSql = sqlite3_mprintf(
       "SELECT\
@@ -199,7 +184,7 @@ char *cfsql_changeQueryForTable(cfsql_TableInfo *tableInfo)
     AND\
       __cfsql_version > ?\
     GROUP BY pks",
-      pkConcatList,
+      cfsql_quoteConcat(tableInfo->pks, tableInfo->pksLen),
       tableInfo->tblName,
       tableInfo->tblName);
 
@@ -240,6 +225,20 @@ char *cfsql_changesUnionQuery(
       "SELECT tbl, pks, col_vrsns, min_v FROM (%z) ORDER BY min_v, tbl ASC",
       unionsStr);
   // %z frees unionsStr https://www.sqlite.org/printf.html#percentz
+}
+
+cfsql_ColumnInfo *cfsql_pickColumnInfosFromVersionsMap(const char *colVersions, int *rLen) {
+  char * zSql = sqlite3_mprintf("SELECT * FROM json_each(?)");
+
+
+  // char *colNames[colsLen];
+  // for (int i = 0; i < colsLen; ++i)
+  // {
+  //   colNames[i] = cols[i].name;
+  // }
+
+  // char *colsConcatList = cfsql_join2(&quote, colNames, colsLen, " || ");
+  return 0;
 }
 
 /*
@@ -309,10 +308,12 @@ static int changesSinceNext(sqlite3_vtab_cursor *cur)
     pksArr[i] = sqlite3_mprintf("\"%s\" = %z", tblInfo->pks[i].name, pksArr[i]);
   }
 
+  int changedColsLen = 0;
+  cfsql_ColumnInfo *changedCols = cfsql_pickColumnInfosFromVersionsMap(colVrsns, &changedColsLen);
+  char *colsConcatList = cfsql_quoteConcat(changedCols, changedColsLen);
   char *zSql = sqlite3_mprintf(
     "SELECT %z FROM \"%s\" WHERE %z",
-    // TODO: we should only pull those with returned changes from colVrsns
-    cfsql_asIdentifierList(tblInfo->nonPks, tblInfo->nonPksLen, 0),
+    colsConcatList,
     tblInfo->tblName,
     // given identity is a pass-thru, pksArr will have its contents freed after calling this
     cfsql_join2((char *(*)(const char *)) &cfsql_identity, pksArr, tblInfo->pksLen, " AND ")
@@ -320,6 +321,7 @@ static int changesSinceNext(sqlite3_vtab_cursor *cur)
 
   // contents of pksArr was already freed via join2 and cfsql_identity. See above.
   sqlite3_free(pksArr);
+  sqlite3_free(zSql);
   
   // (3) create pk where list -- can insert directly since strings are quoted
   // (4) select all columns in the versioned column list

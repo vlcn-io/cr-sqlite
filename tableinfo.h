@@ -72,5 +72,6 @@ int cfsql_getIndexList(
 
 void cfsql_freeAllTableInfos(cfsql_TableInfo **tableInfos, int len);
 cfsql_TableInfo *cfsql_findTableInfo(cfsql_TableInfo **tblInfos, int len, const char * tblName);
+char *cfsql_quoteConcat(cfsql_ColumnInfo * cols, int len);
 
 #endif

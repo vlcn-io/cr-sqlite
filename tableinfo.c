@@ -87,6 +87,22 @@ void cfsql_freeIndexInfos(cfsql_IndexInfo *indexInfos, int indexInfosLen)
   sqlite3_free(indexInfos);
 }
 
+
+static char *quote(const char *in)
+{
+  return sqlite3_mprintf("quote(\"%s\")", in);
+}
+
+char *cfsql_quoteConcat(cfsql_ColumnInfo * cols, int len) {
+  char *names[len];
+  for (int i = 0; i < len; ++i)
+  {
+    names[i] = cols[i].name;
+  }
+
+  return cfsql_join2(&quote, names, len, " || ");
+}
+
 static void cfsql_freeColumnInfos(cfsql_ColumnInfo *columnInfos, int len)
 {
   if (columnInfos == 0)

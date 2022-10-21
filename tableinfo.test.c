@@ -231,6 +231,19 @@ void testFindTableInfo() {
 
 void testQuoteConcat() {
   printf("QuoteConcat\n");
+
+  int len = 3;
+  cfsql_ColumnInfo colInfos[3];
+
+  colInfos[0].name = "a";
+  colInfos[1].name = "b";
+  colInfos[2].name = "c";
+
+  char *quoted = cfsql_quoteConcat(colInfos, len);
+
+  assert(strcmp(quoted, "quote(\"a\") || quote(\"b\") || quote(\"c\")") == 0);
+
+  sqlite3_free(quoted);
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 

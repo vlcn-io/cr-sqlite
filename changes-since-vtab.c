@@ -180,6 +180,7 @@ char *cfsql_changesQueryForTable(cfsql_TableInfo *tableInfo)
       %z as pks,\
       '%s' as tbl,\
       json_group_object(__cfsql_col_num, __cfsql_version) as col_vrsns,\
+      count(__cfsql_col_num) as num_cols,\
       min(__cfsql_version) as min_v\
     FROM \"%s__cfsql_clock\"\
     WHERE\
@@ -207,13 +208,15 @@ char *cfsql_changesUnionQuery(
     unionsArr[i] = cfsql_changesQueryForTable(tableInfos[i]);
     if (unionsArr[i] == 0)
     {
-      for (int j = 0; j < i; j++) {
+      for (int j = 0; j < i; j++)
+      {
         sqlite3_free(unionsArr[j]);
       }
       return 0;
     }
 
-    if (i < tableInfosLen - 1) {
+    if (i < tableInfosLen - 1)
+    {
       unionsArr[i] = sqlite3_mprintf("%z %s ", unionsArr[i], UNION);
     }
   }
@@ -229,17 +232,30 @@ char *cfsql_changesUnionQuery(
   // compose the final query
 #define TBL 0
 #define PKS 1
-#define COL_VRSNS 2
-#define MIN_V 3
+#define NUM_COLS 2
+#define COL_VRSNS 3
+#define MIN_V 4
   return sqlite3_mprintf(
-      "SELECT tbl, pks, col_vrsns, min_v FROM (%z) ORDER BY min_v, tbl ASC",
+      "SELECT tbl, pks, num_cols, col_vrsns, min_v FROM (%z) ORDER BY min_v, tbl ASC",
       unionsStr);
   // %z frees unionsStr https://www.sqlite.org/printf.html#percentz
 }
 
-cfsql_ColumnInfo *cfsql_pickColumnInfosFromVersionMap(const char *colVersions, int *rLen)
+cfsql_ColumnInfo *cfsql_pickColumnInfosFromVersionMap(
+    sqlite3 *db,
+    int numCols,
+    const char *colVersions,
+    int *rLen)
 {
-  char *zSql = sqlite3_mprintf("SELECT * FROM json_each(?)");
+  int rc = SQLITE_OK;
+  char *zSql = sqlite3_mprintf("SELECT key as cid, value as version FROM json_each(?)");
+  
+  sqlite3_stmt *pStmt;
+  rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
+
+  if (rc != SQLITE_OK) {
+    return 0;
+  }
 
   // char *colNames[colsLen];
   // for (int i = 0; i < colsLen; ++i)
@@ -252,7 +268,9 @@ cfsql_ColumnInfo *cfsql_pickColumnInfosFromVersionMap(const char *colVersions, i
 }
 
 char *cfsql_rowPatchDataQuery(
+    sqlite3 *db,
     cfsql_TableInfo *tblInfo,
+    int numCols,
     const char *colVrsns,
     const char *pks)
 {
@@ -281,7 +299,7 @@ char *cfsql_rowPatchDataQuery(
   }
 
   int changedColsLen = 0;
-  cfsql_ColumnInfo *changedCols = cfsql_pickColumnInfosFromVersionMap(colVrsns, &changedColsLen);
+  cfsql_ColumnInfo *changedCols = cfsql_pickColumnInfosFromVersionMap(db, numCols, colVrsns, &changedColsLen);
   char *colsConcatList = cfsql_quoteConcat(changedCols, changedColsLen);
   char *zSql = sqlite3_mprintf(
       "SELECT %z FROM \"%s\" WHERE %z",
@@ -327,6 +345,7 @@ static int changesSinceNext(sqlite3_vtab_cursor *cur)
   const char *tbl = (const char *)sqlite3_column_text(pCur->pChangesStmt, TBL);
   const char *pks = (const char *)sqlite3_column_text(pCur->pChangesStmt, PKS);
   const char *colVrsns = (const char *)sqlite3_column_text(pCur->pChangesStmt, COL_VRSNS);
+  int numCols = sqlite3_column_int(pCur->pChangesStmt, NUM_COLS);
   sqlite3_int64 minv = sqlite3_column_int64(pCur->pChangesStmt, MIN_V);
 
   pCur->version = minv;
@@ -345,8 +364,9 @@ static int changesSinceNext(sqlite3_vtab_cursor *cur)
     return SQLITE_ERROR;
   }
 
-  char *zSql = cfsql_rowPatchDataQuery(tblInfo, colVrsns, pks);
-  if (zSql == 0) {
+  char *zSql = cfsql_rowPatchDataQuery(pCur->pTab->db, tblInfo, numCols, colVrsns, pks);
+  if (zSql == 0)
+  {
     // TODO set error msg
     return SQLITE_ERROR;
   }

@@ -59,7 +59,7 @@ def test_changes_since():
   # do you really want to group by pk?
   # you'll collapse disparate transactiosn...
   # you want to group by pk where all version for the column match?
-  format_str = "SELECT quote(id) as pk, '{tbl}' as tbl, json_group_object(\"__cfsql_col_num\", \"__cfsql_version\") as col_vsns, min(__cfsql_version) as min_v, max(rowid) as rid FROM {tbl}__cfsql_clock WHERE __cfsql_site_id != x'{siteid}' AND __cfsql_version > {vers} GROUP BY pk"
+  format_str = "SELECT quote(id) as pk, '{tbl}' as tbl, json_group_object(\"__cfsql_col_num\", \"__cfsql_version\") as col_vsns, count(__cfsql_col_num) as num_cols, min(__cfsql_version) as min_v, max(rowid) as rid FROM {tbl}__cfsql_clock WHERE __cfsql_site_id != x'{siteid}' AND __cfsql_version > {vers} GROUP BY pk"
   unions = [
     format_str.format(tbl="user", vers=min_db_v, siteid="FF"), # TODO: get the actual site id
     format_str.format(tbl="deck", vers=min_db_v, siteid="FF"),
@@ -67,7 +67,7 @@ def test_changes_since():
     format_str.format(tbl="component", vers=min_db_v, siteid="FF"),
   ]
   
-  complete_query = "SELECT tbl, pk, rid, col_vsns, min_v FROM ( {unions} ) ORDER BY min_v, tbl, rid".format(unions=" UNION ".join(unions))
+  complete_query = "SELECT tbl, pk, rid, col_vsns, num_cols, min_v FROM ( {unions} ) ORDER BY min_v, tbl, rid".format(unions=" UNION ".join(unions))
 
   changes = c.execute(complete_query, ()).fetchall()
   pp.pprint(changes)

@@ -100,3 +100,6 @@ void cfsqlChagesSinceVtabTestSuite()
   testChangesUnionQuery();
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
+
+// TODO: mem debugging
+// https://stackoverflow.com/questions/2980917/c-is-it-possible-to-implement-memory-leak-testing-in-a-unit-test

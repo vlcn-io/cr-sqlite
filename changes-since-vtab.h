@@ -7,12 +7,12 @@ SQLITE_EXTENSION_INIT3
 
 sqlite3_module cfsql_changesSinceModule;
 
-char *cfsql_changeQueryForTable(cfsql_TableInfo *tableInfo);
+char *cfsql_changesQueryForTable(cfsql_TableInfo *tableInfo);
 char *cfsql_changesUnionQuery(
     cfsql_TableInfo **tableInfos,
     int tableInfosLen);
-cfsql_ColumnInfo *cfsql_pickColumnInfosFromVersionsMap(const char *colVersions, int *rLen);
+cfsql_ColumnInfo *cfsql_pickColumnInfosFromVersionMap(const char *colVersions, int *rLen);
 char *cfsql_rowPatchDataQuery(
     cfsql_TableInfo *tblInfo,
     const char *colVrsns,
-    char *pks);
+    const char *pks);

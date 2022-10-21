@@ -168,7 +168,7 @@ static int changesSinceEof(sqlite3_vtab_cursor *cur)
   return pCur->pChangesStmt == 0;
 }
 
-char *cfsql_changeQueryForTable(cfsql_TableInfo *tableInfo)
+char *cfsql_changesQueryForTable(cfsql_TableInfo *tableInfo)
 {
   if (tableInfo->pksLen == 0)
   {
@@ -204,7 +204,7 @@ char *cfsql_changesUnionQuery(
 
   for (i = 0; i < tableInfosLen; ++i)
   {
-    unionsArr[i] = cfsql_changeQueryForTable(tableInfos[i]);
+    unionsArr[i] = cfsql_changesQueryForTable(tableInfos[i]);
     if (unionsArr[i] == 0)
     {
       return 0;
@@ -230,7 +230,7 @@ char *cfsql_changesUnionQuery(
   // %z frees unionsStr https://www.sqlite.org/printf.html#percentz
 }
 
-cfsql_ColumnInfo *cfsql_pickColumnInfosFromVersionsMap(const char *colVersions, int *rLen)
+cfsql_ColumnInfo *cfsql_pickColumnInfosFromVersionMap(const char *colVersions, int *rLen)
 {
   char *zSql = sqlite3_mprintf("SELECT * FROM json_each(?)");
 
@@ -247,7 +247,7 @@ cfsql_ColumnInfo *cfsql_pickColumnInfosFromVersionsMap(const char *colVersions, 
 char *cfsql_rowPatchDataQuery(
     cfsql_TableInfo *tblInfo,
     const char *colVrsns,
-    char *pks)
+    const char *pks)
 {
   char **pksArr = 0;
   if (tblInfo->pksLen == 1)
@@ -263,8 +263,7 @@ char *cfsql_rowPatchDataQuery(
 
   if (pksArr == 0)
   {
-    // TODO set error msg
-    return SQLITE_ERROR;
+    return 0;
   }
 
   for (int i = 0; i < tblInfo->pksLen; ++i)
@@ -275,7 +274,7 @@ char *cfsql_rowPatchDataQuery(
   }
 
   int changedColsLen = 0;
-  cfsql_ColumnInfo *changedCols = cfsql_pickColumnInfosFromVersionsMap(colVrsns, &changedColsLen);
+  cfsql_ColumnInfo *changedCols = cfsql_pickColumnInfosFromVersionMap(colVrsns, &changedColsLen);
   char *colsConcatList = cfsql_quoteConcat(changedCols, changedColsLen);
   char *zSql = sqlite3_mprintf(
       "SELECT %z FROM \"%s\" WHERE %z",
@@ -340,6 +339,10 @@ static int changesSinceNext(sqlite3_vtab_cursor *cur)
   }
 
   char *zSql = cfsql_rowPatchDataQuery(tblInfo, colVrsns, pks);
+  if (zSql == 0) {
+    // TODO set error msg
+    return SQLITE_ERROR;
+  }
   sqlite3_free(zSql);
 
   // (3) create pk where list -- can insert directly since strings are quoted

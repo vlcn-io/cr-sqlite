@@ -37,7 +37,7 @@ struct cfsql_ChangesSince_cursor
   sqlite3_stmt *pChangesStmt;
 
   char *colVals;
-  char *colVrsns;
+  const char *colVrsns;
   sqlite3_int64 version;
 };
 
@@ -128,7 +128,10 @@ static int changesSinceCrsrFinalize(cfsql_ChangesSince_cursor *crsr)
 
   sqlite3_free(crsr->colVals);
   crsr->colVals = 0;
-  sqlite3_free(crsr->colVrsns);
+  // do not free colVrsns as it is a reference
+  // to the data from the pChangesStmt
+  // and is thus managed by that statement
+  // sqlite3_free(crsr->colVrsns);
   crsr->colVrsns = 0;
 
   return rc;
@@ -227,9 +230,9 @@ char *cfsql_changesUnionQuery(
   // %z frees unionsStr https://www.sqlite.org/printf.html#percentz
 }
 
-cfsql_ColumnInfo *cfsql_pickColumnInfosFromVersionsMap(const char *colVersions, int *rLen) {
-  char * zSql = sqlite3_mprintf("SELECT * FROM json_each(?)");
-
+cfsql_ColumnInfo *cfsql_pickColumnInfosFromVersionsMap(const char *colVersions, int *rLen)
+{
+  char *zSql = sqlite3_mprintf("SELECT * FROM json_each(?)");
 
   // char *colNames[colsLen];
   // for (int i = 0; i < colsLen; ++i)
@@ -239,6 +242,52 @@ cfsql_ColumnInfo *cfsql_pickColumnInfosFromVersionsMap(const char *colVersions, 
 
   // char *colsConcatList = cfsql_join2(&quote, colNames, colsLen, " || ");
   return 0;
+}
+
+char *cfsql_rowPatchDataQuery(
+    cfsql_TableInfo *tblInfo,
+    const char *colVrsns,
+    char *pks)
+{
+  char **pksArr = 0;
+  if (tblInfo->pksLen == 1)
+  {
+    pksArr = sqlite3_malloc(1 * sizeof(char *));
+    pksArr[0] = strdup(pks);
+  }
+  else
+  {
+    // split it up and assign
+    pksArr = cfsql_split(pks, PK_DELIM, tblInfo->pksLen);
+  }
+
+  if (pksArr == 0)
+  {
+    // TODO set error msg
+    return SQLITE_ERROR;
+  }
+
+  for (int i = 0; i < tblInfo->pksLen; ++i)
+  {
+    // this is safe since pks are extracted as `quote` in the prior queries
+    // %z will de-allocate pksArr[i] so we can re-allocate it in the assignment
+    pksArr[i] = sqlite3_mprintf("\"%s\" = %z", tblInfo->pks[i].name, pksArr[i]);
+  }
+
+  int changedColsLen = 0;
+  cfsql_ColumnInfo *changedCols = cfsql_pickColumnInfosFromVersionsMap(colVrsns, &changedColsLen);
+  char *colsConcatList = cfsql_quoteConcat(changedCols, changedColsLen);
+  char *zSql = sqlite3_mprintf(
+      "SELECT %z FROM \"%s\" WHERE %z",
+      colsConcatList,
+      tblInfo->tblName,
+      // given identity is a pass-thru, pksArr will have its contents freed after calling this
+      cfsql_join2((char *(*)(const char *)) & cfsql_identity, pksArr, tblInfo->pksLen, " AND "));
+
+  // contents of pksArr was already freed via join2 and cfsql_identity. See above.
+  sqlite3_free(pksArr);
+
+  return zSql;
 }
 
 /*
@@ -277,58 +326,28 @@ static int changesSinceNext(sqlite3_vtab_cursor *cur)
   pCur->version = minv;
 
   cfsql_TableInfo *tblInfo = cfsql_findTableInfo(pCur->tableInfos, pCur->tableInfosLen, tbl);
-  if (tblInfo == 0) {
+  if (tblInfo == 0)
+  {
     changesSinceCrsrFinalize(pCur);
     return SQLITE_ERROR;
   }
 
-  if (tblInfo->pksLen == 0) {
+  if (tblInfo->pksLen == 0)
+  {
     // TODO set error msg
     // require pks in `cfsql_as_crr`
     return SQLITE_ERROR;
   }
 
-  char **pksArr = 0;
-  if (tblInfo->pksLen == 1) {
-    pksArr = sqlite3_malloc(1 * sizeof(char *));
-    pksArr[0] = strdup(pks);
-  } else {
-    // split it up and assign
-    pksArr = cfsql_split(pks, PK_DELIM, tblInfo->pksLen);
-  }
-
-  if (pksArr == 0) {
-    // TODO set error msg
-    return SQLITE_ERROR;
-  }
-
-  for (int i = 0; i < tblInfo->pksLen; ++i) {
-    // this is safe since pks are extracted as `quote` in the prior queries
-    // %z will de-allocate pksArr[i] so we can re-allocate it in the assignment
-    pksArr[i] = sqlite3_mprintf("\"%s\" = %z", tblInfo->pks[i].name, pksArr[i]);
-  }
-
-  int changedColsLen = 0;
-  cfsql_ColumnInfo *changedCols = cfsql_pickColumnInfosFromVersionsMap(colVrsns, &changedColsLen);
-  char *colsConcatList = cfsql_quoteConcat(changedCols, changedColsLen);
-  char *zSql = sqlite3_mprintf(
-    "SELECT %z FROM \"%s\" WHERE %z",
-    colsConcatList,
-    tblInfo->tblName,
-    // given identity is a pass-thru, pksArr will have its contents freed after calling this
-    cfsql_join2((char *(*)(const char *)) &cfsql_identity, pksArr, tblInfo->pksLen, " AND ")
-  );
-
-  // contents of pksArr was already freed via join2 and cfsql_identity. See above.
-  sqlite3_free(pksArr);
+  char *zSql = cfsql_rowPatchDataQuery(tblInfo, colVrsns, pks);
   sqlite3_free(zSql);
-  
+
   // (3) create pk where list -- can insert directly since strings are quoted
   // (4) select all columns in the versioned column list
   //   this is done by filtering by cid in the table info list
   // (5) json-encode {name: [val, version]} of columns
   pCur->colVals = sqlite3_mprintf("todo vals");
-  pCur->colVrsns = sqlite3_mprintf("todo versions");
+  pCur->colVrsns = colVrsns;
 
   return rc;
 }
@@ -391,7 +410,8 @@ static int changesSinceFilter(
   int rNumCols = 0;
   char *err = 0;
 
-  if (pCrsr->pChangesStmt) {
+  if (pCrsr->pChangesStmt)
+  {
     sqlite3_finalize(pCrsr->pChangesStmt);
     pCrsr->pChangesStmt = 0;
   }
@@ -421,7 +441,7 @@ static int changesSinceFilter(
   {
     // Strip __cfsql_clock suffix.
     // +1 since tableNames includes a row for column headers
-    char * baseTableName = strndup(rClockTableNames[i + 1], strlen(rClockTableNames[i + 1]) - __CFSQL_CLOCK_LEN);
+    char *baseTableName = strndup(rClockTableNames[i + 1], strlen(rClockTableNames[i + 1]) - __CFSQL_CLOCK_LEN);
     rc = cfsql_getTableInfo(db, baseTableName, &tableInfos[i], &err);
     sqlite3_free(baseTableName);
 
@@ -468,7 +488,7 @@ static int changesSinceFilter(
     requestorSiteIdLen = sqlite3_value_bytes(argv[i]);
     if (requestorSiteIdLen != 0)
     {
-      requestorSiteId = (const char*)sqlite3_value_blob(argv[i]);
+      requestorSiteId = (const char *)sqlite3_value_blob(argv[i]);
     }
     else
     {
@@ -484,8 +504,8 @@ static int changesSinceFilter(
   int j = 1;
   for (i = 0; i < rNumRows; ++i)
   {
-      sqlite3_bind_blob(pStmt, j++, requestorSiteId, requestorSiteIdLen, SQLITE_STATIC);
-      sqlite3_bind_int64(pStmt, j++, versionBound);
+    sqlite3_bind_blob(pStmt, j++, requestorSiteId, requestorSiteIdLen, SQLITE_STATIC);
+    sqlite3_bind_int64(pStmt, j++, versionBound);
   }
 
   // put table infos into our cursor for later use on row fetches

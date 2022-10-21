@@ -2,6 +2,7 @@ void cfsqlUtilTestSuite();
 void cfsqlTableInfoTestSuite();
 void cfsqlTestSuite();
 void cfsqlTriggersTestSuite();
+void cfsqlChagesSinceVtabTestSuite();
 
 int main(int argc, char *argv[])
 {
@@ -9,4 +10,5 @@ int main(int argc, char *argv[])
   cfsqlTableInfoTestSuite();
   cfsqlTestSuite();
   cfsqlTriggersTestSuite();
+  cfsqlChagesSinceVtabTestSuite();
 }

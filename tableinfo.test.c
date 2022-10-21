@@ -207,6 +207,33 @@ void testGetIndexList() {
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
+void testFindTableInfo() {
+  printf("FindTableInfo\n");
+
+  cfsql_TableInfo** tblInfos = sqlite3_malloc(3 * sizeof(cfsql_TableInfo*));
+  for (int i = 0; i < 3; ++i) {
+    tblInfos[i] = sqlite3_malloc(sizeof(cfsql_TableInfo));
+    tblInfos[i]->tblName = sqlite3_mprintf("%d", i);
+  }
+
+  assert(cfsql_findTableInfo(tblInfos, 3, "0") == tblInfos[0]);
+  assert(cfsql_findTableInfo(tblInfos, 3, "1") == tblInfos[1]);
+  assert(cfsql_findTableInfo(tblInfos, 3, "2") == tblInfos[2]);
+  assert(cfsql_findTableInfo(tblInfos, 3, "3") == 0);
+
+  for (int i = 0; i < 3; ++i) {
+    sqlite3_free(tblInfos[i]);
+  }
+  sqlite3_free(tblInfos);
+
+  printf("\t\e[0;32mSuccess\e[0m\n");
+}
+
+void testQuoteConcat() {
+  printf("QuoteConcat\n");
+  printf("\t\e[0;32mSuccess\e[0m\n");
+}
+
 void cfsqlTableInfoTestSuite() {
   printf("\e[47m\e[1;30mSuite: cfsql_tableInfo\e[0m\n");
 
@@ -214,6 +241,8 @@ void cfsqlTableInfoTestSuite() {
   testExtractBaseCols();
   testGetTableInfo();
   testGetIndexList();
+  testFindTableInfo();
+  testQuoteConcat();
 
   // TODO: memory test -- allocate and deallocate no leaks.
 }

@@ -58,14 +58,6 @@ void testCreateTriggers()
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
-void testLocalInsertOnConflictStr()
-{
-}
-
-void testUpdateClocksStr()
-{
-}
-
 void testDeleteTriggerQuery()
 {
   printf("DeleteTriggerQuery\n");
@@ -103,4 +95,5 @@ void cfsqlTriggersTestSuite()
 
   testDeleteTriggerQuery();
   testCreateTriggers();
+  // testInsertTriggers();
 }

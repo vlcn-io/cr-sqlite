@@ -98,4 +98,9 @@ void cfsqlTestSuite()
 
   testCreateClockTable();
   teste2e();
+  // testIdempotence();
+  // testColumnAdds();
+  // testColumnDrops();
+  // testRecreateCrrFromExisting();
+  // testRequiredPrimaryKey();
 }

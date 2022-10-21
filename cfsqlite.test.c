@@ -73,7 +73,6 @@ void teste2e()
   int rc = SQLITE_OK;
   sqlite3 *db;
   char *err = 0;
-  cfsql_TableInfo *tableInfo = 0;
   rc = sqlite3_open(":memory:", &db);
 
   rc = sqlite3_exec(db, "create table foo (a primary key, b);", 0, 0, &err);
@@ -87,7 +86,6 @@ void teste2e()
 fail:
   printf("err: %s %d\n", err, rc);
   sqlite3_free(err);
-  cfsql_freeTableInfo(tableInfo);
   sqlite3_close(db);
   assert(rc == SQLITE_OK);
 }

@@ -207,7 +207,14 @@ char *cfsql_changesUnionQuery(
     unionsArr[i] = cfsql_changesQueryForTable(tableInfos[i]);
     if (unionsArr[i] == 0)
     {
+      for (int j = 0; j < i; j++) {
+        sqlite3_free(unionsArr[j]);
+      }
       return 0;
+    }
+
+    if (i < tableInfosLen - 1) {
+      unionsArr[i] = sqlite3_mprintf("%z %s ", unionsArr[i], UNION);
     }
   }
 

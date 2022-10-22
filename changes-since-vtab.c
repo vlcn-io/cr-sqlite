@@ -349,7 +349,6 @@ char *cfsql_rowPatchDataQuery(
 
   // contents of pksArr was already freed via join2 and cfsql_identity. See above.
   sqlite3_free(pksArr);
-
   return zSql;
 }
 

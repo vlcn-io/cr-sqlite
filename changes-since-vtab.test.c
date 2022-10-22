@@ -206,6 +206,8 @@ void testPickColumnInfosFromVersionMap()
   assert(picked[0].cid == 3);
   assert(strcmp(picked[0].name, "d") == 0);
 
+  // TC11: includes delete record
+
   printf("\t\e[0;32mSuccess\e[0m\n");
 
   fail:
@@ -218,7 +220,33 @@ void testPickColumnInfosFromVersionMap()
 void testRowPatchDataQuery()
 {
   printf("RowPatchDataQuery\n");
+
+  int rc = SQLITE_OK;
+  sqlite3 *db;
+  char *err = 0;
+  cfsql_TableInfo *tblInfo = 0;
+  rc = sqlite3_open(":memory:", &db);
+
+  rc += sqlite3_exec(db, "create table foo (a primary key, b, c, d);", 0, 0, &err);
+  rc += sqlite3_exec(db, "select cfsql_as_crr('foo');", 0, 0, &err);
+  rc += sqlite3_exec(db, "insert into foo values(1, 'cb', 'cc', 'cd')", 0, 0, &err);
+  rc += cfsql_getTableInfo(db, "foo", &tblInfo, &err);
+  CHECK_OK
+
+  // TC1: single pk table, 1 col change
+  char *versions = "{\"1\": 1}";
+  char *pks = "1";
+  char *q = cfsql_rowPatchDataQuery(db, tblInfo, 1, versions, pks);
+  assert(strcmp(q, "SELECT quote(\"b\") FROM \"foo\" WHERE \"a\" = 1") == 0);
+  sqlite3_free(q);
+
   printf("\t\e[0;32mSuccess\e[0m\n");
+
+  fail:
+  sqlite3_free(err);
+  cfsql_freeTableInfo(tblInfo);
+  sqlite3_close(db);
+  assert(rc == SQLITE_OK);
 }
 
 void cfsqlChagesSinceVtabTestSuite()

@@ -1,5 +1,7 @@
 todo:
 
+- go back thru changes-since-vtab and ensure correct error
+  msg is set in all cases
 - throw if pk is not defined -- don't use rowid. See:
   - https://www.sqlabs.com/blog/2010/12/sqlite-and-unique-rowid-something-you-really-need-to-know/
 - invariant on incompatible index types

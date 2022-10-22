@@ -243,34 +243,66 @@ char *cfsql_changesUnionQuery(
 
 cfsql_ColumnInfo *cfsql_pickColumnInfosFromVersionMap(
     sqlite3 *db,
-    int numCols,
-    const char *colVersions,
-    int *rLen)
+    cfsql_ColumnInfo *columnInfos,
+    int columnInfosLen,
+    int numVersionCols,
+    const char *colVersions)
 {
-  int rc = SQLITE_OK;
-  char *zSql = sqlite3_mprintf("SELECT key as cid, value as version FROM json_each(?)");
-  
-  sqlite3_stmt *pStmt;
-  rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
-
-  if (rc != SQLITE_OK) {
+  if (numVersionCols > columnInfosLen) {
     return 0;
   }
 
-  // char *colNames[colsLen];
-  // for (int i = 0; i < colsLen; ++i)
-  // {
-  //   colNames[i] = cols[i].name;
-  // }
+  int rc = SQLITE_OK;
+  char *zSql = sqlite3_mprintf("SELECT key as cid FROM json_each(?)");
+  
+  sqlite3_stmt *pStmt;
+  rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
+  sqlite3_free(zSql);
 
-  // char *colsConcatList = cfsql_join2(&quote, colNames, colsLen, " || ");
-  return 0;
+  if (rc != SQLITE_OK) {
+    sqlite3_finalize(pStmt);
+    return 0;
+  }
+
+  // This is safe, yea?
+  // Binding the result of one statement to another.
+  rc = sqlite3_bind_text(pStmt, 1, colVersions, -1, SQLITE_STATIC);
+  if (rc != SQLITE_OK) {
+    sqlite3_finalize(pStmt);
+    return 0;
+  }
+
+  rc = sqlite3_step(pStmt);
+  cfsql_ColumnInfo *ret = sqlite3_malloc(numVersionCols * sizeof *ret);
+  int i = 0;
+  while (rc == SQLITE_ROW) {
+
+    int cid = sqlite3_column_int(pStmt, 0);
+    if (cid >= columnInfosLen || i >= numVersionCols) {
+      sqlite3_free(ret);
+      sqlite3_finalize(pStmt);
+      return 0;
+    }
+    ret[i] = columnInfos[cid];
+
+    rc = sqlite3_step(pStmt);
+    ++i;
+  }
+
+  if (i != numVersionCols) {
+    sqlite3_free(ret);
+    sqlite3_finalize(pStmt);
+    return 0;
+  }
+
+  sqlite3_finalize(pStmt);
+  return ret;
 }
 
 char *cfsql_rowPatchDataQuery(
     sqlite3 *db,
     cfsql_TableInfo *tblInfo,
-    int numCols,
+    int numVersionCols,
     const char *colVrsns,
     const char *pks)
 {
@@ -298,9 +330,16 @@ char *cfsql_rowPatchDataQuery(
     pksArr[i] = sqlite3_mprintf("\"%s\" = %z", tblInfo->pks[i].name, pksArr[i]);
   }
 
-  int changedColsLen = 0;
-  cfsql_ColumnInfo *changedCols = cfsql_pickColumnInfosFromVersionMap(db, numCols, colVrsns, &changedColsLen);
-  char *colsConcatList = cfsql_quoteConcat(changedCols, changedColsLen);
+  cfsql_ColumnInfo *changedCols = cfsql_pickColumnInfosFromVersionMap(
+    db,
+    tblInfo->baseCols,
+    tblInfo->baseColsLen,
+    numVersionCols,
+    colVrsns
+  );
+  char *colsConcatList = cfsql_quoteConcat(changedCols, numVersionCols);
+  sqlite3_free(changedCols);
+
   char *zSql = sqlite3_mprintf(
       "SELECT %z FROM \"%s\" WHERE %z",
       colsConcatList,
@@ -347,6 +386,11 @@ static int changesSinceNext(sqlite3_vtab_cursor *cur)
   const char *colVrsns = (const char *)sqlite3_column_text(pCur->pChangesStmt, COL_VRSNS);
   int numCols = sqlite3_column_int(pCur->pChangesStmt, NUM_COLS);
   sqlite3_int64 minv = sqlite3_column_int64(pCur->pChangesStmt, MIN_V);
+
+  if (numCols == 0) {
+    changesSinceCrsrFinalize(pCur);
+    return SQLITE_ERROR;
+  }
 
   pCur->version = minv;
 

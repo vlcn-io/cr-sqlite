@@ -12,7 +12,11 @@ char *cfsql_changesUnionQuery(
     cfsql_TableInfo **tableInfos,
     int tableInfosLen);
 cfsql_ColumnInfo *cfsql_pickColumnInfosFromVersionMap(
-  sqlite3 * db, int numCols, const char *colVersions, int *rLen);
+  sqlite3 * db,
+  cfsql_ColumnInfo *columnInfos,
+  int columnInfosLen,
+  int numVersionCols,
+  const char *colVersions);
 char *cfsql_rowPatchDataQuery(
     sqlite3 *db,
     cfsql_TableInfo *tblInfo,

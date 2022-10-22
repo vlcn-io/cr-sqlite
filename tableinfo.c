@@ -393,7 +393,7 @@ int cfsql_getTableInfo(
     return numColInfos;
   }
 
-  zSql = sqlite3_mprintf("select \"cid\", \"name\", \"type\", \"notnull\", \"pk\" from pragma_table_info(\"%s\")",
+  zSql = sqlite3_mprintf("select \"cid\", \"name\", \"type\", \"notnull\", \"pk\" from pragma_table_info(\"%s\") order by cid asc",
                          tblName);
   rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
   sqlite3_free(zSql);

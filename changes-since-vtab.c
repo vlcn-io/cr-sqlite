@@ -35,8 +35,8 @@ struct cfsql_ChangesSince_cursor
   // The statement that is returning the identifiers
   // of what has changed
   sqlite3_stmt *pChangesStmt;
+  sqlite3_stmt *pRowStmt;
 
-  char *colVals;
   const char *colVrsns;
   sqlite3_int64 version;
 };
@@ -122,16 +122,15 @@ static int changesSinceCrsrFinalize(cfsql_ChangesSince_cursor *crsr)
   int rc = SQLITE_OK;
   rc += sqlite3_finalize(crsr->pChangesStmt);
   crsr->pChangesStmt = 0;
+  rc += sqlite3_finalize(crsr->pRowStmt);
+  crsr->pRowStmt = 0;
   cfsql_freeAllTableInfos(crsr->tableInfos, crsr->tableInfosLen);
   crsr->tableInfos = 0;
   crsr->tableInfosLen = 0;
 
-  sqlite3_free(crsr->colVals);
-  crsr->colVals = 0;
   // do not free colVrsns as it is a reference
   // to the data from the pChangesStmt
   // and is thus managed by that statement
-  // sqlite3_free(crsr->colVrsns);
   crsr->colVrsns = 0;
 
   return rc;
@@ -365,10 +364,22 @@ static int changesSinceNext(sqlite3_vtab_cursor *cur)
     return SQLITE_ERROR;
   }
 
+  if (pCur->pRowStmt != 0) {
+    // Finalize the prior row result
+    // before getting the next row.
+    // Do not re-use the statement since we could be entering
+    // a new table.
+    // An optimization would be to keep (rewind) it if we're processing the same
+    // table for many rows.
+    sqlite3_finalize(pCur->pRowStmt);
+    pCur->pRowStmt = 0;
+  }
+
   // step to next
   // if no row, tear down (finalize) statements
   // set statements to null
-  if (sqlite3_step(pCur->pChangesStmt) != SQLITE_ROW)
+  rc = sqlite3_step(pCur->pChangesStmt);
+  if (rc != SQLITE_ROW)
   {
     // tear down since we're done
     return changesSinceCrsrFinalize(pCur);
@@ -391,8 +402,6 @@ static int changesSinceNext(sqlite3_vtab_cursor *cur)
     return SQLITE_ERROR;
   }
 
-  pCur->version = minv;
-
   cfsql_TableInfo *tblInfo = cfsql_findTableInfo(pCur->tableInfos, pCur->tableInfosLen, tbl);
   if (tblInfo == 0)
   {
@@ -407,20 +416,34 @@ static int changesSinceNext(sqlite3_vtab_cursor *cur)
     return SQLITE_ERROR;
   }
 
+  // TODO: handle delete patch case
   char *zSql = cfsql_rowPatchDataQuery(pCur->pTab->db, tblInfo, numCols, colVrsns, pks);
   if (zSql == 0)
   {
     // TODO set error msg
     return SQLITE_ERROR;
   }
+  sqlite3_stmt *pRowStmt;
+  rc = sqlite3_prepare_v2(pCur->pTab->db, zSql, -1, &pRowStmt, 0);
   sqlite3_free(zSql);
 
-  // (3) create pk where list -- can insert directly since strings are quoted
-  // (4) select all columns in the versioned column list
-  //   this is done by filtering by cid in the table info list
-  // (5) json-encode {name: [val, version]} of columns
-  pCur->colVals = sqlite3_mprintf("todo vals");
+  if (rc != SQLITE_OK) {
+    sqlite3_finalize(pRowStmt);
+    return rc;
+  }
+
+  rc = sqlite3_step(pRowStmt);
+  if (rc != SQLITE_ROW) {
+    sqlite3_finalize(pRowStmt);
+    return SQLITE_ERROR;
+  } else {
+    rc = SQLITE_OK;
+  }
+
+  // pCur->colVals = strdup(sqlite3_column_text(pRowStmt, 0));
+  pCur->pRowStmt = pRowStmt;
   pCur->colVrsns = colVrsns;
+  pCur->version = minv;
 
   return rc;
 }
@@ -448,7 +471,7 @@ static int changesSinceColumn(
     sqlite3_result_value(ctx, sqlite3_column_value(pCur->pChangesStmt, PKS));
     break;
   case CHANGES_SINCE_VTAB_COL_VALS:
-    sqlite3_result_text(ctx, pCur->colVals, -1, 0);
+    sqlite3_result_value(ctx, sqlite3_column_value(pCur->pRowStmt, 0));
     break;
   case CHANGES_SINCE_VTAB_COL_VRSNS:
     sqlite3_result_text(ctx, pCur->colVrsns, -1, 0);

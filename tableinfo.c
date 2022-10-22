@@ -100,7 +100,7 @@ char *cfsql_quoteConcat(cfsql_ColumnInfo * cols, int len) {
     names[i] = cols[i].name;
   }
 
-  return cfsql_join2(&quote, names, len, " || ");
+  return cfsql_join2(&quote, names, len, " || '~''~' || ");
 }
 
 static void cfsql_freeColumnInfos(cfsql_ColumnInfo *columnInfos, int len)

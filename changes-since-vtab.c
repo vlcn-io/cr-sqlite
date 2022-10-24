@@ -5,11 +5,18 @@
 #include "util.h"
 
 /**
- * vtab usage:
- * SELECT * FROM crsql_chages WHERE requestor = SITE_ID AND version > V
+ * vtab `changes since` usage:
+ * SELECT * FROM crsql_chages WHERE site_id != SITE_ID AND version > V
  *
  * returns:
  * table_name, quote-concated pks ~'~, json-encoded vals, json-encoded versions, curr version
+ *  
+ * vtab `apply changes` usage:
+ * insert into crsql_changes table, pks, colvals, colversions, site_id VALUES(...)
+ * ^-- don't technically need a where.. maybe never even do a where
+ * given `pks`, `table` are our where.
+ * ^-- only allow inserts, never updates.
+ *
  */
 
 typedef struct crsql_ChangesSince_vtab crsql_ChangesSince_vtab;
@@ -358,10 +365,12 @@ char *crsql_rowPatchDataQuery(
 static int changesSinceNext(sqlite3_vtab_cursor *cur)
 {
   crsql_ChangesSince_cursor *pCur = (crsql_ChangesSince_cursor *)cur;
+  sqlite3_vtab *pTabBase = (sqlite3_vtab *)(pCur->pTab);
   int rc = SQLITE_OK;
 
   if (pCur->pChangesStmt == 0)
   {
+    pTabBase->zErrMsg = sqlite3_mprintf("crsql internal error: in an unexpected state. pChangesStmt is null.");
     return SQLITE_ERROR;
   }
 
@@ -386,12 +395,6 @@ static int changesSinceNext(sqlite3_vtab_cursor *cur)
     return changesSinceCrsrFinalize(pCur);
   }
 
-  // else -- create row statement for the current row
-  // fetch the data
-  // pack it
-  // finalize the row statement
-  // fill our cursor
-  // return
   const char *tbl = (const char *)sqlite3_column_text(pCur->pChangesStmt, TBL);
   const char *pks = (const char *)sqlite3_column_text(pCur->pChangesStmt, PKS);
   const char *colVrsns = (const char *)sqlite3_column_text(pCur->pChangesStmt, COL_VRSNS);
@@ -399,6 +402,8 @@ static int changesSinceNext(sqlite3_vtab_cursor *cur)
   sqlite3_int64 minv = sqlite3_column_int64(pCur->pChangesStmt, MIN_V);
 
   if (numCols == 0) {
+    // TODO: this could be an insert where the table only has primary keys and no non-primary key columns
+    pTabBase->zErrMsg = sqlite3_mprintf("Received a change set that had 0 columns from table %s", tbl);
     changesSinceCrsrFinalize(pCur);
     return SQLITE_ERROR;
   }
@@ -406,6 +411,7 @@ static int changesSinceNext(sqlite3_vtab_cursor *cur)
   crsql_TableInfo *tblInfo = crsql_findTableInfo(pCur->tableInfos, pCur->tableInfosLen, tbl);
   if (tblInfo == 0)
   {
+    pTabBase->zErrMsg = sqlite3_mprintf("crsql internal error. Could not find schema for table %s", tbl);
     changesSinceCrsrFinalize(pCur);
     return SQLITE_ERROR;
   }
@@ -414,6 +420,8 @@ static int changesSinceNext(sqlite3_vtab_cursor *cur)
   {
     // TODO set error msg
     // require pks in `crsql_as_crr`
+    crsql_freeTableInfo(tblInfo);
+    pTabBase->zErrMsg = sqlite3_mprintf("crr table %s is missing primary key columns", tblInfo->tblName);
     return SQLITE_ERROR;
   }
 
@@ -421,7 +429,7 @@ static int changesSinceNext(sqlite3_vtab_cursor *cur)
   char *zSql = crsql_rowPatchDataQuery(pCur->pTab->db, tblInfo, numCols, colVrsns, pks);
   if (zSql == 0)
   {
-    // TODO set error msg
+    pTabBase->zErrMsg = sqlite3_mprintf("crsql internal error generationg raw data fetch query for table %s", tbl);
     return SQLITE_ERROR;
   }
   sqlite3_stmt *pRowStmt;
@@ -429,19 +437,21 @@ static int changesSinceNext(sqlite3_vtab_cursor *cur)
   sqlite3_free(zSql);
 
   if (rc != SQLITE_OK) {
+    pTabBase->zErrMsg = sqlite3_mprintf("crsql internal error preparing row data fetch statement");
     sqlite3_finalize(pRowStmt);
     return rc;
   }
 
+  // TODO: handle the row delete case. There will be now row to fetch in that case.
   rc = sqlite3_step(pRowStmt);
   if (rc != SQLITE_ROW) {
+    pTabBase->zErrMsg = sqlite3_mprintf("crsql internal error fetching row data");
     sqlite3_finalize(pRowStmt);
     return SQLITE_ERROR;
   } else {
     rc = SQLITE_OK;
   }
 
-  // pCur->colVals = strdup(sqlite3_column_text(pRowStmt, 0));
   pCur->pRowStmt = pRowStmt;
   pCur->colVrsns = colVrsns;
   pCur->version = minv;
@@ -501,6 +511,7 @@ static int changesSinceFilter(
   int rc = SQLITE_OK;
   crsql_ChangesSince_cursor *pCrsr = (crsql_ChangesSince_cursor *)pVtabCursor;
   crsql_ChangesSince_vtab *pTab = pCrsr->pTab;
+  sqlite3_vtab *pTabBase = (sqlite3_vtab *)pTab;
   sqlite3 *db = pTab->db;
   char **rClockTableNames = 0;
   int rNumRows = 0;
@@ -524,6 +535,7 @@ static int changesSinceFilter(
 
   if (rc != SQLITE_OK || rNumRows == 0)
   {
+    pTabBase->zErrMsg = sqlite3_mprintf("crsql internal error discovering crr tables.");
     sqlite3_free_table(rClockTableNames);
     return rc;
   }
@@ -544,6 +556,7 @@ static int changesSinceFilter(
 
     if (rc != SQLITE_OK)
     {
+      pTabBase->zErrMsg = sqlite3_mprintf("crsql internal error getting schemas for crr tables.");
       crsql_freeAllTableInfos(tableInfos, rNumRows);
       sqlite3_free(err);
       return rc;
@@ -557,6 +570,7 @@ static int changesSinceFilter(
 
   if (zSql == 0)
   {
+    pTabBase->zErrMsg = sqlite3_mprintf("crsql internal error generating the query to extract changes.");
     crsql_freeAllTableInfos(tableInfos, rNumRows);
     return SQLITE_ERROR;
   }
@@ -565,6 +579,7 @@ static int changesSinceFilter(
   rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
   if (rc != SQLITE_OK)
   {
+    pTabBase->zErrMsg = sqlite3_mprintf("crsql internal error preparing the statement to extract changes.");
     crsql_freeAllTableInfos(tableInfos, rNumRows);
     sqlite3_finalize(pStmt);
     return rc;
@@ -638,6 +653,7 @@ static int changesSinceBestIndex(
     case CHANGES_SINCE_VTAB_VRSN:
       if (pConstraint->op != SQLITE_INDEX_CONSTRAINT_GT)
       {
+        tab->zErrMsg = sqlite3_mprintf("crsql_changes.version only supports the greater than operator. E.g., version > x");
         return SQLITE_CONSTRAINT;
       }
       versionIdx = i;
@@ -646,6 +662,7 @@ static int changesSinceBestIndex(
     case CHANGES_SINCE_VTAB_SITE_ID:
       if (pConstraint->op != SQLITE_INDEX_CONSTRAINT_NE)
       {
+        tab->zErrMsg = sqlite3_mprintf("crsql_changes.site_id only supportes the not equal operator. E.g., site_id != x");
         return SQLITE_CONSTRAINT;
       }
       requestorIdx = i;
@@ -696,6 +713,20 @@ static int changesSinceBestIndex(
   return SQLITE_OK;
 }
 
+int applyRowPatch(
+  sqlite3_vtab *pVTab,
+  int argc,
+  sqlite3_value **argv,
+  sqlite_int64 *pRowid
+) {
+  if (argc <= 1 || argv[0] != 0) {
+    pVTab->zErrMsg = sqlite3_mprintf("Only inserts are allowed against the changes table.");
+    return SQLITE_MISUSE;
+  }
+
+  return SQLITE_OK;
+}
+
 sqlite3_module crsql_changesSinceModule = {
     /* iVersion    */ 0,
     /* xCreate     */ 0,
@@ -710,7 +741,7 @@ sqlite3_module crsql_changesSinceModule = {
     /* xEof        */ changesSinceEof,
     /* xColumn     */ changesSinceColumn,
     /* xRowid      */ changesSinceRowid,
-    /* xUpdate     */ 0,
+    /* xUpdate     */ applyRowPatch,
     /* xBegin      */ 0,
     /* xSync       */ 0,
     /* xCommit     */ 0,

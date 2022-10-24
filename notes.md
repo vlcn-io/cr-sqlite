@@ -1,5 +1,6 @@
 todo:
 
+- validate tbl infos prior to replication as well as when converting to `as_crr`
 - go back thru changes-since-vtab and ensure correct error
   msg is set in all cases
 - support for table with only pks

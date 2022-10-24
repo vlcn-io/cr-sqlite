@@ -1,8 +1,8 @@
 todo:
 
+- check proper utf8 handling via unsigned char everywhere
+- finish multithreading test case
 - validate tbl infos prior to replication as well as when converting to `as_crr`
-- go back thru changes-vtab and ensure correct error
-  msg is set in all cases
 - support for table with only pks
 - throw if pk is not defined -- don't use rowid. See:
   - https://www.sqlabs.com/blog/2010/12/sqlite-and-unique-rowid-something-you-really-need-to-know/
@@ -11,32 +11,15 @@ todo:
 - if a column gets changed to become part of the primary key set...
   - Need to drop version tracking on it
 - inserts should... fail if already exists? Or always be upsert given we don't know what might already exist due to replications?
-- e2e tests in c
-- loadable tests in py
-- perf notebook
-  https://stackoverflow.com/questions/35545402/how-to-run-an-ipynb-jupyter-notebook-from-terminal
-- test normalization does everything expected in all cases.
-  e.g., spaces around `.`
-- concat if multiple priamry keys quote(x) || '~\'~' || quote(y)
-- select quote for dflt value from pragma? and extract as text?
-- incrementing causal length without looking is problematic for upserts
-- delta generation view?
-  - Probs not if we want deltas across tables for cross table tx support.
-  - Well we can get ids in a view since ids will union correctly.
-- alter crr
+  - rn insert would fail if row exists. User can handle this as desired.
 - sync lib for sending/receiving changes to/from peers
 - c linters and static analyzers
   - https://clang-analyzer.llvm.org/command-line.html
   - https://cppcheck.sourceforge.io/
-- support differing schema names
-- test quoted table names.... strip quote in extract word?
-- support `if not exists`
-- support quoted identifiers --
-- additional indices on clock tables to facilitate delta extraction?
-- just throw if no primary key is specified on create rather than allowing the create?
-- perf test cases
-- version index?
-- check query optimization / plans against the view. With joins and so on.
+- test `as_crr` when schema name is provided
+- idempotency of `as_crr` / support re-running `as_crr` against already crr-ified table.
+  - to support altering a crr
+- support quoted identifiers (i.e., %w or %q rather than what we have now)
 
   - test index of cl
 

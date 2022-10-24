@@ -80,6 +80,10 @@ void teste2e()
   rc = sqlite3_exec(db, "select crsql_as_crr('foo');", 0, 0, &err);
   CHECK_OK
 
+  // TODO: do inserts, get patch sets.
+
+  // TODO: create other connections. apply patches between connections.
+
   printf("\t\e[0;32mSuccess\e[0m\n");
   return;
 
@@ -95,6 +99,7 @@ void crsqlTestSuite()
   printf("\e[47m\e[1;30mSuite: crsql\e[0m\n");
 
   testCreateClockTable();
+  // testSyncBit();
   teste2e();
   // testIdempotence();
   // testColumnAdds();

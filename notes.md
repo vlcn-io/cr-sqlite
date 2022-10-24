@@ -1,5 +1,6 @@
 todo:
 
+- go through an ensure proper documentation on each function
 - check proper utf8 handling via unsigned char everywhere
 - finish multithreading test case
 - validate tbl infos prior to replication as well as when converting to `as_crr`

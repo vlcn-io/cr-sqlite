@@ -451,6 +451,19 @@ static int dropCrr(
   return rc;
 }
 
+static void crsqlSyncBit(sqlite3_context *context, int argc, sqlite3_value **argv) {
+  int *syncBit = (int*)sqlite3_user_data(context);
+
+  // No args? We're reading the value of the bit.
+  if (argc == 0) {
+    sqlite3_result_int(context, *syncBit);
+  }
+
+  // Args? We're setting the value of the bit
+  int newValue = sqlite3_value_int(argv[0]);
+  *syncBit = newValue;
+}
+
 /**
  * Takes a table name and turns it into a CRR.
  *
@@ -502,14 +515,15 @@ static void crsqlMakeCrrFunc(sqlite3_context *context, int argc, sqlite3_value *
   sqlite3_exec(db, "COMMIT", 0, 0, 0);
 }
 
-// TODO: install a commit_hook to advance the dbversion on every tx commit
-// get_changes_since function
-
 #ifdef _WIN32
 __declspec(dllexport)
 #endif
     int sqlite3_crsqlite_preinit()
 {
+  // TODO: document that if this extension is used as a run time loadable extension
+  // then one thread must initialize it before any other threads may be allowed to 
+  // start using it.
+  // If it is statically linked as an auto-load extension then the user is ok to do anything.
 #if SQLITE_THREADSAFE != 0
   if (globalsInitMutex == 0)
   {
@@ -623,6 +637,22 @@ __declspec(dllexport)
                                  // existing database state. directonly.
                                  SQLITE_UTF8 | SQLITE_DIRECTONLY,
                                  0, crsqlMakeCrrFunc, 0, 0);
+  }
+
+  if (rc == SQLITE_OK) {
+    int *syncBit = sqlite3_malloc(sizeof *syncBit);
+    *syncBit = 0;
+    rc = sqlite3_create_function_v2(
+      db,
+      "crsql_internal_sync_bit",
+      -1, // num args: -1 -> 0 or more
+      SQLITE_UTF8 | SQLITE_INNOCUOUS | SQLITE_DIRECTONLY, // configuration
+      syncBit, // user data
+      crsqlSyncBit,
+      0, // step
+      0, // final
+      sqlite3_free // destroy / free syncBit
+    );
   }
 
   if (rc == SQLITE_OK) {

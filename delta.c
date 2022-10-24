@@ -3,7 +3,7 @@
 * replication strategies.
 */
 
-char *cfsql_deltas() {
+char *crsql_deltas() {
   /**
    * Provided clock: {me: 1, peer: 2}
    * 

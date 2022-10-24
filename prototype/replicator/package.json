@@ -1,5 +1,5 @@
 {
-  "name": "@cfsql/replicator",
+  "name": "@crsql/replicator",
   "version": "0.0.1",
   "description": "",
   "main": "lib/index.js",

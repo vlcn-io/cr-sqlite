@@ -1,5 +1,5 @@
-#ifndef CFSQLITE_H
-#define CFSQLITE_H
+#ifndef CRSQLITE_H
+#define CRSQLITE_H
 
 #include "sqlite3ext.h"
 SQLITE_EXTENSION_INIT3
@@ -12,9 +12,9 @@ SQLITE_EXTENSION_INIT3
 # define STATIC
 #endif
 
-int cfsql_createClockTable(
+int crsql_createClockTable(
     sqlite3 *db,
-    cfsql_TableInfo *tableInfo,
+    crsql_TableInfo *tableInfo,
     char **err);
 
 #endif

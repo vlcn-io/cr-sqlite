@@ -1,10 +1,10 @@
 {
-  "name": "@cfsql/migrator",
+  "name": "@crsql/migrator",
   "version": "0.0.1",
   "main": "bin/cli.js",
   "description": "",
   "bin": {
-    "cfsqlite": "./bin/cli.js"
+    "crsqlite": "./bin/cli.js"
   },
   "type": "module",
   "scripts": {

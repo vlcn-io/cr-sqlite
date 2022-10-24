@@ -56,13 +56,13 @@ async function run() {
 function print_general_usage() {
   const sections = [
     {
-      header: "🧚‍♀️ cfsql 🧚‍♀️",
+      header: "🧚‍♀️ crsql 🧚‍♀️",
       content:
         "Utility to migrate existing sqlite databases to be conflict free",
     },
     {
       header: "Synopsis",
-      content: "{bold $ cfsql} <command> <options>",
+      content: "{bold $ crsql} <command> <options>",
     },
     {
       header: "Commands",
@@ -85,7 +85,7 @@ function print_general_usage() {
 function print_migrate_help() {
   const usage = commandLineUsage([
     {
-      header: "cfsql `migrate`",
+      header: "crsql `migrate`",
       content:
         "Migrate a source database, copying it to a dest database which is conflict free",
     },

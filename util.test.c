@@ -1,4 +1,4 @@
-#include "cfsqlite.h"
+#include "crsqlite.h"
 
 #include "util.h"
 #include "consts.h"
@@ -32,16 +32,16 @@ void testGetVersionUnionQuery()
   char *query;
   printf("GetVersionUnionQuery\n");
 
-  query = cfsql_getDbVersionUnionQuery(
+  query = crsql_getDbVersionUnionQuery(
       numRows_tc1,
       tableNames_tc1);
-  assert(strcmp(query, "SELECT max(version) as version FROM (SELECT max(__cfsql_version) as version FROM \"foo\"  )") == 0);
+  assert(strcmp(query, "SELECT max(version) as version FROM (SELECT max(__crsql_version) as version FROM \"foo\"  )") == 0);
   sqlite3_free(query);
 
-  query = cfsql_getDbVersionUnionQuery(
+  query = crsql_getDbVersionUnionQuery(
       numRows_tc2,
       tableNames_tc2);
-  assert(strcmp(query, "SELECT max(version) as version FROM (SELECT max(__cfsql_version) as version FROM \"foo\" UNION SELECT max(__cfsql_version) as version FROM \"bar\" UNION SELECT max(__cfsql_version) as version FROM \"baz\"  )") == 0);
+  assert(strcmp(query, "SELECT max(version) as version FROM (SELECT max(__crsql_version) as version FROM \"foo\" UNION SELECT max(__crsql_version) as version FROM \"bar\" UNION SELECT max(__crsql_version) as version FROM \"baz\"  )") == 0);
   sqlite3_free(query);
 
   printf("\t\e[0;32mSuccess\e[0m\n");
@@ -61,9 +61,9 @@ void testDoesTableExist()
     return;
   }
 
-  assert(cfsql_doesTableExist(db, "foo") == 0);
+  assert(crsql_doesTableExist(db, "foo") == 0);
   sqlite3_exec(db, "CREATE TABLE foo (a, b)", 0, 0, 0);
-  assert(cfsql_doesTableExist(db, "foo") == 1);
+  assert(crsql_doesTableExist(db, "foo") == 1);
 
   sqlite3_close(db);
   printf("\t\e[0;32mSuccess\e[0m\n");
@@ -77,11 +77,11 @@ void testGetCount()
 
   rc = sqlite3_open(":memory:", &db);
   sqlite3_exec(db, "CREATE TABLE foo (a); INSERT INTO foo VALUES (1);", 0, 0, 0);
-  rc = cfsql_getCount(db, "SELECT count(*) FROM foo");
+  rc = crsql_getCount(db, "SELECT count(*) FROM foo");
 
   assert(rc == 1);
   sqlite3_exec(db, "INSERT INTO foo VALUES (1);", 0, 0, 0);
-  rc = cfsql_getCount(db, "SELECT count(*) FROM foo");
+  rc = crsql_getCount(db, "SELECT count(*) FROM foo");
   assert(rc == 2);
 
   sqlite3_close(db);
@@ -97,7 +97,7 @@ void testJoinWith()
       "two",
       "four"};
 
-  cfsql_joinWith(dest, src, 3, ',');
+  crsql_joinWith(dest, src, 3, ',');
 
   assert(strcmp(dest, "one,two,four") == 0);
   printf("\t\e[0;32mSuccess\e[0m\n");
@@ -116,7 +116,7 @@ void testGetIndexedCols()
   sqlite3_exec(db, "CREATE TABLE foo (a);", 0, 0, 0);
   sqlite3_exec(db, "CREATE TABLE bar (a primary key);", 0, 0, 0);
 
-  rc = cfsql_getIndexedCols(
+  rc = crsql_getIndexedCols(
       db,
       "sqlite_autoindex_foo_1",
       &indexedCols,
@@ -126,7 +126,7 @@ void testGetIndexedCols()
   assert(indexedColsLen == 0);
   assert(indexedCols == 0);
 
-  rc = cfsql_getIndexedCols(
+  rc = crsql_getIndexedCols(
       db,
       "sqlite_autoindex_bar_1",
       &indexedCols,
@@ -156,7 +156,7 @@ void testAsIdentifierListStr() {
   };
   char *res;
 
-  res = cfsql_asIdentifierListStr(
+  res = crsql_asIdentifierListStr(
     tc1,
     3,
     ','
@@ -186,14 +186,14 @@ void testJoin2() {
   };
   char * result;
 
-  result = cfsql_join2(&join2map, tc0, 0, ", ");
+  result = crsql_join2(&join2map, tc0, 0, ", ");
   assert(result == 0);
 
-  result = cfsql_join2(&join2map, tc1, 1, ", ");
+  result = crsql_join2(&join2map, tc1, 1, ", ");
   assert(strcmp(result, "foo one bar") == 0);
   sqlite3_free(result);
 
-  result = cfsql_join2(&join2map, tc2, 2, ", ");
+  result = crsql_join2(&join2map, tc2, 2, ", ");
   assert(strcmp(result, "foo one bar, foo two bar") == 0);
   sqlite3_free(result);
 
@@ -208,43 +208,43 @@ void testSplit() {
   char *tc2 = "one~'~two";
 
   char ** result;
-  result = cfsql_split(tc0, ",", 3);
+  result = crsql_split(tc0, ",", 3);
   assert(strcmp(result[0], "one") == 0);
   assert(strcmp(result[1], " two") == 0);
   assert(strcmp(result[2], " three") == 0);
 
-  result = cfsql_split(tc0, ", ", 3);
+  result = crsql_split(tc0, ", ", 3);
   assert(strcmp(result[0], "one") == 0);
   assert(strcmp(result[1], "two") == 0);
   assert(strcmp(result[2], "three") == 0);
 
-  result = cfsql_split(tc1, "~'~", 3);
+  result = crsql_split(tc1, "~'~", 3);
   assert(strcmp(result[0], "one") == 0);
   assert(strcmp(result[1], "two") == 0);
   assert(strcmp(result[2], "three") == 0);
 
-  result = cfsql_split(tc2, "~'~", 2);
+  result = crsql_split(tc2, "~'~", 2);
   assert(strcmp(result[0], "one") == 0);
   assert(strcmp(result[1], "two") == 0);
 
-  result = cfsql_split(tc2, "~'~", 3);
+  result = crsql_split(tc2, "~'~", 3);
   assert(result == 0);
 
-  result = cfsql_split(tc2, "~'~", 1);
+  result = crsql_split(tc2, "~'~", 1);
   assert(strcmp(result[0], "one") == 0);
 
-  result = cfsql_split(tc2, "!", 1);
+  result = crsql_split(tc2, "!", 1);
   assert(strcmp(result[0], "one~'~two") == 0);
 
-  result = cfsql_split(tc2, "!", 2);
+  result = crsql_split(tc2, "!", 2);
   assert(result == 0);
 
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
-void cfsqlUtilTestSuite()
+void crsqlUtilTestSuite()
 {
-  printf("\e[47m\e[1;30mSuite: cfsql_util\e[0m\n");
+  printf("\e[47m\e[1;30mSuite: crsql_util\e[0m\n");
 
   testGetVersionUnionQuery();
   testDoesTableExist();

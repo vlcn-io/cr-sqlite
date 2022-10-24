@@ -1,4 +1,4 @@
-#include "cfsqlite.h"
+#include "crsqlite.h"
 SQLITE_EXTENSION_INIT1
 
 #include "util.h"
@@ -23,10 +23,10 @@ void testCreateClockTable()
 
   sqlite3 *db;
   int rc;
-  cfsql_TableInfo *tc1;
-  cfsql_TableInfo *tc2;
-  cfsql_TableInfo *tc3;
-  cfsql_TableInfo *tc4;
+  crsql_TableInfo *tc1;
+  crsql_TableInfo *tc2;
+  crsql_TableInfo *tc3;
+  crsql_TableInfo *tc4;
   char *err = 0;
 
   rc = sqlite3_open(":memory:", &db);
@@ -35,22 +35,22 @@ void testCreateClockTable()
   sqlite3_exec(db, "CREATE TABLE baz (a primary key, b)", 0, 0, 0);
   sqlite3_exec(db, "CREATE TABLE boo (a primary key, b, c)", 0, 0, 0);
 
-  rc = cfsql_getTableInfo(db, "foo", &tc1, &err);
+  rc = crsql_getTableInfo(db, "foo", &tc1, &err);
   CHECK_OK
-  rc = cfsql_getTableInfo(db, "bar", &tc2, &err);
+  rc = crsql_getTableInfo(db, "bar", &tc2, &err);
   CHECK_OK
-  rc = cfsql_getTableInfo(db, "baz", &tc3, &err);
+  rc = crsql_getTableInfo(db, "baz", &tc3, &err);
   CHECK_OK
-  rc = cfsql_getTableInfo(db, "boo", &tc4, &err);
+  rc = crsql_getTableInfo(db, "boo", &tc4, &err);
   CHECK_OK
 
-  rc = cfsql_createClockTable(db, tc1, &err);
+  rc = crsql_createClockTable(db, tc1, &err);
   CHECK_OK
-  rc = cfsql_createClockTable(db, tc2, &err);
+  rc = crsql_createClockTable(db, tc2, &err);
   CHECK_OK
-  rc = cfsql_createClockTable(db, tc3, &err);
+  rc = crsql_createClockTable(db, tc3, &err);
   CHECK_OK
-  rc = cfsql_createClockTable(db, tc4, &err);
+  rc = crsql_createClockTable(db, tc4, &err);
   CHECK_OK
 
   // TODO: check that the tables have the expected schema
@@ -77,7 +77,7 @@ void teste2e()
 
   rc = sqlite3_exec(db, "create table foo (a primary key, b);", 0, 0, &err);
   CHECK_OK
-  rc = sqlite3_exec(db, "select cfsql_as_crr('foo');", 0, 0, &err);
+  rc = sqlite3_exec(db, "select crsql_as_crr('foo');", 0, 0, &err);
   CHECK_OK
 
   printf("\t\e[0;32mSuccess\e[0m\n");
@@ -90,9 +90,9 @@ fail:
   assert(rc == SQLITE_OK);
 }
 
-void cfsqlTestSuite()
+void crsqlTestSuite()
 {
-  printf("\e[47m\e[1;30mSuite: cfsql\e[0m\n");
+  printf("\e[47m\e[1;30mSuite: crsql\e[0m\n");
 
   testCreateClockTable();
   teste2e();

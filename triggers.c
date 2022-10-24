@@ -7,9 +7,9 @@
 #include <string.h>
 #include <stdio.h>
 
-int cfsql_createInsertTrigger(
+int crsql_createInsertTrigger(
     sqlite3 *db,
-    cfsql_TableInfo *tableInfo,
+    crsql_TableInfo *tableInfo,
     char **err)
 {
   char *zSql;
@@ -32,22 +32,22 @@ int cfsql_createInsertTrigger(
   }
   else
   {
-    pkList = cfsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, 0);
-    pkNewList = cfsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, "NEW.");
+    pkList = crsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, 0);
+    pkNewList = crsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, "NEW.");
   }
 
   for (int i = 0; i < tableInfo->nonPksLen; ++i)
   {
     subTriggers[i] = sqlite3_mprintf(
-        "INSERT OR REPLACE INTO \"%s__cfsql_clock\" (\
+        "INSERT OR REPLACE INTO \"%s__crsql_clock\" (\
         %s,\
-        __cfsql_col_num,\
-        __cfsql_version,\
-        __cfsql_site_id\
+        __crsql_col_num,\
+        __crsql_version,\
+        __crsql_site_id\
       ) VALUES (\
         %s,\
         %d,\
-        cfsql_nextdbversion(),\
+        crsql_nextdbversion(),\
         0\
       );\n",
         tableInfo->tblName,
@@ -55,14 +55,14 @@ int cfsql_createInsertTrigger(
         pkNewList,
         tableInfo->nonPks[i].cid);
   }
-  joinedSubTriggers = cfsql_join(subTriggers, tableInfo->nonPksLen);
+  joinedSubTriggers = crsql_join(subTriggers, tableInfo->nonPksLen);
 
   for (int i = 0; i < tableInfo->nonPksLen; ++i)
   {
     sqlite3_free(subTriggers[i]);
   }
 
-  zSql = sqlite3_mprintf("CREATE TRIGGER \"%s__cfsql_itrig\"\
+  zSql = sqlite3_mprintf("CREATE TRIGGER \"%s__crsql_itrig\"\
       AFTER INSERT ON \"%s\"\
     BEGIN\
       %s\
@@ -85,8 +85,8 @@ int cfsql_createInsertTrigger(
   return rc;
 }
 
-int cfsql_createUpdateTrigger(sqlite3 *db,
-                              cfsql_TableInfo *tableInfo,
+int crsql_createUpdateTrigger(sqlite3 *db,
+                              crsql_TableInfo *tableInfo,
                               char **err)
 {
   char *zSql;
@@ -108,18 +108,18 @@ int cfsql_createUpdateTrigger(sqlite3 *db,
   }
   else
   {
-    pkList = cfsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, 0);
-    pkNewList = cfsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, "NEW.");
+    pkList = crsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, 0);
+    pkNewList = crsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, "NEW.");
   }
 
   for (int i = 0; i < tableInfo->nonPksLen; ++i)
   {
-    subTriggers[i] = sqlite3_mprintf("INSERT OR REPLACE INTO \"%s__cfsql_clock\" (\
+    subTriggers[i] = sqlite3_mprintf("INSERT OR REPLACE INTO \"%s__crsql_clock\" (\
         %s,\
-        __cfsql_col_num,\
-        __cfsql_version,\
-        __cfsql_site_id\
-      ) SELECT %s, %d, cfsql_nextdbversion(), 0 WHERE NEW.\"%s\" != OLD.\"%s\";\n",
+        __crsql_col_num,\
+        __crsql_version,\
+        __crsql_site_id\
+      ) SELECT %s, %d, crsql_nextdbversion(), 0 WHERE NEW.\"%s\" != OLD.\"%s\";\n",
                            tableInfo->tblName,
                            pkList,
                            pkNewList,
@@ -127,14 +127,14 @@ int cfsql_createUpdateTrigger(sqlite3 *db,
                            tableInfo->nonPks[i].name,
                            tableInfo->nonPks[i].name);
   }
-  joinedSubTriggers = cfsql_join(subTriggers, tableInfo->nonPksLen);
+  joinedSubTriggers = crsql_join(subTriggers, tableInfo->nonPksLen);
 
   for (int i = 0; i < tableInfo->nonPksLen; ++i)
   {
     sqlite3_free(subTriggers[i]);
   }
 
-  zSql = sqlite3_mprintf("CREATE TRIGGER \"%s__cfsql_utrig\"\
+  zSql = sqlite3_mprintf("CREATE TRIGGER \"%s__crsql_utrig\"\
       AFTER UPDATE ON \"%s\"\
     BEGIN\
       %s\
@@ -157,7 +157,7 @@ int cfsql_createUpdateTrigger(sqlite3 *db,
   return rc;
 }
 
-char *cfsql_deleteTriggerQuery(cfsql_TableInfo *tableInfo)
+char *crsql_deleteTriggerQuery(crsql_TableInfo *tableInfo)
 {
   char *zSql;
   char *pkList = 0;
@@ -171,23 +171,23 @@ char *cfsql_deleteTriggerQuery(cfsql_TableInfo *tableInfo)
   }
   else
   {
-    pkList = cfsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, 0);
-    pkNewList = cfsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, "OLD.");
+    pkList = crsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, 0);
+    pkNewList = crsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, "OLD.");
   }
 
   zSql = sqlite3_mprintf(
-      "CREATE TRIGGER \"%s__cfsql_dtrig\"\
+      "CREATE TRIGGER \"%s__crsql_dtrig\"\
       AFTER DELETE ON \"%s\"\
     BEGIN\
-      INSERT OR REPLACE INTO \"%s__cfsql_clock\" (\
+      INSERT OR REPLACE INTO \"%s__crsql_clock\" (\
         %s,\
-        __cfsql_col_num,\
-        __cfsql_version,\
-        __cfsql_site_id\
+        __crsql_col_num,\
+        __crsql_version,\
+        __crsql_site_id\
       ) VALUES (\
         %s,\
         %d,\
-        cfsql_nextdbversion(),\
+        crsql_nextdbversion(),\
         0\
       );\
     END;",
@@ -207,34 +207,34 @@ char *cfsql_deleteTriggerQuery(cfsql_TableInfo *tableInfo)
   return zSql;
 }
 
-int cfsql_createDeleteTrigger(
+int crsql_createDeleteTrigger(
     sqlite3 *db,
-    cfsql_TableInfo *tableInfo,
+    crsql_TableInfo *tableInfo,
     char **err)
 {
   int rc = SQLITE_OK;
 
-  char *zSql = cfsql_deleteTriggerQuery(tableInfo);
+  char *zSql = crsql_deleteTriggerQuery(tableInfo);
   rc = sqlite3_exec(db, zSql, 0, 0, err);
   sqlite3_free(zSql);
 
   return rc;
 }
 
-int cfsql_createCrrTriggers(
+int crsql_createCrrTriggers(
     sqlite3 *db,
-    cfsql_TableInfo *tableInfo,
+    crsql_TableInfo *tableInfo,
     char **err)
 {
 
-  int rc = cfsql_createInsertTrigger(db, tableInfo, err);
+  int rc = crsql_createInsertTrigger(db, tableInfo, err);
   if (rc == SQLITE_OK)
   {
-    rc = cfsql_createUpdateTrigger(db, tableInfo, err);
+    rc = crsql_createUpdateTrigger(db, tableInfo, err);
   }
   if (rc == SQLITE_OK)
   {
-    rc = cfsql_createDeleteTrigger(db, tableInfo, err);
+    rc = crsql_createDeleteTrigger(db, tableInfo, err);
   }
 
   return rc;

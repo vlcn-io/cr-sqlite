@@ -1,6 +1,0 @@
-pyproject.toml
-src/cfsql_correctness/connect.py
-src/cfsql_correctness.egg-info/PKG-INFO
-src/cfsql_correctness.egg-info/SOURCES.txt
-src/cfsql_correctness.egg-info/dependency_links.txt
-src/cfsql_correctness.egg-info/top_level.txt

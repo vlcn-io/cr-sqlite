@@ -1,24 +1,24 @@
-#ifndef CFSQLITE_TRIGGERS_H
-#define CFSQLITE_TRIGGERS_H
+#ifndef CRSQLITE_TRIGGERS_H
+#define CRSQLITE_TRIGGERS_H
 
-#include "cfsqlite.h"
+#include "crsqlite.h"
 #include <ctype.h>
 
-int cfsql_createCrrTriggers(
+int crsql_createCrrTriggers(
     sqlite3 *db,
-    cfsql_TableInfo *tableInfo,
+    crsql_TableInfo *tableInfo,
     char **err);
 
-int cfsql_createInsertTrigger(
+int crsql_createInsertTrigger(
     sqlite3 *db,
-    cfsql_TableInfo *tableInfo,
+    crsql_TableInfo *tableInfo,
     char **err);
 
-int cfsql_createUpdateTrigger(sqlite3 *db,
-                              cfsql_TableInfo *tableInfo,
+int crsql_createUpdateTrigger(sqlite3 *db,
+                              crsql_TableInfo *tableInfo,
                               char **err);
 
-int cfsql_createDeleteTrigger(sqlite3 *db, cfsql_TableInfo *tableInfo, char **err);
-char *cfsql_deleteTriggerQuery(cfsql_TableInfo *tableInfo);
+int crsql_createDeleteTrigger(sqlite3 *db, crsql_TableInfo *tableInfo, char **err);
+char *crsql_deleteTriggerQuery(crsql_TableInfo *tableInfo);
 
 #endif

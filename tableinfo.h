@@ -1,13 +1,13 @@
-#ifndef CFSQLITE_TABLEINFO_H
-#define CFSQLITE_TABLEINFO_H
+#ifndef CRSQLITE_TABLEINFO_H
+#define CRSQLITE_TABLEINFO_H
 
 #include "sqlite3ext.h"
 SQLITE_EXTENSION_INIT3
 
 #include <ctype.h>
 
-typedef struct cfsql_ColumnInfo cfsql_ColumnInfo;
-struct cfsql_ColumnInfo
+typedef struct crsql_ColumnInfo crsql_ColumnInfo;
+struct crsql_ColumnInfo
 {
   int cid;
   char *name;
@@ -17,8 +17,8 @@ struct cfsql_ColumnInfo
   char *versionOf;
 };
 
-typedef struct cfsql_IndexInfo cfsql_IndexInfo;
-struct cfsql_IndexInfo {
+typedef struct crsql_IndexInfo crsql_IndexInfo;
+struct crsql_IndexInfo {
   int seq;
   char *name;
   int unique;
@@ -28,50 +28,50 @@ struct cfsql_IndexInfo {
   int indexedColsLen;
 };
 
-typedef struct cfsql_TableInfo cfsql_TableInfo;
-struct cfsql_TableInfo {
+typedef struct crsql_TableInfo crsql_TableInfo;
+struct crsql_TableInfo {
   // Name of the table. Owned by this struct.
   char *tblName;
 
-  cfsql_ColumnInfo *baseCols;
+  crsql_ColumnInfo *baseCols;
   int baseColsLen;
 
-  cfsql_ColumnInfo *pks;
+  crsql_ColumnInfo *pks;
   int pksLen;
 
-  cfsql_ColumnInfo *nonPks;
+  crsql_ColumnInfo *nonPks;
   int nonPksLen;
 
-  cfsql_IndexInfo *indexInfo;
+  crsql_IndexInfo *indexInfo;
   int indexInfoLen;
 };
 
-cfsql_ColumnInfo *cfsql_extractBaseCols(
-    cfsql_ColumnInfo *colInfos,
+crsql_ColumnInfo *crsql_extractBaseCols(
+    crsql_ColumnInfo *colInfos,
     int colInfosLen,
     int *pBaseColsLen);
 
-void cfsql_freeColumnInfoContents(cfsql_ColumnInfo *columnInfo);
+void crsql_freeColumnInfoContents(crsql_ColumnInfo *columnInfo);
 
-void cfsql_freeTableInfo(cfsql_TableInfo *tableInfo);
+void crsql_freeTableInfo(crsql_TableInfo *tableInfo);
 
-int cfsql_getTableInfo(
+int crsql_getTableInfo(
     sqlite3 *db,
     const char *tblName,
-    cfsql_TableInfo **pTableInfo,
+    crsql_TableInfo **pTableInfo,
     char **pErrMsg);
 
-char *cfsql_asIdentifierList(cfsql_ColumnInfo *in, size_t inlen, char *prefix);
+char *crsql_asIdentifierList(crsql_ColumnInfo *in, size_t inlen, char *prefix);
 
-int cfsql_getIndexList(
+int crsql_getIndexList(
     sqlite3 *db,
     const char *tblName,
-    cfsql_IndexInfo **pIndexInfos,
+    crsql_IndexInfo **pIndexInfos,
     int *pIndexInfosLen,
     char **pErrMsg);
 
-void cfsql_freeAllTableInfos(cfsql_TableInfo **tableInfos, int len);
-cfsql_TableInfo *cfsql_findTableInfo(cfsql_TableInfo **tblInfos, int len, const char * tblName);
-char *cfsql_quoteConcat(cfsql_ColumnInfo * cols, int len);
+void crsql_freeAllTableInfos(crsql_TableInfo **tableInfos, int len);
+crsql_TableInfo *crsql_findTableInfo(crsql_TableInfo **tblInfos, int len, const char * tblName);
+char *crsql_quoteConcat(crsql_ColumnInfo * cols, int len);
 
 #endif

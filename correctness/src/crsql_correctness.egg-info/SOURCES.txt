@@ -1,0 +1,6 @@
+pyproject.toml
+src/crsql_correctness/__init__.py
+src/crsql_correctness.egg-info/PKG-INFO
+src/crsql_correctness.egg-info/SOURCES.txt
+src/crsql_correctness.egg-info/dependency_links.txt
+src/crsql_correctness.egg-info/top_level.txt

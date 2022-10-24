@@ -1,6 +1,6 @@
 import Peer, { DataConnection } from "peerjs";
 import { DB, Notifier } from "./createDb";
-import { queries, clock } from "@cfsql/replicator";
+import { queries, clock } from "@crsql/replicator";
 
 const syncedTables = [
   "playlist",

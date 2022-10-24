@@ -1,5 +1,5 @@
 {
-  "name": "@cfsql/example-live-cli",
+  "name": "@crsql/example-live-cli",
   "version": "0.0.1",
   "description": "",
   "main": "dist/main.js",
@@ -15,7 +15,7 @@
   "author": "",
   "license": "GPL",
   "dependencies": {
-    "@cfsql/replicator": "workspace:*",
+    "@crsql/replicator": "workspace:*",
     "nanoid": "^4.0.0",
     "peerjs": "^1.4.6",
     "solid-js": "^1.4.8",

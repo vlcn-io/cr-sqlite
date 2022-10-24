@@ -1,4 +1,4 @@
-#include "cfsqlite.h"
+#include "crsqlite.h"
 #include "tableinfo.h"
 #include "triggers.h"
 #include "util.h"
@@ -17,7 +17,7 @@ void testCreateTriggers()
   printf("CreateTriggers\n");
 
   sqlite3 *db = 0;
-  cfsql_TableInfo *tableInfo;
+  crsql_TableInfo *tableInfo;
   char *errMsg = 0;
   int rc = sqlite3_open(":memory:", &db);
 
@@ -28,22 +28,22 @@ void testCreateTriggers()
       0,
       0,
       &errMsg);
-  rc = cfsql_getTableInfo(db, "foo", &tableInfo, &errMsg);
+  rc = crsql_getTableInfo(db, "foo", &tableInfo, &errMsg);
 
   if (rc == SQLITE_OK)
   {
-    rc = cfsql_createInsertTrigger(db, tableInfo, &errMsg);
+    rc = crsql_createInsertTrigger(db, tableInfo, &errMsg);
   }
   if (rc == SQLITE_OK)
   {
-    rc = cfsql_createUpdateTrigger(db, tableInfo, &errMsg);
+    rc = crsql_createUpdateTrigger(db, tableInfo, &errMsg);
   }
   if (rc == SQLITE_OK)
   {
-    rc = cfsql_createDeleteTrigger(db, tableInfo, &errMsg);
+    rc = crsql_createDeleteTrigger(db, tableInfo, &errMsg);
   }
 
-  cfsql_freeTableInfo(tableInfo);
+  crsql_freeTableInfo(tableInfo);
   if (rc != SQLITE_OK)
   {
     sqlite3_close(db);
@@ -62,7 +62,7 @@ void testDeleteTriggerQuery()
 {
   printf("DeleteTriggerQuery\n");
   sqlite3 *db = 0;
-  cfsql_TableInfo *tableInfo;
+  crsql_TableInfo *tableInfo;
   char *errMsg = 0;
   int rc = sqlite3_open(":memory:", &db);
 
@@ -72,7 +72,7 @@ void testDeleteTriggerQuery()
       0,
       0,
       &errMsg);
-  rc += cfsql_getTableInfo(db, "foo", &tableInfo, &errMsg);
+  rc += crsql_getTableInfo(db, "foo", &tableInfo, &errMsg);
   rc += sqlite3_exec(
       db,
       "DROP TABLE foo",
@@ -80,8 +80,8 @@ void testDeleteTriggerQuery()
       0,
       &errMsg);
 
-  char *query = cfsql_deleteTriggerQuery(tableInfo);
-  assert(strcmp("CREATE TRIGGER \"foo__cfsql_dtrig\"      AFTER DELETE ON \"foo\"    BEGIN      INSERT OR REPLACE INTO \"foo__cfsql_clock\" (        \"a\",        __cfsql_col_num,        __cfsql_version,        __cfsql_site_id      ) VALUES (        OLD.\"a\",        -1,        cfsql_nextdbversion(),        0      );    END;", query) == 0);
+  char *query = crsql_deleteTriggerQuery(tableInfo);
+  assert(strcmp("CREATE TRIGGER \"foo__crsql_dtrig\"      AFTER DELETE ON \"foo\"    BEGIN      INSERT OR REPLACE INTO \"foo__crsql_clock\" (        \"a\",        __crsql_col_num,        __crsql_version,        __crsql_site_id      ) VALUES (        OLD.\"a\",        -1,        crsql_nextdbversion(),        0      );    END;", query) == 0);
 
   sqlite3_close(db);
   assert(rc == SQLITE_OK);
@@ -89,9 +89,9 @@ void testDeleteTriggerQuery()
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
-void cfsqlTriggersTestSuite()
+void crsqlTriggersTestSuite()
 {
-  printf("\e[47m\e[1;30mSuite: cfsqlTriggers\e[0m\n");
+  printf("\e[47m\e[1;30mSuite: crsqlTriggers\e[0m\n");
 
   testDeleteTriggerQuery();
   testCreateTriggers();

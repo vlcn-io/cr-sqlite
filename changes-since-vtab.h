@@ -5,21 +5,21 @@ SQLITE_EXTENSION_INIT3
 
 #include "tableinfo.h"
 
-sqlite3_module cfsql_changesSinceModule;
+sqlite3_module crsql_changesSinceModule;
 
-char *cfsql_changesQueryForTable(cfsql_TableInfo *tableInfo);
-char *cfsql_changesUnionQuery(
-    cfsql_TableInfo **tableInfos,
+char *crsql_changesQueryForTable(crsql_TableInfo *tableInfo);
+char *crsql_changesUnionQuery(
+    crsql_TableInfo **tableInfos,
     int tableInfosLen);
-cfsql_ColumnInfo *cfsql_pickColumnInfosFromVersionMap(
+crsql_ColumnInfo *crsql_pickColumnInfosFromVersionMap(
   sqlite3 * db,
-  cfsql_ColumnInfo *columnInfos,
+  crsql_ColumnInfo *columnInfos,
   int columnInfosLen,
   int numVersionCols,
   const char *colVersions);
-char *cfsql_rowPatchDataQuery(
+char *crsql_rowPatchDataQuery(
     sqlite3 *db,
-    cfsql_TableInfo *tblInfo,
+    crsql_TableInfo *tblInfo,
     int numCols,
     const char *colVrsns,
     const char *pks);

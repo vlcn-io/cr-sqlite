@@ -1,14 +1,14 @@
-void cfsqlUtilTestSuite();
-void cfsqlTableInfoTestSuite();
-void cfsqlTestSuite();
-void cfsqlTriggersTestSuite();
-void cfsqlChagesSinceVtabTestSuite();
+void crsqlUtilTestSuite();
+void crsqlTableInfoTestSuite();
+void crsqlTestSuite();
+void crsqlTriggersTestSuite();
+void crsqlChagesSinceVtabTestSuite();
 
 int main(int argc, char *argv[])
 {
-  cfsqlUtilTestSuite();
-  cfsqlTableInfoTestSuite();
-  cfsqlTestSuite();
-  cfsqlTriggersTestSuite();
-  cfsqlChagesSinceVtabTestSuite();
+  crsqlUtilTestSuite();
+  crsqlTableInfoTestSuite();
+  crsqlTestSuite();
+  crsqlTriggersTestSuite();
+  crsqlChagesSinceVtabTestSuite();
 }

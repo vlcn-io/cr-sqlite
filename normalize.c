@@ -50,17 +50,17 @@
 ** and link it against the SQLite library.
 
 src: https://sqlite.org/src/file/ext/misc/normalize.c
-==== cfsqlite modification ====
-This is included directly into the cfsqlite build for portability.
+==== crsqlite modification ====
+This is included directly into the crsqlite build for portability.
 
 Not including it requires all targets (node, swift, python, etc) to:
 - have compiled sqlite with `-DSQLITE_ENABLE_NORMALIZE`
 - or to have the `normalize` module available
 
-`sqlite3_normalize` has been renamed to `cfsql_normalize` to avoid conflicts.
+`sqlite3_normalize` has been renamed to `crsql_normalize` to avoid conflicts.
 */
 
-#include "cfsqlite.h"
+#include "crsqlite.h"
 #include <string.h>
 
 /*
@@ -563,7 +563,7 @@ static int sqlite3GetToken(const unsigned char *z, int *tokenType){
   return i;
 }
 
-char *cfsql_normalize(const char *zSql){
+char *crsql_normalize(const char *zSql){
   char *z;              /* The output string */
   sqlite3_int64 nZ;     /* Size of the output string in bytes */
   sqlite3_int64 nSql;   /* Size of the input string in bytes */

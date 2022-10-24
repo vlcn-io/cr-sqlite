@@ -31,7 +31,7 @@ DEFINE_SQLITE_PATH=$(DEFINE_SQLITE_PATH_DATE) $(DEFINE_SQLITE_PATH_VERSION) $(DE
 
 prefix=dist
 
-TARGET_LOADABLE=$(prefix)/cfsqlite.$(LOADABLE_EXTENSION)
+TARGET_LOADABLE=$(prefix)/crsqlite.$(LOADABLE_EXTENSION)
 TARGET_SQLITE3_EXTRA_C=$(prefix)/sqlite3-extra.c
 TARGET_SQLITE3=$(prefix)/sqlite3
 TARGET_SQLITE3_VANILLA=$(prefix)/vanilla-sqlite3
@@ -40,8 +40,8 @@ TARGET_SQLJS_WASM=$(prefix)/sqljs.wasm
 TARGET_SQLJS=$(TARGET_SQLJS_JS) $(TARGET_SQLJS_WASM)
 TARGET_TEST=$(prefix)/test
 
-ext_files=cfsqlite.c util.c tableinfo.c triggers.c normalize.c changes-since-vtab.c
-ext_headers=cfsqlite.h csflite-utils.h tablinfo.h triggers.h
+ext_files=crsqlite.c util.c tableinfo.c triggers.c normalize.c changes-since-vtab.c
+ext_headers=crsqlite.h csflite-utils.h tablinfo.h triggers.h
 
 $(prefix):
 	mkdir -p $(prefix)

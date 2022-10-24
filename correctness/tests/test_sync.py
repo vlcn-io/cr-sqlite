@@ -1,4 +1,4 @@
-from cfsql_correctness import connect, min_db_v
+from crsql_correctness import connect, min_db_v
 import pprint
 
 # Using this to prototype sync rather than test it.
@@ -20,10 +20,10 @@ def create_schema(c):
   c.execute("CREATE TABLE slide (id primary key, deck_id, \"order\")")
   c.execute("CREATE TABLE component (id primary key, type, slide_id, content)")
 
-  c.execute("select cfsql_as_crr('user')")
-  c.execute("select cfsql_as_crr('deck')")
-  c.execute("select cfsql_as_crr('slide')")
-  c.execute("select cfsql_as_crr('component')")
+  c.execute("select crsql_as_crr('user')")
+  c.execute("select crsql_as_crr('deck')")
+  c.execute("select crsql_as_crr('slide')")
+  c.execute("select crsql_as_crr('component')")
 
 def insert_data(c):
   c.execute("INSERT INTO user VALUES (1, 'Javi')")
@@ -52,14 +52,14 @@ def test_changes_since():
   dbs = init()
   c = dbs[0]
   update_data(c)
-  clock_tables = c.execute("SELECT tbl_name FROM sqlite_master WHERE type='table' AND tbl_name LIKE '%__cfsql_clock'").fetchall()
+  clock_tables = c.execute("SELECT tbl_name FROM sqlite_master WHERE type='table' AND tbl_name LIKE '%__crsql_clock'").fetchall()
 
   # the extension will need to get table info for the clock tables
   # and extract pk columns to quote-concat as pk. ~'~
   # do you really want to group by pk?
   # you'll collapse disparate transactiosn...
   # you want to group by pk where all version for the column match?
-  format_str = "SELECT quote(id) as pk, '{tbl}' as tbl, json_group_object(\"__cfsql_col_num\", \"__cfsql_version\") as col_vsns, count(__cfsql_col_num) as num_cols, min(__cfsql_version) as min_v, max(rowid) as rid FROM {tbl}__cfsql_clock WHERE __cfsql_site_id != x'{siteid}' AND __cfsql_version > {vers} GROUP BY pk"
+  format_str = "SELECT quote(id) as pk, '{tbl}' as tbl, json_group_object(\"__crsql_col_num\", \"__crsql_version\") as col_vsns, count(__crsql_col_num) as num_cols, min(__crsql_version) as min_v, max(rowid) as rid FROM {tbl}__crsql_clock WHERE __crsql_site_id != x'{siteid}' AND __crsql_version > {vers} GROUP BY pk"
   unions = [
     format_str.format(tbl="user", vers=min_db_v, siteid="FF"), # TODO: get the actual site id
     format_str.format(tbl="deck", vers=min_db_v, siteid="FF"),

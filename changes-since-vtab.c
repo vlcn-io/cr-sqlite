@@ -6,14 +6,14 @@
 
 /**
  * vtab usage:
- * SELECT * FROM cfsql_chages WHERE requestor = SITE_ID AND version > V
+ * SELECT * FROM crsql_chages WHERE requestor = SITE_ID AND version > V
  *
  * returns:
  * table_name, quote-concated pks ~'~, json-encoded vals, json-encoded versions, curr version
  */
 
-typedef struct cfsql_ChangesSince_vtab cfsql_ChangesSince_vtab;
-struct cfsql_ChangesSince_vtab
+typedef struct crsql_ChangesSince_vtab crsql_ChangesSince_vtab;
+struct crsql_ChangesSince_vtab
 {
   sqlite3_vtab base; /* Base class - must be first */
   sqlite3 *db;
@@ -23,13 +23,13 @@ struct cfsql_ChangesSince_vtab
 ** serve as the underlying representation of a cursor that scans
 ** over rows of the result
 */
-typedef struct cfsql_ChangesSince_cursor cfsql_ChangesSince_cursor;
-struct cfsql_ChangesSince_cursor
+typedef struct crsql_ChangesSince_cursor crsql_ChangesSince_cursor;
+struct crsql_ChangesSince_cursor
 {
   sqlite3_vtab_cursor base; /* Base class - must be first */
 
-  cfsql_ChangesSince_vtab *pTab;
-  cfsql_TableInfo **tableInfos;
+  crsql_ChangesSince_vtab *pTab;
+  crsql_TableInfo **tableInfos;
   int tableInfosLen;
 
   // The statement that is returning the identifiers
@@ -61,7 +61,7 @@ static int changesSinceConnect(
     sqlite3_vtab **ppVtab,
     char **pzErr)
 {
-  cfsql_ChangesSince_vtab *pNew;
+  crsql_ChangesSince_vtab *pNew;
   int rc;
 
   // TODO: future improvement to include txid
@@ -94,7 +94,7 @@ static int changesSinceConnect(
 */
 static int changesSinceDisconnect(sqlite3_vtab *pVtab)
 {
-  cfsql_ChangesSince_vtab *p = (cfsql_ChangesSince_vtab *)pVtab;
+  crsql_ChangesSince_vtab *p = (crsql_ChangesSince_vtab *)pVtab;
   sqlite3_free(p);
   return SQLITE_OK;
 }
@@ -104,7 +104,7 @@ static int changesSinceDisconnect(sqlite3_vtab *pVtab)
 */
 static int changesSinceOpen(sqlite3_vtab *p, sqlite3_vtab_cursor **ppCursor)
 {
-  cfsql_ChangesSince_cursor *pCur;
+  crsql_ChangesSince_cursor *pCur;
   pCur = sqlite3_malloc(sizeof(*pCur));
   if (pCur == 0)
   {
@@ -112,11 +112,11 @@ static int changesSinceOpen(sqlite3_vtab *p, sqlite3_vtab_cursor **ppCursor)
   }
   memset(pCur, 0, sizeof(*pCur));
   *ppCursor = &pCur->base;
-  pCur->pTab = (cfsql_ChangesSince_vtab *)p;
+  pCur->pTab = (crsql_ChangesSince_vtab *)p;
   return SQLITE_OK;
 }
 
-static int changesSinceCrsrFinalize(cfsql_ChangesSince_cursor *crsr)
+static int changesSinceCrsrFinalize(crsql_ChangesSince_cursor *crsr)
 {
   // Assign pointers to null after freeing
   // since we can get into this twice for the same object.
@@ -125,7 +125,7 @@ static int changesSinceCrsrFinalize(cfsql_ChangesSince_cursor *crsr)
   crsr->pChangesStmt = 0;
   rc += sqlite3_finalize(crsr->pRowStmt);
   crsr->pRowStmt = 0;
-  cfsql_freeAllTableInfos(crsr->tableInfos, crsr->tableInfosLen);
+  crsql_freeAllTableInfos(crsr->tableInfos, crsr->tableInfosLen);
   crsr->tableInfos = 0;
   crsr->tableInfosLen = 0;
 
@@ -142,7 +142,7 @@ static int changesSinceCrsrFinalize(cfsql_ChangesSince_cursor *crsr)
 */
 static int changesSinceClose(sqlite3_vtab_cursor *cur)
 {
-  cfsql_ChangesSince_cursor *pCur = (cfsql_ChangesSince_cursor *)cur;
+  crsql_ChangesSince_cursor *pCur = (crsql_ChangesSince_cursor *)cur;
   changesSinceCrsrFinalize(pCur);
   sqlite3_free(pCur);
   return SQLITE_OK;
@@ -153,7 +153,7 @@ static int changesSinceClose(sqlite3_vtab_cursor *cur)
 */
 static int changesSinceRowid(sqlite3_vtab_cursor *cur, sqlite_int64 *pRowid)
 {
-  cfsql_ChangesSince_cursor *pCur = (cfsql_ChangesSince_cursor *)cur;
+  crsql_ChangesSince_cursor *pCur = (crsql_ChangesSince_cursor *)cur;
   *pRowid = pCur->version;
   return SQLITE_OK;
 }
@@ -164,11 +164,11 @@ static int changesSinceRowid(sqlite3_vtab_cursor *cur, sqlite_int64 *pRowid)
 */
 static int changesSinceEof(sqlite3_vtab_cursor *cur)
 {
-  cfsql_ChangesSince_cursor *pCur = (cfsql_ChangesSince_cursor *)cur;
+  crsql_ChangesSince_cursor *pCur = (crsql_ChangesSince_cursor *)cur;
   return pCur->pChangesStmt == 0;
 }
 
-char *cfsql_changesQueryForTable(cfsql_TableInfo *tableInfo)
+char *crsql_changesQueryForTable(crsql_TableInfo *tableInfo)
 {
   if (tableInfo->pksLen == 0)
   {
@@ -179,24 +179,24 @@ char *cfsql_changesQueryForTable(cfsql_TableInfo *tableInfo)
       "SELECT\
       %z as pks,\
       '%s' as tbl,\
-      json_group_object(__cfsql_col_num, __cfsql_version) as col_vrsns,\
-      count(__cfsql_col_num) as num_cols,\
-      min(__cfsql_version) as min_v\
-    FROM \"%s__cfsql_clock\"\
+      json_group_object(__crsql_col_num, __crsql_version) as col_vrsns,\
+      count(__crsql_col_num) as num_cols,\
+      min(__crsql_version) as min_v\
+    FROM \"%s__crsql_clock\"\
     WHERE\
-      __cfsql_site_id != ?\
+      __crsql_site_id != ?\
     AND\
-      __cfsql_version > ?\
+      __crsql_version > ?\
     GROUP BY pks",
-      cfsql_quoteConcat(tableInfo->pks, tableInfo->pksLen),
+      crsql_quoteConcat(tableInfo->pks, tableInfo->pksLen),
       tableInfo->tblName,
       tableInfo->tblName);
 
   return zSql;
 }
 
-char *cfsql_changesUnionQuery(
-    cfsql_TableInfo **tableInfos,
+char *crsql_changesUnionQuery(
+    crsql_TableInfo **tableInfos,
     int tableInfosLen)
 {
   char *unionsArr[tableInfosLen];
@@ -205,7 +205,7 @@ char *cfsql_changesUnionQuery(
 
   for (i = 0; i < tableInfosLen; ++i)
   {
-    unionsArr[i] = cfsql_changesQueryForTable(tableInfos[i]);
+    unionsArr[i] = crsql_changesQueryForTable(tableInfos[i]);
     if (unionsArr[i] == 0)
     {
       for (int j = 0; j < i; j++)
@@ -222,7 +222,7 @@ char *cfsql_changesUnionQuery(
   }
 
   // move the array of strings into a single string
-  unionsStr = cfsql_join(unionsArr, tableInfosLen);
+  unionsStr = crsql_join(unionsArr, tableInfosLen);
   // free the strings in the array
   for (i = 0; i < tableInfosLen; ++i)
   {
@@ -241,9 +241,9 @@ char *cfsql_changesUnionQuery(
   // %z frees unionsStr https://www.sqlite.org/printf.html#percentz
 }
 
-cfsql_ColumnInfo *cfsql_pickColumnInfosFromVersionMap(
+crsql_ColumnInfo *crsql_pickColumnInfosFromVersionMap(
     sqlite3 *db,
-    cfsql_ColumnInfo *columnInfos,
+    crsql_ColumnInfo *columnInfos,
     int columnInfosLen,
     int numVersionCols,
     const char *colVersions)
@@ -273,7 +273,7 @@ cfsql_ColumnInfo *cfsql_pickColumnInfosFromVersionMap(
   }
 
   rc = sqlite3_step(pStmt);
-  cfsql_ColumnInfo *ret = sqlite3_malloc(numVersionCols * sizeof *ret);
+  crsql_ColumnInfo *ret = sqlite3_malloc(numVersionCols * sizeof *ret);
   int i = 0;
   while (rc == SQLITE_ROW) {
 
@@ -299,9 +299,9 @@ cfsql_ColumnInfo *cfsql_pickColumnInfosFromVersionMap(
   return ret;
 }
 
-char *cfsql_rowPatchDataQuery(
+char *crsql_rowPatchDataQuery(
     sqlite3 *db,
-    cfsql_TableInfo *tblInfo,
+    crsql_TableInfo *tblInfo,
     int numVersionCols,
     const char *colVrsns,
     const char *pks)
@@ -315,7 +315,7 @@ char *cfsql_rowPatchDataQuery(
   else
   {
     // split it up and assign
-    pksArr = cfsql_split(pks, PK_DELIM, tblInfo->pksLen);
+    pksArr = crsql_split(pks, PK_DELIM, tblInfo->pksLen);
   }
 
   if (pksArr == 0)
@@ -330,14 +330,14 @@ char *cfsql_rowPatchDataQuery(
     pksArr[i] = sqlite3_mprintf("\"%s\" = %z", tblInfo->pks[i].name, pksArr[i]);
   }
 
-  cfsql_ColumnInfo *changedCols = cfsql_pickColumnInfosFromVersionMap(
+  crsql_ColumnInfo *changedCols = crsql_pickColumnInfosFromVersionMap(
     db,
     tblInfo->baseCols,
     tblInfo->baseColsLen,
     numVersionCols,
     colVrsns
   );
-  char *colsConcatList = cfsql_quoteConcat(changedCols, numVersionCols);
+  char *colsConcatList = crsql_quoteConcat(changedCols, numVersionCols);
   sqlite3_free(changedCols);
 
   char *zSql = sqlite3_mprintf(
@@ -345,9 +345,9 @@ char *cfsql_rowPatchDataQuery(
       colsConcatList,
       tblInfo->tblName,
       // given identity is a pass-thru, pksArr will have its contents freed after calling this
-      cfsql_join2((char *(*)(const char *)) & cfsql_identity, pksArr, tblInfo->pksLen, " AND "));
+      crsql_join2((char *(*)(const char *)) & crsql_identity, pksArr, tblInfo->pksLen, " AND "));
 
-  // contents of pksArr was already freed via join2 and cfsql_identity. See above.
+  // contents of pksArr was already freed via join2 and crsql_identity. See above.
   sqlite3_free(pksArr);
   return zSql;
 }
@@ -357,7 +357,7 @@ char *cfsql_rowPatchDataQuery(
 */
 static int changesSinceNext(sqlite3_vtab_cursor *cur)
 {
-  cfsql_ChangesSince_cursor *pCur = (cfsql_ChangesSince_cursor *)cur;
+  crsql_ChangesSince_cursor *pCur = (crsql_ChangesSince_cursor *)cur;
   int rc = SQLITE_OK;
 
   if (pCur->pChangesStmt == 0)
@@ -403,7 +403,7 @@ static int changesSinceNext(sqlite3_vtab_cursor *cur)
     return SQLITE_ERROR;
   }
 
-  cfsql_TableInfo *tblInfo = cfsql_findTableInfo(pCur->tableInfos, pCur->tableInfosLen, tbl);
+  crsql_TableInfo *tblInfo = crsql_findTableInfo(pCur->tableInfos, pCur->tableInfosLen, tbl);
   if (tblInfo == 0)
   {
     changesSinceCrsrFinalize(pCur);
@@ -413,12 +413,12 @@ static int changesSinceNext(sqlite3_vtab_cursor *cur)
   if (tblInfo->pksLen == 0)
   {
     // TODO set error msg
-    // require pks in `cfsql_as_crr`
+    // require pks in `crsql_as_crr`
     return SQLITE_ERROR;
   }
 
   // TODO: handle delete patch case
-  char *zSql = cfsql_rowPatchDataQuery(pCur->pTab->db, tblInfo, numCols, colVrsns, pks);
+  char *zSql = crsql_rowPatchDataQuery(pCur->pTab->db, tblInfo, numCols, colVrsns, pks);
   if (zSql == 0)
   {
     // TODO set error msg
@@ -459,7 +459,7 @@ static int changesSinceColumn(
     int i                     /* Which column to return */
 )
 {
-  cfsql_ChangesSince_cursor *pCur = (cfsql_ChangesSince_cursor *)cur;
+  crsql_ChangesSince_cursor *pCur = (crsql_ChangesSince_cursor *)cur;
   // TODO: in the future, return a protobuf.
   switch (i)
   {
@@ -499,8 +499,8 @@ static int changesSinceFilter(
     int argc, sqlite3_value **argv)
 {
   int rc = SQLITE_OK;
-  cfsql_ChangesSince_cursor *pCrsr = (cfsql_ChangesSince_cursor *)pVtabCursor;
-  cfsql_ChangesSince_vtab *pTab = pCrsr->pTab;
+  crsql_ChangesSince_cursor *pCrsr = (crsql_ChangesSince_cursor *)pVtabCursor;
+  crsql_ChangesSince_vtab *pTab = pCrsr->pTab;
   sqlite3 *db = pTab->db;
   char **rClockTableNames = 0;
   int rNumRows = 0;
@@ -532,19 +532,19 @@ static int changesSinceFilter(
   // we'll need to attach these table infos
   // to our cursor
   // TODO: we should preclude index info from them
-  cfsql_TableInfo **tableInfos = sqlite3_malloc(rNumRows * sizeof(cfsql_TableInfo *));
-  memset(tableInfos, 0, rNumRows * sizeof(cfsql_TableInfo *));
+  crsql_TableInfo **tableInfos = sqlite3_malloc(rNumRows * sizeof(crsql_TableInfo *));
+  memset(tableInfos, 0, rNumRows * sizeof(crsql_TableInfo *));
   for (int i = 0; i < rNumRows; ++i)
   {
-    // Strip __cfsql_clock suffix.
+    // Strip __crsql_clock suffix.
     // +1 since tableNames includes a row for column headers
-    char *baseTableName = strndup(rClockTableNames[i + 1], strlen(rClockTableNames[i + 1]) - __CFSQL_CLOCK_LEN);
-    rc = cfsql_getTableInfo(db, baseTableName, &tableInfos[i], &err);
+    char *baseTableName = strndup(rClockTableNames[i + 1], strlen(rClockTableNames[i + 1]) - __CRSQL_CLOCK_LEN);
+    rc = crsql_getTableInfo(db, baseTableName, &tableInfos[i], &err);
     sqlite3_free(baseTableName);
 
     if (rc != SQLITE_OK)
     {
-      cfsql_freeAllTableInfos(tableInfos, rNumRows);
+      crsql_freeAllTableInfos(tableInfos, rNumRows);
       sqlite3_free(err);
       return rc;
     }
@@ -553,11 +553,11 @@ static int changesSinceFilter(
   sqlite3_free_table(rClockTableNames);
 
   // now construct and prepare our union for fetching changes
-  char *zSql = cfsql_changesUnionQuery(tableInfos, rNumRows);
+  char *zSql = crsql_changesUnionQuery(tableInfos, rNumRows);
 
   if (zSql == 0)
   {
-    cfsql_freeAllTableInfos(tableInfos, rNumRows);
+    crsql_freeAllTableInfos(tableInfos, rNumRows);
     return SQLITE_ERROR;
   }
 
@@ -565,7 +565,7 @@ static int changesSinceFilter(
   rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
   if (rc != SQLITE_OK)
   {
-    cfsql_freeAllTableInfos(tableInfos, rNumRows);
+    crsql_freeAllTableInfos(tableInfos, rNumRows);
     sqlite3_finalize(pStmt);
     return rc;
   }
@@ -696,7 +696,7 @@ static int changesSinceBestIndex(
   return SQLITE_OK;
 }
 
-sqlite3_module cfsql_changesSinceModule = {
+sqlite3_module crsql_changesSinceModule = {
     /* iVersion    */ 0,
     /* xCreate     */ 0,
     /* xConnect    */ changesSinceConnect,

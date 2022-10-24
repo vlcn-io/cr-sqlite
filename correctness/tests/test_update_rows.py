@@ -1,2 +1,2 @@
-from cfsql_correctness import connect
+from crsql_correctness import connect
 

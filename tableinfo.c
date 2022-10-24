@@ -1,5 +1,5 @@
 #include "tableinfo.h"
-#include "cfsqlite.h"
+#include "crsqlite.h"
 #include "util.h"
 #include "consts.h"
 
@@ -9,8 +9,8 @@
 #include <assert.h>
 #include <stdio.h>
 
-// Bug here? see cfsql_asIdentifierListStr
-char *cfsql_asIdentifierList(cfsql_ColumnInfo *in, size_t inlen, char *prefix)
+// Bug here? see crsql_asIdentifierListStr
+char *crsql_asIdentifierList(crsql_ColumnInfo *in, size_t inlen, char *prefix)
 {
   if (inlen <= 0)
   {
@@ -33,7 +33,7 @@ char *cfsql_asIdentifierList(cfsql_ColumnInfo *in, size_t inlen, char *prefix)
   ret = sqlite3_malloc(finalLen * sizeof(char) + 1);
   ret[finalLen] = '\0';
 
-  cfsql_joinWith(ret, mapped, inlen, ',');
+  crsql_joinWith(ret, mapped, inlen, ',');
 
   // free everything we allocated, except ret.
   // caller will free ret.
@@ -46,7 +46,7 @@ char *cfsql_asIdentifierList(cfsql_ColumnInfo *in, size_t inlen, char *prefix)
   return ret;
 }
 
-void cfsql_freeColumnInfoContents(cfsql_ColumnInfo *columnInfo)
+void crsql_freeColumnInfoContents(crsql_ColumnInfo *columnInfo)
 {
   sqlite3_free(columnInfo->name);
   if (columnInfo->versionOf == 0)
@@ -61,7 +61,7 @@ void cfsql_freeColumnInfoContents(cfsql_ColumnInfo *columnInfo)
   // sqlite3_free(columnInfo->versionOf);
 }
 
-void cfsql_freeIndexInfoContents(cfsql_IndexInfo *indexInfo)
+void crsql_freeIndexInfoContents(crsql_IndexInfo *indexInfo)
 {
   sqlite3_free(indexInfo->name);
   sqlite3_free(indexInfo->origin);
@@ -72,7 +72,7 @@ void cfsql_freeIndexInfoContents(cfsql_IndexInfo *indexInfo)
   sqlite3_free(indexInfo->indexedCols);
 }
 
-void cfsql_freeIndexInfos(cfsql_IndexInfo *indexInfos, int indexInfosLen)
+void crsql_freeIndexInfos(crsql_IndexInfo *indexInfos, int indexInfosLen)
 {
   if (indexInfos == 0)
   {
@@ -81,7 +81,7 @@ void cfsql_freeIndexInfos(cfsql_IndexInfo *indexInfos, int indexInfosLen)
 
   for (int i = 0; i < indexInfosLen; ++i)
   {
-    cfsql_freeIndexInfoContents(&indexInfos[i]);
+    crsql_freeIndexInfoContents(&indexInfos[i]);
   }
 
   sqlite3_free(indexInfos);
@@ -93,17 +93,17 @@ static char *quote(const char *in)
   return sqlite3_mprintf("quote(\"%s\")", in);
 }
 
-char *cfsql_quoteConcat(cfsql_ColumnInfo * cols, int len) {
+char *crsql_quoteConcat(crsql_ColumnInfo * cols, int len) {
   char *names[len];
   for (int i = 0; i < len; ++i)
   {
     names[i] = cols[i].name;
   }
 
-  return cfsql_join2(&quote, names, len, " || '~''~' || ");
+  return crsql_join2(&quote, names, len, " || '~''~' || ");
 }
 
-static void cfsql_freeColumnInfos(cfsql_ColumnInfo *columnInfos, int len)
+static void crsql_freeColumnInfos(crsql_ColumnInfo *columnInfos, int len)
 {
   if (columnInfos == 0)
   {
@@ -113,21 +113,21 @@ static void cfsql_freeColumnInfos(cfsql_ColumnInfo *columnInfos, int len)
   int i = 0;
   for (i = 0; i < len; ++i)
   {
-    cfsql_freeColumnInfoContents(&columnInfos[i]);
+    crsql_freeColumnInfoContents(&columnInfos[i]);
   }
 
   sqlite3_free(columnInfos);
 }
 
-cfsql_ColumnInfo *cfsql_extractBaseCols(
-    cfsql_ColumnInfo *colInfos,
+crsql_ColumnInfo *crsql_extractBaseCols(
+    crsql_ColumnInfo *colInfos,
     int colInfosLen,
     int *pBaseColsLen)
 {
   int i = 0;
   int j = 0;
   int numBaseCols = 0;
-  cfsql_ColumnInfo *ret = 0;
+  crsql_ColumnInfo *ret = 0;
 
   for (i = 0; i < colInfosLen; ++i)
   {
@@ -153,8 +153,8 @@ cfsql_ColumnInfo *cfsql_extractBaseCols(
   return ret;
 }
 
-int cfsql_numPks(
-    cfsql_ColumnInfo *colInfos,
+int crsql_numPks(
+    crsql_ColumnInfo *colInfos,
     int colInfosLen)
 {
   int ret = 0;
@@ -173,15 +173,15 @@ int cfsql_numPks(
 
 static int cmpPks(const void *a, const void *b)
 {
-  return (((cfsql_ColumnInfo *)a)->pk - ((cfsql_ColumnInfo *)b)->pk);
+  return (((crsql_ColumnInfo *)a)->pk - ((crsql_ColumnInfo *)b)->pk);
 }
 
-cfsql_ColumnInfo *cfsql_pks(cfsql_ColumnInfo *colInfos,
+crsql_ColumnInfo *crsql_pks(crsql_ColumnInfo *colInfos,
                             int colInfosLen,
                             int *pPksLen)
 {
-  int numPks = cfsql_numPks(colInfos, colInfosLen);
-  cfsql_ColumnInfo *ret = 0;
+  int numPks = crsql_numPks(colInfos, colInfosLen);
+  crsql_ColumnInfo *ret = 0;
   int i = 0;
   int j = 0;
   *pPksLen = numPks;
@@ -202,18 +202,18 @@ cfsql_ColumnInfo *cfsql_pks(cfsql_ColumnInfo *colInfos,
     }
   }
 
-  qsort(ret, numPks, sizeof(cfsql_ColumnInfo), cmpPks);
+  qsort(ret, numPks, sizeof(crsql_ColumnInfo), cmpPks);
 
   assert(j == numPks);
   return ret;
 }
 
-cfsql_ColumnInfo *cfsql_nonPks(cfsql_ColumnInfo *colInfos,
+crsql_ColumnInfo *crsql_nonPks(crsql_ColumnInfo *colInfos,
                                int colInfosLen,
                                int *pNonPksLen)
 {
-  int nonPksLen = colInfosLen - cfsql_numPks(colInfos, colInfosLen);
-  cfsql_ColumnInfo *ret = 0;
+  int nonPksLen = colInfosLen - crsql_numPks(colInfos, colInfosLen);
+  crsql_ColumnInfo *ret = 0;
   int i = 0;
   int j = 0;
   *pNonPksLen = nonPksLen;
@@ -242,14 +242,14 @@ cfsql_ColumnInfo *cfsql_nonPks(cfsql_ColumnInfo *colInfos,
  * Constructs a table info based on the results of pragma
  * statements against the base table.
  */
-static cfsql_TableInfo *cfsql_tableInfo(
+static crsql_TableInfo *crsql_tableInfo(
     const char *tblName,
-    cfsql_ColumnInfo *colInfos,
+    crsql_ColumnInfo *colInfos,
     int colInfosLen,
-    cfsql_IndexInfo *indexInfos,
+    crsql_IndexInfo *indexInfos,
     int indexInfosLen)
 {
-  cfsql_TableInfo *ret = sqlite3_malloc(sizeof *ret);
+  crsql_TableInfo *ret = sqlite3_malloc(sizeof *ret);
   int tmpLen = 0;
 
   ret->baseCols = colInfos;
@@ -257,8 +257,8 @@ static cfsql_TableInfo *cfsql_tableInfo(
 
   ret->tblName = strdup(tblName);
 
-  ret->nonPks = cfsql_nonPks(ret->baseCols, ret->baseColsLen, &(ret->nonPksLen));
-  ret->pks = cfsql_pks(ret->baseCols, ret->baseColsLen, &(ret->pksLen));
+  ret->nonPks = crsql_nonPks(ret->baseCols, ret->baseColsLen, &(ret->nonPksLen));
+  ret->pks = crsql_pks(ret->baseCols, ret->baseColsLen, &(ret->pksLen));
   ret->indexInfo = indexInfos;
   ret->indexInfoLen = indexInfosLen;
 
@@ -269,10 +269,10 @@ static cfsql_TableInfo *cfsql_tableInfo(
  * Given a table, return (into pIndexInfo) all the
  * indices for that table and the columns indexed.
  */
-int cfsql_getIndexList(
+int crsql_getIndexList(
     sqlite3 *db,
     const char *tblName,
-    cfsql_IndexInfo **pIndexInfos,
+    crsql_IndexInfo **pIndexInfos,
     int *pIndexInfosLen,
     char **pErrMsg)
 {
@@ -283,11 +283,11 @@ int cfsql_getIndexList(
   int numIndices = 0;
   char *zSql = 0;
   sqlite3_stmt *pStmt = 0;
-  cfsql_IndexInfo *indexInfos = 0;
+  crsql_IndexInfo *indexInfos = 0;
   int i = 0;
 
   zSql = sqlite3_mprintf("select count(*) from pragma_index_list('%s')", tblName);
-  numIndices = cfsql_getCount(db, zSql);
+  numIndices = crsql_getCount(db, zSql);
   sqlite3_free(zSql);
 
   if (numIndices == 0)
@@ -338,7 +338,7 @@ int cfsql_getIndexList(
 
   for (i = 0; i < numIndices; ++i)
   {
-    rc = cfsql_getIndexedCols(
+    rc = crsql_getIndexedCols(
         db,
         indexInfos[i].name,
         &(indexInfos[i].indexedCols),
@@ -359,7 +359,7 @@ FAIL:
   *pIndexInfosLen = 0;
   for (i = 0; i < numIndices; ++i)
   {
-    cfsql_freeIndexInfoContents(&indexInfos[i]);
+    crsql_freeIndexInfoContents(&indexInfos[i]);
   }
   return rc;
 }
@@ -370,10 +370,10 @@ FAIL:
  * of pragma_table_info, pragma_index_list, pragma_index_info on a given table
  * and its inidces as well as some extra fields to facilitate crr creation.
  */
-int cfsql_getTableInfo(
+int crsql_getTableInfo(
     sqlite3 *db,
     const char *tblName,
-    cfsql_TableInfo **pTableInfo,
+    crsql_TableInfo **pTableInfo,
     char **pErrMsg)
 {
   char *zSql = 0;
@@ -381,10 +381,10 @@ int cfsql_getTableInfo(
   sqlite3_stmt *pStmt = 0;
   int numColInfos = 0;
   int i = 0;
-  cfsql_ColumnInfo *columnInfos = 0;
+  crsql_ColumnInfo *columnInfos = 0;
 
   zSql = sqlite3_mprintf("select count(*) from pragma_table_info(\"%s\")", tblName);
-  numColInfos = cfsql_getCount(db, zSql);
+  numColInfos = crsql_getCount(db, zSql);
   sqlite3_free(zSql);
 
   if (numColInfos < 0)
@@ -432,11 +432,11 @@ int cfsql_getTableInfo(
   }
   sqlite3_finalize(pStmt);
 
-  cfsql_IndexInfo *indexInfos = 0;
+  crsql_IndexInfo *indexInfos = 0;
   int numIndexInfos = 0;
 
   // TODO: validate indices are compatible with CRR properties
-  rc = cfsql_getIndexList(
+  rc = crsql_getIndexList(
       db,
       tblName,
       &indexInfos,
@@ -448,12 +448,12 @@ int cfsql_getTableInfo(
     return rc;
   }
 
-  *pTableInfo = cfsql_tableInfo(tblName, columnInfos, numColInfos, indexInfos, numIndexInfos);
+  *pTableInfo = crsql_tableInfo(tblName, columnInfos, numColInfos, indexInfos, numIndexInfos);
 
   return SQLITE_OK;
 }
 
-void cfsql_freeTableInfo(cfsql_TableInfo *tableInfo)
+void crsql_freeTableInfo(crsql_TableInfo *tableInfo)
 {
   if (tableInfo == 0)
   {
@@ -461,27 +461,27 @@ void cfsql_freeTableInfo(cfsql_TableInfo *tableInfo)
   }
   // baseCols is a superset of all other col arrays
   // and will free their contents.
-  cfsql_freeColumnInfos(tableInfo->baseCols, tableInfo->baseColsLen);
+  crsql_freeColumnInfos(tableInfo->baseCols, tableInfo->baseColsLen);
 
   // the arrays themselves of course still need freeing
   sqlite3_free(tableInfo->tblName);
   sqlite3_free(tableInfo->pks);
   sqlite3_free(tableInfo->nonPks);
 
-  cfsql_freeIndexInfos(tableInfo->indexInfo, tableInfo->indexInfoLen);
+  crsql_freeIndexInfos(tableInfo->indexInfo, tableInfo->indexInfoLen);
   sqlite3_free(tableInfo);
 }
 
-void cfsql_freeAllTableInfos(cfsql_TableInfo **tableInfos, int len)
+void crsql_freeAllTableInfos(crsql_TableInfo **tableInfos, int len)
 {
   for (int i = 0; i < len; ++i)
   {
-    cfsql_freeTableInfo(tableInfos[i]);
+    crsql_freeTableInfo(tableInfos[i]);
   }
   sqlite3_free(tableInfos);
 }
 
-cfsql_TableInfo *cfsql_findTableInfo(cfsql_TableInfo **tblInfos, int len, const char * tblName) {
+crsql_TableInfo *crsql_findTableInfo(crsql_TableInfo **tblInfos, int len, const char * tblName) {
   for (int i = 0; i < len; ++i) {
     if (strcmp(tblInfos[i]->tblName, tblName) == 0) {
       return tblInfos[i];

@@ -1,4 +1,4 @@
-#include "cfsqlite.h"
+#include "crsqlite.h"
 #include "tableinfo.h"
 #include "util.h"
 #include "consts.h"
@@ -11,14 +11,14 @@ void testGetTableInfo()
 {
   printf("GetTableInfo\n");
   sqlite3 *db = 0;
-  cfsql_TableInfo *tableInfo = 0;
+  crsql_TableInfo *tableInfo = 0;
   char *errMsg = 0;
   int rc = SQLITE_OK;
 
   rc = sqlite3_open(":memory:", &db);
 
   sqlite3_exec(db, "CREATE TABLE foo (a INT NOT NULL, b)", 0, 0, 0);
-  rc = cfsql_getTableInfo(db, "foo", &tableInfo, &errMsg);
+  rc = crsql_getTableInfo(db, "foo", &tableInfo, &errMsg);
 
   if (rc != SQLITE_OK)
   {
@@ -45,10 +45,10 @@ void testGetTableInfo()
   assert(tableInfo->nonPks[0].notnull == 1);
   assert(tableInfo->nonPks[0].pk == 0);
 
-  cfsql_freeTableInfo(tableInfo);
+  crsql_freeTableInfo(tableInfo);
 
   sqlite3_exec(db, "CREATE TABLE bar (a PRIMARY KEY, b)", 0, 0, 0);
-  rc = cfsql_getTableInfo(db, "bar", &tableInfo, &errMsg);
+  rc = crsql_getTableInfo(db, "bar", &tableInfo, &errMsg);
   if (rc != SQLITE_OK)
   {
     printf("err: %s %d\n", errMsg, rc);
@@ -70,7 +70,7 @@ void testGetTableInfo()
   assert(tableInfo->indexInfoLen == 1);
   assert(strcmp(tableInfo->indexInfo[0].indexedCols[0], "a") == 0);
 
-  cfsql_freeTableInfo(tableInfo);
+  crsql_freeTableInfo(tableInfo);
 
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
@@ -78,8 +78,8 @@ void testGetTableInfo()
 void testExtractBaseCols()
 {
   int numInfos = 4;
-  cfsql_ColumnInfo colInfos[numInfos];
-  cfsql_ColumnInfo *extracted;
+  crsql_ColumnInfo colInfos[numInfos];
+  crsql_ColumnInfo *extracted;
   int i = 0;
   int extractedLen = 0;
   printf("ExtractBaseCols\n");
@@ -95,12 +95,12 @@ void testExtractBaseCols()
     colInfos[i].versionOf = 0;
   }
 
-  extracted = cfsql_extractBaseCols(colInfos, numInfos, &extractedLen);
+  extracted = crsql_extractBaseCols(colInfos, numInfos, &extractedLen);
   assert(extractedLen == 4);
 
   for (i = 0; i < numInfos; ++i)
   {
-    cfsql_freeColumnInfoContents(&colInfos[i]);
+    crsql_freeColumnInfoContents(&colInfos[i]);
   }
   sqlite3_free(extracted);
 
@@ -122,12 +122,12 @@ void testExtractBaseCols()
     }
   }
 
-  extracted = cfsql_extractBaseCols(colInfos, numInfos, &extractedLen);
+  extracted = crsql_extractBaseCols(colInfos, numInfos, &extractedLen);
   assert(extractedLen == 2);
 
   for (i = 0; i < numInfos; ++i)
   {
-    cfsql_freeColumnInfoContents(&colInfos[i]);
+    crsql_freeColumnInfoContents(&colInfos[i]);
   }
   sqlite3_free(extracted);
 
@@ -138,26 +138,26 @@ void testAsIdentifierList()
 {
   printf("AsIdentifierList\n");
 
-  cfsql_ColumnInfo tc1[3];
+  crsql_ColumnInfo tc1[3];
   tc1[0].name = "one";
   tc1[1].name = "two";
   tc1[2].name = "three";
 
-  cfsql_ColumnInfo tc2[0];
+  crsql_ColumnInfo tc2[0];
 
-  cfsql_ColumnInfo tc3[1];
+  crsql_ColumnInfo tc3[1];
   tc3[0].name = "one";
   char *result;
 
-  result = cfsql_asIdentifierList(tc1, 3, 0);
+  result = crsql_asIdentifierList(tc1, 3, 0);
   assert(strcmp(result, "\"one\",\"two\",\"three\"") == 0);
   sqlite3_free(result);
 
-  result = cfsql_asIdentifierList(tc2, 0, 0);
+  result = crsql_asIdentifierList(tc2, 0, 0);
   assert(result == 0);
   sqlite3_free(result);
 
-  result = cfsql_asIdentifierList(tc3, 1, 0);
+  result = crsql_asIdentifierList(tc3, 1, 0);
   assert(strcmp(result, "\"one\"") == 0);
   sqlite3_free(result);
 
@@ -167,13 +167,13 @@ void testAsIdentifierList()
 void testGetIndexList() {
   printf("GetIndexList\n");
   sqlite3 *db = 0;
-  cfsql_IndexInfo *indexInfos;
+  crsql_IndexInfo *indexInfos;
   int indexInfosLen;
   int rc = sqlite3_open(":memory:", &db);
 
   sqlite3_exec(db, "CREATE TABLE foo (a)", 0, 0, 0);
 
-  rc = cfsql_getIndexList(
+  rc = crsql_getIndexList(
     db,
     "foo",
     &indexInfos,
@@ -187,7 +187,7 @@ void testGetIndexList() {
 
   sqlite3_exec(db, "CREATE TABLE bar (a primary key)", 0, 0, 0);
 
-  rc = cfsql_getIndexList(
+  rc = crsql_getIndexList(
     db,
     "bar",
     &indexInfos,
@@ -210,16 +210,16 @@ void testGetIndexList() {
 void testFindTableInfo() {
   printf("FindTableInfo\n");
 
-  cfsql_TableInfo** tblInfos = sqlite3_malloc(3 * sizeof(cfsql_TableInfo*));
+  crsql_TableInfo** tblInfos = sqlite3_malloc(3 * sizeof(crsql_TableInfo*));
   for (int i = 0; i < 3; ++i) {
-    tblInfos[i] = sqlite3_malloc(sizeof(cfsql_TableInfo));
+    tblInfos[i] = sqlite3_malloc(sizeof(crsql_TableInfo));
     tblInfos[i]->tblName = sqlite3_mprintf("%d", i);
   }
 
-  assert(cfsql_findTableInfo(tblInfos, 3, "0") == tblInfos[0]);
-  assert(cfsql_findTableInfo(tblInfos, 3, "1") == tblInfos[1]);
-  assert(cfsql_findTableInfo(tblInfos, 3, "2") == tblInfos[2]);
-  assert(cfsql_findTableInfo(tblInfos, 3, "3") == 0);
+  assert(crsql_findTableInfo(tblInfos, 3, "0") == tblInfos[0]);
+  assert(crsql_findTableInfo(tblInfos, 3, "1") == tblInfos[1]);
+  assert(crsql_findTableInfo(tblInfos, 3, "2") == tblInfos[2]);
+  assert(crsql_findTableInfo(tblInfos, 3, "3") == 0);
 
   for (int i = 0; i < 3; ++i) {
     sqlite3_free(tblInfos[i]);
@@ -233,13 +233,13 @@ void testQuoteConcat() {
   printf("QuoteConcat\n");
 
   int len = 3;
-  cfsql_ColumnInfo colInfos[3];
+  crsql_ColumnInfo colInfos[3];
 
   colInfos[0].name = "a";
   colInfos[1].name = "b";
   colInfos[2].name = "c";
 
-  char *quoted = cfsql_quoteConcat(colInfos, len);
+  char *quoted = crsql_quoteConcat(colInfos, len);
 
   assert(strcmp(quoted, "quote(\"a\") || '~''~' || quote(\"b\") || '~''~' || quote(\"c\")") == 0);
 
@@ -247,8 +247,8 @@ void testQuoteConcat() {
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
-void cfsqlTableInfoTestSuite() {
-  printf("\e[47m\e[1;30mSuite: cfsql_tableInfo\e[0m\n");
+void crsqlTableInfoTestSuite() {
+  printf("\e[47m\e[1;30mSuite: crsql_tableInfo\e[0m\n");
 
   testAsIdentifierList();
   testExtractBaseCols();

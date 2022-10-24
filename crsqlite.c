@@ -1,4 +1,4 @@
-#include "cfsqlite.h"
+#include "crsqlite.h"
 SQLITE_EXTENSION_INIT1
 
 #include "util.h"
@@ -124,7 +124,7 @@ static int initSiteId(sqlite3 *db)
   }
 
   // look for site id tablesql
-  tableExists = cfsql_doesTableExist(db, TBL_SITE_ID);
+  tableExists = crsql_doesTableExist(db, TBL_SITE_ID);
 
   if (tableExists == 0)
   {
@@ -213,7 +213,7 @@ static int initDbVersion(sqlite3 *db)
   }
 
   // builds the query string
-  zSql = cfsql_getDbVersionUnionQuery(rNumRows, rClockTableNames);
+  zSql = crsql_getDbVersionUnionQuery(rNumRows, rClockTableNames);
   sqlite3_free_table(rClockTableNames);
   // now prepare the statement
   // and bind site id param
@@ -270,7 +270,7 @@ static int initDbVersion(sqlite3 *db)
 /**
  * return the uuid which uniquely identifies this database.
  *
- * `select cfsql_siteid()`
+ * `select crsql_siteid()`
  *
  * @param context
  * @param argc
@@ -284,7 +284,7 @@ static void siteIdFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
 /**
  * Return the current version of the database.
  *
- * `select cfsql_dbversion()`
+ * `select crsql_dbversion()`
  */
 static void dbVersionFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
@@ -294,7 +294,7 @@ static void dbVersionFunc(sqlite3_context *context, int argc, sqlite3_value **ar
 /**
  * Return the next version of the database for use in inserts/updates/deletes
  *
- * `select cfsql_nextdbversion()`
+ * `select crsql_nextdbversion()`
  */
 static void nextDbVersionFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
@@ -318,9 +318,9 @@ static void nextDbVersionFunc(sqlite3_context *context, int argc, sqlite3_value 
  *
  * @param tableInfo
  */
-int cfsql_createClockTable(
+int crsql_createClockTable(
     sqlite3 *db,
-    cfsql_TableInfo *tableInfo,
+    crsql_TableInfo *tableInfo,
     char **err)
 {
   char *zSql = 0;
@@ -332,7 +332,7 @@ int cfsql_createClockTable(
   // copy the data to a temp table, re-create this table, copy it back.
   // of course if columns were re-ordered versions are pinned to the wrong columns.
   // TODO: incorporate schema name!
-  zSql = sqlite3_mprintf("DROP TABLE IF EXISTS \"%s__cfsql_clock\"", tableInfo->tblName);
+  zSql = sqlite3_mprintf("DROP TABLE IF EXISTS \"%s__crsql_clock\"", tableInfo->tblName);
   rc = sqlite3_exec(db, zSql, 0, 0, err);
   sqlite3_free(zSql);
   if (rc != SQLITE_OK) {
@@ -342,27 +342,27 @@ int cfsql_createClockTable(
   // TODO: just forbid tables w/o primary keys?
   if (tableInfo->pksLen == 0)
   {
-    zSql = sqlite3_mprintf("CREATE TABLE \"%s__cfsql_clock\" (\
+    zSql = sqlite3_mprintf("CREATE TABLE \"%s__crsql_clock\" (\
       \"rowid\" NOT NULL,\
-      \"__cfsql_col_num\" NOT NULL,\
-      \"__cfsql_version\" NOT NULL,\
-      \"__cfsql_site_id\" NOT NULL,\
-      PRIMARY KEY (\"rowid\", \"__cfsql_col_num\")\
+      \"__crsql_col_num\" NOT NULL,\
+      \"__crsql_version\" NOT NULL,\
+      \"__crsql_site_id\" NOT NULL,\
+      PRIMARY KEY (\"rowid\", \"__crsql_col_num\")\
     )",
                            tableInfo->tblName);
   }
   else
   {
-    pkList = cfsql_asIdentifierList(
+    pkList = crsql_asIdentifierList(
         tableInfo->pks,
         tableInfo->pksLen,
         0);
-    zSql = sqlite3_mprintf("CREATE TABLE \"%s__cfsql_clock\" (\
+    zSql = sqlite3_mprintf("CREATE TABLE \"%s__crsql_clock\" (\
       %s,\
-      \"__cfsql_col_num\" NOT NULL,\
-      \"__cfsql_version\" NOT NULL,\
-      \"__cfsql_site_id\" NOT NULL,\
-      PRIMARY KEY (%s, __cfsql_col_num)\
+      \"__crsql_col_num\" NOT NULL,\
+      \"__crsql_version\" NOT NULL,\
+      \"__crsql_site_id\" NOT NULL,\
+      PRIMARY KEY (%s, __crsql_col_num)\
     )",
                            tableInfo->tblName, pkList, pkList);
     sqlite3_free(pkList);
@@ -376,7 +376,7 @@ int cfsql_createClockTable(
   }
 
   zSql = sqlite3_mprintf(
-      "CREATE INDEX \"%s__cfsql_clock_v_idx\" ON \"%s__cfsql_clock\" (__cfsql_version)",
+      "CREATE INDEX \"%s__crsql_clock_v_idx\" ON \"%s__crsql_clock\" (__crsql_version)",
       tableInfo->tblName,
       tableInfo->tblName);
   sqlite3_exec(db, zSql, 0, 0, err);
@@ -398,9 +398,9 @@ static int createCrr(
 {
   int rc = SQLITE_OK;
   char *zSql = 0;
-  cfsql_TableInfo *tableInfo = 0;
+  crsql_TableInfo *tableInfo = 0;
 
-  rc = cfsql_getTableInfo(
+  rc = crsql_getTableInfo(
       db,
       tblName,
       &tableInfo,
@@ -408,17 +408,17 @@ static int createCrr(
 
   if (rc != SQLITE_OK)
   {
-    cfsql_freeTableInfo(tableInfo);
+    crsql_freeTableInfo(tableInfo);
     return rc;
   }
 
-  rc = cfsql_createClockTable(db, tableInfo, err);
+  rc = crsql_createClockTable(db, tableInfo, err);
   if (rc == SQLITE_OK)
   {
-    rc = cfsql_createCrrTriggers(db, tableInfo, err);
+    rc = crsql_createCrrTriggers(db, tableInfo, err);
   }
 
-  cfsql_freeTableInfo(tableInfo);
+  crsql_freeTableInfo(tableInfo);
   return rc;
 }
 
@@ -440,7 +440,7 @@ static int dropCrr(
     return rc;
   }
 
-  zSql = sqlite3_mprintf("DROP TABLE \"%s\".\"%s\"__cfsql_clock", schemaName, tblName);
+  zSql = sqlite3_mprintf("DROP TABLE \"%s\".\"%s\"__crsql_clock", schemaName, tblName);
   rc = sqlite3_exec(db, zSql, 0, 0, err);
   sqlite3_free(zSql);
   if (rc != SQLITE_OK)
@@ -456,7 +456,7 @@ static int dropCrr(
  *
  * This allows users to create and modify tables as normal.
  */
-static void cfsqlMakeCrrFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
+static void crsqlMakeCrrFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
   const char *tblName = 0;
   const char *schemaName = 0;
@@ -466,7 +466,7 @@ static void cfsqlMakeCrrFunc(sqlite3_context *context, int argc, sqlite3_value *
   char *errmsg = 0;
 
   if (argc == 0) {
-    sqlite3_result_error(context, "Wrong number of args provided to cfsql_as_crr. Provide the schema name and table name or just the table name.", -1);
+    sqlite3_result_error(context, "Wrong number of args provided to crsql_as_crr. Provide the schema name and table name or just the table name.", -1);
     return;
   }
 
@@ -508,7 +508,7 @@ static void cfsqlMakeCrrFunc(sqlite3_context *context, int argc, sqlite3_value *
 #ifdef _WIN32
 __declspec(dllexport)
 #endif
-    int sqlite3_cfsqlite_preinit()
+    int sqlite3_crsqlite_preinit()
 {
 #if SQLITE_THREADSAFE != 0
   if (globalsInitMutex == 0)
@@ -577,7 +577,7 @@ static int initSharedMemory(sqlite3 *db)
 #ifdef _WIN32
 __declspec(dllexport)
 #endif
-    int sqlite3_cfsqlite_init(sqlite3 *db, char **pzErrMsg,
+    int sqlite3_crsqlite_init(sqlite3 *db, char **pzErrMsg,
                               const sqlite3_api_routines *pApi)
 {
   int rc = SQLITE_OK;
@@ -586,12 +586,12 @@ __declspec(dllexport)
 
   // If this is used as a runtime loadable extension
   // then preinit might not have been run.
-  sqlite3_cfsqlite_preinit();
+  sqlite3_crsqlite_preinit();
 
   rc = initSharedMemory(db);
   if (rc == SQLITE_OK)
   {
-    rc = sqlite3_create_function(db, "cfsql_siteid", 0,
+    rc = sqlite3_create_function(db, "crsql_siteid", 0,
                                  // siteid never changes -- deterministic and innnocuous
                                  SQLITE_UTF8 | SQLITE_INNOCUOUS |
                                      SQLITE_DETERMINISTIC,
@@ -599,14 +599,14 @@ __declspec(dllexport)
   }
   if (rc == SQLITE_OK)
   {
-    rc = sqlite3_create_function(db, "cfsql_dbversion", 0,
+    rc = sqlite3_create_function(db, "crsql_dbversion", 0,
                                  // dbversion can change on each invocation.
                                  SQLITE_UTF8 | SQLITE_INNOCUOUS,
                                  0, dbVersionFunc, 0, 0);
   }
   if (rc == SQLITE_OK)
   {
-    rc = sqlite3_create_function(db, "cfsql_nextdbversion", 0,
+    rc = sqlite3_create_function(db, "crsql_nextdbversion", 0,
                                  // dbversion can change on each invocation.
                                  SQLITE_UTF8 | SQLITE_INNOCUOUS,
                                  0, nextDbVersionFunc, 0, 0);
@@ -617,16 +617,16 @@ __declspec(dllexport)
     // Only register a commit hook, not update or pre-update, since all rows in the same transaction
     // should have the same clock value.
     // This allows us to replicate them together and ensure more consistency.
-    rc = sqlite3_create_function(db, "cfsql_as_crr", -1,
-                                 // cfsql should only ever be used at the top level
+    rc = sqlite3_create_function(db, "crsql_as_crr", -1,
+                                 // crsql should only ever be used at the top level
                                  // and does a great deal to modify
                                  // existing database state. directonly.
                                  SQLITE_UTF8 | SQLITE_DIRECTONLY,
-                                 0, cfsqlMakeCrrFunc, 0, 0);
+                                 0, crsqlMakeCrrFunc, 0, 0);
   }
 
   if (rc == SQLITE_OK) {
-    rc = sqlite3_create_module(db, "cfsql_changes", &cfsql_changesSinceModule, 0);
+    rc = sqlite3_create_module(db, "crsql_changes", &crsql_changesSinceModule, 0);
   }
 
   // if (rc == SQLITE_OK) {

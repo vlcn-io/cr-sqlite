@@ -1,5 +1,5 @@
 [project]
-name = "cfsql_correctness"
+name = "crsql_correctness"
 
 [tool.pytest.ini_options]
 addopts = [

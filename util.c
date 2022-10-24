@@ -1,4 +1,4 @@
-#include "cfsqlite.h"
+#include "crsqlite.h"
 #include "util.h"
 #include "consts.h"
 
@@ -23,7 +23,7 @@ static char *joinHelper(char **in, size_t inlen, size_t inpos, size_t accum)
 }
 
 // DO NOT dupe the memory!
-const char *cfsql_identity(const char *x)
+const char *crsql_identity(const char *x)
 {
   return x;
 }
@@ -35,12 +35,12 @@ const char *cfsql_identity(const char *x)
  * @param inlen length of the array in
  * @return char* string -- must be freed by caller
  */
-char *cfsql_join(char **in, size_t inlen)
+char *crsql_join(char **in, size_t inlen)
 {
   return joinHelper(in, inlen, 0, 0);
 }
 
-void cfsql_joinWith(char *dest, char **src, size_t srcLen, char delim)
+void crsql_joinWith(char *dest, char **src, size_t srcLen, char delim)
 {
   int j = 0;
   for (int i = 0; i < srcLen; ++i)
@@ -61,7 +61,7 @@ void cfsql_joinWith(char *dest, char **src, size_t srcLen, char delim)
 
 // TODO: re-write all users of other join methods to just
 // use this
-char *cfsql_join2(char *(*map)(const char *), char **in, size_t len, char *delim)
+char *crsql_join2(char *(*map)(const char *), char **in, size_t len, char *delim)
 {
   if (len == 0)
   {
@@ -105,7 +105,7 @@ char *cfsql_join2(char *(*map)(const char *), char **in, size_t len, char *delim
  * Caller must free all entries in the returned array
  * as well as the returned array
  */
-char **cfsql_split(const char *in, char *delim, int partsLen)
+char **crsql_split(const char *in, char *delim, int partsLen)
 {
   char *ptr = strstr(in, delim);
   int delimLen = strlen(delim);
@@ -143,8 +143,8 @@ char **cfsql_split(const char *in, char *delim, int partsLen)
 
 // TODO:
 // have this take a function pointer that extracts the string so we can
-// delete cfsql_asIdentifierList
-char *cfsql_asIdentifierListStr(char **in, size_t inlen, char delim)
+// delete crsql_asIdentifierList
+char *crsql_asIdentifierListStr(char **in, size_t inlen, char delim)
 {
   int finalLen = 0;
   char *ret = 0;
@@ -162,7 +162,7 @@ char *cfsql_asIdentifierListStr(char **in, size_t inlen, char delim)
   ret = sqlite3_malloc(finalLen * sizeof(char) + 1);
   ret[finalLen] = '\0';
 
-  cfsql_joinWith(ret, mapped, inlen, delim);
+  crsql_joinWith(ret, mapped, inlen, delim);
 
   // free everything we allocated, except ret.
   // caller will free ret.
@@ -182,7 +182,7 @@ char *cfsql_asIdentifierListStr(char **in, size_t inlen, char delim)
  * @param tableNames array of clock table names
  * @return int success or not
  */
-char *cfsql_getDbVersionUnionQuery(
+char *crsql_getDbVersionUnionQuery(
     int numRows,
     char **tableNames)
 {
@@ -194,7 +194,7 @@ char *cfsql_getDbVersionUnionQuery(
   for (i = 0; i < numRows; ++i)
   {
     unionsArr[i] = sqlite3_mprintf(
-        "SELECT max(__cfsql_version) as version FROM \"%w\" %s ",
+        "SELECT max(__crsql_version) as version FROM \"%w\" %s ",
         // the first result in tableNames is the column heading
         // so skip that
         tableNames[i + 1],
@@ -203,7 +203,7 @@ char *cfsql_getDbVersionUnionQuery(
   }
 
   // move the array of strings into a single string
-  unionsStr = cfsql_join(unionsArr, numRows);
+  unionsStr = crsql_join(unionsArr, numRows);
   // free the array of strings
   for (i = 0; i < numRows; ++i)
   {
@@ -225,7 +225,7 @@ char *cfsql_getDbVersionUnionQuery(
  *
  * Returns -1 on error.
  */
-int cfsql_doesTableExist(sqlite3 *db, const char *tblName)
+int crsql_doesTableExist(sqlite3 *db, const char *tblName)
 {
   char *zSql;
   sqlite3_stmt *pStmt = 0;
@@ -235,13 +235,13 @@ int cfsql_doesTableExist(sqlite3 *db, const char *tblName)
   zSql = sqlite3_mprintf(
       "SELECT count(*) as c FROM sqlite_master WHERE type='table' AND tbl_name = \"%s\"",
       tblName);
-  ret = cfsql_getCount(db, zSql);
+  ret = crsql_getCount(db, zSql);
   sqlite3_free(zSql);
 
   return ret;
 }
 
-int cfsql_getCount(
+int crsql_getCount(
     sqlite3 *db,
     char *zSql)
 {
@@ -274,7 +274,7 @@ int cfsql_getCount(
  * Fills pIndexedCols with an array of strings.
  * Caller is responsible for freeing pIndexedCols.
  */
-int cfsql_getIndexedCols(
+int crsql_getIndexedCols(
     sqlite3 *db,
     const char *indexName,
     char ***pIndexedCols,
@@ -290,7 +290,7 @@ int cfsql_getIndexedCols(
   char *zSql = sqlite3_mprintf(
       "SELECT count(*) FROM temp.pragma_index_info('%s')",
       indexName);
-  numCols = cfsql_getCount(db, zSql);
+  numCols = crsql_getCount(db, zSql);
   sqlite3_free(zSql);
 
   if (numCols <= 0)
@@ -343,7 +343,7 @@ int cfsql_getIndexedCols(
   return SQLITE_OK;
 }
 
-int cfsql_isIdentifierOpenQuote(char c)
+int crsql_isIdentifierOpenQuote(char c)
 {
   switch (c)
   {

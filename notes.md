@@ -98,21 +98,21 @@ CREATE TABLE foo (a primray key, b);
 -- or just have deletion managed in user space as soft deletion? Gives user control over delete wins
 -- and actually dropping the data vs keeping the data.
 
-CREATE TABLE _foo__cfsql_clock (a, col_num, col_v, site_id, primary key (a, col_num)); -- <-- will this have a auto-incr hidden rowid? hopefully. to be used for chunking sync operations.
-CREATE INDEX _foo_col_v_idx__cfsql_clock ON _foo__cfsql_clock (col_v);
+CREATE TABLE _foo__crsql_clock (a, col_num, col_v, site_id, primary key (a, col_num)); -- <-- will this have a auto-incr hidden rowid? hopefully. to be used for chunking sync operations.
+CREATE INDEX _foo_col_v_idx__crsql_clock ON _foo__crsql_clock (col_v);
 
 CREATE TRIGGER _foo_itrig AFTER INSERT ON foo BEGIN
   -- code-gen one insert per column...
   -- replace on conflict since we know db version is bumped on insert.
   -- NIT: we do not track primary key columns!
-  -- INSERT OR REPLACE INTO _foo__cfsql_clock (a, col_num, col_v, site_id) VALUES (NEW."a", 0, cfsql_dbversion(), 0);
-  INSERT OR REPLACE INTO _foo__cfsql_clock (a, col_num, col_v, site_id) VALUES (NEW."a", 1, cfsql_dbversion(), 0);
+  -- INSERT OR REPLACE INTO _foo__crsql_clock (a, col_num, col_v, site_id) VALUES (NEW."a", 0, crsql_dbversion(), 0);
+  INSERT OR REPLACE INTO _foo__crsql_clock (a, col_num, col_v, site_id) VALUES (NEW."a", 1, crsql_dbversion(), 0);
 END;
 
 CREATE TRIGGER _foo_utrig AFTER UPDATE ON foo BEGIN
   -- Do not track primary key columns!
-  -- INSERT OR REPLACE INTO _foo__cfsql_clock (a, col_num, col_v, site_id) SELECT (NEW."a", 0, cfsql_dbversion(), 0) WHERE NEW."a" != OLD."a";
-  INSERT OR REPLACE INTO _foo__cfsql_clock (a, col_num, col_v, site_id) SELECT (NEW."a", 1, cfsql_dbversion(), 0) WHERE NEW."b" != OLD."b";
+  -- INSERT OR REPLACE INTO _foo__crsql_clock (a, col_num, col_v, site_id) SELECT (NEW."a", 0, crsql_dbversion(), 0) WHERE NEW."a" != OLD."a";
+  INSERT OR REPLACE INTO _foo__crsql_clock (a, col_num, col_v, site_id) SELECT (NEW."a", 1, crsql_dbversion(), 0) WHERE NEW."b" != OLD."b";
 END;
 
 -- no delete trigger. We'll let the user implement delete as a soft delete if so desired.
@@ -122,9 +122,9 @@ END;
 
 -- this would probably be better to do in the extension itself rather than a trigger
 -- patch trigger should not re-create a thing if it is deleted.
-CREATE TRIGGER _foo_ptrig INSTEAD OF INSERT ON _foo__cfsql_patch BEGIN
+CREATE TRIGGER _foo_ptrig INSTEAD OF INSERT ON _foo__crsql_patch BEGIN
   -- sqlite with? ordered cols?
-  WITH versions AS (SELECT col_v FROM _foo__cfsql_clock WHERE pks = NEW.pks ORDER BY col_num ASC);
+  WITH versions AS (SELECT col_v FROM _foo__crsql_clock WHERE pks = NEW.pks ORDER BY col_num ASC);
 
   -- check if the row being patched is deleted. don't patch if so.
   -- check if the patch is a delete. delete if so.
@@ -147,12 +147,12 @@ CREATE TRIGGER _foo_ptrig INSTEAD OF INSERT ON _foo__cfsql_patch BEGIN
     END
 
   -- now to update the clocks / versions...
-  INSERT INTO _foo__cfsql_clock (a, col_num, col_v, site_id) NEW."a", 1, cfsql_dbversion(), NEW.site_id ON CONFLICT ("a", col_num)
+  INSERT INTO _foo__crsql_clock (a, col_num, col_v, site_id) NEW."a", 1, crsql_dbversion(), NEW.site_id ON CONFLICT ("a", col_num)
     DO UPDATE SET
       col_v = CASE WHEN EXCLUDED.col_v > col_v THEN EXCLUDED.col_v ELSE col_v END;
 END;
 
-COMMIT_HOOK --> cfsql_nextDbVersion();
+COMMIT_HOOK --> crsql_nextDbVersion();
 ```
 
 ^-- or just a trigger that invokes a c function that does the insert?
@@ -171,9 +171,9 @@ So...
 patching should likely be done in the extension.
 
 BEGIN
-cfsql_patch(table, rows)
-cfsql_patch(table, rows)
-cfsql_patch(table, rows)
+crsql_patch(table, rows)
+crsql_patch(table, rows)
+crsql_patch(table, rows)
 COMMIT
 
 ^-- or invoke once per row in a loop... may simplify unpacking.
@@ -181,7 +181,7 @@ COMMIT
 (1) Select all column versions for the row(s) being patched
 
 ```sql
-select * from _foo__cfsql_clock where pks = provided.pks;
+select * from _foo__crsql_clock where pks = provided.pks;
 ```
 
 (2) go thru each column, comparing column versions
@@ -211,7 +211,7 @@ insert a patch row at a time...
 Patch row insert looks like:
 
 ```sql
-INSERT INTO cfsql_patch (table_name, pkList, col1, col1_v, col2, col2_v, ...) VALUES (...);
+INSERT INTO crsql_patch (table_name, pkList, col1, col1_v, col2, col2_v, ...) VALUES (...);
 ```
 
 ^-- can we support varags insertion of vtab?
@@ -219,7 +219,7 @@ INSERT INTO cfsql_patch (table_name, pkList, col1, col1_v, col2, col2_v, ...) VA
 Changes since vtab:
 
 ```sql
-SELECT * FROM cfsql_changes_since WHERE version > $ AND site_id != $ ORDER BY version, rowid ASC;
+SELECT * FROM crsql_changes_since WHERE version > $ AND site_id != $ ORDER BY version, rowid ASC;
 ```
 
 this would return:
@@ -241,9 +241,9 @@ rowid can be used to break up large changes within a single version
 ```sql
 create table foo (a primary key, b);
 create table baz (a primary key, b, c, d);
-select cfsql_as_crr('foo');
-select cfsql_as_crr('baz');
+select crsql_as_crr('foo');
+select crsql_as_crr('baz');
 insert into foo values (1,2);
 insert into baz values ('k', 'woo', 'doo', 'daa');
-select * from cfsql_changes;
+select * from crsql_changes;
 ```

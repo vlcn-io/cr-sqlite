@@ -6,13 +6,13 @@
 
 This project implements [CRDTs](https://crdt.tech/) and [CRRs](https://hal.inria.fr/hal-02983557/document) in `SQLite`, allowing databases that share a common schema to merge their state together. Merges can happen between an arbitrary number of peers and all peers will eventually converge to the same state.
 
-`cfsqlite` works by adding metadata tables and triggers around your existing database schema. This means that you do not have to change your schema in order to get conflict resolution support -- with a few caveats around uniqueness constraints and foreign keys. See [Schema Design for CRDTs & Eventual Consistency](#schema-design-for-crdts--eventual-consistency).
+`crsqlite` works by adding metadata tables and triggers around your existing database schema. This means that you do not have to change your schema in order to get conflict resolution support -- with a few caveats around uniqueness constraints and foreign keys. See [Schema Design for CRDTs & Eventual Consistency](#schema-design-for-crdts--eventual-consistency).
 
 # Overview
 
 [![loom](https://cdn.loom.com/sessions/thumbnails/0934f93364d340e0ba658146a974edb4-with-play.gif)](https://www.loom.com/share/0934f93364d340e0ba658146a974edb4)
 
-I'm working on a demo application to show how to use cfsqlite in practice. This will live in `examples/live-cli` -- current progress: https://www.loom.com/share/09aa7726f5964e5b8a12ca15652f39b2
+I'm working on a demo application to show how to use crsqlite in practice. This will live in `examples/live-cli` -- current progress: https://www.loom.com/share/09aa7726f5964e5b8a12ca15652f39b2
 
 You can view a conflict-free DB in action in the `__tests__` folder of the `replicator` package: https://github.com/tantaman/conflict-free-sqlite/blob/main/prototype/replicator/src/__tests__/merge-random-2.test.ts
 
@@ -31,32 +31,32 @@ An example of the results this migration can be seen in the `chinook` package.
 
 https://munin.uit.no/bitstream/handle/10037/22344/thesis.pdf?sequence=2
 
-`cfsqlite` improves upon [1] in the following ways --
+`crsqlite` improves upon [1] in the following ways --
 
-- [1] stores two copies of all the data. `cfsqlite` only keeps one by leveraging views and `ISNTEAD OF` triggers.
-- [1] cannot compute deltas between databases without sending the full copy of each database to be compared. `cfsqlite` only needs the logical clock (1 64bit int per peer) of a given database to determine what updates that database is missing.
+- [1] stores two copies of all the data. `crsqlite` only keeps one by leveraging views and `ISNTEAD OF` triggers.
+- [1] cannot compute deltas between databases without sending the full copy of each database to be compared. `crsqlite` only needs the logical clock (1 64bit int per peer) of a given database to determine what updates that database is missing.
 
 ## [2] Conflict-Free Replicated Relations for Multi-Synchronous Database Management at Edge
 
 https://hal.inria.fr/hal-02983557/document
 
-`cfsqlite` improves upon [2] in the following ways --
+`crsqlite` improves upon [2] in the following ways --
 
-- [2] is implemented in a specific ORM. `cfsqlite` runs at the db layer and allows existing applications to interface with the db as normal.
-- [2] keeps a queue of all writes. This queue is drained when those writes are merged. This means that [2] can only sync changes to a single centralized node. `cfsqlite` keeps a logical clock at each database. If a new database comes online it sends its logical clock to a peer. That peer can compute what changes are missing from the clock.
+- [2] is implemented in a specific ORM. `crsqlite` runs at the db layer and allows existing applications to interface with the db as normal.
+- [2] keeps a queue of all writes. This queue is drained when those writes are merged. This means that [2] can only sync changes to a single centralized node. `crsqlite` keeps a logical clock at each database. If a new database comes online it sends its logical clock to a peer. That peer can compute what changes are missing from the clock.
 
 ## [3] CRDTs for Mortals
 
 https://www.youtube.com/watch?v=DEcwa68f-jY
 
-`cfsqlite` improves upon [3] in the following ways --
+`crsqlite` improves upon [3] in the following ways --
 
-- [3] requires retaining all history for all time (iiuc), `cfsqlite` only needs the latest state
-- [3] keeps a hloc per column, `cfsqlite` only keeps an extra int per column and a clock per row.
+- [3] requires retaining all history for all time (iiuc), `crsqlite` only needs the latest state
+- [3] keeps a hloc per column, `crsqlite` only keeps an extra int per column and a clock per row.
 
 [3] is better in the following way --
 
-- `cfsqlite` requires more work at the network layer to ensure ordered delivery and to deliver only the columns of a row that changed. [3] doesn't require any causal order to delivery and already identifies single column changes.
+- `crsqlite` requires more work at the network layer to ensure ordered delivery and to deliver only the columns of a row that changed. [3] doesn't require any causal order to delivery and already identifies single column changes.
 
 ## Other
 
@@ -69,14 +69,14 @@ These projects helped improve my understanding of CRDTs on this journey --
 
 # Schema Design for CRDTs & Eventual Consistency
 
-`cfsqlite` currently does not support:
+`crsqlite` currently does not support:
 
 1. Foreign key cosntraints. You can still have foreign keys (i.e. a column with an id of another row), but they can't be enforced by the db.
    1. TODO: discuss design alternatives and why this is actually not a bad thing when considering row level security.
 2. Uniqueness constraints other than the primary key. The only enforceably unique column in a table should be the primary key. Other columns may be indices but they may not be unique.
    1. TODO: discuss this in much more detail.
 
-Note: prior art [1] & [2] claim to support foreign key and uniqueness constraints. I believe their approach is unsound and results in update loops and have not incoroprated it into `cfsqlite`. If I'm wrong, I'll gladly fold their approach in.
+Note: prior art [1] & [2] claim to support foreign key and uniqueness constraints. I believe their approach is unsound and results in update loops and have not incoroprated it into `crsqlite`. If I'm wrong, I'll gladly fold their approach in.
 
 # Architecture
 
@@ -111,7 +111,7 @@ This algorithm requires causal delivery of message during the time which two pee
 
 # Implementation
 
-`cfsqlite` is currently implemented as a set of views, triggers, and conflict free base tables.
+`crsqlite` is currently implemented as a set of views, triggers, and conflict free base tables.
 
 The views match an application's existing database schema so little to no changes need be made to existing applications.
 
@@ -122,7 +122,7 @@ https://github.com/tantaman/conflict-free-sqlite/tree/main/prototype/test-schema
 
 # Perf
 
-`cfsqlite` is currently 2-3x slower than base `sqlite`. I believe we can get perf to be near identical. The current bottlenecks are:
+`crsqlite` is currently 2-3x slower than base `sqlite`. I believe we can get perf to be near identical. The current bottlenecks are:
 
 1. The current database clock value is stored in a table and must be touched every write
 2. The site id of the database is stored in a table and queried every write
@@ -132,7 +132,7 @@ We can move both of these values out of their tables and into a variable in-memo
 # Future
 
 - Sharing & Privacy -- in a real-world collaborative scenario, you may not want to share your entire database with other peers. Thus, in addition to clock information, we must keep visibility information to use when computing deltas and doing replication.
-- Byzantine fault tolerance -- `cfsqlite` currently assumes friendly actors. We need to guard against malicious updates.
+- Byzantine fault tolerance -- `crsqlite` currently assumes friendly actors. We need to guard against malicious updates.
 - Subselects -- peers may want to sync subsets of the database even if they have access to the entire thing. Compute deltas but only send those deltas that fall into the peer's provided query.
 
 # Example Use Case
@@ -150,7 +150,7 @@ As they see different (or maybe even the same) animals, they record their observ
 
 Some observations may even involve making updates to the prior day's (or week's) observations written by other members of the party.
 
-At the end of the day, the group comes back together. They need to merge all of their work. `cfsqlite` will allow Alice, Bob and Billy to merge their changes (without conflict) in a p2p fashion and converge to the same state.
+At the end of the day, the group comes back together. They need to merge all of their work. `crsqlite` will allow Alice, Bob and Billy to merge their changes (without conflict) in a p2p fashion and converge to the same state.
 
 Note that "without conflict" would be based on the rules of the selected `CRDTs` used within the schema.
 

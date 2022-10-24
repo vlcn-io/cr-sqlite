@@ -74,10 +74,9 @@ static int changesConnect(
   // TODO: future improvement to include txid
   rc = sqlite3_declare_vtab(
       db,
-      // TODO: should we do rowid or without rowid?
-      // perf test to figure this out.
-      // CREATE TABLE x([table], [pk], [col_vals], [col_versions], [version], [site_id])
-      "CREATE TABLE x([table], [pk], [col_vals], [col_versions], [version] primary key, [site_id]) without rowid");
+      // If we go without rowid we need to concat `table || !'! pk` to be the primary key
+      // as xUpdate requires a single column to be the primary key if we use without rowid.
+      "CREATE TABLE x([table], [pk], [col_vals], [col_versions], [version], [site_id])");
 #define CHANGES_SINCE_VTAB_TBL 0
 #define CHANGES_SINCE_VTAB_PK 1
 #define CHANGES_SINCE_VTAB_COL_VALS 2
@@ -649,6 +648,7 @@ static int changesFilter(
 ** that uses the virtual table.  This routine needs to create
 ** a query plan for each invocation and compute an estimated cost for that
 ** plan.
+** TODO: should we support `where table` filters?
 */
 static int changesBestIndex(
     sqlite3_vtab *tab,
@@ -727,13 +727,81 @@ static int changesBestIndex(
   return SQLITE_OK;
 }
 
-int crsql_mergeDelete() {
+int crsql_mergeDelete()
+{
+  // argv[0] is the primary key of the thing to delete
+  // this is a bit problematic... as we need the pks and table rather than the version.
+  // we could change the pk to be pk and table concated...
+  // or we can preclude explicit deletes and do the delete on insert
+
   // TODO: should we accept an actual delete statement or..
   // understand an insert could be a delete post merge?
   return SQLITE_OK;
 }
 
-int crsql_mergeInsert() {
+int crsql_mergeInsert(
+    sqlite3_vtab *pVTab,
+    int argc,
+    sqlite3_value **argv,
+    sqlite_int64 *pRowid)
+{
+  // he argv[1] parameter is the rowid of a new row to be inserted into the virtual table.
+  // If argv[1] is an SQL NULL, then the implementation must choose a rowid for the newly inserted row
+  int argv1Type = sqlite3_value_type(argv[1]);
+  // column values exist in argv[2] and following.
+
+  // Algorithm:
+  // 0. toggle `crsql_insert_src` to `sync`
+  // 1. start a transaction? Or should we assume caller has done that?
+  // 2. pick cids _and_ versions from col_versions
+  // 3. fetch corresponding col version entries from clock table for the table
+  // 4. only take the ones where patch_version > local_version or patch_version = local_version and remote_site > local_site
+  // 5. construct new insert statement against base table
+  //   nit: how will you prevent the trigger(s) from running?
+  //   need to register a new function that has a user data arg which we can toggle to
+  //   tell us the source of the insert. safe given sqlite connections must be accessed from 1 and only 1 thread.
+  // 6. apply insert to base table. `on conflict update` the new columns.
+
+  // Steps (2) & (3) & (4):
+  // If remote_site < local_site:
+  // select cid, version from json_each(col_versions) left join x_clock WHERE pkWhereList AND version > x_clock.version
+  // If remote_site > local_site:
+  // select cid, version from json_each(col_versions) left join x_clock WHERE pkWhereList AND version >= x_clock.version
+  // pkWhereList:
+  // x_clock.pk1 = lit_pk1 AND x_clock.pk2 = list_pk2 etc.
+  // `lit_pk1` etc are escaped for inclusion directly in the string given they are quote-concated
+  // LEFT JOIN since that'll give us results even if the local has no clock table entries for those columns.
+
+  // Given `cids`, pull `columInfos` (they're indexed by cid already)
+  // INSERT INTO tbl (asIdentifierList(columnInfos)) VALUES (extracted-values)
+  
+  // extracted-values:
+  // we need to map back from cids to values indices...
+  // extracted-values are indexed by colVersions.
+  // SELECT cid FROM json_each(col_versions);
+  // patchVales = []
+  // for i = 0; i < cids.len; ++i {
+  //   if (cid in patchable_cids) {
+  //     patchVals.push(vals[i])
+  //   }
+  // }
+
+
+  // sqlite is going to somehow provide us with a rowid.
+  // TODO: how in the world does it know the rowid of a vtab?
+  // unless it runs a query all against our vtab... which I hope not.
+  /*
+  #define CHANGES_SINCE_VTAB_TBL 0
+  #define CHANGES_SINCE_VTAB_PK 1
+  #define CHANGES_SINCE_VTAB_COL_VALS 2
+  #define CHANGES_SINCE_VTAB_COL_VRSNS 3
+  #define CHANGES_SINCE_VTAB_VRSN 4
+  #define CHANGES_SINCE_VTAB_SITE_ID 5
+  */
+
+  // implementation must set *pRowid to the rowid of the newly inserted row
+  // if argv[1] is an SQL NULL
+  // sqlite3_value_type(argv[i])==SQLITE_NULL
   return SQLITE_OK;
 }
 
@@ -743,20 +811,21 @@ int applyRowPatch(
     sqlite3_value **argv,
     sqlite_int64 *pRowid)
 {
-  if (argc == 1 && argv[0] != 0)
-  {
-    // delete statement
-    return crsql_mergeDelete();
-  }
-  else if (argc > 1 && argv[0] == 0)
+  int argv0Type = sqlite3_value_type(argv[0]);
+  // if (argc == 1 && argv[0] != 0)
+  // {
+  //   // delete statement
+  //   return crsql_mergeDelete();
+  // }
+  if (argc > 1 && argv0Type == SQLITE_NULL)
   {
     // insert statement
     // argv[1] is the rowid.. but why would it ever be filled for us?
-    return crsql_mergeInsert();
+    return crsql_mergeInsert(pVTab, argc, argv, pRowid);
   }
   else
   {
-    pVTab->zErrMsg = sqlite3_mprintf("Only INSERT and DELETE statements are allowed against the crsql changes table.");
+    pVTab->zErrMsg = sqlite3_mprintf("Only INSERT statements are allowed against the crsql changes table.");
     return SQLITE_MISUSE;
   }
 

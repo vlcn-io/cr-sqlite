@@ -67,13 +67,13 @@ static int changesSinceConnect(
   // TODO: future improvement to include txid
   rc = sqlite3_declare_vtab(
       db,
-      "CREATE TABLE x([table], [pk], [col_vals], [col_versions], [version], [requestor] hidden)");
+      "CREATE TABLE x([table], [pk], [col_vals], [col_versions], [version], [site_id])");
 #define CHANGES_SINCE_VTAB_TBL 0
 #define CHANGES_SINCE_VTAB_PK 1
 #define CHANGES_SINCE_VTAB_COL_VALS 2
 #define CHANGES_SINCE_VTAB_COL_VRSNS 3
 #define CHANGES_SINCE_VTAB_VRSN 4
-#define CHANGES_SINCE_VTAB_RQSTR 5
+#define CHANGES_SINCE_VTAB_SITE_ID 5
 // TODO: ^-- change rqstr to site_id and make query != site_id
   if (rc == SQLITE_OK)
   {
@@ -643,8 +643,8 @@ static int changesSinceBestIndex(
       versionIdx = i;
       idxNum |= 2;
       break;
-    case CHANGES_SINCE_VTAB_RQSTR:
-      if (pConstraint->op != SQLITE_INDEX_CONSTRAINT_EQ)
+    case CHANGES_SINCE_VTAB_SITE_ID:
+      if (pConstraint->op != SQLITE_INDEX_CONSTRAINT_NE)
       {
         return SQLITE_CONSTRAINT;
       }

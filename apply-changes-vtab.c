@@ -4,13 +4,29 @@
 #include "consts.h"
 #include "util.h"
 
+/**
+ * apply changes syntax:
+ * 
+ * insert into crsql_apply_changes table, pks, colvals, colversions, site_id VALUES(...)
+ * 
+ * where `pks` are quote-concated
+ * `colvals` are quote-concated in order of col-versions
+ * `col-versions` are... json keyed by cid :|
+ * `site-id` site id blob? or quoted str?
+ * 
+ * `version` is omittable?
+ * 
+ * Soo.. technically we can use the `changes since` vtab and just
+ * add an update method?
+ */
+
 /* crsql_applyChanges_vtab is a subclass of sqlite3_vtab which is
 ** underlying representation of the virtual table
 */
 typedef struct crsql_applyChanges_vtab crsql_applyChanges_vtab;
 struct crsql_applyChanges_vtab {
   sqlite3_vtab base;  /* Base class - must be first */
-  /* Add new fields here, as necessary */
+  sqlite3 *db;
 };
 
 /* crsql_applyChanges_cursor is a subclass of sqlite3_vtab_cursor which will

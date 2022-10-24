@@ -76,7 +76,7 @@ static int changesConnect(
       db,
       // If we go without rowid we need to concat `table || !'! pk` to be the primary key
       // as xUpdate requires a single column to be the primary key if we use without rowid.
-      "CREATE TABLE x([table], [pk], [col_vals], [col_versions], [version], [site_id])");
+      "CREATE TABLE x([table] NOT NULL, [pk] NOT NULL, [col_vals] NOT NULL, [col_versions] NOT NULL, [version], [site_id] NOT NULL)");
 #define CHANGES_SINCE_VTAB_TBL 0
 #define CHANGES_SINCE_VTAB_PK 1
 #define CHANGES_SINCE_VTAB_COL_VALS 2
@@ -747,8 +747,16 @@ int crsql_mergeInsert(
 {
   // he argv[1] parameter is the rowid of a new row to be inserted into the virtual table.
   // If argv[1] is an SQL NULL, then the implementation must choose a rowid for the newly inserted row
-  int argv1Type = sqlite3_value_type(argv[1]);
+  int rowidType = sqlite3_value_type(argv[1]);
+
   // column values exist in argv[2] and following.
+  const unsigned char * insertTbl = sqlite3_value_text(argv[2 + CHANGES_SINCE_VTAB_TBL]);
+  const unsigned char * insertPks = sqlite3_value_text(argv[2 + CHANGES_SINCE_VTAB_PK]);
+  const unsigned char * insertVals = sqlite3_value_text(argv[2 + CHANGES_SINCE_VTAB_COL_VALS]);
+  const unsigned char * insertColVrsns = sqlite3_value_text(argv[2 + CHANGES_SINCE_VTAB_COL_VRSNS]);
+  // sqlite3_int64 insertVrsn = sqlite3_value_int64(argv[2 + CHANGES_SINCE_VTAB_VRSN]);
+  int insertSiteIdLen = sqlite3_value_bytes(argv[2 + CHANGES_SINCE_VTAB_SITE_ID]);
+  const const char * insertSiteId = sqlite3_value_blob(argv[2 + CHANGES_SINCE_VTAB_SITE_ID]);
 
   // Algorithm:
   // 0. toggle `crsql_insert_src` to `sync`
@@ -790,14 +798,6 @@ int crsql_mergeInsert(
   // sqlite is going to somehow provide us with a rowid.
   // TODO: how in the world does it know the rowid of a vtab?
   // unless it runs a query all against our vtab... which I hope not.
-  /*
-  #define CHANGES_SINCE_VTAB_TBL 0
-  #define CHANGES_SINCE_VTAB_PK 1
-  #define CHANGES_SINCE_VTAB_COL_VALS 2
-  #define CHANGES_SINCE_VTAB_COL_VRSNS 3
-  #define CHANGES_SINCE_VTAB_VRSN 4
-  #define CHANGES_SINCE_VTAB_SITE_ID 5
-  */
 
   // implementation must set *pRowid to the rowid of the newly inserted row
   // if argv[1] is an SQL NULL

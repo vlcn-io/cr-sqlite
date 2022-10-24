@@ -5,7 +5,7 @@ SQLITE_EXTENSION_INIT3
 
 #include "tableinfo.h"
 
-sqlite3_module crsql_changesSinceModule;
+sqlite3_module crsql_changesModule;
 
 char *crsql_changesQueryForTable(crsql_TableInfo *tableInfo);
 char *crsql_changesUnionQuery(

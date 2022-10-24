@@ -5,7 +5,7 @@ SQLITE_EXTENSION_INIT1
 #include "tableinfo.h"
 #include "consts.h"
 #include "triggers.h"
-#include "changes-since-vtab.h"
+#include "changes-vtab.h"
 
 #include <ctype.h>
 #include <stdint.h>
@@ -626,7 +626,7 @@ __declspec(dllexport)
   }
 
   if (rc == SQLITE_OK) {
-    rc = sqlite3_create_module(db, "crsql_changes", &crsql_changesSinceModule, 0);
+    rc = sqlite3_create_module(db, "crsql_changes", &crsql_changesModule, 0);
   }
 
   // if (rc == SQLITE_OK) {

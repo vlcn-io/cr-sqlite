@@ -1,5 +1,5 @@
 #include "crsqlite.h"
-#include "changes-since-vtab.h"
+#include "changes-vtab.h"
 #include "consts.h"
 #include <assert.h>
 #include <string.h>
@@ -251,7 +251,7 @@ void testRowPatchDataQuery()
 
 void crsqlChagesSinceVtabTestSuite()
 {
-  printf("\e[47m\e[1;30mSuite: crsql_changesSinceVtab\e[0m\n");
+  printf("\e[47m\e[1;30mSuite: crsql_changesVtab\e[0m\n");
   testChangesQueryForTable();
   testChangesUnionQuery();
   testPickColumnInfosFromVersionMap();

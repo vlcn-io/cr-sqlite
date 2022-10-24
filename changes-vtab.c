@@ -1,4 +1,4 @@
-#include "changes-since-vtab.h"
+#include "changes-vtab.h"
 #include <string.h>
 #include <assert.h>
 #include "consts.h"
@@ -19,8 +19,8 @@
  *
  */
 
-typedef struct crsql_ChangesSince_vtab crsql_ChangesSince_vtab;
-struct crsql_ChangesSince_vtab
+typedef struct crsql_Changes_vtab crsql_Changes_vtab;
+struct crsql_Changes_vtab
 {
   sqlite3_vtab base; /* Base class - must be first */
   sqlite3 *db;
@@ -30,12 +30,12 @@ struct crsql_ChangesSince_vtab
 ** serve as the underlying representation of a cursor that scans
 ** over rows of the result
 */
-typedef struct crsql_ChangesSince_cursor crsql_ChangesSince_cursor;
-struct crsql_ChangesSince_cursor
+typedef struct crsql_Changes_cursor crsql_Changes_cursor;
+struct crsql_Changes_cursor
 {
   sqlite3_vtab_cursor base; /* Base class - must be first */
 
-  crsql_ChangesSince_vtab *pTab;
+  crsql_Changes_vtab *pTab;
   crsql_TableInfo **tableInfos;
   int tableInfosLen;
 
@@ -49,7 +49,7 @@ struct crsql_ChangesSince_cursor
 };
 
 /*
-** The changesSinceVtabConnect() method is invoked to create a new
+** The changesVtabConnect() method is invoked to create a new
 ** template virtual table.
 **
 ** Think of this routine as the constructor for templatevtab_vtab objects.
@@ -61,14 +61,14 @@ struct crsql_ChangesSince_cursor
 **    (2) Tell SQLite (via the sqlite3_declare_vtab() interface) what the
 **        result set of queries against the virtual table will look like.
 */
-static int changesSinceConnect(
+static int changesConnect(
     sqlite3 *db,
     void *pAux,
     int argc, const char *const *argv,
     sqlite3_vtab **ppVtab,
     char **pzErr)
 {
-  crsql_ChangesSince_vtab *pNew;
+  crsql_Changes_vtab *pNew;
   int rc;
 
   // TODO: future improvement to include txid
@@ -100,21 +100,21 @@ static int changesSinceConnect(
 }
 
 /*
-** Destructor for ChangesSince_vtab objects
+** Destructor for Changes_vtab objects
 */
-static int changesSinceDisconnect(sqlite3_vtab *pVtab)
+static int changesDisconnect(sqlite3_vtab *pVtab)
 {
-  crsql_ChangesSince_vtab *p = (crsql_ChangesSince_vtab *)pVtab;
+  crsql_Changes_vtab *p = (crsql_Changes_vtab *)pVtab;
   sqlite3_free(p);
   return SQLITE_OK;
 }
 
 /*
-** Constructor for a new ChangesSince cursors object.
+** Constructor for a new Changes cursors object.
 */
-static int changesSinceOpen(sqlite3_vtab *p, sqlite3_vtab_cursor **ppCursor)
+static int changesOpen(sqlite3_vtab *p, sqlite3_vtab_cursor **ppCursor)
 {
-  crsql_ChangesSince_cursor *pCur;
+  crsql_Changes_cursor *pCur;
   pCur = sqlite3_malloc(sizeof(*pCur));
   if (pCur == 0)
   {
@@ -122,11 +122,11 @@ static int changesSinceOpen(sqlite3_vtab *p, sqlite3_vtab_cursor **ppCursor)
   }
   memset(pCur, 0, sizeof(*pCur));
   *ppCursor = &pCur->base;
-  pCur->pTab = (crsql_ChangesSince_vtab *)p;
+  pCur->pTab = (crsql_Changes_vtab *)p;
   return SQLITE_OK;
 }
 
-static int changesSinceCrsrFinalize(crsql_ChangesSince_cursor *crsr)
+static int changesCrsrFinalize(crsql_Changes_cursor *crsr)
 {
   // Assign pointers to null after freeing
   // since we can get into this twice for the same object.
@@ -148,12 +148,12 @@ static int changesSinceCrsrFinalize(crsql_ChangesSince_cursor *crsr)
 }
 
 /*
-** Destructor for a ChangesSince cursor.
+** Destructor for a Changes cursor.
 */
-static int changesSinceClose(sqlite3_vtab_cursor *cur)
+static int changesClose(sqlite3_vtab_cursor *cur)
 {
-  crsql_ChangesSince_cursor *pCur = (crsql_ChangesSince_cursor *)cur;
-  changesSinceCrsrFinalize(pCur);
+  crsql_Changes_cursor *pCur = (crsql_Changes_cursor *)cur;
+  changesCrsrFinalize(pCur);
   sqlite3_free(pCur);
   return SQLITE_OK;
 }
@@ -161,9 +161,9 @@ static int changesSinceClose(sqlite3_vtab_cursor *cur)
 /*
 ** Return the rowid for the current row.
 */
-static int changesSinceRowid(sqlite3_vtab_cursor *cur, sqlite_int64 *pRowid)
+static int changesRowid(sqlite3_vtab_cursor *cur, sqlite_int64 *pRowid)
 {
-  crsql_ChangesSince_cursor *pCur = (crsql_ChangesSince_cursor *)cur;
+  crsql_Changes_cursor *pCur = (crsql_Changes_cursor *)cur;
   *pRowid = pCur->version;
   return SQLITE_OK;
 }
@@ -172,9 +172,9 @@ static int changesSinceRowid(sqlite3_vtab_cursor *cur, sqlite_int64 *pRowid)
 ** Return TRUE if the cursor has been moved off of the last
 ** row of output.
 */
-static int changesSinceEof(sqlite3_vtab_cursor *cur)
+static int changesEof(sqlite3_vtab_cursor *cur)
 {
-  crsql_ChangesSince_cursor *pCur = (crsql_ChangesSince_cursor *)cur;
+  crsql_Changes_cursor *pCur = (crsql_Changes_cursor *)cur;
   return pCur->pChangesStmt == 0;
 }
 
@@ -368,11 +368,11 @@ char *crsql_rowPatchDataQuery(
 }
 
 /*
-** Advance a ChangesSince_cursor to its next row of output.
+** Advance a Changes_cursor to its next row of output.
 */
-static int changesSinceNext(sqlite3_vtab_cursor *cur)
+static int changesNext(sqlite3_vtab_cursor *cur)
 {
-  crsql_ChangesSince_cursor *pCur = (crsql_ChangesSince_cursor *)cur;
+  crsql_Changes_cursor *pCur = (crsql_Changes_cursor *)cur;
   sqlite3_vtab *pTabBase = (sqlite3_vtab *)(pCur->pTab);
   int rc = SQLITE_OK;
 
@@ -401,7 +401,7 @@ static int changesSinceNext(sqlite3_vtab_cursor *cur)
   if (rc != SQLITE_ROW)
   {
     // tear down since we're done
-    return changesSinceCrsrFinalize(pCur);
+    return changesCrsrFinalize(pCur);
   }
 
   const char *tbl = (const char *)sqlite3_column_text(pCur->pChangesStmt, TBL);
@@ -414,7 +414,7 @@ static int changesSinceNext(sqlite3_vtab_cursor *cur)
   {
     // TODO: this could be an insert where the table only has primary keys and no non-primary key columns
     pTabBase->zErrMsg = sqlite3_mprintf("Received a change set that had 0 columns from table %s", tbl);
-    changesSinceCrsrFinalize(pCur);
+    changesCrsrFinalize(pCur);
     return SQLITE_ERROR;
   }
 
@@ -422,7 +422,7 @@ static int changesSinceNext(sqlite3_vtab_cursor *cur)
   if (tblInfo == 0)
   {
     pTabBase->zErrMsg = sqlite3_mprintf("crsql internal error. Could not find schema for table %s", tbl);
-    changesSinceCrsrFinalize(pCur);
+    changesCrsrFinalize(pCur);
     return SQLITE_ERROR;
   }
 
@@ -477,13 +477,13 @@ static int changesSinceNext(sqlite3_vtab_cursor *cur)
 ** Return values of columns for the row at which the templatevtab_cursor
 ** is currently pointing.
 */
-static int changesSinceColumn(
+static int changesColumn(
     sqlite3_vtab_cursor *cur, /* The cursor */
     sqlite3_context *ctx,     /* First argument to sqlite3_result_...() */
     int i                     /* Which column to return */
 )
 {
-  crsql_ChangesSince_cursor *pCur = (crsql_ChangesSince_cursor *)cur;
+  crsql_Changes_cursor *pCur = (crsql_Changes_cursor *)cur;
   // TODO: in the future, return a protobuf.
   switch (i)
   {
@@ -517,14 +517,14 @@ static int changesSinceColumn(
 ** once prior to any call to templatevtabColumn() or templatevtabRowid() or
 ** templatevtabEof().
 */
-static int changesSinceFilter(
+static int changesFilter(
     sqlite3_vtab_cursor *pVtabCursor,
     int idxNum, const char *idxStr,
     int argc, sqlite3_value **argv)
 {
   int rc = SQLITE_OK;
-  crsql_ChangesSince_cursor *pCrsr = (crsql_ChangesSince_cursor *)pVtabCursor;
-  crsql_ChangesSince_vtab *pTab = pCrsr->pTab;
+  crsql_Changes_cursor *pCrsr = (crsql_Changes_cursor *)pVtabCursor;
+  crsql_Changes_vtab *pTab = pCrsr->pTab;
   sqlite3_vtab *pTabBase = (sqlite3_vtab *)pTab;
   sqlite3 *db = pTab->db;
   char **rClockTableNames = 0;
@@ -599,7 +599,7 @@ static int changesSinceFilter(
     return rc;
   }
 
-  // pull user provided params to `getChangesSince`
+  // pull user provided params to `getChanges`
   int i = 0;
   sqlite3_int64 versionBound = MIN_POSSIBLE_DB_VERSION;
   const char *requestorSiteId = "aa";
@@ -639,7 +639,7 @@ static int changesSinceFilter(
   pCrsr->tableInfosLen = rNumRows;
   pCrsr->pChangesStmt = pStmt;
 
-  return changesSinceNext((sqlite3_vtab_cursor *)pCrsr);
+  return changesNext((sqlite3_vtab_cursor *)pCrsr);
 
   // return SQLITE_OK;
 }
@@ -650,7 +650,7 @@ static int changesSinceFilter(
 ** a query plan for each invocation and compute an estimated cost for that
 ** plan.
 */
-static int changesSinceBestIndex(
+static int changesBestIndex(
     sqlite3_vtab *tab,
     sqlite3_index_info *pIdxInfo)
 {
@@ -730,11 +730,11 @@ static int changesSinceBestIndex(
 int crsql_mergeDelete() {
   // TODO: should we accept an actual delete statement or..
   // understand an insert could be a delete post merge?
-
+  return SQLITE_OK;
 }
 
 int crsql_mergeInsert() {
-
+  return SQLITE_OK;
 }
 
 int applyRowPatch(
@@ -763,20 +763,20 @@ int applyRowPatch(
   return SQLITE_OK;
 }
 
-sqlite3_module crsql_changesSinceModule = {
+sqlite3_module crsql_changesModule = {
     /* iVersion    */ 0,
     /* xCreate     */ 0,
-    /* xConnect    */ changesSinceConnect,
-    /* xBestIndex  */ changesSinceBestIndex,
-    /* xDisconnect */ changesSinceDisconnect,
+    /* xConnect    */ changesConnect,
+    /* xBestIndex  */ changesBestIndex,
+    /* xDisconnect */ changesDisconnect,
     /* xDestroy    */ 0,
-    /* xOpen       */ changesSinceOpen,
-    /* xClose      */ changesSinceClose,
-    /* xFilter     */ changesSinceFilter,
-    /* xNext       */ changesSinceNext,
-    /* xEof        */ changesSinceEof,
-    /* xColumn     */ changesSinceColumn,
-    /* xRowid      */ changesSinceRowid,
+    /* xOpen       */ changesOpen,
+    /* xClose      */ changesClose,
+    /* xFilter     */ changesFilter,
+    /* xNext       */ changesNext,
+    /* xEof        */ changesEof,
+    /* xColumn     */ changesColumn,
+    /* xRowid      */ changesRowid,
     /* xUpdate     */ applyRowPatch,
     /* xBegin      */ 0,
     /* xSync       */ 0,

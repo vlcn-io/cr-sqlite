@@ -1,4 +1,4 @@
-# [wip] cfsql - conflict-free-sqlite
+# [wip] crsql - Convergent, Replicated, SQLite
 
 **10/7** - production ready c extension is nearing completion.
 

@@ -74,6 +74,7 @@ static int changesSinceConnect(
 #define CHANGES_SINCE_VTAB_COL_VRSNS 3
 #define CHANGES_SINCE_VTAB_VRSN 4
 #define CHANGES_SINCE_VTAB_RQSTR 5
+// TODO: ^-- change rqstr to site_id and make query != site_id
   if (rc == SQLITE_OK)
   {
     pNew = sqlite3_malloc(sizeof(*pNew));
@@ -624,6 +625,7 @@ static int changesSinceBestIndex(
     sqlite3_vtab *tab,
     sqlite3_index_info *pIdxInfo)
 {
+  // TODO: require both params?
   int idxNum = 0;
   int versionIdx = -1;
   int requestorIdx = -1;

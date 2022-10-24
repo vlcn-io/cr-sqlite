@@ -245,5 +245,5 @@ select cfsql_as_crr('foo');
 select cfsql_as_crr('baz');
 insert into foo values (1,2);
 insert into baz values ('k', 'woo', 'doo', 'daa');
-select * from cfsql_changes
+select * from cfsql_changes;
 ```

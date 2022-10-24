@@ -10,7 +10,7 @@
  *
  * returns:
  * table_name, quote-concated pks ~'~, json-encoded vals, json-encoded versions, curr version
- *  
+ *
  * vtab `apply changes` usage:
  * insert into crsql_changes table, pks, colvals, colversions, site_id VALUES(...)
  * ^-- don't technically need a where.. maybe never even do a where
@@ -74,14 +74,17 @@ static int changesSinceConnect(
   // TODO: future improvement to include txid
   rc = sqlite3_declare_vtab(
       db,
-      "CREATE TABLE x([table], [pk], [col_vals], [col_versions], [version], [site_id])");
+      // TODO: should we do rowid or without rowid?
+      // perf test to figure this out.
+      // CREATE TABLE x([table], [pk], [col_vals], [col_versions], [version], [site_id])
+      "CREATE TABLE x([table], [pk], [col_vals], [col_versions], [version] primary key, [site_id]) without rowid");
 #define CHANGES_SINCE_VTAB_TBL 0
 #define CHANGES_SINCE_VTAB_PK 1
 #define CHANGES_SINCE_VTAB_COL_VALS 2
 #define CHANGES_SINCE_VTAB_COL_VRSNS 3
 #define CHANGES_SINCE_VTAB_VRSN 4
 #define CHANGES_SINCE_VTAB_SITE_ID 5
-// TODO: ^-- change rqstr to site_id and make query != site_id
+  // TODO: ^-- change rqstr to site_id and make query != site_id
   if (rc == SQLITE_OK)
   {
     pNew = sqlite3_malloc(sizeof(*pNew));
@@ -255,18 +258,20 @@ crsql_ColumnInfo *crsql_pickColumnInfosFromVersionMap(
     int numVersionCols,
     const char *colVersions)
 {
-  if (numVersionCols > columnInfosLen) {
+  if (numVersionCols > columnInfosLen)
+  {
     return 0;
   }
 
   int rc = SQLITE_OK;
   char *zSql = sqlite3_mprintf("SELECT key as cid FROM json_each(?)");
-  
+
   sqlite3_stmt *pStmt;
   rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
   sqlite3_free(zSql);
 
-  if (rc != SQLITE_OK) {
+  if (rc != SQLITE_OK)
+  {
     sqlite3_finalize(pStmt);
     return 0;
   }
@@ -274,7 +279,8 @@ crsql_ColumnInfo *crsql_pickColumnInfosFromVersionMap(
   // This is safe, yea?
   // Binding the result of one statement to another.
   rc = sqlite3_bind_text(pStmt, 1, colVersions, -1, SQLITE_STATIC);
-  if (rc != SQLITE_OK) {
+  if (rc != SQLITE_OK)
+  {
     sqlite3_finalize(pStmt);
     return 0;
   }
@@ -282,10 +288,12 @@ crsql_ColumnInfo *crsql_pickColumnInfosFromVersionMap(
   rc = sqlite3_step(pStmt);
   crsql_ColumnInfo *ret = sqlite3_malloc(numVersionCols * sizeof *ret);
   int i = 0;
-  while (rc == SQLITE_ROW) {
+  while (rc == SQLITE_ROW)
+  {
 
     int cid = sqlite3_column_int(pStmt, 0);
-    if (cid >= columnInfosLen || i >= numVersionCols) {
+    if (cid >= columnInfosLen || i >= numVersionCols)
+    {
       sqlite3_free(ret);
       sqlite3_finalize(pStmt);
       return 0;
@@ -296,7 +304,8 @@ crsql_ColumnInfo *crsql_pickColumnInfosFromVersionMap(
     ++i;
   }
 
-  if (i != numVersionCols) {
+  if (i != numVersionCols)
+  {
     sqlite3_free(ret);
     sqlite3_finalize(pStmt);
     return 0;
@@ -338,12 +347,11 @@ char *crsql_rowPatchDataQuery(
   }
 
   crsql_ColumnInfo *changedCols = crsql_pickColumnInfosFromVersionMap(
-    db,
-    tblInfo->baseCols,
-    tblInfo->baseColsLen,
-    numVersionCols,
-    colVrsns
-  );
+      db,
+      tblInfo->baseCols,
+      tblInfo->baseColsLen,
+      numVersionCols,
+      colVrsns);
   char *colsConcatList = crsql_quoteConcat(changedCols, numVersionCols);
   sqlite3_free(changedCols);
 
@@ -374,7 +382,8 @@ static int changesSinceNext(sqlite3_vtab_cursor *cur)
     return SQLITE_ERROR;
   }
 
-  if (pCur->pRowStmt != 0) {
+  if (pCur->pRowStmt != 0)
+  {
     // Finalize the prior row result
     // before getting the next row.
     // Do not re-use the statement since we could be entering
@@ -401,7 +410,8 @@ static int changesSinceNext(sqlite3_vtab_cursor *cur)
   int numCols = sqlite3_column_int(pCur->pChangesStmt, NUM_COLS);
   sqlite3_int64 minv = sqlite3_column_int64(pCur->pChangesStmt, MIN_V);
 
-  if (numCols == 0) {
+  if (numCols == 0)
+  {
     // TODO: this could be an insert where the table only has primary keys and no non-primary key columns
     pTabBase->zErrMsg = sqlite3_mprintf("Received a change set that had 0 columns from table %s", tbl);
     changesSinceCrsrFinalize(pCur);
@@ -436,7 +446,8 @@ static int changesSinceNext(sqlite3_vtab_cursor *cur)
   rc = sqlite3_prepare_v2(pCur->pTab->db, zSql, -1, &pRowStmt, 0);
   sqlite3_free(zSql);
 
-  if (rc != SQLITE_OK) {
+  if (rc != SQLITE_OK)
+  {
     pTabBase->zErrMsg = sqlite3_mprintf("crsql internal error preparing row data fetch statement");
     sqlite3_finalize(pRowStmt);
     return rc;
@@ -444,11 +455,14 @@ static int changesSinceNext(sqlite3_vtab_cursor *cur)
 
   // TODO: handle the row delete case. There will be now row to fetch in that case.
   rc = sqlite3_step(pRowStmt);
-  if (rc != SQLITE_ROW) {
+  if (rc != SQLITE_ROW)
+  {
     pTabBase->zErrMsg = sqlite3_mprintf("crsql internal error fetching row data");
     sqlite3_finalize(pRowStmt);
     return SQLITE_ERROR;
-  } else {
+  }
+  else
+  {
     rc = SQLITE_OK;
   }
 
@@ -713,14 +727,36 @@ static int changesSinceBestIndex(
   return SQLITE_OK;
 }
 
+int crsql_mergeDelete() {
+  // TODO: should we accept an actual delete statement or..
+  // understand an insert could be a delete post merge?
+
+}
+
+int crsql_mergeInsert() {
+
+}
+
 int applyRowPatch(
-  sqlite3_vtab *pVTab,
-  int argc,
-  sqlite3_value **argv,
-  sqlite_int64 *pRowid
-) {
-  if (argc <= 1 || argv[0] != 0) {
-    pVTab->zErrMsg = sqlite3_mprintf("Only inserts are allowed against the changes table.");
+    sqlite3_vtab *pVTab,
+    int argc,
+    sqlite3_value **argv,
+    sqlite_int64 *pRowid)
+{
+  if (argc == 1 && argv[0] != 0)
+  {
+    // delete statement
+    return crsql_mergeDelete();
+  }
+  else if (argc > 1 && argv[0] == 0)
+  {
+    // insert statement
+    // argv[1] is the rowid.. but why would it ever be filled for us?
+    return crsql_mergeInsert();
+  }
+  else
+  {
+    pVTab->zErrMsg = sqlite3_mprintf("Only INSERT and DELETE statements are allowed against the crsql changes table.");
     return SQLITE_MISUSE;
   }
 

@@ -747,11 +747,19 @@ int crsql_mergeInsert(
     sqlite3_vtab *pVTab,
     int argc,
     sqlite3_value **argv,
-    sqlite_int64 *pRowid)
+    sqlite_int64 *pRowid,
+    char ** errmsg)
 {
   // he argv[1] parameter is the rowid of a new row to be inserted into the virtual table.
   // If argv[1] is an SQL NULL, then the implementation must choose a rowid for the newly inserted row
   int rowidType = sqlite3_value_type(argv[1]);
+  int rc = 0;
+  crsql_Changes_vtab *pTab = (crsql_Changes_vtab *)pVTab;
+  sqlite3 *db = pTab->db;
+  char *zSql = 0;
+  char **cidsAndVersions = 0;
+  int numChangedCols = 0;
+  int ignore = 0;
 
   // column values exist in argv[2] and following.
   const unsigned char * insertTbl = sqlite3_value_text(argv[2 + CHANGES_SINCE_VTAB_TBL]);
@@ -761,6 +769,31 @@ int crsql_mergeInsert(
   // sqlite3_int64 insertVrsn = sqlite3_value_int64(argv[2 + CHANGES_SINCE_VTAB_VRSN]);
   int insertSiteIdLen = sqlite3_value_bytes(argv[2 + CHANGES_SINCE_VTAB_SITE_ID]);
   const char * insertSiteId = sqlite3_value_blob(argv[2 + CHANGES_SINCE_VTAB_SITE_ID]);
+
+  rc = sqlite3_exec(db, SET_SYNC_BIT, 0, 0, errmsg);
+  if (rc != SQLITE_OK) {
+    // try to revert the sync bit -- although it should not have taken
+    // if the above failed anyway
+    sqlite3_exec(db, CLEAR_SYNC_BIT, 0, 0, 0);
+    return rc;
+  }
+
+  zSql = sqlite3_mprintf("SELECT key as cid, value as version FROM json_each(%Q)", insertColVrsns);
+  rc = sqlite3_get_table(db, zSql, &cidsAndVersions, &numChangedCols, &ignore, errmsg);
+  sqlite3_free(zSql);
+
+  if (rc != SQLITE_OK || numChangedCols == 0) {
+    sqlite3_exec(db, CLEAR_SYNC_BIT, 0, 0, 0);
+    sqlite3_free_table(cidsAndVersions);
+    return rc;
+  }
+
+  // construct table info for given table...
+  // can we cache it? we don't want to reconstruct for every row...
+  // or just pull table infos into vtab
+  // and require users of the vtab to not connect their syncing until _after_
+  // all schema changes have been made. Or destroy and re-create connection
+  // if schema changes are made.
 
   // Algorithm:
   // 0. toggle `crsql_insert_src` to `sync`
@@ -809,13 +842,15 @@ int crsql_mergeInsert(
   return SQLITE_OK;
 }
 
-int applyRowPatch(
+int changesApply(
     sqlite3_vtab *pVTab,
     int argc,
     sqlite3_value **argv,
     sqlite_int64 *pRowid)
 {
   int argv0Type = sqlite3_value_type(argv[0]);
+  char *errmsg;
+  int rc = SQLITE_OK;
   // if (argc == 1 && argv[0] != 0)
   // {
   //   // delete statement
@@ -825,7 +860,11 @@ int applyRowPatch(
   {
     // insert statement
     // argv[1] is the rowid.. but why would it ever be filled for us?
-    return crsql_mergeInsert(pVTab, argc, argv, pRowid);
+    rc = crsql_mergeInsert(pVTab, argc, argv, pRowid, &errmsg);
+    if (rc != SQLITE_OK) {
+      pVTab->zErrMsg = errmsg;
+    }
+    return rc;
   }
   else
   {
@@ -850,7 +889,7 @@ sqlite3_module crsql_changesModule = {
     /* xEof        */ changesEof,
     /* xColumn     */ changesColumn,
     /* xRowid      */ changesRowid,
-    /* xUpdate     */ applyRowPatch,
+    /* xUpdate     */ changesApply,
     /* xBegin      */ 0,
     /* xSync       */ 0,
     /* xCommit     */ 0,

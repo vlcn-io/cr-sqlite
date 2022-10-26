@@ -1,5 +1,10 @@
 todo:
 
+- pk validation
+- delete support
+  sentinel col vers?
+  -1 col?
+  ...
 - go through an ensure proper documentation on each function
 - check proper utf8 handling via unsigned char everywhere
 - finish multithreading test case

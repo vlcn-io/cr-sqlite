@@ -1,3 +1,37 @@
+/**
+ * The changes virtual table is an eponymous virtual table which can be used
+ * to fetch and apply patches to a db.
+ * 
+ * To fetch a changeset:
+ * ```sql
+ * SELECT * FROM crsql_chages WHERE site_id != SITE_ID AND version > V
+ * ```
+ * 
+ * The site id parameter is used to prevent a site from fetching its own changes that were
+ * patched into the remote.
+ * 
+ * The version parameter is used to get changes after a specific version.
+ * Sites should keep track of the latest version they've received from other sites
+ * and use that number as a cursor to fetch future changes.
+ *
+ * The changes table has the following columns:
+ * 1. table - the name of the table the patch is from
+ * 2. pk - the primary key(s) that identify the row to be patched. If the
+ *    table has many columns that comprise the primary key then
+ *    the values are quote concatenated in pk order.
+ * 3. col_vals - the values to patch. quote concatenated in cid order.
+ * 4. col_versions - the cids of the changed columns and the versions of those columns
+ * 5. version - the min version of the patch. Used for filtering and for sites to update their
+ *    "last seen" version from other sites
+ * 6. site_id - the site_id that is responsible for the update. If this is 0
+ *    then the update was made locally.
+ * 
+ * To apply a changeset:
+ * ```sql
+ * INSERT INTO changes (table, pk, col_vals, col_versions, site_id) VALUES (...)
+ * ```
+ */
+
 #include "changes-vtab.h"
 #include <string.h>
 #include <assert.h>
@@ -5,43 +39,70 @@
 #include "util.h"
 
 /**
- * vtab `changes since` usage:
- * SELECT * FROM crsql_chages WHERE site_id != SITE_ID AND version > V
- *
- * returns:
- * table_name, quote-concated pks ~'~, json-encoded vals, json-encoded versions, curr version
- *
- * vtab `apply changes` usage:
- * insert into crsql_changes table, pks, colvals, colversions, site_id VALUES(...)
- * ^-- don't technically need a where.. maybe never even do a where
- * given `pks`, `table` are our where.
- * ^-- only allow inserts, never updates.
- *
+ * Data maintained by the virtual table across
+ * queries.
+ * 
+ * Per-query data is kept on crsql_Changes_cursor
+ * 
+ * All table infos are fetched on vtab initialization.
+ * This creates the constraint that if the schema of a crr
+ * is modified after the virtual table definition is loaded
+ * then it will not be or not be correctly processed
+ * by the virtual table.
+ * 
+ * Given that, if a schema modification is made
+ * to a crr table then the changes vtab needs to be 
+ * reloaded.
+ * 
+ * The simpleset way to accomplish this is to close
+ * and re-open the connection responsible for syncing.
+ * 
+ * In practice this should generally not be a problem
+ * as application startup would establish, migrated, etc. the schemas
+ * after which a sync process would connect.
  */
-
 typedef struct crsql_Changes_vtab crsql_Changes_vtab;
 struct crsql_Changes_vtab
 {
-  sqlite3_vtab base; /* Base class - must be first */
+  sqlite3_vtab base;
   sqlite3 *db;
 
   crsql_TableInfo **tableInfos;
   int tableInfosLen;
 };
 
-/* A subclass of sqlite3_vtab_cursor which will
-** serve as the underlying representation of a cursor that scans
-** over rows of the result
-*/
+/**
+ * Cursor used to return patches.
+ * This is instantiated per-query and updated
+ * on each row being returned.
+ * 
+ * Contains a reference to the vtab structure in order
+ * get a handle on the db which to fetch from
+ * the underlying crr tables.
+ * 
+ * Most columns are passed-through from
+ * `pChangesStmt` and `pRowStmt` which are stepped
+ * in each call to `changesNext`.
+ * 
+ * `colVersion` is copied given it is unclear
+ * what the behavior is of calling `sqlite3_column_x` on
+ * the same column multiple times with, potentially,
+ * different types.
+ * 
+ * `colVersions` is used in the implementation as
+ * a text column in order to fetch the correct columns
+ * from the physical row.
+ * 
+ * Everything allocated here must be constructed in
+ * changesOpen and released in changesCrsrFinalize
+ */
 typedef struct crsql_Changes_cursor crsql_Changes_cursor;
 struct crsql_Changes_cursor
 {
-  sqlite3_vtab_cursor base; /* Base class - must be first */
+  sqlite3_vtab_cursor base;
 
   crsql_Changes_vtab *pTab;
 
-  // The statement that is returning the identifiers
-  // of what has changed
   sqlite3_stmt *pChangesStmt;
   sqlite3_stmt *pRowStmt;
 
@@ -49,13 +110,18 @@ struct crsql_Changes_cursor
   sqlite3_int64 version;
 };
 
+/**
+ * Pulls all table infos for all crrs present in the database.
+ * Run once at vtab initialization -- see docs on crsql_Changes_vtab
+ * for the constraints this creates.
+ */
 int crsql_pullAllTableInfos(
     sqlite3 *db,
-    crsql_TableInfo ***rTableInfos,
+    crsql_TableInfo ***pzpTableInfos,
     int *rTableInfosLen,
     char **errmsg)
 {
-  char **rClockTableNames = 0;
+  char **zzClockTableNames = 0;
   int rNumCols = 0;
   int rNumRows = 0;
   int rc = SQLITE_OK;
@@ -64,7 +130,7 @@ int crsql_pullAllTableInfos(
   rc = sqlite3_get_table(
       db,
       CLOCK_TABLES_SELECT,
-      &rClockTableNames,
+      &zzClockTableNames,
       &rNumRows,
       &rNumCols,
       0);
@@ -72,7 +138,7 @@ int crsql_pullAllTableInfos(
   if (rc != SQLITE_OK || rNumRows == 0)
   {
     *errmsg = sqlite3_mprintf("crsql internal error discovering crr tables.");
-    sqlite3_free_table(rClockTableNames);
+    sqlite3_free_table(zzClockTableNames);
     return SQLITE_ERROR;
   }
 
@@ -81,41 +147,34 @@ int crsql_pullAllTableInfos(
   memset(tableInfos, 0, rNumRows * sizeof(crsql_TableInfo *));
   for (int i = 0; i < rNumRows; ++i)
   {
-    // Strip __crsql_clock suffix.
     // +1 since tableNames includes a row for column headers
-    char *baseTableName = strndup(rClockTableNames[i + 1], strlen(rClockTableNames[i + 1]) - __CRSQL_CLOCK_LEN);
+    // Strip __crsql_clock suffix.
+    char *baseTableName = strndup(zzClockTableNames[i + 1], strlen(zzClockTableNames[i + 1]) - __CRSQL_CLOCK_LEN);
     rc = crsql_getTableInfo(db, baseTableName, &tableInfos[i], errmsg);
     sqlite3_free(baseTableName);
 
     if (rc != SQLITE_OK)
     {
-      sqlite3_free_table(rClockTableNames);
+      sqlite3_free_table(zzClockTableNames);
       crsql_freeAllTableInfos(tableInfos, rNumRows);
       return rc;
     }
   }
 
-  sqlite3_free_table(rClockTableNames);
+  sqlite3_free_table(zzClockTableNames);
 
-  *rTableInfos = tableInfos;
+  *pzpTableInfos = tableInfos;
   *rTableInfosLen = rNumRows;
 
   return SQLITE_OK;
 }
 
-/*
-** The changesVtabConnect() method is invoked to create a new
-** template virtual table.
-**
-** Think of this routine as the constructor for templatevtab_vtab objects.
-**
-** All this routine needs to do is:
-**
-**    (1) Allocate the templatevtab_vtab object and initialize all fields.
-**
-**    (2) Tell SQLite (via the sqlite3_declare_vtab() interface) what the
-**        result set of queries against the virtual table will look like.
-*/
+/**
+ * Created when the virtual table is initialized.
+ * This happens when the vtab is first used in a given connection.
+ * The method allocated the crsql_Changes_vtab for use for the duration
+ * of the connection.
+ */
 static int changesConnect(
     sqlite3 *db,
     void *pAux,
@@ -154,15 +213,19 @@ static int changesConnect(
   rc = crsql_pullAllTableInfos(db, &(pNew->tableInfos), &(pNew->tableInfosLen), &(*ppVtab)->zErrMsg);
   if (rc != SQLITE_OK) {
     crsql_freeAllTableInfos(pNew->tableInfos, pNew->tableInfosLen);
+    sqlite3_free(pNew);
     return rc;
   }
 
   return rc;
 }
 
-/*
-** Destructor for Changes_vtab objects
-*/
+/**
+ * Called when the connection closes to free
+ * all resources allocated by `changesConnect`
+ * 
+ * I.e., free everything in `crsql_Changes_vtab` / `pVtab`
+ */
 static int changesDisconnect(sqlite3_vtab *pVtab)
 {
   crsql_Changes_vtab *p = (crsql_Changes_vtab *)pVtab;
@@ -173,9 +236,10 @@ static int changesDisconnect(sqlite3_vtab *pVtab)
   return SQLITE_OK;
 }
 
-/*
-** Constructor for a new Changes cursors object.
-*/
+/**
+ * Called to allocate a cursor for use in executing a query against
+ * the virtual table.
+ */
 static int changesOpen(sqlite3_vtab *p, sqlite3_vtab_cursor **ppCursor)
 {
   crsql_Changes_cursor *pCur;
@@ -193,7 +257,7 @@ static int changesOpen(sqlite3_vtab *p, sqlite3_vtab_cursor **ppCursor)
 static int changesCrsrFinalize(crsql_Changes_cursor *crsr)
 {
   // Assign pointers to null after freeing
-  // since we can get into this twice for the same object.
+  // since we can get into this twice for the same cursor object.
   int rc = SQLITE_OK;
   rc += sqlite3_finalize(crsr->pChangesStmt);
   crsr->pChangesStmt = 0;
@@ -208,9 +272,19 @@ static int changesCrsrFinalize(crsql_Changes_cursor *crsr)
   return rc;
 }
 
-/*
-** Destructor for a Changes cursor.
-*/
+/**
+ * Called to reclaim all of the resources allocated in `changesOpen`
+ * once a query against the virtual table has completed.
+ * 
+ * We, of course, do not de-allocated the `pTab` reference
+ * given `pTab` must persist for the life of the connection.
+ * 
+ * `pChangesStmt` and `pRowStmt` must be finalized.
+ * 
+ * `colVrsns` does not need to be freed as it comes from
+ * `pChangesStmt` thus finalizing `pChangesStmt` will
+ * release `colVrsnsr`
+ */
 static int changesClose(sqlite3_vtab_cursor *cur)
 {
   crsql_Changes_cursor *pCur = (crsql_Changes_cursor *)cur;
@@ -219,9 +293,15 @@ static int changesClose(sqlite3_vtab_cursor *cur)
   return SQLITE_OK;
 }
 
-/*
-** Return the rowid for the current row.
-*/
+/**
+ * version is guaranteed to be unique (it increases on every write)
+ * thus we use it for the rowid.
+ * 
+ * Depending on how sqlite treats calls to `xUpdate` we may
+ * shift to a `without rowid` table and use `table + pk` concated
+ * as the primary key. xUpdate requires a single column to act
+ * as the primary key, hence the concatenation that'd be required.
+ */
 static int changesRowid(sqlite3_vtab_cursor *cur, sqlite_int64 *pRowid)
 {
   crsql_Changes_cursor *pCur = (crsql_Changes_cursor *)cur;
@@ -229,16 +309,21 @@ static int changesRowid(sqlite3_vtab_cursor *cur, sqlite_int64 *pRowid)
   return SQLITE_OK;
 }
 
-/*
-** Return TRUE if the cursor has been moved off of the last
-** row of output.
-*/
+/**
+ * Returns true if the cursor has been moved off the last row.
+ * `pChangesStmt` is finalized and set to null when this is the case as we
+ * finalize `pChangeStmt` in `changesNext` when it returns `SQLITE_DONE`
+ */
 static int changesEof(sqlite3_vtab_cursor *cur)
 {
   crsql_Changes_cursor *pCur = (crsql_Changes_cursor *)cur;
   return pCur->pChangesStmt == 0;
 }
 
+/**
+ * Construct the query to grab the changes made against
+ * rows in a given table
+ */
 char *crsql_changesQueryForTable(crsql_TableInfo *tableInfo)
 {
   if (tableInfo->pksLen == 0)
@@ -266,6 +351,10 @@ char *crsql_changesQueryForTable(crsql_TableInfo *tableInfo)
   return zSql;
 }
 
+/**
+ * Union all the crr tables together to get a comprehensive
+ * set of changes
+ */
 char *crsql_changesUnionQuery(
     crsql_TableInfo **tableInfos,
     int tableInfosLen)
@@ -312,6 +401,10 @@ char *crsql_changesUnionQuery(
   // %z frees unionsStr https://www.sqlite.org/printf.html#percentz
 }
 
+/**
+ * Pull the column infos that represent the cids in
+ * the version map.
+ */
 crsql_ColumnInfo *crsql_pickColumnInfosFromVersionMap(
     sqlite3 *db,
     crsql_ColumnInfo *columnInfos,
@@ -327,7 +420,7 @@ crsql_ColumnInfo *crsql_pickColumnInfosFromVersionMap(
   int rc = SQLITE_OK;
   char *zSql = sqlite3_mprintf("SELECT key as cid FROM json_each(?)");
 
-  sqlite3_stmt *pStmt;
+  sqlite3_stmt *pStmt = 0;
   rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
   sqlite3_free(zSql);
 
@@ -364,18 +457,35 @@ crsql_ColumnInfo *crsql_pickColumnInfosFromVersionMap(
     rc = sqlite3_step(pStmt);
     ++i;
   }
+  sqlite3_finalize(pStmt);
 
   if (i != numVersionCols)
   {
     sqlite3_free(ret);
-    sqlite3_finalize(pStmt);
     return 0;
   }
 
-  sqlite3_finalize(pStmt);
   return ret;
 }
 
+/**
+ * Create the query to pull the backing data from the actual row based
+ * on the version mape of changed columns.
+ * 
+ * This pulls all columns that have changed from the row.
+ * The values of the columns are quote-concated for compliance
+ * with union query constraints. I.e., that all tables must have same
+ * output number of columns.
+ * 
+ * TODO: potential improvement would be to store a binary
+ * representation of the data via flat buffers.
+ * 
+ * This will fill pRowStmt in the cursor.
+ * 
+ * TODO: We could theoretically prepare all of these queries up 
+ * front on vtab initialization so we don't have to
+ * re-compile them for each row fetched.
+ */
 char *crsql_rowPatchDataQuery(
     sqlite3 *db,
     crsql_TableInfo *tblInfo,
@@ -428,9 +538,17 @@ char *crsql_rowPatchDataQuery(
   return zSql;
 }
 
-/*
-** Advance a Changes_cursor to its next row of output.
-*/
+/**
+ * Advances our Changes_cursor to its next row of output.
+ * 
+ * 1. steps pChangesStmt
+ * 2. creates a pRowStmt for the latest row
+ * 3. saves off `versionCols` to prevent a `sqlite3_column_text` followed by
+ * `sqlite3_column_value` (in the changeColumn method) which seems to have 
+ * undefined behavior / potentially result in freeing.
+ * ^ TODO: is this a true problem? Or can we pass thru version cols
+ * as we do with other cols?
+ */
 static int changesNext(sqlite3_vtab_cursor *cur)
 {
   crsql_Changes_cursor *pCur = (crsql_Changes_cursor *)cur;
@@ -487,16 +605,20 @@ static int changesNext(sqlite3_vtab_cursor *cur)
     return SQLITE_ERROR;
   }
 
+  // TODO: we should require pks in a validation step when
+  // building crrs
   if (tblInfo->pksLen == 0)
   {
-    // TODO set error msg
-    // require pks in `crsql_as_crr`
     crsql_freeTableInfo(tblInfo);
     pTabBase->zErrMsg = sqlite3_mprintf("crr table %s is missing primary key columns", tblInfo->tblName);
     return SQLITE_ERROR;
   }
 
   // TODO: handle delete patch case
+  // There'll be a -1 colVrsn col.
+  // And no need for pRowStmt.
+  // Ret -1 for delete case for below?
+  // Set a marker on the cursor that it represents a deleted row?
   char *zSql = crsql_rowPatchDataQuery(pCur->pTab->db, tblInfo, numCols, colVrsns, pks);
   if (zSql == 0)
   {
@@ -514,7 +636,6 @@ static int changesNext(sqlite3_vtab_cursor *cur)
     return rc;
   }
 
-  // TODO: handle the row delete case. There will be now row to fetch in that case.
   rc = sqlite3_step(pRowStmt);
   if (rc != SQLITE_ROW)
   {
@@ -534,10 +655,10 @@ static int changesNext(sqlite3_vtab_cursor *cur)
   return rc;
 }
 
-/*
-** Return values of columns for the row at which the templatevtab_cursor
-** is currently pointing.
-*/
+/**
+ * Returns volums for the row at which
+ * the cursor currently resides.
+ */
 static int changesColumn(
     sqlite3_vtab_cursor *cur, /* The cursor */
     sqlite3_context *ctx,     /* First argument to sqlite3_result_...() */
@@ -545,7 +666,6 @@ static int changesColumn(
 )
 {
   crsql_Changes_cursor *pCur = (crsql_Changes_cursor *)cur;
-  // TODO: in the future, return a protobuf.
   switch (i)
   {
     // we clean up the cursor on moving to the next result
@@ -576,12 +696,13 @@ static int changesColumn(
   return SQLITE_OK;
 }
 
-/*
-** This method is called to "rewind" the templatevtab_cursor object back
-** to the first row of output.  This method is always called at least
-** once prior to any call to templatevtabColumn() or templatevtabRowid() or
-** templatevtabEof().
-*/
+/**
+ * Invoked to kick off the pulling of rows from the virtual table.
+ * Provides the constraints with which the vtab can work with
+ * to compute what rows to pull.
+ * 
+ * Provided constraints are filled in by the changesBestIndex method.
+ */
 static int changesFilter(
     sqlite3_vtab_cursor *pVtabCursor,
     int idxNum, const char *idxStr,
@@ -594,28 +715,29 @@ static int changesFilter(
   sqlite3 *db = pTab->db;
   char *err = 0;
 
+  // This should never happen. pChangesStmt should be finalized
+  // before filter is ever invoked.
   if (pCrsr->pChangesStmt)
   {
     sqlite3_finalize(pCrsr->pChangesStmt);
     pCrsr->pChangesStmt = 0;
   }
 
-  // now construct and prepare our union for fetching changes
+  // construct and prepare our union for fetching changes
   char *zSql = crsql_changesUnionQuery(pTab->tableInfos, pTab->tableInfosLen);
 
   if (zSql == 0)
   {
     pTabBase->zErrMsg = sqlite3_mprintf("crsql internal error generating the query to extract changes.");
-    crsql_freeAllTableInfos(pTab->tableInfos, pTab->tableInfosLen);
     return SQLITE_ERROR;
   }
 
   sqlite3_stmt *pStmt = 0;
   rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
+  sqlite3_free(zSql);
   if (rc != SQLITE_OK)
   {
     pTabBase->zErrMsg = sqlite3_mprintf("crsql internal error preparing the statement to extract changes.");
-    crsql_freeAllTableInfos(pTab->tableInfos, pTab->tableInfosLen);
     sqlite3_finalize(pStmt);
     return rc;
   }
@@ -656,10 +778,7 @@ static int changesFilter(
   }
 
   pCrsr->pChangesStmt = pStmt;
-
   return changesNext((sqlite3_vtab_cursor *)pCrsr);
-
-  // return SQLITE_OK;
 }
 
 /*
@@ -673,7 +792,6 @@ static int changesBestIndex(
     sqlite3_vtab *tab,
     sqlite3_index_info *pIdxInfo)
 {
-  // TODO: require both params?
   int idxNum = 0;
   int versionIdx = -1;
   int requestorIdx = -1;
@@ -743,18 +861,6 @@ static int changesBestIndex(
   }
 
   pIdxInfo->idxNum = idxNum;
-  return SQLITE_OK;
-}
-
-int crsql_mergeDelete()
-{
-  // argv[0] is the primary key of the thing to delete
-  // this is a bit problematic... as we need the pks and table rather than the version.
-  // we could change the pk to be pk and table concated...
-  // or we can preclude explicit deletes and do the delete on insert
-
-  // TODO: should we accept an actual delete statement or..
-  // understand an insert could be a delete post merge?
   return SQLITE_OK;
 }
 

@@ -1,5 +1,10 @@
 todo:
 
+- bump glob version at end of patch tx
+  - will need to save max of largest version seen during patching
+  - can we save this on the vtab struct?
+    - vtab struct is one per connection
+    - need a cas instruction to swap db vrs if gt existing vrs
 - schema comparison before sync
   - ensure schemas are at same or compatible versions...
 - pk validation

@@ -70,6 +70,8 @@ struct crsql_Changes_vtab
 
   crsql_TableInfo **tableInfos;
   int tableInfosLen;
+
+  sqlite3_int64 maxSeenPatchVersion;
 };
 
 /**
@@ -210,6 +212,7 @@ static int changesConnect(
   }
   memset(pNew, 0, sizeof(*pNew));
   pNew->db = db;
+  pNew->maxSeenPatchVersion = MIN_POSSIBLE_DB_VERSION;
 
   rc = crsql_pullAllTableInfos(db, &(pNew->tableInfos), &(pNew->tableInfosLen), &(*ppVtab)->zErrMsg);
   if (rc != SQLITE_OK)
@@ -1071,7 +1074,7 @@ int crsql_mergeInsert(
     sqlite3_vtab *pVTab,
     int argc,
     sqlite3_value **argv,
-    sqlite_int64 *pRowid,
+    sqlite3_int64 *pRowid,
     char **errmsg)
 {
   // he argv[1] parameter is the rowid of a new row to be inserted into the virtual table.
@@ -1291,7 +1294,7 @@ int changesApply(
     sqlite3_vtab *pVTab,
     int argc,
     sqlite3_value **argv,
-    sqlite_int64 *pRowid)
+    sqlite3_int64 *pRowid)
 {
   int argv0Type = sqlite3_value_type(argv[0]);
   char *errmsg;
@@ -1321,6 +1324,32 @@ int changesApply(
   return SQLITE_OK;
 }
 
+static int changesTxBegin(sqlite3_vtab *pVTab) {
+  int rc = SQLITE_OK;
+  crsql_Changes_vtab *tab = (crsql_Changes_vtab *)pVTab;
+  tab->maxSeenPatchVersion = MIN_POSSIBLE_DB_VERSION;
+  return rc;
+}
+
+static int changesTxCommit(sqlite3_vtab *pVTab) {
+  // cas maxPatchVersion to db version iff maxPatchVersion > db version
+  // reset maxPatchVersion
+  int rc = SQLITE_OK;
+
+  // int priorDbVersion = 
+  // do {
+
+  // } while (!__sync_bool_compare_and_swap());
+  return rc;
+}
+
+static int changesTxRollback(sqlite3_vtab *pVTab) {
+  int rc = SQLITE_OK;
+  crsql_Changes_vtab *tab = (crsql_Changes_vtab *)pVTab;
+  tab->maxSeenPatchVersion = MIN_POSSIBLE_DB_VERSION;
+  return rc;
+}
+
 sqlite3_module crsql_changesModule = {
     /* iVersion    */ 0,
     /* xCreate     */ 0,
@@ -1336,10 +1365,10 @@ sqlite3_module crsql_changesModule = {
     /* xColumn     */ changesColumn,
     /* xRowid      */ changesRowid,
     /* xUpdate     */ changesApply,
-    /* xBegin      */ 0,
+    /* xBegin      */ changesTxBegin,
     /* xSync       */ 0,
-    /* xCommit     */ 0,
-    /* xRollback   */ 0,
+    /* xCommit     */ changesTxCommit,
+    /* xRollback   */ changesTxRollback,
     /* xFindMethod */ 0,
     /* xRename     */ 0,
     /* xSavepoint  */ 0,

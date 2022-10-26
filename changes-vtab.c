@@ -495,6 +495,9 @@ char *crsql_extractPkWhereList(
   {
     // this is safe since pks are extracted as `quote` in the prior queries
     // %z will de-allocate pksArr[i] so we can re-allocate it in the assignment
+    // TODO: we currently invoke this in a non safe case
+    // where pksArr is receive from a network socket rather than the
+    // local db.
     pksArr[i] = sqlite3_mprintf("\"%s\" = %z", tblInfo->pks[i].name, pksArr[i]);
   }
 
@@ -1102,6 +1105,7 @@ int crsql_mergeInsert(
     return SQLITE_ERROR;
   }
 
+  // TODO: we can't trust `insertPks`
   char *pkWhereList = crsql_extractPkWhereList(tblInfo, (const char *)insertPks);
   if (pkWhereList == 0)
   {

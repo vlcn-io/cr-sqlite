@@ -26,4 +26,5 @@ char *crsql_rowPatchDataQuery(
 int *crsql_allReceivedCids(
   sqlite3 *db,
   const unsigned char *colVrsns,
-  int totalNumCols);
+  int totalNumCols,
+  int *rNumReceivedCids);

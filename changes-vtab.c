@@ -504,6 +504,10 @@ char *crsql_extractPkWhereList(
   return ret;
 }
 
+// char **crsql_extractValList() {
+
+// }
+
 /**
  * Create the query to pull the backing data from the actual row based
  * on the version mape of changed columns.
@@ -886,7 +890,8 @@ static int changesBestIndex(
 int *crsql_allReceivedCids(
     sqlite3 *db,
     const unsigned char *colVrsns,
-    int totalNumCols)
+    int totalNumCols,
+    int *rNumReceivedCids)
 {
   int rc = SQLITE_OK;
   sqlite3_stmt *pStmt = 0;
@@ -931,6 +936,7 @@ int *crsql_allReceivedCids(
     return 0;
   }
 
+  *rNumReceivedCids = numReceivedCids;
   return ret;
 }
 
@@ -1012,8 +1018,38 @@ int *crsql_allChangedCids(
   }
 
   // run zSql
+  sqlite3_stmt *pStmt = 0;
+  int rc = sqlite3_prepare(db, zSql, -1, &pStmt, 0);
+  sqlite3_free(zSql);
 
-  return 0;
+  if (rc != SQLITE_OK) {
+    sqlite3_finalize(pStmt);
+    return 0;
+  }
+
+  int *ret = sqlite3_malloc(totalNumCols * sizeof *ret);
+  memset(ret, 0, totalNumCols * sizeof *ret);
+  rc = sqlite3_step(pStmt);
+  int i = 0;
+  while (rc == SQLITE_ROW) {
+    int cid = sqlite3_column_int(pStmt, 0);
+    if (cid > totalNumCols || i >= totalNumCols) {
+      sqlite3_free(ret);
+      sqlite3_finalize(pStmt);
+      return 0;
+    }
+    ret[i] = cid;
+    ++i;
+    rc = sqlite3_step(pStmt);
+  }
+
+  if (rc != SQLITE_DONE) {
+    sqlite3_free(ret);
+    sqlite3_finalize(pStmt);
+    return 0;
+  }
+
+  return ret;
 }
 
 int crsql_mergeInsert(
@@ -1048,27 +1084,21 @@ int crsql_mergeInsert(
     return SQLITE_ERROR;
   }
 
-  rc = sqlite3_exec(db, SET_SYNC_BIT, 0, 0, errmsg);
-  if (rc != SQLITE_OK)
-  {
-    // try to revert the sync bit -- although it should not have taken
-    // if the above failed anyway
-    sqlite3_exec(db, CLEAR_SYNC_BIT, 0, 0, 0);
-    return rc;
-  }
-
-  int *allReceivedCids = crsql_allReceivedCids(db, insertColVrsns, tblInfo->baseColsLen);
+  int numReceivedCids = 0;
+  int *allReceivedCids = crsql_allReceivedCids(db, insertColVrsns, tblInfo->baseColsLen, &numReceivedCids);
 
   if (allReceivedCids == 0)
   {
-    sqlite3_exec(db, CLEAR_SYNC_BIT, 0, 0, 0);
+    sqlite3_free(allReceivedCids);
     *errmsg = sqlite3_mprintf("crsql - failed to extract cids of changed columns");
     return SQLITE_ERROR;
   }
 
   if (allReceivedCids[0] == -1) {
+    sqlite3_free(allReceivedCids);
     *errmsg = sqlite3_mprintf("crsql - patching deletes is not yet implemented");
     // can just issue a delete via pkwherelist and be done.
+    // rc = sqlite3_exec(db, SET_SYNC_BIT, 0, 0, errmsg);
     return SQLITE_ERROR;
   }
 
@@ -1076,6 +1106,7 @@ int crsql_mergeInsert(
   if (pkWhereList == 0)
   {
     *errmsg = sqlite3_mprintf("crsql - failed decoding primary keys for insert");
+    sqlite3_free(allReceivedCids);
     return SQLITE_ERROR;
   }
 
@@ -1090,31 +1121,57 @@ int crsql_mergeInsert(
       insertSiteId,
       insertSiteIdLen,
       errmsg);
-  if (allChangedCids == 0)
+  sqlite3_free(pkWhereList);
+
+  if (allChangedCids == 0 || allChangedCidsLen + tblInfo->pksLen > tblInfo->baseColsLen)
   {
-    sqlite3_exec(db, CLEAR_SYNC_BIT, 0, 0, 0);
-    sqlite3_free(pkWhereList);
     sqlite3_free(allReceivedCids);
     return SQLITE_ERROR;
   }
 
   if (allChangedCidsLen == 0) {
-    // the patch doesn't apply
-    rc = sqlite3_exec(db, CLEAR_SYNC_BIT, 0, 0, 0);
-    sqlite3_free(pkWhereList);
-    sqlite3_free(allChangedCids);
+    // the patch doesn't apply -- we're ok and done.
+    sqlite3_free(allReceivedCids);
     sqlite3_free(allChangedCids);
     return rc;
   }
 
-  if (allChangedCidsLen + tblInfo->pksLen > tblInfo->baseColsLen) {
-    *errmsg = sqlite3_mprintf("crsql - received more columns than exist in the target table %s", tblInfo->tblName);
+  crsql_ColumnInfo columnInfosForInsert[allChangedCidsLen];
+  char **pkValsForInsert = crsql_split((const char*)insertPks, PK_DELIM, tblInfo->pksLen);
+  char **allReceivedNonPkVals = crsql_split((const char*)insertVals, PK_DELIM, numReceivedCids);
+  char *nonPkValsForInsert[allChangedCidsLen];
+
+  // TODO: handle the case where only pks to process
+  if (pkValsForInsert == 0 || allReceivedNonPkVals == 0) {
+    sqlite3_free(allReceivedCids);
+    sqlite3_free(allChangedCids);
     return SQLITE_ERROR;
   }
 
-  crsql_ColumnInfo columnInfosForInsert[allChangedCidsLen];
-  char **pkValsForInsert = 0;
-  char **colValsForInsert = 0;
+  // TODO: bounds checking
+  for (int i = 0; i < allChangedCidsLen; ++i) {
+    int cid = allChangedCids[i];
+    int valIdx = allReceivedCids[cid];
+    nonPkValsForInsert[i] = allReceivedNonPkVals[valIdx];
+    columnInfosForInsert[i] = tblInfo->baseCols[cid];
+  }
+
+  char *pkIdentifierList = crsql_asIdentifierList(tblInfo->pks, tblInfo->pksLen, 0);
+  // TODO: handle case where only pks to process
+  zSql = sqlite3_mprintf(
+    "INSERT INTO \"%s\" (%s, %z)\
+      VALUES (%z, %z)\
+      ON CONFLICT (%z) DO UPDATE\
+      %z",
+    tblInfo->tblName,
+    pkIdentifierList,
+    crsql_asIdentifierList(columnInfosForInsert, allChangedCidsLen, 0)
+  );
+
+  rc = sqlite3_exec(db, SET_SYNC_BIT, 0, 0, errmsg);
+  // don't do insert if failed to set sync bit
+  sqlite3_exec(db, CLEAR_SYNC_BIT, 0, 0, 0);
+
   /*
   - go thru allChangedCids
   - build new colInfoArray from it
@@ -1134,7 +1191,6 @@ int crsql_mergeInsert(
   // implementation must set *pRowid to the rowid of the newly inserted row
   // if argv[1] is an SQL NULL
   // sqlite3_value_type(argv[i])==SQLITE_NULL
-  sqlite3_exec(db, CLEAR_SYNC_BIT, 0, 0, 0);
   return SQLITE_OK;
 }
 

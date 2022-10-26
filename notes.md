@@ -1,5 +1,7 @@
 todo:
 
+- schema comparison before sync
+  - ensure schemas are at same or compatible versions...
 - pk validation
 - replace binding where not needs? %Q?
 - delete support

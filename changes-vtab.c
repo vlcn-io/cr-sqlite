@@ -1072,12 +1072,27 @@ int crsql_mergeInsert(
   int ignore = 0;
 
   // column values exist in argv[2] and following.
+  const int insertTblLen = sqlite3_value_bytes(argv[2 + CHANGES_SINCE_VTAB_TBL]);
+  if (insertTblLen > MAX_TBL_NAME_LEN) {
+    *errmsg = sqlite3_mprintf("crsql - table name exceeded max length");
+    return SQLITE_ERROR;
+  }
+  // safe given we only use this if it exactly matches a table name
+  // from tblInfo
   const unsigned char *insertTbl = sqlite3_value_text(argv[2 + CHANGES_SINCE_VTAB_TBL]);
+  // TODO: sanitize / assert proper quoting of pks
   const unsigned char *insertPks = sqlite3_value_text(argv[2 + CHANGES_SINCE_VTAB_PK]);
+  // TODO: sanitize / assert proper quoting of vals
   const unsigned char *insertVals = sqlite3_value_text(argv[2 + CHANGES_SINCE_VTAB_COL_VALS]);
+  // safe given we only use via %Q and json processing
   const unsigned char *insertColVrsns = sqlite3_value_text(argv[2 + CHANGES_SINCE_VTAB_COL_VRSNS]);
   // sqlite3_int64 insertVrsn = sqlite3_value_int64(argv[2 + CHANGES_SINCE_VTAB_VRSN]);
   int insertSiteIdLen = sqlite3_value_bytes(argv[2 + CHANGES_SINCE_VTAB_SITE_ID]);
+  if (insertSiteIdLen > SITE_ID_LEN) {
+    *errmsg = sqlite3_mprintf("crsql - site id exceeded max length");
+    return SQLITE_ERROR;
+  }
+  // safe given we only use siteid via `bind`
   const void *insertSiteId = sqlite3_value_blob(argv[2 + CHANGES_SINCE_VTAB_SITE_ID]);
 
   crsql_TableInfo *tblInfo = crsql_findTableInfo(pTab->tableInfos, pTab->tableInfosLen, (const char *)insertTbl);

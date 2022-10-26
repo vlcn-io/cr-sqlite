@@ -21,4 +21,7 @@
 #define TBL_DB_VERSION "__crsql_dbversion"
 #define UNION "UNION"
 
+#define MAX_TBL_NAME_LEN 2048
+#define SITE_ID_LEN 16
+
 #endif

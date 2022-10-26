@@ -27,12 +27,12 @@ SQLITE_EXTENSION_INIT1
  * DB version is incremented on trnsaction commit via a
  * commit hook.
  */
-static unsigned char siteIdBlob[] = {
+unsigned char crsql_siteIdBlob[16] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 // track if siteId was set so we don't re-initialize site id on new connections
 static int siteIdSet = 0;
-static const size_t siteIdBlobSize = sizeof(siteIdBlob);
+const size_t crsql_siteIdBlobSize = sizeof(crsql_siteIdBlob);
 
 /**
  * Cached representation of the version of the database.
@@ -87,8 +87,8 @@ static int createSiteIdTable(sqlite3 *db)
     return rc;
   }
 
-  uuid(siteIdBlob);
-  rc = sqlite3_bind_blob(pStmt, 1, siteIdBlob, siteIdBlobSize, SQLITE_STATIC);
+  uuid(crsql_siteIdBlob);
+  rc = sqlite3_bind_blob(pStmt, 1, crsql_siteIdBlob, crsql_siteIdBlobSize, SQLITE_STATIC);
   if (rc != SQLITE_OK)
   {
     return rc;
@@ -158,7 +158,7 @@ static int initSiteId(sqlite3 *db)
   siteIdFromTable = sqlite3_column_blob(pStmt, 0);
   // the blob mem returned to us will be freed so copy it.
   // https://www.sqlite.org/c3ref/column_blob.html
-  memcpy(siteIdBlob, siteIdFromTable, siteIdBlobSize);
+  memcpy(crsql_siteIdBlob, siteIdFromTable, crsql_siteIdBlobSize);
   siteIdSet = 1;
 
   sqlite3_finalize(pStmt);
@@ -278,7 +278,7 @@ static int initDbVersion(sqlite3 *db)
  */
 static void siteIdFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
-  sqlite3_result_blob(context, &siteIdBlob, siteIdBlobSize, SQLITE_STATIC);
+  sqlite3_result_blob(context, &crsql_siteIdBlob, crsql_siteIdBlobSize, SQLITE_STATIC);
 }
 
 /**

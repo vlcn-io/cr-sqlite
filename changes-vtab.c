@@ -1,15 +1,15 @@
 /**
  * The changes virtual table is an eponymous virtual table which can be used
  * to fetch and apply patches to a db.
- * 
+ *
  * To fetch a changeset:
  * ```sql
  * SELECT * FROM crsql_chages WHERE site_id != SITE_ID AND version > V
  * ```
- * 
+ *
  * The site id parameter is used to prevent a site from fetching its own changes that were
  * patched into the remote.
- * 
+ *
  * The version parameter is used to get changes after a specific version.
  * Sites should keep track of the latest version they've received from other sites
  * and use that number as a cursor to fetch future changes.
@@ -25,7 +25,7 @@
  *    "last seen" version from other sites
  * 6. site_id - the site_id that is responsible for the update. If this is 0
  *    then the update was made locally.
- * 
+ *
  * To apply a changeset:
  * ```sql
  * INSERT INTO changes (table, pk, col_vals, col_versions, site_id) VALUES (...)
@@ -37,26 +37,27 @@
 #include <assert.h>
 #include "consts.h"
 #include "util.h"
+#include "crsqlite.h"
 
 /**
  * Data maintained by the virtual table across
  * queries.
- * 
+ *
  * Per-query data is kept on crsql_Changes_cursor
- * 
+ *
  * All table infos are fetched on vtab initialization.
  * This creates the constraint that if the schema of a crr
  * is modified after the virtual table definition is loaded
  * then it will not be or not be correctly processed
  * by the virtual table.
- * 
+ *
  * Given that, if a schema modification is made
- * to a crr table then the changes vtab needs to be 
+ * to a crr table then the changes vtab needs to be
  * reloaded.
- * 
+ *
  * The simpleset way to accomplish this is to close
  * and re-open the connection responsible for syncing.
- * 
+ *
  * In practice this should generally not be a problem
  * as application startup would establish, migrated, etc. the schemas
  * after which a sync process would connect.
@@ -75,24 +76,24 @@ struct crsql_Changes_vtab
  * Cursor used to return patches.
  * This is instantiated per-query and updated
  * on each row being returned.
- * 
+ *
  * Contains a reference to the vtab structure in order
  * get a handle on the db which to fetch from
  * the underlying crr tables.
- * 
+ *
  * Most columns are passed-through from
  * `pChangesStmt` and `pRowStmt` which are stepped
  * in each call to `changesNext`.
- * 
+ *
  * `colVersion` is copied given it is unclear
  * what the behavior is of calling `sqlite3_column_x` on
  * the same column multiple times with, potentially,
  * different types.
- * 
+ *
  * `colVersions` is used in the implementation as
  * a text column in order to fetch the correct columns
  * from the physical row.
- * 
+ *
  * Everything allocated here must be constructed in
  * changesOpen and released in changesCrsrFinalize
  */
@@ -211,7 +212,8 @@ static int changesConnect(
   pNew->db = db;
 
   rc = crsql_pullAllTableInfos(db, &(pNew->tableInfos), &(pNew->tableInfosLen), &(*ppVtab)->zErrMsg);
-  if (rc != SQLITE_OK) {
+  if (rc != SQLITE_OK)
+  {
     crsql_freeAllTableInfos(pNew->tableInfos, pNew->tableInfosLen);
     sqlite3_free(pNew);
     return rc;
@@ -223,7 +225,7 @@ static int changesConnect(
 /**
  * Called when the connection closes to free
  * all resources allocated by `changesConnect`
- * 
+ *
  * I.e., free everything in `crsql_Changes_vtab` / `pVtab`
  */
 static int changesDisconnect(sqlite3_vtab *pVtab)
@@ -275,12 +277,12 @@ static int changesCrsrFinalize(crsql_Changes_cursor *crsr)
 /**
  * Called to reclaim all of the resources allocated in `changesOpen`
  * once a query against the virtual table has completed.
- * 
+ *
  * We, of course, do not de-allocated the `pTab` reference
  * given `pTab` must persist for the life of the connection.
- * 
+ *
  * `pChangesStmt` and `pRowStmt` must be finalized.
- * 
+ *
  * `colVrsns` does not need to be freed as it comes from
  * `pChangesStmt` thus finalizing `pChangesStmt` will
  * release `colVrsnsr`
@@ -296,7 +298,7 @@ static int changesClose(sqlite3_vtab_cursor *cur)
 /**
  * version is guaranteed to be unique (it increases on every write)
  * thus we use it for the rowid.
- * 
+ *
  * Depending on how sqlite treats calls to `xUpdate` we may
  * shift to a `without rowid` table and use `table + pk` concated
  * as the primary key. xUpdate requires a single column to act
@@ -468,31 +470,10 @@ crsql_ColumnInfo *crsql_pickColumnInfosFromVersionMap(
   return ret;
 }
 
-/**
- * Create the query to pull the backing data from the actual row based
- * on the version mape of changed columns.
- * 
- * This pulls all columns that have changed from the row.
- * The values of the columns are quote-concated for compliance
- * with union query constraints. I.e., that all tables must have same
- * output number of columns.
- * 
- * TODO: potential improvement would be to store a binary
- * representation of the data via flat buffers.
- * 
- * This will fill pRowStmt in the cursor.
- * 
- * TODO: We could theoretically prepare all of these queries up 
- * front on vtab initialization so we don't have to
- * re-compile them for each row fetched.
- */
-char *crsql_rowPatchDataQuery(
-    sqlite3 *db,
-    crsql_TableInfo *tblInfo,
-    int numVersionCols,
-    const char *colVrsns,
-    const char *pks)
-{
+char *crsql_extractPkWhereList(
+  crsql_TableInfo *tblInfo,
+  const char *pks
+) {
   char **pksArr = 0;
   if (tblInfo->pksLen == 1)
   {
@@ -517,6 +498,37 @@ char *crsql_rowPatchDataQuery(
     pksArr[i] = sqlite3_mprintf("\"%s\" = %z", tblInfo->pks[i].name, pksArr[i]);
   }
 
+  // join2 will free the contents of pksArr given identity is a pass-thru
+  char * ret = crsql_join2((char *(*)(const char *)) & crsql_identity, pksArr, tblInfo->pksLen, " AND ");
+  sqlite3_free(pksArr);
+  return ret;
+}
+
+/**
+ * Create the query to pull the backing data from the actual row based
+ * on the version mape of changed columns.
+ *
+ * This pulls all columns that have changed from the row.
+ * The values of the columns are quote-concated for compliance
+ * with union query constraints. I.e., that all tables must have same
+ * output number of columns.
+ *
+ * TODO: potential improvement would be to store a binary
+ * representation of the data via flat buffers.
+ *
+ * This will fill pRowStmt in the cursor.
+ *
+ * TODO: We could theoretically prepare all of these queries up
+ * front on vtab initialization so we don't have to
+ * re-compile them for each row fetched.
+ */
+char *crsql_rowPatchDataQuery(
+    sqlite3 *db,
+    crsql_TableInfo *tblInfo,
+    int numVersionCols,
+    const char *colVrsns,
+    const char *pks)
+{
   crsql_ColumnInfo *changedCols = crsql_pickColumnInfosFromVersionMap(
       db,
       tblInfo->baseCols,
@@ -526,25 +538,23 @@ char *crsql_rowPatchDataQuery(
   char *colsConcatList = crsql_quoteConcat(changedCols, numVersionCols);
   sqlite3_free(changedCols);
 
+  char *pkWhereList = crsql_extractPkWhereList(tblInfo, (const char*)pks);
   char *zSql = sqlite3_mprintf(
       "SELECT %z FROM \"%s\" WHERE %z",
       colsConcatList,
       tblInfo->tblName,
-      // given identity is a pass-thru, pksArr will have its contents freed after calling this
-      crsql_join2((char *(*)(const char *)) & crsql_identity, pksArr, tblInfo->pksLen, " AND "));
+      pkWhereList);
 
-  // contents of pksArr was already freed via join2 and crsql_identity. See above.
-  sqlite3_free(pksArr);
   return zSql;
 }
 
 /**
  * Advances our Changes_cursor to its next row of output.
- * 
+ *
  * 1. steps pChangesStmt
  * 2. creates a pRowStmt for the latest row
  * 3. saves off `versionCols` to prevent a `sqlite3_column_text` followed by
- * `sqlite3_column_value` (in the changeColumn method) which seems to have 
+ * `sqlite3_column_value` (in the changeColumn method) which seems to have
  * undefined behavior / potentially result in freeing.
  * ^ TODO: is this a true problem? Or can we pass thru version cols
  * as we do with other cols?
@@ -700,7 +710,7 @@ static int changesColumn(
  * Invoked to kick off the pulling of rows from the virtual table.
  * Provides the constraints with which the vtab can work with
  * to compute what rows to pull.
- * 
+ *
  * Provided constraints are filled in by the changesBestIndex method.
  */
 static int changesFilter(
@@ -878,8 +888,6 @@ int crsql_mergeInsert(
   crsql_Changes_vtab *pTab = (crsql_Changes_vtab *)pVTab;
   sqlite3 *db = pTab->db;
   char *zSql = 0;
-  char **cidsAndVersions = 0;
-  int numChangedCols = 0;
   int ignore = 0;
 
   // column values exist in argv[2] and following.
@@ -891,6 +899,12 @@ int crsql_mergeInsert(
   int insertSiteIdLen = sqlite3_value_bytes(argv[2 + CHANGES_SINCE_VTAB_SITE_ID]);
   const char *insertSiteId = sqlite3_value_blob(argv[2 + CHANGES_SINCE_VTAB_SITE_ID]);
 
+  crsql_TableInfo *tblInfo = crsql_findTableInfo(pTab->tableInfos, pTab->tableInfosLen, (const char*)insertTbl);
+  if (tblInfo == 0) {
+    *errmsg = sqlite3_mprintf("crsql - could not find the schema information for table %s", insertTbl);
+    return SQLITE_ERROR;
+  }
+
   rc = sqlite3_exec(db, SET_SYNC_BIT, 0, 0, errmsg);
   if (rc != SQLITE_OK)
   {
@@ -900,34 +914,107 @@ int crsql_mergeInsert(
     return rc;
   }
 
-  zSql = sqlite3_mprintf("SELECT key as cid, value as version FROM json_each(%Q)", insertColVrsns);
-  rc = sqlite3_get_table(db, zSql, &cidsAndVersions, &numChangedCols, &ignore, errmsg);
+  // cmp insertSiteId
+  int siteComparison = memcmp(
+      insertSiteId,
+      crsql_siteIdBlob,
+      insertSiteIdLen < crsql_siteIdBlobSize ? insertSiteIdLen : crsql_siteIdBlobSize);
+
+  if (siteComparison == 0)
+  {
+    if (insertSiteIdLen > crsql_siteIdBlobSize)
+    {
+      siteComparison = 1;
+    }
+    else if (insertSiteIdLen < crsql_siteIdBlobSize)
+    {
+      siteComparison = -1;
+    }
+    else
+    {
+      // we're patching into our own site? Makes no sense.
+      sqlite3_exec(db, CLEAR_SYNC_BIT, 0, 0, 0);
+      *errmsg = sqlite3_mprintf("crsql - a site is trying to patch itself.");
+      return SQLITE_ERROR;
+    }
+  }
+
+  char **allReceivedCidsTbl = 0;
+  int numReceivedCids = 0;
+  char **allChangedCidsTbl = 0;
+  int numChangedCids = 0;
+  zSql = sqlite3_mprintf("SELECT key as cid FROM json_each(%Q)", insertColVrsns);
+  rc = sqlite3_get_table(db, zSql, &allReceivedCidsTbl, &numReceivedCids, &ignore, errmsg);
   sqlite3_free(zSql);
 
-  if (rc != SQLITE_OK || numChangedCols == 0)
+  if (rc != SQLITE_OK)
   {
     sqlite3_exec(db, CLEAR_SYNC_BIT, 0, 0, 0);
-    sqlite3_free_table(cidsAndVersions);
+    sqlite3_free_table(allReceivedCidsTbl);
     return rc;
   }
 
-  // construct table info for given table...
-  // can we cache it? we don't want to reconstruct for every row...
-  // or just pull table infos into vtab
-  // and require users of the vtab to not connect their syncing until _after_
-  // all schema changes have been made. Or destroy and re-create connection
-  // if schema changes are made.
+  char * pkWhereList = crsql_extractPkWhereList(tblInfo, (const char*)insertPks);
+  if (pkWhereList == 0) {
+    *errmsg = sqlite3_mprintf("crsql - failed decoding primary keys for insert");
+    return SQLITE_ERROR;
+  }
+
+  if (siteComparison > 0)
+  {
+    zSql = sqlite3_mprintf(
+        "SELECT key as cid FROM json_each(%Q)\
+          LEFT JOIN \"%s__crsql_clock\"\
+          WHERE %z AND value >= \"%s__crsql_clock\".__crsql_version",
+        insertColVrsns,
+        insertTbl,
+        pkWhereList,
+        insertTbl
+    );
+  }
+  else if (siteComparison < 0)
+  {
+    zSql = sqlite3_mprintf(
+        "SELECT key as cid FROM json_each(%Q)\
+          LEFT JOIN \"%s__crsql_clock\"\
+          WHERE %z AND value > \"%s__crsql_clock\".__crsql_version",
+        insertColVrsns,
+        insertTbl,
+        pkWhereList,
+        insertTbl
+    );
+  }
+  else
+  {
+    // should be impossible given prior siteComparison == 0 if statement
+    sqlite3_exec(db, CLEAR_SYNC_BIT, 0, 0, 0);
+    sqlite3_free(pkWhereList);
+    sqlite3_free_table(allReceivedCidsTbl);
+    return SQLITE_ERROR;
+  }
+
+  rc = sqlite3_get_table(db, zSql, &allChangedCidsTbl, &numChangedCids, &ignore, errmsg);
+  sqlite3_free(zSql);
+
+  // go thru changed cids
+  // craft col names
+  // pick insert
+  // insert pks
+  crsql_ColumnInfo changedColumns[numChangedCids];
+  for (int i = 0; i < numChangedCids; ++i) {
+    // allChangedCidsTbl[i + 1];
+    // changedColumns[i] = tblInfo->baseCols[];
+  }
+
+  // if -1 cid exists, is a delete
+  // for (int i = 0; i < numChangedCols; ++i) {
+  // grab col
+  // }
+
+  // insert into tbl (asIdentifierList(cols)) values ()
 
   // Algorithm:
-  // 0. toggle `crsql_insert_src` to `sync`
-  // 1. start a transaction? Or should we assume caller has done that?
-  // 2. pick cids _and_ versions from col_versions
-  // 3. fetch corresponding col version entries from clock table for the table
-  // 4. only take the ones where patch_version > local_version or patch_version = local_version and remote_site > local_site
   // 5. construct new insert statement against base table
-  //   nit: how will you prevent the trigger(s) from running?
-  //   need to register a new function that has a user data arg which we can toggle to
-  //   tell us the source of the insert. safe given sqlite connections must be accessed from 1 and only 1 thread.
   // 6. apply insert to base table. `on conflict update` the new columns.
 
   // Steps (2) & (3) & (4):
@@ -961,6 +1048,7 @@ int crsql_mergeInsert(
   // implementation must set *pRowid to the rowid of the newly inserted row
   // if argv[1] is an SQL NULL
   // sqlite3_value_type(argv[i])==SQLITE_NULL
+  sqlite3_exec(db, CLEAR_SYNC_BIT, 0, 0, 0);
   return SQLITE_OK;
 }
 

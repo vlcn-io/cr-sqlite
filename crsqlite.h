@@ -17,4 +17,7 @@ int crsql_createClockTable(
     crsql_TableInfo *tableInfo,
     char **err);
 
+unsigned char crsql_siteIdBlob[16];
+const size_t crsql_siteIdBlobSize;
+
 #endif

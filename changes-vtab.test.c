@@ -256,6 +256,7 @@ void crsqlChagesSinceVtabTestSuite()
   testChangesUnionQuery();
   testPickColumnInfosFromVersionMap();
   testRowPatchDataQuery();
+  // testExtractPkWhereList
 }
 
 // TODO: mem debugging

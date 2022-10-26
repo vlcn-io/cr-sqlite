@@ -35,6 +35,8 @@
 #include "changes-vtab.h"
 #include <string.h>
 #include <assert.h>
+#include <stdint.h>
+#include <stdatomic.h>
 #include "consts.h"
 #include "util.h"
 #include "crsqlite.h"
@@ -71,7 +73,7 @@ struct crsql_Changes_vtab
   crsql_TableInfo **tableInfos;
   int tableInfosLen;
 
-  sqlite3_int64 maxSeenPatchVersion;
+  int64_t maxSeenPatchVersion;
 };
 
 /**
@@ -1247,7 +1249,8 @@ int crsql_mergeInsert(
   sqlite3_free(pkValsForInsert);
 
   rc = sqlite3_exec(db, SET_SYNC_BIT, 0, 0, errmsg);
-  if (rc != SQLITE_OK) {
+  if (rc != SQLITE_OK)
+  {
     sqlite3_exec(db, CLEAR_SYNC_BIT, 0, 0, 0);
     return rc;
   }
@@ -1256,7 +1259,8 @@ int crsql_mergeInsert(
   sqlite3_free(zSql);
   sqlite3_exec(db, CLEAR_SYNC_BIT, 0, 0, 0);
 
-  if (rc != SQLITE_OK) {
+  if (rc != SQLITE_OK)
+  {
     return rc;
   }
 
@@ -1324,26 +1328,38 @@ int changesApply(
   return SQLITE_OK;
 }
 
-static int changesTxBegin(sqlite3_vtab *pVTab) {
+static int changesTxBegin(sqlite3_vtab *pVTab)
+{
   int rc = SQLITE_OK;
   crsql_Changes_vtab *tab = (crsql_Changes_vtab *)pVTab;
   tab->maxSeenPatchVersion = MIN_POSSIBLE_DB_VERSION;
   return rc;
 }
 
-static int changesTxCommit(sqlite3_vtab *pVTab) {
-  // cas maxPatchVersion to db version iff maxPatchVersion > db version
-  // reset maxPatchVersion
+int crsql_changesTxCommit(sqlite3_vtab *pVTab)
+{
   int rc = SQLITE_OK;
 
-  // int priorDbVersion = 
-  // do {
+  crsql_Changes_vtab *tab = (crsql_Changes_vtab *)pVTab;
+  int64_t maxSeenPatchVersion = tab->maxSeenPatchVersion;
 
-  // } while (!__sync_bool_compare_and_swap());
+  int64_t priorVersion = crsql_dbVersion;
+  while (maxSeenPatchVersion > priorVersion)
+  {
+    if (atomic_compare_exchange_weak(
+            &crsql_dbVersion,
+            &priorVersion,
+            maxSeenPatchVersion))
+    {
+      break;
+    }
+  }
+
   return rc;
 }
 
-static int changesTxRollback(sqlite3_vtab *pVTab) {
+static int changesTxRollback(sqlite3_vtab *pVTab)
+{
   int rc = SQLITE_OK;
   crsql_Changes_vtab *tab = (crsql_Changes_vtab *)pVTab;
   tab->maxSeenPatchVersion = MIN_POSSIBLE_DB_VERSION;
@@ -1367,7 +1383,7 @@ sqlite3_module crsql_changesModule = {
     /* xUpdate     */ changesApply,
     /* xBegin      */ changesTxBegin,
     /* xSync       */ 0,
-    /* xCommit     */ changesTxCommit,
+    /* xCommit     */ crsql_changesTxCommit,
     /* xRollback   */ changesTxRollback,
     /* xFindMethod */ 0,
     /* xRename     */ 0,

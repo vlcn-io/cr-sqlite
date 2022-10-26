@@ -304,6 +304,7 @@ void crsqlChagesSinceVtabTestSuite()
   // testExtractPkWhereList();
   testAllReceivedCids();
   testAllChangedCids();
+  // test crsql_changesTxCommit
 }
 
 // TODO: mem debugging

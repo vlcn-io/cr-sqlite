@@ -5,6 +5,8 @@
 SQLITE_EXTENSION_INIT3
 
 #include "tableinfo.h"
+#include <stdint.h>
+#include <stdatomic.h>
 
 #ifndef UNIT_TEST
 # define STATIC static
@@ -17,7 +19,8 @@ int crsql_createClockTable(
     crsql_TableInfo *tableInfo,
     char **err);
 
-unsigned char crsql_siteIdBlob[16];
-const size_t crsql_siteIdBlobSize;
+extern unsigned char crsql_siteIdBlob[];
+extern const size_t crsql_siteIdBlobSize;
+extern _Atomic int64_t crsql_dbVersion;
 
 #endif

@@ -12,6 +12,7 @@ SQLITE_EXTENSION_INIT1
 #include <string.h>
 #include <limits.h>
 #include <assert.h>
+#include <stdatomic.h>
 
 /**
  * Global variables to hold the site id and db version.
@@ -39,7 +40,6 @@ const size_t crsql_siteIdBlobSize = sizeof(crsql_siteIdBlob);
  *
  * This is not an unsigned int since sqlite does not support unsigned ints
  * as a data type and we do eventually write db version(s) to the db.
- *
  */
 _Atomic int64_t crsql_dbVersion = MIN_POSSIBLE_DB_VERSION;
 static int dbVersionSet = 0;

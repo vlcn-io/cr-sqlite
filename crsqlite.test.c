@@ -112,4 +112,6 @@ void crsqlTestSuite()
   // testRecreateCrrFromExisting();
   // testRequiredPrimaryKey();
   // testSyncBit();
+  // testDbVersion();
+  // testSiteId();
 }

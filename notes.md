@@ -1,6 +1,7 @@
 todo:
 
 - pk validation
+- replace binding where not needs? %Q?
 - delete support
   sentinel col vers?
   -1 col?

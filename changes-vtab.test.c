@@ -249,6 +249,51 @@ void testRowPatchDataQuery()
   assert(rc == SQLITE_OK);
 }
 
+void testAllReceivedCids() {
+  int rc = SQLITE_OK;
+  sqlite3 *db;
+  rc = sqlite3_open(":memory:", &db);
+  char *err = 0;
+
+  // test delete sentinel
+
+  // test 0 cols
+
+  // test more cols in json than cols in table
+  
+  // test bad cids in json
+
+  // test correct case
+
+  printf("\t\e[0;32mSuccess\e[0m\n");
+  fail:
+  sqlite3_free(err);
+  sqlite3_close(db);
+  assert(rc == SQLITE_OK);
+}
+
+void testAllChangedCids() {
+  int rc = SQLITE_OK;
+  sqlite3 *db;
+  rc = sqlite3_open(":memory:", &db);
+  char *err = 0;
+
+  // test 
+
+  printf("\t\e[0;32mSuccess\e[0m\n");
+  fail:
+  sqlite3_free(err);
+  sqlite3_close(db);
+  assert(rc == SQLITE_OK);
+}
+
+void memTestMergeInsert() {
+  // test delete case
+  // test nothing to merge case
+  // test normal merge
+  // test error / early returns
+}
+
 void crsqlChagesSinceVtabTestSuite()
 {
   printf("\e[47m\e[1;30mSuite: crsql_changesVtab\e[0m\n");
@@ -256,7 +301,9 @@ void crsqlChagesSinceVtabTestSuite()
   testChangesUnionQuery();
   testPickColumnInfosFromVersionMap();
   testRowPatchDataQuery();
-  // testExtractPkWhereList
+  // testExtractPkWhereList();
+  testAllReceivedCids();
+  testAllChangedCids();
 }
 
 // TODO: mem debugging

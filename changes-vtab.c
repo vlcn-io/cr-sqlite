@@ -471,9 +471,9 @@ crsql_ColumnInfo *crsql_pickColumnInfosFromVersionMap(
 }
 
 char *crsql_extractPkWhereList(
-  crsql_TableInfo *tblInfo,
-  const char *pks
-) {
+    crsql_TableInfo *tblInfo,
+    const char *pks)
+{
   char **pksArr = 0;
   if (tblInfo->pksLen == 1)
   {
@@ -499,7 +499,7 @@ char *crsql_extractPkWhereList(
   }
 
   // join2 will free the contents of pksArr given identity is a pass-thru
-  char * ret = crsql_join2((char *(*)(const char *)) & crsql_identity, pksArr, tblInfo->pksLen, " AND ");
+  char *ret = crsql_join2((char *(*)(const char *)) & crsql_identity, pksArr, tblInfo->pksLen, " AND ");
   sqlite3_free(pksArr);
   return ret;
 }
@@ -538,7 +538,7 @@ char *crsql_rowPatchDataQuery(
   char *colsConcatList = crsql_quoteConcat(changedCols, numVersionCols);
   sqlite3_free(changedCols);
 
-  char *pkWhereList = crsql_extractPkWhereList(tblInfo, (const char*)pks);
+  char *pkWhereList = crsql_extractPkWhereList(tblInfo, (const char *)pks);
   char *zSql = sqlite3_mprintf(
       "SELECT %z FROM \"%s\" WHERE %z",
       colsConcatList,
@@ -874,6 +874,148 @@ static int changesBestIndex(
   return SQLITE_OK;
 }
 
+/**
+ * Given a json map of received col versions,
+ * return an array indexed by cid that contains the index
+ * of the received col version.
+ *
+ * Returns r[0] = -1 on delete
+ *
+ * Returns 0 on failure.
+ */
+int *crsql_allReceivedCids(
+    sqlite3 *db,
+    const unsigned char *colVrsns,
+    int totalNumCols)
+{
+  int rc = SQLITE_OK;
+  sqlite3_stmt *pStmt = 0;
+  char *zSql = sqlite3_mprintf("SELECT key as cid FROM json_each(%Q)", colVrsns);
+  rc = sqlite3_prepare(db, zSql, -1, &pStmt, 0);
+  sqlite3_free(zSql);
+
+  if (rc != SQLITE_OK)
+  {
+    sqlite3_finalize(pStmt);
+    return 0;
+  }
+
+  int *ret = sqlite3_malloc(totalNumCols * sizeof *ret);
+  memset(ret, 0, totalNumCols * sizeof *ret);
+  int numReceivedCids = 0;
+  rc = sqlite3_step(pStmt);
+  while (rc == SQLITE_ROW)
+  {
+    int cid = sqlite3_column_int(pStmt, 0);
+    if (cid == DELETE_CID_SENTINEL)
+    {
+      sqlite3_finalize(pStmt);
+      ret[0] = -1;
+      return ret;
+    }
+    if (cid > totalNumCols || numReceivedCids >= totalNumCols)
+    {
+      sqlite3_free(ret);
+      sqlite3_finalize(pStmt);
+      return 0;
+    }
+    ret[cid] = numReceivedCids;
+    ++numReceivedCids;
+    rc = sqlite3_step(pStmt);
+  }
+
+  if (rc != SQLITE_DONE)
+  {
+    sqlite3_free(ret);
+    sqlite3_finalize(pStmt);
+    return 0;
+  }
+
+  return ret;
+}
+
+/**
+ * Given a json map of received col versions,
+ * return an array of the cids that should actually
+ * overwrite values on the local db.
+ *
+ * Note that this is different from `allReceivedCids` which returns
+ * an array indexed by cid containing index locations of the
+ * col version.
+ *
+ * This is a regular array containing cids.
+ *
+ * The former is used for extracting data from concatenated col vals.
+ */
+int *crsql_allChangedCids(
+    sqlite3 *db,
+    const unsigned char *insertColVrsns,
+    const unsigned char *insertTbl,
+    const char *pkWhereList,
+    int totalNumCols,
+    int *rlen,
+    const void *insertSiteId,
+    int insertSiteIdLen,
+    char **errmsg)
+{
+  char *zSql = 0;
+  // cmp insertSiteId
+  int siteComparison = memcmp(
+      insertSiteId,
+      crsql_siteIdBlob,
+      insertSiteIdLen < crsql_siteIdBlobSize ? insertSiteIdLen : crsql_siteIdBlobSize);
+
+  if (siteComparison == 0)
+  {
+    if (insertSiteIdLen > crsql_siteIdBlobSize)
+    {
+      siteComparison = 1;
+    }
+    else if (insertSiteIdLen < crsql_siteIdBlobSize)
+    {
+      siteComparison = -1;
+    }
+    else
+    {
+      // we're patching into our own site? Makes no sense.
+      *errmsg = sqlite3_mprintf("crsql - a site is trying to patch itself.");
+      return 0;
+    }
+  }
+
+  if (siteComparison > 0)
+  {
+    zSql = sqlite3_mprintf(
+        "SELECT key as cid FROM json_each(%Q)\
+          LEFT JOIN \"%s__crsql_clock\"\
+          WHERE %z AND value >= \"%s__crsql_clock\".__crsql_version",
+        insertColVrsns,
+        insertTbl,
+        pkWhereList,
+        insertTbl);
+  }
+  else if (siteComparison < 0)
+  {
+    zSql = sqlite3_mprintf(
+        "SELECT key as cid FROM json_each(%Q)\
+          LEFT JOIN \"%s__crsql_clock\"\
+          WHERE %z AND value > \"%s__crsql_clock\".__crsql_version",
+        insertColVrsns,
+        insertTbl,
+        pkWhereList,
+        insertTbl);
+  }
+  else
+  {
+    // should be impossible given prior siteComparison == 0 if statement
+    return 0;
+  }
+
+  // run zSql
+
+  return 0;
+}
+
 int crsql_mergeInsert(
     sqlite3_vtab *pVTab,
     int argc,
@@ -897,10 +1039,11 @@ int crsql_mergeInsert(
   const unsigned char *insertColVrsns = sqlite3_value_text(argv[2 + CHANGES_SINCE_VTAB_COL_VRSNS]);
   // sqlite3_int64 insertVrsn = sqlite3_value_int64(argv[2 + CHANGES_SINCE_VTAB_VRSN]);
   int insertSiteIdLen = sqlite3_value_bytes(argv[2 + CHANGES_SINCE_VTAB_SITE_ID]);
-  const char *insertSiteId = sqlite3_value_blob(argv[2 + CHANGES_SINCE_VTAB_SITE_ID]);
+  const void *insertSiteId = sqlite3_value_blob(argv[2 + CHANGES_SINCE_VTAB_SITE_ID]);
 
-  crsql_TableInfo *tblInfo = crsql_findTableInfo(pTab->tableInfos, pTab->tableInfosLen, (const char*)insertTbl);
-  if (tblInfo == 0) {
+  crsql_TableInfo *tblInfo = crsql_findTableInfo(pTab->tableInfos, pTab->tableInfosLen, (const char *)insertTbl);
+  if (tblInfo == 0)
+  {
     *errmsg = sqlite3_mprintf("crsql - could not find the schema information for table %s", insertTbl);
     return SQLITE_ERROR;
   }
@@ -914,132 +1057,75 @@ int crsql_mergeInsert(
     return rc;
   }
 
-  // cmp insertSiteId
-  int siteComparison = memcmp(
-      insertSiteId,
-      crsql_siteIdBlob,
-      insertSiteIdLen < crsql_siteIdBlobSize ? insertSiteIdLen : crsql_siteIdBlobSize);
+  int *allReceivedCids = crsql_allReceivedCids(db, insertColVrsns, tblInfo->baseColsLen);
 
-  if (siteComparison == 0)
-  {
-    if (insertSiteIdLen > crsql_siteIdBlobSize)
-    {
-      siteComparison = 1;
-    }
-    else if (insertSiteIdLen < crsql_siteIdBlobSize)
-    {
-      siteComparison = -1;
-    }
-    else
-    {
-      // we're patching into our own site? Makes no sense.
-      sqlite3_exec(db, CLEAR_SYNC_BIT, 0, 0, 0);
-      *errmsg = sqlite3_mprintf("crsql - a site is trying to patch itself.");
-      return SQLITE_ERROR;
-    }
-  }
-
-  char **allReceivedCidsTbl = 0;
-  int numReceivedCids = 0;
-  char **allChangedCidsTbl = 0;
-  int numChangedCids = 0;
-  zSql = sqlite3_mprintf("SELECT key as cid FROM json_each(%Q)", insertColVrsns);
-  rc = sqlite3_get_table(db, zSql, &allReceivedCidsTbl, &numReceivedCids, &ignore, errmsg);
-  sqlite3_free(zSql);
-
-  if (rc != SQLITE_OK)
+  if (allReceivedCids == 0)
   {
     sqlite3_exec(db, CLEAR_SYNC_BIT, 0, 0, 0);
-    sqlite3_free_table(allReceivedCidsTbl);
-    return rc;
+    *errmsg = sqlite3_mprintf("crsql - failed to extract cids of changed columns");
+    return SQLITE_ERROR;
   }
 
-  char * pkWhereList = crsql_extractPkWhereList(tblInfo, (const char*)insertPks);
-  if (pkWhereList == 0) {
+  if (allReceivedCids[0] == -1) {
+    *errmsg = sqlite3_mprintf("crsql - patching deletes is not yet implemented");
+    // can just issue a delete via pkwherelist and be done.
+    return SQLITE_ERROR;
+  }
+
+  char *pkWhereList = crsql_extractPkWhereList(tblInfo, (const char *)insertPks);
+  if (pkWhereList == 0)
+  {
     *errmsg = sqlite3_mprintf("crsql - failed decoding primary keys for insert");
     return SQLITE_ERROR;
   }
 
-  if (siteComparison > 0)
+  int allChangedCidsLen = 0;
+  int *allChangedCids = crsql_allChangedCids(
+      db,
+      insertColVrsns,
+      insertTbl,
+      pkWhereList,
+      tblInfo->baseColsLen,
+      &allChangedCidsLen,
+      insertSiteId,
+      insertSiteIdLen,
+      errmsg);
+  if (allChangedCids == 0)
   {
-    zSql = sqlite3_mprintf(
-        "SELECT key as cid FROM json_each(%Q)\
-          LEFT JOIN \"%s__crsql_clock\"\
-          WHERE %z AND value >= \"%s__crsql_clock\".__crsql_version",
-        insertColVrsns,
-        insertTbl,
-        pkWhereList,
-        insertTbl
-    );
-  }
-  else if (siteComparison < 0)
-  {
-    zSql = sqlite3_mprintf(
-        "SELECT key as cid FROM json_each(%Q)\
-          LEFT JOIN \"%s__crsql_clock\"\
-          WHERE %z AND value > \"%s__crsql_clock\".__crsql_version",
-        insertColVrsns,
-        insertTbl,
-        pkWhereList,
-        insertTbl
-    );
-  }
-  else
-  {
-    // should be impossible given prior siteComparison == 0 if statement
     sqlite3_exec(db, CLEAR_SYNC_BIT, 0, 0, 0);
     sqlite3_free(pkWhereList);
-    sqlite3_free_table(allReceivedCidsTbl);
+    sqlite3_free(allReceivedCids);
     return SQLITE_ERROR;
   }
 
-  rc = sqlite3_get_table(db, zSql, &allChangedCidsTbl, &numChangedCids, &ignore, errmsg);
-  sqlite3_free(zSql);
-
-  // go thru changed cids
-  // craft col names
-  // pick insert
-  // insert pks
-  crsql_ColumnInfo changedColumns[numChangedCids];
-  for (int i = 0; i < numChangedCids; ++i) {
-    // allChangedCidsTbl[i + 1];
-    // changedColumns[i] = tblInfo->baseCols[];
+  if (allChangedCidsLen == 0) {
+    // the patch doesn't apply
+    rc = sqlite3_exec(db, CLEAR_SYNC_BIT, 0, 0, 0);
+    sqlite3_free(pkWhereList);
+    sqlite3_free(allChangedCids);
+    sqlite3_free(allChangedCids);
+    return rc;
   }
 
-  // if -1 cid exists, is a delete
-  // for (int i = 0; i < numChangedCols; ++i) {
-  // grab col
-  // }
+  if (allChangedCidsLen + tblInfo->pksLen > tblInfo->baseColsLen) {
+    *errmsg = sqlite3_mprintf("crsql - received more columns than exist in the target table %s", tblInfo->tblName);
+    return SQLITE_ERROR;
+  }
 
-  // insert into tbl (asIdentifierList(cols)) values ()
-
-  // Algorithm:
-  // 5. construct new insert statement against base table
-  // 6. apply insert to base table. `on conflict update` the new columns.
-
-  // Steps (2) & (3) & (4):
-  // If remote_site < local_site:
-  // select cid, version from json_each(col_versions) left join x_clock WHERE pkWhereList AND version > x_clock.version
-  // If remote_site > local_site:
-  // select cid, version from json_each(col_versions) left join x_clock WHERE pkWhereList AND version >= x_clock.version
-  // pkWhereList:
-  // x_clock.pk1 = lit_pk1 AND x_clock.pk2 = list_pk2 etc.
-  // `lit_pk1` etc are escaped for inclusion directly in the string given they are quote-concated
-  // LEFT JOIN since that'll give us results even if the local has no clock table entries for those columns.
-
-  // Given `cids`, pull `columInfos` (they're indexed by cid already)
-  // INSERT INTO tbl (asIdentifierList(columnInfos)) VALUES (extracted-values)
-
-  // extracted-values:
-  // we need to map back from cids to values indices...
-  // extracted-values are indexed by colVersions.
-  // SELECT cid FROM json_each(col_versions);
-  // patchVales = []
-  // for i = 0; i < cids.len; ++i {
-  //   if (cid in patchable_cids) {
-  //     patchVals.push(vals[i])
-  //   }
-  // }
+  crsql_ColumnInfo columnInfosForInsert[allChangedCidsLen];
+  char **pkValsForInsert = 0;
+  char **colValsForInsert = 0;
+  /*
+  - go thru allChangedCids
+  - build new colInfoArray from it
+  - asIdentifierList that colInfoArray for INSER INTO x (identlist)
+    - including pks!
+  - create an array of values to insert based on allChangedCids
+    - split insertVals
+    - go thru allChangedCids
+    - look up insertVals index based on allReceivedCids
+  - VALUES (pks, valsarr) <-- "as value list" ?
+  */
 
   // sqlite is going to somehow provide us with a rowid.
   // TODO: how in the world does it know the rowid of a vtab?

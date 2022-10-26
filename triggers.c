@@ -196,7 +196,7 @@ char *crsql_deleteTriggerQuery(crsql_TableInfo *tableInfo)
       tableInfo->tblName,
       pkList,
       pkNewList,
-      DELETE_CLOCK_SENTINEL);
+      DELETE_CID_SENTINEL);
 
   if (tableInfo->pksLen != 0)
   {

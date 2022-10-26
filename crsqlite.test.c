@@ -111,4 +111,5 @@ void crsqlTestSuite()
   // testColumnDrops();
   // testRecreateCrrFromExisting();
   // testRequiredPrimaryKey();
+  // testSyncBit();
 }

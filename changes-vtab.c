@@ -943,6 +943,14 @@ int *crsql_allReceivedCids(
   return ret;
 }
 
+char *crsql_changesTabConflictSets(
+    char **nonPkValsForInsert,
+    crsql_ColumnInfo *columnInfosForInsert,
+    int allChangedCidsLen)
+{
+  return 0;
+}
+
 /**
  * Given a json map of received col versions,
  * return an array of the cids that should actually
@@ -1025,7 +1033,8 @@ int *crsql_allChangedCids(
   int rc = sqlite3_prepare(db, zSql, -1, &pStmt, 0);
   sqlite3_free(zSql);
 
-  if (rc != SQLITE_OK) {
+  if (rc != SQLITE_OK)
+  {
     sqlite3_finalize(pStmt);
     return 0;
   }
@@ -1034,9 +1043,11 @@ int *crsql_allChangedCids(
   memset(ret, 0, totalNumCols * sizeof *ret);
   rc = sqlite3_step(pStmt);
   int i = 0;
-  while (rc == SQLITE_ROW) {
+  while (rc == SQLITE_ROW)
+  {
     int cid = sqlite3_column_int(pStmt, 0);
-    if (cid > totalNumCols || i >= totalNumCols) {
+    if (cid > totalNumCols || i >= totalNumCols)
+    {
       sqlite3_free(ret);
       sqlite3_finalize(pStmt);
       return 0;
@@ -1046,7 +1057,8 @@ int *crsql_allChangedCids(
     rc = sqlite3_step(pStmt);
   }
 
-  if (rc != SQLITE_DONE) {
+  if (rc != SQLITE_DONE)
+  {
     sqlite3_free(ret);
     sqlite3_finalize(pStmt);
     return 0;
@@ -1073,7 +1085,8 @@ int crsql_mergeInsert(
 
   // column values exist in argv[2] and following.
   const int insertTblLen = sqlite3_value_bytes(argv[2 + CHANGES_SINCE_VTAB_TBL]);
-  if (insertTblLen > MAX_TBL_NAME_LEN) {
+  if (insertTblLen > MAX_TBL_NAME_LEN)
+  {
     *errmsg = sqlite3_mprintf("crsql - table name exceeded max length");
     return SQLITE_ERROR;
   }
@@ -1088,7 +1101,8 @@ int crsql_mergeInsert(
   const unsigned char *insertColVrsns = sqlite3_value_text(argv[2 + CHANGES_SINCE_VTAB_COL_VRSNS]);
   // sqlite3_int64 insertVrsn = sqlite3_value_int64(argv[2 + CHANGES_SINCE_VTAB_VRSN]);
   int insertSiteIdLen = sqlite3_value_bytes(argv[2 + CHANGES_SINCE_VTAB_SITE_ID]);
-  if (insertSiteIdLen > SITE_ID_LEN) {
+  if (insertSiteIdLen > SITE_ID_LEN)
+  {
     *errmsg = sqlite3_mprintf("crsql - site id exceeded max length");
     return SQLITE_ERROR;
   }
@@ -1112,13 +1126,17 @@ int crsql_mergeInsert(
     return SQLITE_ERROR;
   }
 
-  if (allReceivedCids[0] == -1) {
+  if (allReceivedCids[0] == -1)
+  {
     sqlite3_free(allReceivedCids);
     *errmsg = sqlite3_mprintf("crsql - patching deletes is not yet implemented");
     // can just issue a delete via pkwherelist and be done.
     // rc = sqlite3_exec(db, SET_SYNC_BIT, 0, 0, errmsg);
     return SQLITE_ERROR;
   }
+
+  // TODO: look for the case where the local deleted the row
+  // and thus should not take the remote's patch
 
   // TODO: we can't trust `insertPks`
   char *pkWhereList = crsql_extractPkWhereList(tblInfo, (const char *)insertPks);
@@ -1148,7 +1166,8 @@ int crsql_mergeInsert(
     return SQLITE_ERROR;
   }
 
-  if (allChangedCidsLen == 0) {
+  if (allChangedCidsLen == 0)
+  {
     // the patch doesn't apply -- we're ok and done.
     sqlite3_free(allReceivedCids);
     sqlite3_free(allChangedCids);
@@ -1156,19 +1175,21 @@ int crsql_mergeInsert(
   }
 
   crsql_ColumnInfo columnInfosForInsert[allChangedCidsLen];
-  char **pkValsForInsert = crsql_split((const char*)insertPks, PK_DELIM, tblInfo->pksLen);
-  char **allReceivedNonPkVals = crsql_split((const char*)insertVals, PK_DELIM, numReceivedCids);
+  char **pkValsForInsert = crsql_split((const char *)insertPks, PK_DELIM, tblInfo->pksLen);
+  char **allReceivedNonPkVals = crsql_split((const char *)insertVals, PK_DELIM, numReceivedCids);
   char *nonPkValsForInsert[allChangedCidsLen];
 
   // TODO: handle the case where only pks to process
-  if (pkValsForInsert == 0 || allReceivedNonPkVals == 0) {
+  if (pkValsForInsert == 0 || allReceivedNonPkVals == 0)
+  {
     sqlite3_free(allReceivedCids);
     sqlite3_free(allChangedCids);
     return SQLITE_ERROR;
   }
 
   // TODO: bounds checking
-  for (int i = 0; i < allChangedCidsLen; ++i) {
+  for (int i = 0; i < allChangedCidsLen; ++i)
+  {
     int cid = allChangedCids[i];
     int valIdx = allReceivedCids[cid];
     nonPkValsForInsert[i] = allReceivedNonPkVals[valIdx];
@@ -1176,20 +1197,73 @@ int crsql_mergeInsert(
   }
 
   char *pkIdentifierList = crsql_asIdentifierList(tblInfo->pks, tblInfo->pksLen, 0);
-  // TODO: handle case where only pks to process
+  int len = 0;
+  for (int i = 0; i < tblInfo->pksLen; ++i)
+  {
+    len += strlen(pkValsForInsert[i]);
+  }
+  char *pkValsStr = sqlite3_malloc(len * sizeof *pkValsStr + 1);
+  crsql_joinWith(pkValsStr, pkValsForInsert, tblInfo->pksLen, ',');
+
+  len = 0;
+  for (int i = 0; i < allChangedCidsLen; ++i)
+  {
+    len += strlen(nonPkValsForInsert[i]);
+  }
+  char *nonPkValsStr = sqlite3_malloc(len * sizeof *pkValsStr + 1);
+  crsql_joinWith(nonPkValsStr, nonPkValsForInsert, allChangedCidsLen, ',');
+
+  char *conflictSets = crsql_changesTabConflictSets(
+      nonPkValsForInsert,
+      columnInfosForInsert,
+      allChangedCidsLen);
+
+  // TODO: handle case where there are only pks to process
   zSql = sqlite3_mprintf(
-    "INSERT INTO \"%s\" (%s, %z)\
+      "INSERT INTO \"%s\" (%s, %z)\
       VALUES (%z, %z)\
       ON CONFLICT (%z) DO UPDATE\
       %z",
-    tblInfo->tblName,
-    pkIdentifierList,
-    crsql_asIdentifierList(columnInfosForInsert, allChangedCidsLen, 0)
-  );
+      tblInfo->tblName,
+      pkIdentifierList,
+      crsql_asIdentifierList(columnInfosForInsert, allChangedCidsLen, 0),
+      pkValsStr,
+      nonPkValsStr,
+      pkIdentifierList,
+      conflictSets);
+
+  for (int i = 0; i < numReceivedCids; ++i)
+  {
+    sqlite3_free(allReceivedNonPkVals[i]);
+  }
+  sqlite3_free(allReceivedNonPkVals);
+  for (int i = 0; i < tblInfo->pksLen; ++i)
+  {
+    sqlite3_free(pkValsForInsert[i]);
+  }
+  sqlite3_free(pkValsForInsert);
 
   rc = sqlite3_exec(db, SET_SYNC_BIT, 0, 0, errmsg);
-  // don't do insert if failed to set sync bit
+  if (rc != SQLITE_OK) {
+    sqlite3_exec(db, CLEAR_SYNC_BIT, 0, 0, 0);
+    return rc;
+  }
+
+  rc = sqlite3_exec(db, zSql, 0, 0, errmsg);
+  sqlite3_free(zSql);
   sqlite3_exec(db, CLEAR_SYNC_BIT, 0, 0, 0);
+
+  if (rc != SQLITE_OK) {
+    return rc;
+  }
+
+  // TODO: also update clocks to new vals.
+  // Post merge it is technically possible to have non-unique version vals in the clock table...
+  // so deal with that and/or make vtab `without rowid`
+  // For the merge:
+  // (1) pick their clock and put it for the column
+  // (2) push our db version if it is behind their clock so we don't issue
+  //     events in the past.
 
   /*
   - go thru allChangedCids

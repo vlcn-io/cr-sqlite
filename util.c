@@ -59,8 +59,6 @@ void crsql_joinWith(char *dest, char **src, size_t srcLen, char delim)
   }
 }
 
-// TODO: re-write all users of other join methods to just
-// use this
 char *crsql_join2(char *(*map)(const char *), char **in, size_t len, char *delim)
 {
   if (len == 0)
@@ -173,6 +171,10 @@ char *crsql_asIdentifierListStr(char **in, size_t inlen, char delim)
 
   return ret;
 }
+
+// int crsql_isProperlyQuoteConcated() {
+
+// }
 
 /**
  * @brief Given a list of clock table names, construct a union query to get the max clock value for our site.

@@ -41,7 +41,7 @@ const size_t crsql_siteIdBlobSize = sizeof(crsql_siteIdBlob);
  * as a data type and we do eventually write db version(s) to the db.
  *
  */
-static _Atomic int64_t dbVersion = MIN_POSSIBLE_DB_VERSION;
+_Atomic int64_t crsql_dbVersion = MIN_POSSIBLE_DB_VERSION;
 static int dbVersionSet = 0;
 
 static sqlite3_mutex *globalsInitMutex = 0;
@@ -260,7 +260,7 @@ static int initDbVersion(sqlite3 *db)
 
   // dbVersion is last version written but we always call `nextDbVersion` before writing
   // a dbversion. Hence no +1.
-  dbVersion = sqlite3_column_int64(pStmt, 0);
+  crsql_dbVersion = sqlite3_column_int64(pStmt, 0);
   dbVersionSet = 1;
   sqlite3_finalize(pStmt);
 
@@ -288,7 +288,7 @@ static void siteIdFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
  */
 static void dbVersionFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
-  sqlite3_result_int64(context, dbVersion);
+  sqlite3_result_int64(context, crsql_dbVersion);
 }
 
 /**
@@ -300,7 +300,7 @@ static void nextDbVersionFunc(sqlite3_context *context, int argc, sqlite3_value 
 {
   // dbVersion is an atomic int thus `++dbVersion` is a CAS and will always return
   // a unique version for the given invocation, even under concurrent accesses.
-  sqlite3_result_int64(context, ++dbVersion);
+  sqlite3_result_int64(context, ++crsql_dbVersion);
 }
 
 /**

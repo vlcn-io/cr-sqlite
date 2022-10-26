@@ -24,6 +24,9 @@ struct crsql_Changes_vtab
 {
   sqlite3_vtab base; /* Base class - must be first */
   sqlite3 *db;
+
+  crsql_TableInfo **tableInfos;
+  int tableInfosLen;
 };
 
 /* A subclass of sqlite3_vtab_cursor which will
@@ -36,8 +39,6 @@ struct crsql_Changes_cursor
   sqlite3_vtab_cursor base; /* Base class - must be first */
 
   crsql_Changes_vtab *pTab;
-  crsql_TableInfo **tableInfos;
-  int tableInfosLen;
 
   // The statement that is returning the identifiers
   // of what has changed
@@ -47,6 +48,60 @@ struct crsql_Changes_cursor
   const char *colVrsns;
   sqlite3_int64 version;
 };
+
+int crsql_pullAllTableInfos(
+    sqlite3 *db,
+    crsql_TableInfo ***rTableInfos,
+    int *rTableInfosLen,
+    char **errmsg)
+{
+  char **rClockTableNames = 0;
+  int rNumCols = 0;
+  int rNumRows = 0;
+  int rc = SQLITE_OK;
+
+  // Find all clock tables
+  rc = sqlite3_get_table(
+      db,
+      CLOCK_TABLES_SELECT,
+      &rClockTableNames,
+      &rNumRows,
+      &rNumCols,
+      0);
+
+  if (rc != SQLITE_OK || rNumRows == 0)
+  {
+    *errmsg = sqlite3_mprintf("crsql internal error discovering crr tables.");
+    sqlite3_free_table(rClockTableNames);
+    return SQLITE_ERROR;
+  }
+
+  // TODO: validate index info
+  crsql_TableInfo **tableInfos = sqlite3_malloc(rNumRows * sizeof(crsql_TableInfo *));
+  memset(tableInfos, 0, rNumRows * sizeof(crsql_TableInfo *));
+  for (int i = 0; i < rNumRows; ++i)
+  {
+    // Strip __crsql_clock suffix.
+    // +1 since tableNames includes a row for column headers
+    char *baseTableName = strndup(rClockTableNames[i + 1], strlen(rClockTableNames[i + 1]) - __CRSQL_CLOCK_LEN);
+    rc = crsql_getTableInfo(db, baseTableName, &tableInfos[i], errmsg);
+    sqlite3_free(baseTableName);
+
+    if (rc != SQLITE_OK)
+    {
+      sqlite3_free_table(rClockTableNames);
+      crsql_freeAllTableInfos(tableInfos, rNumRows);
+      return rc;
+    }
+  }
+
+  sqlite3_free_table(rClockTableNames);
+
+  *rTableInfos = tableInfos;
+  *rTableInfosLen = rNumRows;
+
+  return SQLITE_OK;
+}
 
 /*
 ** The changesVtabConnect() method is invoked to create a new
@@ -83,18 +138,25 @@ static int changesConnect(
 #define CHANGES_SINCE_VTAB_COL_VRSNS 3
 #define CHANGES_SINCE_VTAB_VRSN 4
 #define CHANGES_SINCE_VTAB_SITE_ID 5
-  // TODO: ^-- change rqstr to site_id and make query != site_id
-  if (rc == SQLITE_OK)
+  if (rc != SQLITE_OK)
   {
-    pNew = sqlite3_malloc(sizeof(*pNew));
-    *ppVtab = (sqlite3_vtab *)pNew;
-    if (pNew == 0)
-    {
-      return SQLITE_NOMEM;
-    }
-    memset(pNew, 0, sizeof(*pNew));
-    pNew->db = db;
+    return rc;
   }
+  pNew = sqlite3_malloc(sizeof(*pNew));
+  *ppVtab = (sqlite3_vtab *)pNew;
+  if (pNew == 0)
+  {
+    return SQLITE_NOMEM;
+  }
+  memset(pNew, 0, sizeof(*pNew));
+  pNew->db = db;
+
+  rc = crsql_pullAllTableInfos(db, &(pNew->tableInfos), &(pNew->tableInfosLen), &(*ppVtab)->zErrMsg);
+  if (rc != SQLITE_OK) {
+    crsql_freeAllTableInfos(pNew->tableInfos, pNew->tableInfosLen);
+    return rc;
+  }
+
   return rc;
 }
 
@@ -104,6 +166,9 @@ static int changesConnect(
 static int changesDisconnect(sqlite3_vtab *pVtab)
 {
   crsql_Changes_vtab *p = (crsql_Changes_vtab *)pVtab;
+  crsql_freeAllTableInfos(p->tableInfos, p->tableInfosLen);
+  p->tableInfos = 0;
+  p->tableInfosLen = 0;
   sqlite3_free(p);
   return SQLITE_OK;
 }
@@ -134,9 +199,6 @@ static int changesCrsrFinalize(crsql_Changes_cursor *crsr)
   crsr->pChangesStmt = 0;
   rc += sqlite3_finalize(crsr->pRowStmt);
   crsr->pRowStmt = 0;
-  crsql_freeAllTableInfos(crsr->tableInfos, crsr->tableInfosLen);
-  crsr->tableInfos = 0;
-  crsr->tableInfosLen = 0;
 
   // do not free colVrsns as it is a reference
   // to the data from the pChangesStmt
@@ -417,7 +479,7 @@ static int changesNext(sqlite3_vtab_cursor *cur)
     return SQLITE_ERROR;
   }
 
-  crsql_TableInfo *tblInfo = crsql_findTableInfo(pCur->tableInfos, pCur->tableInfosLen, tbl);
+  crsql_TableInfo *tblInfo = crsql_findTableInfo(pCur->pTab->tableInfos, pCur->pTab->tableInfosLen, tbl);
   if (tblInfo == 0)
   {
     pTabBase->zErrMsg = sqlite3_mprintf("crsql internal error. Could not find schema for table %s", tbl);
@@ -530,9 +592,6 @@ static int changesFilter(
   crsql_Changes_vtab *pTab = pCrsr->pTab;
   sqlite3_vtab *pTabBase = (sqlite3_vtab *)pTab;
   sqlite3 *db = pTab->db;
-  char **rClockTableNames = 0;
-  int rNumRows = 0;
-  int rNumCols = 0;
   char *err = 0;
 
   if (pCrsr->pChangesStmt)
@@ -541,54 +600,13 @@ static int changesFilter(
     pCrsr->pChangesStmt = 0;
   }
 
-  // Find all clock tables
-  rc = sqlite3_get_table(
-      db,
-      CLOCK_TABLES_SELECT,
-      &rClockTableNames,
-      &rNumRows,
-      &rNumCols,
-      0);
-
-  if (rc != SQLITE_OK || rNumRows == 0)
-  {
-    pTabBase->zErrMsg = sqlite3_mprintf("crsql internal error discovering crr tables.");
-    sqlite3_free_table(rClockTableNames);
-    return rc;
-  }
-
-  // construct table infos for each table
-  // we'll need to attach these table infos
-  // to our cursor
-  // TODO: we should preclude index info from them
-  crsql_TableInfo **tableInfos = sqlite3_malloc(rNumRows * sizeof(crsql_TableInfo *));
-  memset(tableInfos, 0, rNumRows * sizeof(crsql_TableInfo *));
-  for (int i = 0; i < rNumRows; ++i)
-  {
-    // Strip __crsql_clock suffix.
-    // +1 since tableNames includes a row for column headers
-    char *baseTableName = strndup(rClockTableNames[i + 1], strlen(rClockTableNames[i + 1]) - __CRSQL_CLOCK_LEN);
-    rc = crsql_getTableInfo(db, baseTableName, &tableInfos[i], &err);
-    sqlite3_free(baseTableName);
-
-    if (rc != SQLITE_OK)
-    {
-      pTabBase->zErrMsg = sqlite3_mprintf("crsql internal error getting schemas for crr tables.");
-      crsql_freeAllTableInfos(tableInfos, rNumRows);
-      sqlite3_free(err);
-      return rc;
-    }
-  }
-
-  sqlite3_free_table(rClockTableNames);
-
   // now construct and prepare our union for fetching changes
-  char *zSql = crsql_changesUnionQuery(tableInfos, rNumRows);
+  char *zSql = crsql_changesUnionQuery(pTab->tableInfos, pTab->tableInfosLen);
 
   if (zSql == 0)
   {
     pTabBase->zErrMsg = sqlite3_mprintf("crsql internal error generating the query to extract changes.");
-    crsql_freeAllTableInfos(tableInfos, rNumRows);
+    crsql_freeAllTableInfos(pTab->tableInfos, pTab->tableInfosLen);
     return SQLITE_ERROR;
   }
 
@@ -597,7 +615,7 @@ static int changesFilter(
   if (rc != SQLITE_OK)
   {
     pTabBase->zErrMsg = sqlite3_mprintf("crsql internal error preparing the statement to extract changes.");
-    crsql_freeAllTableInfos(tableInfos, rNumRows);
+    crsql_freeAllTableInfos(pTab->tableInfos, pTab->tableInfosLen);
     sqlite3_finalize(pStmt);
     return rc;
   }
@@ -631,15 +649,12 @@ static int changesFilter(
   // 1. the site id
   // 2. the version
   int j = 1;
-  for (i = 0; i < rNumRows; ++i)
+  for (i = 0; i < pTab->tableInfosLen; ++i)
   {
     sqlite3_bind_blob(pStmt, j++, requestorSiteId, requestorSiteIdLen, SQLITE_STATIC);
     sqlite3_bind_int64(pStmt, j++, versionBound);
   }
 
-  // put table infos into our cursor for later use on row fetches
-  pCrsr->tableInfos = tableInfos;
-  pCrsr->tableInfosLen = rNumRows;
   pCrsr->pChangesStmt = pStmt;
 
   return changesNext((sqlite3_vtab_cursor *)pCrsr);
@@ -748,7 +763,7 @@ int crsql_mergeInsert(
     int argc,
     sqlite3_value **argv,
     sqlite_int64 *pRowid,
-    char ** errmsg)
+    char **errmsg)
 {
   // he argv[1] parameter is the rowid of a new row to be inserted into the virtual table.
   // If argv[1] is an SQL NULL, then the implementation must choose a rowid for the newly inserted row
@@ -762,16 +777,17 @@ int crsql_mergeInsert(
   int ignore = 0;
 
   // column values exist in argv[2] and following.
-  const unsigned char * insertTbl = sqlite3_value_text(argv[2 + CHANGES_SINCE_VTAB_TBL]);
-  const unsigned char * insertPks = sqlite3_value_text(argv[2 + CHANGES_SINCE_VTAB_PK]);
-  const unsigned char * insertVals = sqlite3_value_text(argv[2 + CHANGES_SINCE_VTAB_COL_VALS]);
-  const unsigned char * insertColVrsns = sqlite3_value_text(argv[2 + CHANGES_SINCE_VTAB_COL_VRSNS]);
+  const unsigned char *insertTbl = sqlite3_value_text(argv[2 + CHANGES_SINCE_VTAB_TBL]);
+  const unsigned char *insertPks = sqlite3_value_text(argv[2 + CHANGES_SINCE_VTAB_PK]);
+  const unsigned char *insertVals = sqlite3_value_text(argv[2 + CHANGES_SINCE_VTAB_COL_VALS]);
+  const unsigned char *insertColVrsns = sqlite3_value_text(argv[2 + CHANGES_SINCE_VTAB_COL_VRSNS]);
   // sqlite3_int64 insertVrsn = sqlite3_value_int64(argv[2 + CHANGES_SINCE_VTAB_VRSN]);
   int insertSiteIdLen = sqlite3_value_bytes(argv[2 + CHANGES_SINCE_VTAB_SITE_ID]);
-  const char * insertSiteId = sqlite3_value_blob(argv[2 + CHANGES_SINCE_VTAB_SITE_ID]);
+  const char *insertSiteId = sqlite3_value_blob(argv[2 + CHANGES_SINCE_VTAB_SITE_ID]);
 
   rc = sqlite3_exec(db, SET_SYNC_BIT, 0, 0, errmsg);
-  if (rc != SQLITE_OK) {
+  if (rc != SQLITE_OK)
+  {
     // try to revert the sync bit -- although it should not have taken
     // if the above failed anyway
     sqlite3_exec(db, CLEAR_SYNC_BIT, 0, 0, 0);
@@ -782,7 +798,8 @@ int crsql_mergeInsert(
   rc = sqlite3_get_table(db, zSql, &cidsAndVersions, &numChangedCols, &ignore, errmsg);
   sqlite3_free(zSql);
 
-  if (rc != SQLITE_OK || numChangedCols == 0) {
+  if (rc != SQLITE_OK || numChangedCols == 0)
+  {
     sqlite3_exec(db, CLEAR_SYNC_BIT, 0, 0, 0);
     sqlite3_free_table(cidsAndVersions);
     return rc;
@@ -819,7 +836,7 @@ int crsql_mergeInsert(
 
   // Given `cids`, pull `columInfos` (they're indexed by cid already)
   // INSERT INTO tbl (asIdentifierList(columnInfos)) VALUES (extracted-values)
-  
+
   // extracted-values:
   // we need to map back from cids to values indices...
   // extracted-values are indexed by colVersions.
@@ -830,7 +847,6 @@ int crsql_mergeInsert(
   //     patchVals.push(vals[i])
   //   }
   // }
-
 
   // sqlite is going to somehow provide us with a rowid.
   // TODO: how in the world does it know the rowid of a vtab?
@@ -861,7 +877,8 @@ int changesApply(
     // insert statement
     // argv[1] is the rowid.. but why would it ever be filled for us?
     rc = crsql_mergeInsert(pVTab, argc, argv, pRowid, &errmsg);
-    if (rc != SQLITE_OK) {
+    if (rc != SQLITE_OK)
+    {
       pVTab->zErrMsg = errmsg;
     }
     return rc;

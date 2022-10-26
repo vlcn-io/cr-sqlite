@@ -75,14 +75,19 @@ void teste2e()
   char *err = 0;
   rc = sqlite3_open(":memory:", &db);
 
-  rc = sqlite3_exec(db, "create table foo (a primary key, b);", 0, 0, &err);
+  rc += sqlite3_exec(db, "create table foo (a primary key, b);", 0, 0, &err);
   CHECK_OK
-  rc = sqlite3_exec(db, "select crsql_as_crr('foo');", 0, 0, &err);
+  rc += sqlite3_exec(db, "select crsql_as_crr('foo');", 0, 0, &err);
   CHECK_OK
+  rc += sqlite3_exec(db, "insert into foo values (1, 2);", 0, 0, &err);
+  CHECK_OK
+  rc += sqlite3_exec(db, "select * from crsql_changes", 0, 0, &err);
+  CHECK_OK
+
 
   // TODO: do inserts, get patch sets.
 
-  // TODO: create other connections. apply patches between connections.
+  // TODO: create other connections to other dbs. apply patches between connections.
 
   printf("\t\e[0;32mSuccess\e[0m\n");
   return;

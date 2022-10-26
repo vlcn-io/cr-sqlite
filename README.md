@@ -16,6 +16,8 @@ This project implements [CRDTs](https://crdt.tech/) and [CRRs](https://hal.inria
 Usage looks like:
 
 ```sql
+-- load the extension if it is not statically linked
+.load crsqlite
 -- create tables as normal
 create table foo (a primary key, b);
 create table baz (a primary key, b, c, d);

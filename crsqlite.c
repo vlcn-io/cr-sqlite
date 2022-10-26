@@ -457,6 +457,7 @@ static void crsqlSyncBit(sqlite3_context *context, int argc, sqlite3_value **arg
   // No args? We're reading the value of the bit.
   if (argc == 0) {
     sqlite3_result_int(context, *syncBit);
+    return;
   }
 
   // Args? We're setting the value of the bit
@@ -640,13 +641,15 @@ __declspec(dllexport)
   }
 
   if (rc == SQLITE_OK) {
+    // Register a thread & connection local bit to toggle on or off
+    // our triggers depending on the source of updates to a table.
     int *syncBit = sqlite3_malloc(sizeof *syncBit);
     *syncBit = 0;
     rc = sqlite3_create_function_v2(
       db,
       "crsql_internal_sync_bit",
       -1, // num args: -1 -> 0 or more
-      SQLITE_UTF8 | SQLITE_INNOCUOUS | SQLITE_DIRECTONLY, // configuration
+      SQLITE_UTF8 | SQLITE_INNOCUOUS, // configuration
       syncBit, // user data
       crsqlSyncBit,
       0, // step

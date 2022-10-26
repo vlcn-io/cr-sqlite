@@ -81,9 +81,10 @@ void testDeleteTriggerQuery()
       &errMsg);
 
   char *query = crsql_deleteTriggerQuery(tableInfo);
-  assert(strcmp("CREATE TRIGGER \"foo__crsql_dtrig\"      AFTER DELETE ON \"foo\"    BEGIN      INSERT OR REPLACE INTO \"foo__crsql_clock\" (        \"a\",        __crsql_col_num,        __crsql_version,        __crsql_site_id      ) VALUES (        OLD.\"a\",        -1,        crsql_nextdbversion(),        0      );    END;", query) == 0);
+  assert(strcmp("CREATE TRIGGER \"foo__crsql_dtrig\"      AFTER DELETE ON \"foo\"    BEGIN      INSERT OR REPLACE INTO \"foo__crsql_clock\" (        \"a\",        __crsql_col_num,        __crsql_version,        __crsql_site_id      ) SELECT         OLD.\"a\",        -1,        crsql_nextdbversion(),        0      WHERE crsql_internal_sync_bit() = 0;    END;", query) == 0);
 
   sqlite3_close(db);
+  sqlite3_free(query);
   assert(rc == SQLITE_OK);
 
   printf("\t\e[0;32mSuccess\e[0m\n");
@@ -96,4 +97,5 @@ void crsqlTriggersTestSuite()
   testDeleteTriggerQuery();
   testCreateTriggers();
   // testInsertTriggers();
+  // testTriggerSyncBitInteraction();
 }

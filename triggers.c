@@ -44,12 +44,12 @@ int crsql_createInsertTrigger(
         __crsql_col_num,\
         __crsql_version,\
         __crsql_site_id\
-      ) VALUES (\
+      ) SELECT \
         %s,\
         %d,\
         crsql_nextdbversion(),\
         0\
-      );\n",
+      WHERE crsql_internal_sync_bit() = 0;\n",
         tableInfo->tblName,
         pkList,
         pkNewList,
@@ -114,12 +114,14 @@ int crsql_createUpdateTrigger(sqlite3 *db,
 
   for (int i = 0; i < tableInfo->nonPksLen; ++i)
   {
+    // updates are conditionally inserted on the new value not being
+    // the same as the old value.
     subTriggers[i] = sqlite3_mprintf("INSERT OR REPLACE INTO \"%s__crsql_clock\" (\
         %s,\
         __crsql_col_num,\
         __crsql_version,\
         __crsql_site_id\
-      ) SELECT %s, %d, crsql_nextdbversion(), 0 WHERE NEW.\"%s\" != OLD.\"%s\";\n",
+      ) SELECT %s, %d, crsql_nextdbversion(), 0 WHERE crsql_internal_sync_bit() = 0 AND NEW.\"%s\" != OLD.\"%s\";\n",
                            tableInfo->tblName,
                            pkList,
                            pkNewList,
@@ -184,12 +186,12 @@ char *crsql_deleteTriggerQuery(crsql_TableInfo *tableInfo)
         __crsql_col_num,\
         __crsql_version,\
         __crsql_site_id\
-      ) VALUES (\
+      ) SELECT \
         %s,\
         %d,\
         crsql_nextdbversion(),\
         0\
-      );\
+      WHERE crsql_internal_sync_bit() = 0;\
     END;",
       tableInfo->tblName,
       tableInfo->tblName,

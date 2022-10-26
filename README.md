@@ -1,29 +1,39 @@
 # [wip] crsql - Convergent, Replicated, SQLite
 
-**10/7** - production ready c extension is nearing completion.
-
 [SQLite](https://www.sqlite.org/index.html) is a foundation of offline, local-first and edge deployed software. Wouldn't it be great, however, if we could merge two or more SQLite databases together and not run into any conflicts?
 
 This project implements [CRDTs](https://crdt.tech/) and [CRRs](https://hal.inria.fr/hal-02983557/document) in `SQLite`, allowing databases that share a common schema to merge their state together. Merges can happen between an arbitrary number of peers and all peers will eventually converge to the same state.
 
 `crsqlite` works by adding metadata tables and triggers around your existing database schema. This means that you do not have to change your schema in order to get conflict resolution support -- with a few caveats around uniqueness constraints and foreign keys. See [Schema Design for CRDTs & Eventual Consistency](#schema-design-for-crdts--eventual-consistency).
 
-# Overview
+# Usage
 
-[![loom](https://cdn.loom.com/sessions/thumbnails/0934f93364d340e0ba658146a974edb4-with-play.gif)](https://www.loom.com/share/0934f93364d340e0ba658146a974edb4)
+`crsqlite` exposes two APIs:
 
-I'm working on a demo application to show how to use crsqlite in practice. This will live in `examples/live-cli` -- current progress: https://www.loom.com/share/09aa7726f5964e5b8a12ca15652f39b2
+- One to upgrade existing tables to "crrs" or "conflict free replicated relations"
+- Another to ask the database for a changeset given a version or to apply a changeset from another database
 
-You can view a conflict-free DB in action in the `__tests__` folder of the `replicator` package: https://github.com/tantaman/conflict-free-sqlite/blob/main/prototype/replicator/src/__tests__/merge-random-2.test.ts
+Usage looks like:
 
-# Auto-Migrate
+```sql
+-- create tables as normal
+create table foo (a primary key, b);
+create table baz (a primary key, b, c, d);
 
-A script to migrate existing `sqlite` dbs to be conflict free lives in the `migrator` package.
+-- upgrade those tables to be crrs
+select crsql_as_crr('foo');
+select crsql_as_crr('baz');
 
-An example of the results this migration can be seen in the `chinook` package.
+-- insert values and interact with your tables as normal
+insert into foo values (1,2);
+insert into baz values ('k', 'woo', 'doo', 'daa');
 
-- chinook.db represents the [standard chinook dataset](https://github.com/lerocha/chinook-database)
-- chinook-crr.db is that dataset after being migrated to a conflict free schema
+-- ask the db for changes
+select * from crsql_changes WHERE version > -9223372036854775807;
+
+-- implementation of patch application is still in progress but the API will look like:
+insert into crsql_changes ("table", "col_vals", "col_versions", "site_id") VALUES (...);
+```
 
 # Prior Art
 
@@ -65,7 +75,6 @@ These projects helped improve my understanding of CRDTs on this journey --
 - [shelf](https://github.com/dglittle/shelf)
 - [tiny-merge](https://github.com/siliconjungle/tiny-merge)
 - [Merkle-CRDT](https://arxiv.org/pdf/2004.00107.pdf)
-  - Not used yet but might become an alternative clock implementation for use cases with unbounded numbers of peers
 
 # Schema Design for CRDTs & Eventual Consistency
 
@@ -76,7 +85,7 @@ These projects helped improve my understanding of CRDTs on this journey --
 2. Uniqueness constraints other than the primary key. The only enforceably unique column in a table should be the primary key. Other columns may be indices but they may not be unique.
    1. TODO: discuss this in much more detail.
 
-Note: prior art [1] & [2] claim to support foreign key and uniqueness constraints. I believe their approach is unsound and results in update loops and have not incoroprated it into `crsqlite`. If I'm wrong, I'll gladly fold their approach in.
+Note: prior art [1] & [2] claim to support foreign key and uniqueness constraints. I believe their approach may be unsound and result in update loops and have not incoroprated it into `crsqlite` yet. If I'm wrong, I'll gladly fold their approach in.
 
 # Architecture
 
@@ -95,39 +104,9 @@ Things to support in the future
 
 ## Deltas
 
-Deltas between databases are calculated by each database keeping a [version vector](https://en.wikipedia.org/wiki/Version_vector).
+Deltas between databases are calculated by each database keeping a [version vector](https://en.wikipedia.org/wiki/Version_vector) that represents the last time it synced with a given peer.
 
-Every row in the database is associated with a copy of the version vector. This copy is a snapshot of the value of the vector at the time the most recent write was made to the row.
-
-If DB-A wants changes from DB-B,
-
-- DB-A sends its version vector to DB-B
-- DB-B finds all rows for which _any_ element in the row's snapshot vector is _greater_ than the corresponding element in the provided vector or for which the provided vector is missing an entry (https://github.com/tantaman/conflict-free-sqlite/blob/main/prototype/replicator/src/queries.ts#L59-L63)
-- DB-B sends these rows to DB-A
-- DB-A applys the changes
-- DB-A now has all of DB-B's updates
-
-This algorithm requires causal delivery of message during the time which two peers decide to sync.
-
-# Implementation
-
-`crsqlite` is currently implemented as a set of views, triggers, and conflict free base tables.
-
-The views match an application's existing database schema so little to no changes need be made to existing applications.
-
-Whenever sqlite tries to write to a view, we intercept that write and write it to the conflict free base tables instead. This allows you to issue arbitrarily complex writes (e.g. UPDATE x WHERE condition) as `SQLite` will resolve the impacted rows via its query engine.
-
-You can view a set of manually constructed view and triggers here:
-https://github.com/tantaman/conflict-free-sqlite/tree/main/prototype/test-schemas
-
-# Perf
-
-`crsqlite` is currently 2-3x slower than base `sqlite`. I believe we can get perf to be near identical. The current bottlenecks are:
-
-1. The current database clock value is stored in a table and must be touched every write
-2. The site id of the database is stored in a table and queried every write
-
-We can move both of these values out of their tables and into a variable in-memory. Preliminary tests show that doing this results in near identical perf to `sqlite`.
+Every row and column in the database is associated with a [lamport timestamp](https://tantaman.com/2022-10-18-lamport-sufficient-for-lww.html). This clock allows peers to ask one another for updates since the last time they communicated.
 
 # Future
 
@@ -161,3 +140,8 @@ Some example are --
 - Table columns might be last write win (LWW) registers -- converging but throwing out earlier writes
 - Table columns might be multi value (MV) registers -- keeping around all concurrent edits to a single column for users (or code) to pick and merge later.
 - A column might be a [counter CRDT](https://www.cs.utexas.edu/~rossbach/cs380p-fall2019/papers/Counters.html) which accumulates all observations from all parties
+
+# Old Design
+
+A description of the original design. Note that this design was only used for the prototype and we've evolved it for the production version --
+[![loom](https://cdn.loom.com/sessions/thumbnails/0934f93364d340e0ba658146a974edb4-with-play.gif)](https://www.loom.com/share/0934f93364d340e0ba658146a974edb4)

@@ -1,37 +1,3 @@
-/**
- * The changes virtual table is an eponymous virtual table which can be used
- * to fetch and apply patches to a db.
- *
- * To fetch a changeset:
- * ```sql
- * SELECT * FROM crsql_chages WHERE site_id != SITE_ID AND version > V
- * ```
- *
- * The site id parameter is used to prevent a site from fetching its own changes that were
- * patched into the remote.
- *
- * The version parameter is used to get changes after a specific version.
- * Sites should keep track of the latest version they've received from other sites
- * and use that number as a cursor to fetch future changes.
- *
- * The changes table has the following columns:
- * 1. table - the name of the table the patch is from
- * 2. pk - the primary key(s) that identify the row to be patched. If the
- *    table has many columns that comprise the primary key then
- *    the values are quote concatenated in pk order.
- * 3. col_vals - the values to patch. quote concatenated in cid order.
- * 4. col_versions - the cids of the changed columns and the versions of those columns
- * 5. version - the min version of the patch. Used for filtering and for sites to update their
- *    "last seen" version from other sites
- * 6. site_id - the site_id that is responsible for the update. If this is 0
- *    then the update was made locally.
- *
- * To apply a changeset:
- * ```sql
- * INSERT INTO changes (table, pk, col_vals, col_versions, site_id) VALUES (...)
- * ```
- */
-
 #include "changes-vtab.h"
 #include <string.h>
 #include <assert.h>
@@ -40,6 +6,7 @@
 #include "consts.h"
 #include "util.h"
 #include "crsqlite.h"
+#include "changes-vtab-read.h"
 
 /**
  * Created when the virtual table is initialized.
@@ -192,87 +159,6 @@ static int changesEof(sqlite3_vtab_cursor *cur)
 {
   crsql_Changes_cursor *pCur = (crsql_Changes_cursor *)cur;
   return pCur->pChangesStmt == 0;
-}
-
-/**
- * Construct the query to grab the changes made against
- * rows in a given table
- */
-char *crsql_changesQueryForTable(crsql_TableInfo *tableInfo)
-{
-  if (tableInfo->pksLen == 0)
-  {
-    return 0;
-  }
-
-  char *zSql = sqlite3_mprintf(
-      "SELECT\
-      %z as pks,\
-      '%s' as tbl,\
-      json_group_object(__crsql_col_num, __crsql_version) as col_vrsns,\
-      count(__crsql_col_num) as num_cols,\
-      min(__crsql_version) as min_v\
-    FROM \"%s__crsql_clock\"\
-    WHERE\
-      __crsql_site_id != ?\
-    AND\
-      __crsql_version > ?\
-    GROUP BY pks",
-      crsql_quoteConcat(tableInfo->pks, tableInfo->pksLen),
-      tableInfo->tblName,
-      tableInfo->tblName);
-
-  return zSql;
-}
-
-/**
- * Union all the crr tables together to get a comprehensive
- * set of changes
- */
-char *crsql_changesUnionQuery(
-    crsql_TableInfo **tableInfos,
-    int tableInfosLen)
-{
-  char *unionsArr[tableInfosLen];
-  char *unionsStr = 0;
-  int i = 0;
-
-  for (i = 0; i < tableInfosLen; ++i)
-  {
-    unionsArr[i] = crsql_changesQueryForTable(tableInfos[i]);
-    if (unionsArr[i] == 0)
-    {
-      for (int j = 0; j < i; j++)
-      {
-        sqlite3_free(unionsArr[j]);
-      }
-      return 0;
-    }
-
-    if (i < tableInfosLen - 1)
-    {
-      unionsArr[i] = sqlite3_mprintf("%z %s ", unionsArr[i], UNION);
-    }
-  }
-
-  // move the array of strings into a single string
-  unionsStr = crsql_join(unionsArr, tableInfosLen);
-  // free the strings in the array
-  for (i = 0; i < tableInfosLen; ++i)
-  {
-    sqlite3_free(unionsArr[i]);
-  }
-
-  // compose the final query
-#define TBL 0
-#define PKS 1
-#define NUM_COLS 2
-#define COL_VRSNS 3
-#define MIN_V 4
-  return sqlite3_mprintf(
-      "SELECT tbl, pks, num_cols, col_vrsns, min_v FROM (%z) ORDER BY min_v, tbl ASC",
-      unionsStr);
-  // %z frees unionsStr https://www.sqlite.org/printf.html#percentz
 }
 
 /**

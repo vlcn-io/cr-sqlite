@@ -85,6 +85,17 @@ static void testAllReceivedCids()
   assert(cidMap[0] == 0);
   assert(cidMap[1] == 1);
   assert(numReceivedCids == 2);
+  sqlite3_free(cidMap);
+
+  cidMap = crsql_allReceivedCids(
+      db,
+      (unsigned char*)"{\"1\": 1, \"0\": 2}",
+      2,
+      &numReceivedCids);
+  assert(cidMap[1] == 0);
+  assert(cidMap[0] == 1);
+  assert(numReceivedCids == 2);
+  sqlite3_free(cidMap);
 
   printf("\t\e[0;32mSuccess\e[0m\n");
 fail:
@@ -111,12 +122,21 @@ static void testChangesTabConflictSets()
 
 static void testAllChangedCids()
 {
+  printf("AllChangedCids\n");
+
   int rc = SQLITE_OK;
   sqlite3 *db;
   rc = sqlite3_open(":memory:", &db);
   char *err = 0;
 
   // test
+  // crsql_allChangedCids(
+  //   db,
+  //   "",
+  //   "",
+  //   "",
+
+  // );
 
   printf("\t\e[0;32mSuccess\e[0m\n");
 fail:
@@ -130,4 +150,5 @@ void crsqlChangesVtabWriteTestSuite()
   printf("\e[47m\e[1;30mSuite: crsql_changesVtabWrite\e[0m\n");
 
   testAllReceivedCids();
+  testAllChangedCids();
 }

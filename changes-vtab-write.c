@@ -236,35 +236,44 @@ int crsql_mergeInsert(
   }
 
   int numReceivedCids = 0;
-  int *allReceivedCids = crsql_allReceivedCids(db, insertColVrsns, tblInfo->baseColsLen, &numReceivedCids);
+  int *allReceivedCidsToIdx = crsql_allReceivedCids(db, insertColVrsns, tblInfo->baseColsLen, &numReceivedCids);
 
-  if (allReceivedCids == 0)
+  if (allReceivedCidsToIdx == 0)
   {
-    sqlite3_free(allReceivedCids);
+    sqlite3_free(allReceivedCidsToIdx);
     *errmsg = sqlite3_mprintf("crsql - failed to extract cids of changed columns");
     return SQLITE_ERROR;
   }
 
-  if (allReceivedCids[0] == -1)
+  if (allReceivedCidsToIdx[0] == -1)
   {
-    sqlite3_free(allReceivedCids);
+    sqlite3_free(allReceivedCidsToIdx);
     *errmsg = sqlite3_mprintf("crsql - patching deletes is not yet implemented");
     // can just issue a delete via pkwherelist and be done.
     // rc = sqlite3_exec(db, SET_SYNC_BIT, 0, 0, errmsg);
     return SQLITE_ERROR;
   }
 
-  // TODO: look for the case where the local deleted the row
-  // and thus should not take the remote's patch
-
-  // TODO: we can't trust `insertPks`
   char *pkWhereList = crsql_extractWhereList(tblInfo->pks, tblInfo->pksLen, (const char *)insertPks);
   if (pkWhereList == 0)
   {
     *errmsg = sqlite3_mprintf("crsql - failed decoding primary keys for insert");
-    sqlite3_free(allReceivedCids);
+    sqlite3_free(allReceivedCidsToIdx);
     return SQLITE_ERROR;
   }
+
+  // SELECT count(*) FROM clock WHERE pkWhereList AND __crsql_col_num = -1;
+  // rc = crsql_checkForLocalDelete(db, tblInfo->tblName, pkWhereList);
+  // if (rc == DELETED_LOCALLY) {
+  //   // delete wins. bail on merge.
+  //   sqlite3_free(allReceivedCidsToIdx);
+  //   return SQLITE_OK;
+  // }
+
+  // if (numReceivedCids == 0) {
+  //   // on conflict ignore this.
+  //   rc = crsql_processPkOnlyInsert(db, tblInfo->tblName, tblInfo->pks, tblInfo->pksLen, insertPks);
+  // }
 
   int allChangedCidsLen = 0;
   int *allChangedCids = crsql_allChangedCids(
@@ -281,22 +290,24 @@ int crsql_mergeInsert(
 
   if (allChangedCids == 0 || allChangedCidsLen + tblInfo->pksLen > tblInfo->baseColsLen)
   {
-    sqlite3_free(allReceivedCids);
+    sqlite3_free(allReceivedCidsToIdx);
+    sqlite3_free(allChangedCids);
     return SQLITE_ERROR;
   }
 
   if (allChangedCidsLen == 0)
   {
-    // the patch doesn't apply -- we're ok and done.
-    // TODO: this isn't true.
-    // This could be a purely primary key insertion
-    sqlite3_free(allReceivedCids);
+    // TODO: confirm you still get results back even if the row does not exist
+    // on local. You should givenv left join usage.
+    sqlite3_free(allReceivedCidsToIdx);
     sqlite3_free(allChangedCids);
     return rc;
   }
 
+  // crsql_insertWinningChanges();
+  // move all code below into insertWinningChanges
+
   crsql_ColumnInfo columnInfosForInsert[allChangedCidsLen];
-  // TODO: we need something that ins't `crsql_split` for this.
   char **pkValsForInsert = crsql_splitQuoteConcat((const char *)insertPks, tblInfo->pksLen);
   char **allReceivedNonPkVals = crsql_splitQuoteConcat((const char *)insertVals, numReceivedCids);
   char *nonPkValsForInsert[allChangedCidsLen];
@@ -304,18 +315,20 @@ int crsql_mergeInsert(
   // TODO: handle the case where only pks to process
   if (pkValsForInsert == 0 || allReceivedNonPkVals == 0)
   {
-    sqlite3_free(allReceivedCids);
+    sqlite3_free(allReceivedCidsToIdx);
     sqlite3_free(allChangedCids);
     return SQLITE_ERROR;
   }
 
-  // TODO: bounds checking
   for (int i = 0; i < allChangedCidsLen; ++i)
   {
     int cid = allChangedCids[i];
-    int valIdx = allReceivedCids[cid];
-    // TODO: valIdx -- if it is -2 there was no mapping found
-    // check this and return an error in this case
+    int valIdx = allReceivedCidsToIdx[cid];
+    if (valIdx < 0 || valIdx >= numReceivedCids) {
+      sqlite3_free(allReceivedCidsToIdx);
+      sqlite3_free(allChangedCids);
+      return SQLITE_ERROR;
+    }
     nonPkValsForInsert[i] = allReceivedNonPkVals[valIdx];
     columnInfosForInsert[i] = tblInfo->baseCols[cid];
   }
@@ -334,7 +347,7 @@ int crsql_mergeInsert(
   {
     len += strlen(nonPkValsForInsert[i]);
   }
-  char *nonPkValsStr = sqlite3_malloc(len * sizeof *pkValsStr + 1);
+  char *nonPkValsStr = sqlite3_malloc((len + 1) * sizeof *nonPkValsStr);
   crsql_joinWith(nonPkValsStr, nonPkValsForInsert, allChangedCidsLen, ',');
 
   char *conflictSets = crsql_changesTabConflictSets(

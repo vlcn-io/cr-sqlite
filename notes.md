@@ -49,8 +49,6 @@ todo:
   - to support altering a crr
 - support quoted identifiers (i.e., %w or %q rather than what we have now)
 
-  - test index of cl
-
   ```
   sqlite> create table """foo""" (a);
   sqlite> .tables

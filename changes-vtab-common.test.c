@@ -1,5 +1,5 @@
 #include "crsqlite.h"
-#include "changes-vtab.h"
+#include "changes-vtab-common.h"
 #include "consts.h"
 #include <assert.h>
 #include <string.h>
@@ -14,8 +14,8 @@
   }
 #endif
 
-void crsqlChangesVtabTestSuite()
+void crsqlChangesVtabCommonTestSuite()
 {
-  // all tests currently exists in vtab-read, vtab-write & vtab-common submodules
+  // testExtractPkWhereList();
   printf("\e[47m\e[1;30mSuite: crsql_changesVtab\e[0m\n");
 }

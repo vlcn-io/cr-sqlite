@@ -2,7 +2,10 @@ void crsqlUtilTestSuite();
 void crsqlTableInfoTestSuite();
 void crsqlTestSuite();
 void crsqlTriggersTestSuite();
-void crsqlChagesSinceVtabTestSuite();
+void crsqlChangesVtabReadTestSuite();
+void crsqlChangesVtabTestSuite();
+void crsqlChangesVtabWriteTestSuite();
+void crsqlChangesVtabCommonTestSuite();
 
 int main(int argc, char *argv[])
 {
@@ -10,5 +13,8 @@ int main(int argc, char *argv[])
   crsqlTableInfoTestSuite();
   crsqlTestSuite();
   crsqlTriggersTestSuite();
-  crsqlChagesSinceVtabTestSuite();
+  crsqlChangesVtabTestSuite();
+  crsqlChangesVtabReadTestSuite();
+  crsqlChangesVtabWriteTestSuite();
+  crsqlChangesVtabCommonTestSuite();
 }

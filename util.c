@@ -75,7 +75,7 @@ char *crsql_join2(char *(*map)(const char *), char **in, size_t len, char *delim
     resultLen += strlen(toJoin[i]);
   }
   resultLen += (len - 1) * strlen(delim);
-  ret = sqlite3_malloc(resultLen * sizeof(char) + 1);
+  ret = sqlite3_malloc((resultLen + 1) * sizeof(char));
   ret[resultLen] = '\0';
 
   int j = 0;
@@ -147,17 +147,74 @@ char **crsql_split(const char *in, char *delim, int partsLen)
   return ret;
 }
 
-const char *crsql_scanToUnescapedQuote(const char *in)
+/**
+ * Given a pointer to the inside of a string literal,
+ * scan until we get to the end of the literal.
+ *
+ * Fails if we hit the end of the string without finding an unescaped
+ * literal termination.
+ */
+const char *crsql_scanToEndOfLiteral(const char *in)
 {
+  while (*in != '\0')
+  {
+    // hit a quote
+    if (*in == '\'')
+    {
+      // with no quote after?
+      // it is unescaped
+      if (*(in + 1) != '\'') {
+        return (in + 1);
+      } else {
+        // was a quote after? move into that quote
+        // then past the quote at end of loop.
+        in += 1;
+      }
+    }
+    in += 1;
+  }
+
+  // we made it to the end of the string? well then
+  // there was a bare quote which is an error case.
   return 0;
 }
 
-const char *crsql_safelyAdvanceThroughString(const char *in, int len) {
-  return 0;
+/**
+ * Advance len characters through the string.
+ * Fails (returns 0) if we cannot advance at least that much.
+ */
+const char *crsql_safelyAdvanceThroughString(const char *in, int len)
+{
+  for (int i = 0; i < len; ++i)
+  {
+    if (*in == '\0')
+    {
+      return 0;
+    }
+
+    in += 1;
+  }
+  return in;
 }
 
-const char *crsql_scanToDelimiter(const char *in, char delim) {
-  return 0;
+/**
+ * Looks for the provided delimiter and returns a pointer to the character
+ * after that delim.
+ *
+ * If no delim is found, returns a pointer to the end of the string.
+ */
+const char *crsql_consumeDigitsToDelimiter(const char *in, char delim)
+{
+  while (*in != '\0' && *in != delim)
+  {
+    if (*in < 48 || *in > 57) {
+      if (*in != '.') {
+        return 0;
+      }
+    }
+    in += 1;
+  }
+  return in;
 }
 
 char **crsql_splitQuoteConcat(const char *in, int partsLen)
@@ -166,17 +223,29 @@ char **crsql_splitQuoteConcat(const char *in, int partsLen)
   const char *last = in;
   char **zzParts = sqlite3_malloc(partsLen * sizeof(char *));
   int partIdx = 0;
-  while (curr != 0 && *curr != '\0')
+  while (curr != 0 && *curr != '\0' && partIdx < partsLen)
   {
     if (*curr == '\'')
     {
       // scan till consumed string literal
+      curr += 1;
+      curr = crsql_scanToEndOfLiteral(curr);
     }
     else if (*curr == 'X')
     {
       // scan till consumed hex
       curr += 1;
-      curr = crsql_scanToUnescapedQuote(curr);
+      if (*curr != '\'')
+      {
+        // unexpected result
+        // set curr = 0 so we can cleanup and exit
+        curr = 0;
+      }
+      else
+      {
+        curr += 1;
+        curr = crsql_scanToEndOfLiteral(curr);
+      }
     }
     else if (*curr == 'N')
     {
@@ -186,26 +255,50 @@ char **crsql_splitQuoteConcat(const char *in, int partsLen)
     else
     {
       // scan till we hit the delimiter, consuming the digits
-      curr = crsql_scanToDelimiter(curr, QC_DELIM);
+      // TODO: this should only allow digits.
+      curr = crsql_consumeDigitsToDelimiter(curr, QC_DELIM);
     }
 
-    if (curr == 0) {
+    if (curr == 0)
+    {
       // we had an error in scanning
       // free what we've allocated thus far and return null.
-      for (int i = 0; i < partIdx; ++i) {
+      for (int i = 0; i < partIdx; ++i)
+      {
         sqlite3_free(zzParts[i]);
       }
       sqlite3_free(zzParts);
       return 0;
     }
 
-    // ok, pull from last to curr
+    // pull from last to curr
     // advance last
+    zzParts[partIdx] = sqlite3_malloc(((curr - last) + 1) * sizeof(char *));
+    strncpy(zzParts[partIdx], last, curr - last);
+    zzParts[partIdx][curr - last] = '\0';
+
+    // pointing at a delim? Move off it.
+    if (*curr == QC_DELIM) {
+      curr += 1;
+    }
+
+    last = curr;
+    partIdx += 1;
   }
 
-  return 0;
-}
+  if (partIdx != partsLen || *curr != '\0')
+  {
+    // we did not consume the whole string or get the number of parts expected. this is an error case.
+    for (int i = 0; i < partIdx; ++i)
+    {
+      sqlite3_free(zzParts[i]);
+    }
+    sqlite3_free(zzParts);
+    return 0;
+  }
 
+  return zzParts;
+}
 
 // TODO:
 // have this take a function pointer that extracts the string so we can
@@ -238,11 +331,6 @@ char *crsql_asIdentifierListStr(char **in, size_t inlen, char delim)
   }
 
   return ret;
-}
-
-int crsql_isProperlyQuoteConcated()
-{
-  return 0;
 }
 
 /**

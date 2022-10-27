@@ -212,9 +212,9 @@ int crsql_mergeInsert(
   // safe given we only use this if it exactly matches a table name
   // from tblInfo
   const unsigned char *insertTbl = sqlite3_value_text(argv[2 + CHANGES_SINCE_VTAB_TBL]);
-  // TODO: sanitize / assert proper quoting of pks
+  // `splitQuoteConcat` will validate these
   const unsigned char *insertPks = sqlite3_value_text(argv[2 + CHANGES_SINCE_VTAB_PK]);
-  // TODO: sanitize / assert proper quoting of vals
+  // `splitQuoteConcat` will validate these
   const unsigned char *insertVals = sqlite3_value_text(argv[2 + CHANGES_SINCE_VTAB_COL_VALS]);
   // safe given we only use via %Q and json processing
   const unsigned char *insertColVrsns = sqlite3_value_text(argv[2 + CHANGES_SINCE_VTAB_COL_VRSNS]);
@@ -297,8 +297,8 @@ int crsql_mergeInsert(
 
   crsql_ColumnInfo columnInfosForInsert[allChangedCidsLen];
   // TODO: we need something that ins't `crsql_split` for this.
-  char **pkValsForInsert = crsql_split((const char *)insertPks, PK_DELIM_DEPRECATED, tblInfo->pksLen);
-  char **allReceivedNonPkVals = crsql_split((const char *)insertVals, PK_DELIM_DEPRECATED, numReceivedCids);
+  char **pkValsForInsert = crsql_splitQuoteConcat((const char *)insertPks, tblInfo->pksLen);
+  char **allReceivedNonPkVals = crsql_splitQuoteConcat((const char *)insertVals, numReceivedCids);
   char *nonPkValsForInsert[allChangedCidsLen];
 
   // TODO: handle the case where only pks to process

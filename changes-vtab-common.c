@@ -18,7 +18,7 @@ char *crsql_extractWhereList(
   {
     // zzParts will not be greater or less than columnInfosLen.
     // TODO: we need something other than `crsql_split` here. `crsql_quoteConcatSplit`
-    zzParts = crsql_split(quoteConcatedVals, PK_DELIM_DEPRECATED, columnInfosLen);
+    zzParts = crsql_splitQuoteConcat(quoteConcatedVals, columnInfosLen);
   }
 
   if (zzParts == 0)

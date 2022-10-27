@@ -15,7 +15,7 @@
  * Returns r[0] = -1 on delete
  *
  * Returns 0 on failure.
- * 
+ *
  * totalNumCols represents the max number of columns in the table.
  * rNumReceivedCids is the number of columns in the change.
  */
@@ -38,7 +38,8 @@ int *crsql_allReceivedCids(
   }
 
   int *ret = sqlite3_malloc(totalNumCols * sizeof *ret);
-  for (int i = 0; i < totalNumCols; ++i) {
+  for (int i = 0; i < totalNumCols; ++i)
+  {
     // -2 => unmapped
     // -1 => full row delete
     ret[i] = -2;
@@ -109,28 +110,13 @@ int *crsql_allChangedCids(
     char **errmsg)
 {
   char *zSql = 0;
-  // cmp insertSiteId
-  int siteComparison = memcmp(
-      insertSiteId,
-      crsql_siteIdBlob,
-      insertSiteIdLen < crsql_siteIdBlobSize ? insertSiteIdLen : crsql_siteIdBlobSize);
+  int siteComparison = crsql_siteIdCmp(insertSiteId, insertSiteIdLen, crsql_siteIdBlob, crsql_siteIdBlobSize);
 
   if (siteComparison == 0)
   {
-    if (insertSiteIdLen > crsql_siteIdBlobSize)
-    {
-      siteComparison = 1;
-    }
-    else if (insertSiteIdLen < crsql_siteIdBlobSize)
-    {
-      siteComparison = -1;
-    }
-    else
-    {
-      // we're patching into our own site? Makes no sense.
-      *errmsg = sqlite3_mprintf("crsql - a site is trying to patch itself.");
-      return 0;
-    }
+    // we're patching into our own site? Makes no sense.
+    *errmsg = sqlite3_mprintf("crsql - a site is trying to patch itself.");
+    return 0;
   }
 
   if (siteComparison > 0)

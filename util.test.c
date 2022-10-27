@@ -16,7 +16,7 @@
   }
 #endif
 
-void testGetVersionUnionQuery()
+static void testGetVersionUnionQuery()
 {
   int numRows_tc1 = 1;
   char *tableNames_tc1[] = {
@@ -47,7 +47,7 @@ void testGetVersionUnionQuery()
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
-void testDoesTableExist()
+static void testDoesTableExist()
 {
   sqlite3 *db;
   int rc;
@@ -69,7 +69,7 @@ void testDoesTableExist()
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
-void testGetCount()
+static void testGetCount()
 {
   sqlite3 *db = 0;
   int rc = SQLITE_OK;
@@ -88,7 +88,7 @@ void testGetCount()
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
-void testJoinWith()
+static void testJoinWith()
 {
   printf("JoinWith\n");
   char dest[13];
@@ -103,7 +103,7 @@ void testJoinWith()
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
-void testGetIndexedCols()
+static void testGetIndexedCols()
 {
   printf("GetIndexedCols\n");
 
@@ -146,7 +146,7 @@ fail:
   printf("bad return code: %d\n", rc);
 }
 
-void testAsIdentifierListStr() {
+static void testAsIdentifierListStr() {
   printf("AsIdentifierListStr\n");
   
   char* tc1[] = {
@@ -169,11 +169,11 @@ void testAsIdentifierListStr() {
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
-char* join2map(const char *in) {
+static char* join2map(const char *in) {
   return sqlite3_mprintf("foo %s bar", in);
 }
 
-void testJoin2() {
+static void testJoin2() {
   printf("Join2\n");
   char* tc0[] = {
   };
@@ -200,7 +200,7 @@ void testJoin2() {
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
-void testSplit() {
+static void testSplit() {
   printf("Split\n");
 
   char *tc0 = "one, two, three";

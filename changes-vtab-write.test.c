@@ -14,7 +14,7 @@
   }
 #endif
 
-void testAllReceivedCids() {
+static void testAllReceivedCids() {
   int rc = SQLITE_OK;
   sqlite3 *db;
   rc = sqlite3_open(":memory:", &db);
@@ -37,22 +37,22 @@ void testAllReceivedCids() {
   assert(rc == SQLITE_OK);
 }
 
-void memTestMergeInsert() {
+static void memTestMergeInsert() {
   // test delete case
   // test nothing to merge case
   // test normal merge
   // test error / early returns
 }
 
-void testMergeInsert() {
+static void testMergeInsert() {
 
 }
 
-void testChangesTabConflictSets() {
+static void testChangesTabConflictSets() {
 
 }
 
-void testAllChangedCids() {
+static void testAllChangedCids() {
   int rc = SQLITE_OK;
   sqlite3 *db;
   rc = sqlite3_open(":memory:", &db);

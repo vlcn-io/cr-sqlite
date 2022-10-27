@@ -12,7 +12,7 @@
 // query construction rather than actual table creation.
 // testing actual table creation requires views and base crr to
 // be in place.
-void testCreateTriggers()
+static void testCreateTriggers()
 {
   printf("CreateTriggers\n");
 
@@ -58,7 +58,7 @@ void testCreateTriggers()
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
-void testDeleteTriggerQuery()
+static void testDeleteTriggerQuery()
 {
   printf("DeleteTriggerQuery\n");
   sqlite3 *db = 0;

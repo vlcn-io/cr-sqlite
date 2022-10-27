@@ -14,7 +14,7 @@
   }
 #endif
 
-void testChangesQueryForTable()
+static void testChangesQueryForTable()
 {
   printf("ChangeQueryForTable\n");
   int rc = SQLITE_OK;
@@ -47,7 +47,7 @@ fail:
   assert(rc == SQLITE_OK);
 }
 
-void testChangesUnionQuery()
+static void testChangesUnionQuery()
 {
   printf("ChangesUnionQuery\n");
 
@@ -78,7 +78,7 @@ void testChangesUnionQuery()
   assert(rc == SQLITE_OK);
 }
 
-void testPickColumnInfosFromVersionMap()
+static void testPickColumnInfosFromVersionMap()
 {
   printf("PickColumnInfosFromVersionMap\n");
 
@@ -217,7 +217,7 @@ void testPickColumnInfosFromVersionMap()
   assert(rc == SQLITE_OK);
 }
 
-void testRowPatchDataQuery()
+static void testRowPatchDataQuery()
 {
   printf("RowPatchDataQuery\n");
 

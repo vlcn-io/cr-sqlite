@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-void testGetTableInfo()
+static void testGetTableInfo()
 {
   printf("GetTableInfo\n");
   sqlite3 *db = 0;
@@ -75,7 +75,7 @@ void testGetTableInfo()
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
-void testExtractBaseCols()
+static void testExtractBaseCols()
 {
   int numInfos = 4;
   crsql_ColumnInfo colInfos[numInfos];
@@ -134,7 +134,7 @@ void testExtractBaseCols()
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
-void testAsIdentifierList()
+static void testAsIdentifierList()
 {
   printf("AsIdentifierList\n");
 
@@ -164,7 +164,7 @@ void testAsIdentifierList()
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
-void testGetIndexList() {
+static void testGetIndexList() {
   printf("GetIndexList\n");
   sqlite3 *db = 0;
   crsql_IndexInfo *indexInfos;
@@ -207,7 +207,7 @@ void testGetIndexList() {
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
-void testFindTableInfo() {
+static void testFindTableInfo() {
   printf("FindTableInfo\n");
 
   crsql_TableInfo** tblInfos = sqlite3_malloc(3 * sizeof(crsql_TableInfo*));
@@ -229,7 +229,7 @@ void testFindTableInfo() {
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
-void testQuoteConcat() {
+static void testQuoteConcat() {
   printf("QuoteConcat\n");
 
   int len = 3;

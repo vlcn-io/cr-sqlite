@@ -17,7 +17,7 @@ SQLITE_EXTENSION_INIT1
   }
 #endif
 
-void testCreateClockTable()
+static void testCreateClockTable()
 {
   printf("CreateClockTable\n");
 
@@ -66,7 +66,7 @@ fail:
   assert(rc == SQLITE_OK);
 }
 
-void teste2e()
+static void teste2e()
 {
   printf("e2e\n");
 

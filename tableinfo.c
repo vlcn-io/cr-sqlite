@@ -490,3 +490,62 @@ crsql_TableInfo *crsql_findTableInfo(crsql_TableInfo **tblInfos, int len, const 
 
   return 0;
 }
+
+/**
+ * Pulls all table infos for all crrs present in the database.
+ * Run once at vtab initialization -- see docs on crsql_Changes_vtab
+ * for the constraints this creates.
+ */
+int crsql_pullAllTableInfos(
+    sqlite3 *db,
+    crsql_TableInfo ***pzpTableInfos,
+    int *rTableInfosLen,
+    char **errmsg)
+{
+  char **zzClockTableNames = 0;
+  int rNumCols = 0;
+  int rNumRows = 0;
+  int rc = SQLITE_OK;
+
+  // Find all clock tables
+  rc = sqlite3_get_table(
+      db,
+      CLOCK_TABLES_SELECT,
+      &zzClockTableNames,
+      &rNumRows,
+      &rNumCols,
+      0);
+
+  if (rc != SQLITE_OK || rNumRows == 0)
+  {
+    *errmsg = sqlite3_mprintf("crsql internal error discovering crr tables.");
+    sqlite3_free_table(zzClockTableNames);
+    return SQLITE_ERROR;
+  }
+
+  // TODO: validate index info
+  crsql_TableInfo **tableInfos = sqlite3_malloc(rNumRows * sizeof(crsql_TableInfo *));
+  memset(tableInfos, 0, rNumRows * sizeof(crsql_TableInfo *));
+  for (int i = 0; i < rNumRows; ++i)
+  {
+    // +1 since tableNames includes a row for column headers
+    // Strip __crsql_clock suffix.
+    char *baseTableName = strndup(zzClockTableNames[i + 1], strlen(zzClockTableNames[i + 1]) - __CRSQL_CLOCK_LEN);
+    rc = crsql_getTableInfo(db, baseTableName, &tableInfos[i], errmsg);
+    sqlite3_free(baseTableName);
+
+    if (rc != SQLITE_OK)
+    {
+      sqlite3_free_table(zzClockTableNames);
+      crsql_freeAllTableInfos(tableInfos, rNumRows);
+      return rc;
+    }
+  }
+
+  sqlite3_free_table(zzClockTableNames);
+
+  *pzpTableInfos = tableInfos;
+  *rTableInfosLen = rNumRows;
+
+  return SQLITE_OK;
+}

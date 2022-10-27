@@ -1,5 +1,14 @@
 todo:
 
+- Alter funcs:
+  - drop column: problem
+    - need to migrate versions to new cids
+  - rename table: problem
+    - need to rename clock table
+    - test that trigger behavior is preserved
+  - define `crsql_alter()` which runs the alter if it is safe, runs a series of statements to make it safe if not
+- add logging
+  - https://www.sqlite.org/capi3ref.html#sqlite3_log
 - bump glob version at end of patch tx
   - will need to save max of largest version seen during patching
   - can we save this on the vtab struct?
@@ -8,7 +17,7 @@ todo:
 - schema comparison before sync
   - ensure schemas are at same or compatible versions...
 - pk validation
-- replace binding where not needs? %Q?
+- replace binding where not needed? %Q?
 - delete support
   sentinel col vers?
   -1 col?
@@ -245,3 +254,11 @@ insert into foo values (1,2);
 insert into baz values ('k', 'woo', 'doo', 'daa');
 select * from crsql_changes;
 ```
+
+-> Alter functions.
+add column is good.
+rename column is good.
+add index is good (ish)
+
+drop column: problem
+rename table: problem

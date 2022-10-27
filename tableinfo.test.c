@@ -256,6 +256,7 @@ void crsqlTableInfoTestSuite() {
   testGetIndexList();
   testFindTableInfo();
   testQuoteConcat();
+  // testPullAllTableInfos();
 
   // TODO: memory test -- allocate and deallocate no leaks.
 }

@@ -73,5 +73,10 @@ int crsql_getIndexList(
 void crsql_freeAllTableInfos(crsql_TableInfo **tableInfos, int len);
 crsql_TableInfo *crsql_findTableInfo(crsql_TableInfo **tblInfos, int len, const char * tblName);
 char *crsql_quoteConcat(crsql_ColumnInfo * cols, int len);
+int crsql_pullAllTableInfos(
+    sqlite3 *db,
+    crsql_TableInfo ***pzpTableInfos,
+    int *rTableInfosLen,
+    char **errmsg);
 
 #endif

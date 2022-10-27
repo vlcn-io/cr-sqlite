@@ -34,7 +34,7 @@ static void testExtractWhereList()
   whereList = crsql_extractWhereList(
       columnInfos,
       3,
-      "'a'~'~'b'~'~'c'~'~'d'");
+      "'a'|'b'|'c'|'d'");
   assert(
       strcmp("\"foo\" = 'a' AND \"bar\" = 'b' AND \"baz\" = 'c'", whereList) == 0);
   sqlite3_free(whereList);
@@ -43,7 +43,7 @@ static void testExtractWhereList()
   whereList = crsql_extractWhereList(
       columnInfos,
       3,
-      "'a'~'~'b'~'~'c'");
+      "'a'|'b'|'c'");
   assert(
       strcmp("\"foo\" = 'a' AND \"bar\" = 'b' AND \"baz\" = 'c'", whereList) == 0);
   sqlite3_free(whereList);

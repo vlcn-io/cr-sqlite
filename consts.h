@@ -4,8 +4,8 @@
 #define MIN_POSSIBLE_DB_VERSION -9223372036854775807L
 
 #define __CRSQL_CLOCK_LEN 13
-#define PK_DELIM "~'~"
-#define PK_DELIM_LEN 3
+#define PK_DELIM_DEPRECATED "|"
+#define QC_DELIM '|'
 
 #define DELETE_CID_SENTINEL -1
 

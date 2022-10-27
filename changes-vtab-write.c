@@ -288,14 +288,17 @@ int crsql_mergeInsert(
   if (allChangedCidsLen == 0)
   {
     // the patch doesn't apply -- we're ok and done.
+    // TODO: this isn't true.
+    // This could be a purely primary key insertion
     sqlite3_free(allReceivedCids);
     sqlite3_free(allChangedCids);
     return rc;
   }
 
   crsql_ColumnInfo columnInfosForInsert[allChangedCidsLen];
-  char **pkValsForInsert = crsql_split((const char *)insertPks, PK_DELIM, tblInfo->pksLen);
-  char **allReceivedNonPkVals = crsql_split((const char *)insertVals, PK_DELIM, numReceivedCids);
+  // TODO: we need something that ins't `crsql_split` for this.
+  char **pkValsForInsert = crsql_split((const char *)insertPks, PK_DELIM_DEPRECATED, tblInfo->pksLen);
+  char **allReceivedNonPkVals = crsql_split((const char *)insertVals, PK_DELIM_DEPRECATED, numReceivedCids);
   char *nonPkValsForInsert[allChangedCidsLen];
 
   // TODO: handle the case where only pks to process

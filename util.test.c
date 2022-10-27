@@ -204,8 +204,8 @@ static void testSplit() {
   printf("Split\n");
 
   char *tc0 = "one, two, three";
-  char *tc1 = "one~'~two~'~three";
-  char *tc2 = "one~'~two";
+  char *tc1 = "one|two|three";
+  char *tc2 = "one|two";
 
   char ** result;
   result = crsql_split(tc0, ",", 3);
@@ -218,23 +218,23 @@ static void testSplit() {
   assert(strcmp(result[1], "two") == 0);
   assert(strcmp(result[2], "three") == 0);
 
-  result = crsql_split(tc1, "~'~", 3);
+  result = crsql_split(tc1, "|", 3);
   assert(strcmp(result[0], "one") == 0);
   assert(strcmp(result[1], "two") == 0);
   assert(strcmp(result[2], "three") == 0);
 
-  result = crsql_split(tc2, "~'~", 2);
+  result = crsql_split(tc2, "|", 2);
   assert(strcmp(result[0], "one") == 0);
   assert(strcmp(result[1], "two") == 0);
 
-  result = crsql_split(tc2, "~'~", 3);
+  result = crsql_split(tc2, "|", 3);
   assert(result == 0);
 
-  result = crsql_split(tc2, "~'~", 1);
+  result = crsql_split(tc2, "|", 1);
   assert(strcmp(result[0], "one") == 0);
 
   result = crsql_split(tc2, "!", 1);
-  assert(strcmp(result[0], "one~'~two") == 0);
+  assert(strcmp(result[0], "one|two") == 0);
 
   result = crsql_split(tc2, "!", 2);
   assert(result == 0);

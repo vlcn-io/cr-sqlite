@@ -102,10 +102,13 @@ char *crsql_join2(char *(*map)(const char *), char **in, size_t len, char *delim
 /**
  * Caller must free all entries in the returned array
  * as well as the returned array.
- * 
+ *
  * if `in` cannot be split into `partsLen` parts, null is returned.
  * if `in` contains more parts than `partsLen` -- only the first `partsLen` parts
  * will be returned.
+ *
+ * Should never be used on quote concated input.
+ * See `crsql_splitQuoteConcat`
  */
 char **crsql_split(const char *in, char *delim, int partsLen)
 {
@@ -123,7 +126,8 @@ char **crsql_split(const char *in, char *delim, int partsLen)
     ++i;
   }
 
-  if (i < partsLen && *in != '\0') {
+  if (i < partsLen && *in != '\0')
+  {
     ret[i] = strdup(in);
     ++i;
   }
@@ -142,6 +146,66 @@ char **crsql_split(const char *in, char *delim, int partsLen)
 
   return ret;
 }
+
+const char *crsql_scanToUnescapedQuote(const char *in)
+{
+  return 0;
+}
+
+const char *crsql_safelyAdvanceThroughString(const char *in, int len) {
+  return 0;
+}
+
+const char *crsql_scanToDelimiter(const char *in, char delim) {
+  return 0;
+}
+
+char **crsql_splitQuoteConcat(const char *in, int partsLen)
+{
+  const char *curr = in;
+  const char *last = in;
+  char **zzParts = sqlite3_malloc(partsLen * sizeof(char *));
+  int partIdx = 0;
+  while (curr != 0 && *curr != '\0')
+  {
+    if (*curr == '\'')
+    {
+      // scan till consumed string literal
+    }
+    else if (*curr == 'X')
+    {
+      // scan till consumed hex
+      curr += 1;
+      curr = crsql_scanToUnescapedQuote(curr);
+    }
+    else if (*curr == 'N')
+    {
+      // scan till consumed NULL
+      curr = crsql_safelyAdvanceThroughString(curr, 4);
+    }
+    else
+    {
+      // scan till we hit the delimiter, consuming the digits
+      curr = crsql_scanToDelimiter(curr, QC_DELIM);
+    }
+
+    if (curr == 0) {
+      // we had an error in scanning
+      // free what we've allocated thus far and return null.
+      for (int i = 0; i < partIdx; ++i) {
+        sqlite3_free(zzParts[i]);
+      }
+      sqlite3_free(zzParts);
+      return 0;
+    }
+
+    // ok, pull from last to curr
+    // advance last
+  }
+
+  return 0;
+}
+
 
 // TODO:
 // have this take a function pointer that extracts the string so we can
@@ -176,9 +240,10 @@ char *crsql_asIdentifierListStr(char **in, size_t inlen, char delim)
   return ret;
 }
 
-// int crsql_isProperlyQuoteConcated() {
-
-// }
+int crsql_isProperlyQuoteConcated()
+{
+  return 0;
+}
 
 /**
  * @brief Given a list of clock table names, construct a union query to get the max clock value for our site.
@@ -364,14 +429,19 @@ int crsql_isIdentifierOpenQuote(char c)
   return 0;
 }
 
-int crsql_siteIdCmp(const void *zLeft, int leftLen, const void *zRight, int rightLen) {
+int crsql_siteIdCmp(const void *zLeft, int leftLen, const void *zRight, int rightLen)
+{
   int minLen = leftLen < rightLen ? leftLen : rightLen;
   int cmp = memcmp(zLeft, zRight, minLen);
 
-  if (cmp == 0) {
-    if (leftLen > rightLen) {
+  if (cmp == 0)
+  {
+    if (leftLen > rightLen)
+    {
       return 1;
-    } else if (leftLen < rightLen) {
+    }
+    else if (leftLen < rightLen)
+    {
       return -1;
     }
 

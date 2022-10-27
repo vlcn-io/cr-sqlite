@@ -55,7 +55,7 @@ def test_changes_since():
   clock_tables = c.execute("SELECT tbl_name FROM sqlite_master WHERE type='table' AND tbl_name LIKE '%__crsql_clock'").fetchall()
 
   # the extension will need to get table info for the clock tables
-  # and extract pk columns to quote-concat as pk. ~'~
+  # and extract pk columns to quote-concat as pk. |
   # do you really want to group by pk?
   # you'll collapse disparate transactiosn...
   # you want to group by pk where all version for the column match?

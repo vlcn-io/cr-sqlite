@@ -14,8 +14,33 @@
   }
 #endif
 
+// TODO: spawn some threads and test various orders of updates
+void testChangesTxCommit() {
+  printf("ChangesTxCommit\n");
+
+  crsql_Changes_vtab tab;
+  sqlite3_vtab *casted = (sqlite3_vtab *)&tab;
+  tab.maxSeenPatchVersion = 0;
+  printf("v: %lld", crsql_dbVersion);
+
+  assert(crsql_dbVersion < 0);
+
+  crsql_changesTxCommit(casted);
+  assert(crsql_dbVersion == 0);
+
+  tab.maxSeenPatchVersion = MIN_POSSIBLE_DB_VERSION;
+  crsql_changesTxCommit(casted);
+  assert(crsql_dbVersion == 0);
+
+  tab.maxSeenPatchVersion = 1;
+  crsql_changesTxCommit(casted);
+  assert(crsql_dbVersion == 1);
+
+  printf("\t\e[0;32mSuccess\e[0m\n");
+}
+
 void crsqlChangesVtabTestSuite()
 {
-  // all tests currently exists in vtab-read, vtab-write & vtab-common submodules
   printf("\e[47m\e[1;30mSuite: crsql_changesVtab\e[0m\n");
+  testChangesTxCommit();
 }

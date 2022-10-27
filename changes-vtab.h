@@ -118,4 +118,6 @@ struct crsql_Changes_cursor
   sqlite3_int64 version;
 };
 
+int crsql_changesTxCommit(sqlite3_vtab *pVTab);
+
 #endif

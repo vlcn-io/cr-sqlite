@@ -263,3 +263,6 @@ Any concern over using cids?
 schemas match it doesn't matter.
 
 Rly no other way to do it if you want to extract the cols and pks appropriately
+
+memtest - https://calcagno.blog/m1dev/ & https://valgrind.org/docs/manual/quick-start.html
+Given that valgrind doesn't work on monterey

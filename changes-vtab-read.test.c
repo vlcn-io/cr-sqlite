@@ -256,7 +256,6 @@ void crsqlChangesVtabReadTestSuite()
   testChangesUnionQuery();
   testPickColumnInfosFromVersionMap();
   testRowPatchDataQuery();
-  // test crsql_changesTxCommit
 }
 
 

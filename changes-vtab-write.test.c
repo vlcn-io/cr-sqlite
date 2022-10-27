@@ -68,5 +68,5 @@ static void testAllChangedCids() {
 }
 
 void crsqlChangesVtabWriteTestSuite() {
-  
+  printf("\e[47m\e[1;30mSuite: crsql_changesVtabWrite\e[0m\n");
 }

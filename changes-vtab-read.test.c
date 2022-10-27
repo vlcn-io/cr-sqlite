@@ -251,7 +251,7 @@ static void testRowPatchDataQuery()
 
 void crsqlChangesVtabReadTestSuite()
 {
-  printf("\e[47m\e[1;30mSuite: crsql_changesVtab\e[0m\n");
+  printf("\e[47m\e[1;30mSuite: crsql_changesVtabRead\e[0m\n");
   testChangesQueryForTable();
   testChangesUnionQuery();
   testPickColumnInfosFromVersionMap();

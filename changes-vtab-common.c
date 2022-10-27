@@ -3,39 +3,40 @@
 #include <string.h>
 #include "util.h"
 
-char *crsql_extractPkWhereList(
-    crsql_TableInfo *tblInfo,
-    const char *pks)
+char *crsql_extractWhereList(
+    crsql_ColumnInfo *zColumnInfos,
+    int columnInfosLen,
+    const char *quoteConcatedVals)
 {
-  char **pksArr = 0;
-  if (tblInfo->pksLen == 1)
+  char **zzParts = 0;
+  if (columnInfosLen == 1)
   {
-    pksArr = sqlite3_malloc(1 * sizeof(char *));
-    pksArr[0] = strdup(pks);
+    zzParts = sqlite3_malloc(1 * sizeof(char *));
+    zzParts[0] = strdup(quoteConcatedVals);
   }
   else
   {
-    // split it up and assign
-    pksArr = crsql_split(pks, PK_DELIM, tblInfo->pksLen);
+    // zzParts cannot be greater or less than columnInfosLen.
+    zzParts = crsql_split(quoteConcatedVals, PK_DELIM, columnInfosLen);
   }
 
-  if (pksArr == 0)
+  if (zzParts == 0)
   {
     return 0;
   }
 
-  for (int i = 0; i < tblInfo->pksLen; ++i)
+  for (int i = 0; i < columnInfosLen; ++i)
   {
     // this is safe since pks are extracted as `quote` in the prior queries
     // %z will de-allocate pksArr[i] so we can re-allocate it in the assignment
     // TODO: we currently invoke this in a non safe case
     // where pksArr is receive from a network socket rather than the
-    // local db.
-    pksArr[i] = sqlite3_mprintf("\"%s\" = %z", tblInfo->pks[i].name, pksArr[i]);
+    // local db. In the apply patches path.
+    zzParts[i] = sqlite3_mprintf("\"%s\" = %z", zColumnInfos[i].name, zzParts[i]);
   }
 
-  // join2 will free the contents of pksArr given identity is a pass-thru
-  char *ret = crsql_join2((char *(*)(const char *)) & crsql_identity, pksArr, tblInfo->pksLen, " AND ");
-  sqlite3_free(pksArr);
+  // join2 will free the contents of zzParts given identity is a pass-thru
+  char *ret = crsql_join2((char *(*)(const char *)) & crsql_identity, zzParts, columnInfosLen, " AND ");
+  sqlite3_free(zzParts);
   return ret;
 }

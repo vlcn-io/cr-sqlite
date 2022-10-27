@@ -1,5 +1,9 @@
 todo:
 
+- withoutrowid on vtab given post-merge we can have rowid conflicts
+- don't drop if `as_crr` is re-run. rather provide a return of:
+  - success if the current crr tables are compatible with current table struct
+  - errors if an alteration needs to be performed or constraints are incompatible
 - Alter funcs:
   - drop column: problem
     - need to migrate versions to new cids
@@ -255,10 +259,7 @@ insert into baz values ('k', 'woo', 'doo', 'daa');
 select * from crsql_changes;
 ```
 
--> Alter functions.
-add column is good.
-rename column is good.
-add index is good (ish)
+Any concern over using cids?
+schemas match it doesn't matter.
 
-drop column: problem
-rename table: problem
+Rly no other way to do it if you want to extract the cols and pks appropriately

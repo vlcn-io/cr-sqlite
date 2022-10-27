@@ -265,7 +265,7 @@ int crsql_mergeInsert(
   // and thus should not take the remote's patch
 
   // TODO: we can't trust `insertPks`
-  char *pkWhereList = crsql_extractPkWhereList(tblInfo, (const char *)insertPks);
+  char *pkWhereList = crsql_extractWhereList(tblInfo->pks, tblInfo->pksLen, (const char *)insertPks);
   if (pkWhereList == 0)
   {
     *errmsg = sqlite3_mprintf("crsql - failed decoding primary keys for insert");

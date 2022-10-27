@@ -254,6 +254,7 @@ void crsqlUtilTestSuite()
   testAsIdentifierListStr();
   testJoin2();
   testSplit();
+  // testIsProperlyQuoteConcated();
 
   // TODO: test pk pulling and correct sorting of pks
   // TODO: create a fn to create test tables for all tests.

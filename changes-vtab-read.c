@@ -179,7 +179,7 @@ char *crsql_rowPatchDataQuery(
   char *colsConcatList = crsql_quoteConcat(changedCols, numVersionCols);
   sqlite3_free(changedCols);
 
-  char *pkWhereList = crsql_extractPkWhereList(tblInfo, (const char *)pks);
+  char *pkWhereList = crsql_extractWhereList(tblInfo->pks, tblInfo->pksLen, pks);
   char *zSql = sqlite3_mprintf(
       "SELECT %z FROM \"%s\" WHERE %z",
       colsConcatList,

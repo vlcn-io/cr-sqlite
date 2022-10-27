@@ -101,7 +101,11 @@ char *crsql_join2(char *(*map)(const char *), char **in, size_t len, char *delim
 
 /**
  * Caller must free all entries in the returned array
- * as well as the returned array
+ * as well as the returned array.
+ * 
+ * if `in` cannot be split into `partsLen` parts, null is returned.
+ * if `in` contains more parts than `partsLen` -- only the first `partsLen` parts
+ * will be returned.
  */
 char **crsql_split(const char *in, char *delim, int partsLen)
 {

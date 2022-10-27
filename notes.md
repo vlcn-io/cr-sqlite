@@ -1,5 +1,6 @@
 todo:
 
+- double check utf8 support via emojis and other non latin symbols
 - withoutrowid on vtab given post-merge we can have rowid conflicts
 - don't drop if `as_crr` is re-run. rather provide a return of:
   - success if the current crr tables are compatible with current table struct

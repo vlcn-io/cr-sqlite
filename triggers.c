@@ -163,18 +163,18 @@ char *crsql_deleteTriggerQuery(crsql_TableInfo *tableInfo)
 {
   char *zSql;
   char *pkList = 0;
-  char *pkNewList = 0;
+  char *pkOldList = 0;
   int rc = SQLITE_OK;
 
   if (tableInfo->pksLen == 0)
   {
     pkList = "\"rowid\"";
-    pkNewList = "OLD.\"rowid\"";
+    pkOldList = "OLD.\"rowid\"";
   }
   else
   {
     pkList = crsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, 0);
-    pkNewList = crsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, "OLD.");
+    pkOldList = crsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, "OLD.");
   }
 
   zSql = sqlite3_mprintf(
@@ -197,13 +197,13 @@ char *crsql_deleteTriggerQuery(crsql_TableInfo *tableInfo)
       tableInfo->tblName,
       tableInfo->tblName,
       pkList,
-      pkNewList,
+      pkOldList,
       DELETE_CID_SENTINEL);
 
   if (tableInfo->pksLen != 0)
   {
     sqlite3_free(pkList);
-    sqlite3_free(pkNewList);
+    sqlite3_free(pkOldList);
   }
 
   return zSql;

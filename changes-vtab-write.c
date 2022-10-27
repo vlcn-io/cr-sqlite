@@ -15,6 +15,9 @@
  * Returns r[0] = -1 on delete
  *
  * Returns 0 on failure.
+ * 
+ * totalNumCols represents the max number of columns in the table.
+ * rNumReceivedCids is the number of columns in the change.
  */
 int *crsql_allReceivedCids(
     sqlite3 *db,
@@ -35,7 +38,11 @@ int *crsql_allReceivedCids(
   }
 
   int *ret = sqlite3_malloc(totalNumCols * sizeof *ret);
-  memset(ret, 0, totalNumCols * sizeof *ret);
+  for (int i = 0; i < totalNumCols; ++i) {
+    // -2 => unmapped
+    // -1 => full row delete
+    ret[i] = -2;
+  }
   int numReceivedCids = 0;
   rc = sqlite3_step(pStmt);
   while (rc == SQLITE_ROW)
@@ -47,7 +54,7 @@ int *crsql_allReceivedCids(
       ret[0] = -1;
       return ret;
     }
-    if (cid > totalNumCols || numReceivedCids >= totalNumCols)
+    if (cid >= totalNumCols || numReceivedCids >= totalNumCols || cid < 0)
     {
       sqlite3_free(ret);
       sqlite3_finalize(pStmt);
@@ -318,6 +325,8 @@ int crsql_mergeInsert(
   {
     int cid = allChangedCids[i];
     int valIdx = allReceivedCids[cid];
+    // TODO: valIdx -- if it is -2 there was no mapping found
+    // check this and return an error in this case
     nonPkValsForInsert[i] = allReceivedNonPkVals[valIdx];
     columnInfosForInsert[i] = tblInfo->baseCols[cid];
   }

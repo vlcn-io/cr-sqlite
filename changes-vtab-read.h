@@ -23,5 +23,11 @@ char *crsql_rowPatchDataQuery(
     int numVersionCols,
     const char *colVrsns,
     const char *pks);
+crsql_ColumnInfo *crsql_pickColumnInfosFromVersionMap(
+  sqlite3 * db,
+  crsql_ColumnInfo *columnInfos,
+  int columnInfosLen,
+  int numVersionCols,
+  const char *colVersions);
 
 #endif

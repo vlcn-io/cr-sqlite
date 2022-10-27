@@ -118,20 +118,4 @@ struct crsql_Changes_cursor
   sqlite3_int64 version;
 };
 
-char *crsql_changesQueryForTable(crsql_TableInfo *tableInfo);
-char *crsql_changesUnionQuery(
-    crsql_TableInfo **tableInfos,
-    int tableInfosLen);
-crsql_ColumnInfo *crsql_pickColumnInfosFromVersionMap(
-  sqlite3 * db,
-  crsql_ColumnInfo *columnInfos,
-  int columnInfosLen,
-  int numVersionCols,
-  const char *colVersions);
-int *crsql_allReceivedCids(
-  sqlite3 *db,
-  const unsigned char *colVrsns,
-  int totalNumCols,
-  int *rNumReceivedCids);
-
 #endif

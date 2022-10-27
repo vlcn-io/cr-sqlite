@@ -217,37 +217,37 @@ void testPickColumnInfosFromVersionMap()
   assert(rc == SQLITE_OK);
 }
 
-void testRowPatchDataQuery()
-{
-  printf("RowPatchDataQuery\n");
+// void testRowPatchDataQuery()
+// {
+//   printf("RowPatchDataQuery\n");
 
-  int rc = SQLITE_OK;
-  sqlite3 *db;
-  char *err = 0;
-  crsql_TableInfo *tblInfo = 0;
-  rc = sqlite3_open(":memory:", &db);
+//   int rc = SQLITE_OK;
+//   sqlite3 *db;
+//   char *err = 0;
+//   crsql_TableInfo *tblInfo = 0;
+//   rc = sqlite3_open(":memory:", &db);
 
-  rc += sqlite3_exec(db, "create table foo (a primary key, b, c, d);", 0, 0, &err);
-  rc += sqlite3_exec(db, "select crsql_as_crr('foo');", 0, 0, &err);
-  rc += sqlite3_exec(db, "insert into foo values(1, 'cb', 'cc', 'cd')", 0, 0, &err);
-  rc += crsql_getTableInfo(db, "foo", &tblInfo, &err);
-  CHECK_OK
+//   rc += sqlite3_exec(db, "create table foo (a primary key, b, c, d);", 0, 0, &err);
+//   rc += sqlite3_exec(db, "select crsql_as_crr('foo');", 0, 0, &err);
+//   rc += sqlite3_exec(db, "insert into foo values(1, 'cb', 'cc', 'cd')", 0, 0, &err);
+//   rc += crsql_getTableInfo(db, "foo", &tblInfo, &err);
+//   CHECK_OK
 
-  // TC1: single pk table, 1 col change
-  char *versions = "{\"1\": 1}";
-  char *pks = "1";
-  char *q = crsql_rowPatchDataQuery(db, tblInfo, 1, versions, pks);
-  assert(strcmp(q, "SELECT quote(\"b\") FROM \"foo\" WHERE \"a\" = 1") == 0);
-  sqlite3_free(q);
+//   // TC1: single pk table, 1 col change
+//   char *versions = "{\"1\": 1}";
+//   char *pks = "1";
+//   char *q = crsql_rowPatchDataQuery(db, tblInfo, 1, versions, pks);
+//   assert(strcmp(q, "SELECT quote(\"b\") FROM \"foo\" WHERE \"a\" = 1") == 0);
+//   sqlite3_free(q);
 
-  printf("\t\e[0;32mSuccess\e[0m\n");
+//   printf("\t\e[0;32mSuccess\e[0m\n");
 
-  fail:
-  sqlite3_free(err);
-  crsql_freeTableInfo(tblInfo);
-  sqlite3_close(db);
-  assert(rc == SQLITE_OK);
-}
+//   fail:
+//   sqlite3_free(err);
+//   crsql_freeTableInfo(tblInfo);
+//   sqlite3_close(db);
+//   assert(rc == SQLITE_OK);
+// }
 
 void testAllReceivedCids() {
   int rc = SQLITE_OK;
@@ -300,7 +300,7 @@ void crsqlChagesSinceVtabTestSuite()
   testChangesQueryForTable();
   testChangesUnionQuery();
   testPickColumnInfosFromVersionMap();
-  testRowPatchDataQuery();
+  // testRowPatchDataQuery();
   // testExtractPkWhereList();
   testAllReceivedCids();
   testAllChangedCids();

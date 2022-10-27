@@ -40,8 +40,8 @@ TARGET_SQLJS_WASM=$(prefix)/sqljs.wasm
 TARGET_SQLJS=$(TARGET_SQLJS_JS) $(TARGET_SQLJS_WASM)
 TARGET_TEST=$(prefix)/test
 
-ext_files=crsqlite.c util.c tableinfo.c triggers.c normalize.c changes-vtab.c changes-vtab-read.c
-ext_headers=crsqlite.h csflite-utils.h tablinfo.h triggers.h changes-vtab.h changes-vtab-read.h
+ext_files=crsqlite.c util.c tableinfo.c triggers.c normalize.c changes-vtab.c changes-vtab-read.c changes-vtab-common.c
+ext_headers=crsqlite.h csflite-utils.h tablinfo.h triggers.h changes-vtab.h changes-vtab-read.h changes-vtab-common.h
 
 $(prefix):
 	mkdir -p $(prefix)

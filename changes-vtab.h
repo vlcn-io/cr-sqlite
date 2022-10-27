@@ -128,12 +128,6 @@ crsql_ColumnInfo *crsql_pickColumnInfosFromVersionMap(
   int columnInfosLen,
   int numVersionCols,
   const char *colVersions);
-char *crsql_rowPatchDataQuery(
-    sqlite3 *db,
-    crsql_TableInfo *tblInfo,
-    int numCols,
-    const char *colVrsns,
-    const char *pks);
 int *crsql_allReceivedCids(
   sqlite3 *db,
   const unsigned char *colVrsns,

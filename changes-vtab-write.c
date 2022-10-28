@@ -8,19 +8,9 @@
 #include "util.h"
 
 /**
- * Given a json map of received col versions,
- * return an array of the cids that should actually
- * overwrite values on the local db.
  *
- * Note that this is different from `allReceivedCids` which returns
- * an array indexed by cid containing index locations of the
- * col version.
- *
- * This is a regular array containing cids.
- *
- * The former is used for extracting data from concatenated col vals.
  */
-int *crsql_didCidWin(
+int crsql_didCidWin(
     sqlite3 *db,
     const char *insertTbl,
     const char *pkWhereList,
@@ -275,7 +265,7 @@ int crsql_mergeInsert(
 
   // process normal merge
 
-  int doesCidWin = crsql_didCidWin(db, insertTbl, pkWhereList, insertSiteId, insertSiteIdLen, insertCid, insertVrsn, errmsg);
+  int doesCidWin = crsql_didCidWin(db, tblInfo->tblName, pkWhereList, insertSiteId, insertSiteIdLen, insertCid, insertVrsn, errmsg);
   if (doesCidWin == -1 || doesCidWin == 0)
   {
     sqlite3_free(pkValsStr);
@@ -288,7 +278,8 @@ int crsql_mergeInsert(
   // crsql_insertWinningChanges();
   // move all code below into insertWinningChanges
 
-  char **sanitizedInsertVal = crsql_splitQuoteConcat(insertVal, 1);
+  // TODO: dounle check unicode handling
+  char **sanitizedInsertVal = crsql_splitQuoteConcat((const char*)insertVal, 1);
 
   if (sanitizedInsertVal == 0)
   {

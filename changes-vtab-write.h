@@ -6,12 +6,6 @@ SQLITE_EXTENSION_INIT3
 
 #include "tableinfo.h"
 
-int *crsql_allReceivedCids(
-    sqlite3 *db,
-    const unsigned char *colVrsns,
-    int totalNumCols,
-    int *rNumReceivedCids);
-
 int crsql_mergeInsert(
     sqlite3_vtab *pVTab,
     int argc,
@@ -19,20 +13,14 @@ int crsql_mergeInsert(
     sqlite3_int64 *pRowid,
     char **errmsg);
 
-char *crsql_changesTabConflictSets(
-    char **nonPkValsForInsert,
-    crsql_ColumnInfo *columnInfosForInsert,
-    int allChangedCidsLen);
-
-int *crsql_allWinningCids(
+int crsql_didCidWin(
     sqlite3 *db,
-    const unsigned char *insertColVrsns,
-    const unsigned char *insertTbl,
+    const char *insertTbl,
     const char *pkWhereList,
-    int totalNumCols,
-    int *rlen,
     const void *insertSiteId,
     int insertSiteIdLen,
+    int cid,
+    sqlite3_int64 version,
     char **errmsg);
 
 #endif

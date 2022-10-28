@@ -562,6 +562,8 @@ static int createOrGetPerDbData(sqlite3 *db, crsql_PerDbData **ppOut)
       *ppOut = existing;
       (*ppOut)->referenceCount += 1;
       bAssignedPerDbData = 1;
+      sqlite3_free(siteId);
+      siteId = 0;
     }
   }
 
@@ -583,6 +585,11 @@ static int createOrGetPerDbData(sqlite3 *db, crsql_PerDbData **ppOut)
       {
         *ppOut = empty;
         empty->dbVersion = dbVersion;
+
+        // we are reclaiming someone's slot. free their siteid.
+        unsigned char * priorSiteId = empty->siteId;
+        sqlite3_free(priorSiteId);
+
         empty->siteId = siteId;
         empty->referenceCount = 1;
       }
@@ -598,6 +605,7 @@ static int createOrGetPerDbData(sqlite3 *db, crsql_PerDbData **ppOut)
     // Intentionally not setting the RC.
     // We already have a failure and do not want to record rollback success.
     sqlite3_exec(db, "ROLLBACK", 0, 0, 0);
+    sqlite3_free(siteId);
   }
 
 #if SQLITE_THREADSAFE != 0

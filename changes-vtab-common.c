@@ -51,7 +51,7 @@ char *crsql_quotedValuesAsList(char **parts, int numParts)
     len += strlen(parts[i]);
   }
   char *ret = sqlite3_malloc((len + 1) * sizeof *ret);
-  crsql_joinWith(ret, parts, len, ',');
+  crsql_joinWith(ret, parts, numParts, ',');
   ret[len] = '\0';
 
   return ret;

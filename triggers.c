@@ -16,7 +16,7 @@ int crsql_createInsertTrigger(
   char *pkList = 0;
   char *pkNewList = 0;
   int rc = SQLITE_OK;
-  char *subTriggers[tableInfo->nonPksLen];
+  char *subTriggers[tableInfo->nonPksLen == 0 ? 1 : tableInfo->nonPksLen];
   char *joinedSubTriggers;
 
   // TODO: we should track a sentinel create for this case
@@ -36,14 +36,31 @@ int crsql_createInsertTrigger(
     pkNewList = crsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, "NEW.");
   }
 
-  // TODO: handle pk only tables
-  // We need a CREATE_SENTINEL (-3?) to stand in for the create event so we can replicate PKs
+  // We need a CREATE_SENTINEL to stand in for the create event so we can replicate PKs
   // If we have a create sentinel how will we insert the created rows without a requirement of nullability
   // on every column?
   // Keep some event data for create that represents the initial state of the row?
   // Future improvement.
   // TODO: bump once for the row rather than once per column
-  // we'll need to make our vtab a without rowid table in that case.
+  // and do grouping on same v # & table-pk combo?
+  if (tableInfo->nonPksLen == 0) {
+    subTriggers[0] = sqlite3_mprintf(
+        "INSERT OR REPLACE INTO \"%s__crsql_clock\" (\
+        %s,\
+        __crsql_col_num,\
+        __crsql_version,\
+        __crsql_site_id\
+      ) SELECT \
+        %s,\
+        %d,\
+        crsql_nextdbversion(),\
+        0\
+      WHERE crsql_internal_sync_bit() = 0;\n",
+        tableInfo->tblName,
+        pkList,
+        pkNewList,
+        PKS_ONLY_CID_SENTINEL);
+  }
   for (int i = 0; i < tableInfo->nonPksLen; ++i)
   {
     subTriggers[i] = sqlite3_mprintf(
@@ -68,6 +85,9 @@ int crsql_createInsertTrigger(
   for (int i = 0; i < tableInfo->nonPksLen; ++i)
   {
     sqlite3_free(subTriggers[i]);
+  }
+  if (tableInfo->nonPksLen == 0) {
+    sqlite3_free(subTriggers[0]);
   }
 
   zSql = sqlite3_mprintf("CREATE TRIGGER \"%s__crsql_itrig\"\

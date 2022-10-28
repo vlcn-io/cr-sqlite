@@ -262,12 +262,15 @@ int crsql_mergeInsert(
     return rc;
   }
 
+  if (insertCid == PKS_ONLY_CID_SENTINEL) {
+    // no col -- this was a create event for the row
+    // I.e., a pk only insert.
+  }
+
   // if (numReceivedCids == 0) {
   //   // on conflict ignore this.
   //   rc = crsql_processPkOnlyInsert(db, tblInfo->tblName, tblInfo->pks, tblInfo->pksLen, insertPks);
   // }
-
-  // process normal merge
 
   int doesCidWin = crsql_didCidWin(db, tblInfo->tblName, pkWhereList, insertSiteId, insertSiteIdLen, insertCid, insertVrsn, errmsg);
   if (doesCidWin == -1 || doesCidWin == 0)
@@ -279,10 +282,7 @@ int crsql_mergeInsert(
     return doesCidWin == 0 ? SQLITE_OK : SQLITE_ERROR;
   }
 
-  // crsql_insertWinningChanges();
-  // move all code below into insertWinningChanges
-
-  // TODO: dounle check unicode handling
+  // TODO: double check unicode handling
   char **sanitizedInsertVal = crsql_splitQuoteConcat((const char*)insertVal, 1);
 
   if (sanitizedInsertVal == 0)

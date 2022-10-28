@@ -7,6 +7,7 @@
 #define QC_DELIM '|'
 
 #define DELETE_CID_SENTINEL -1
+#define PKS_ONLY_CID_SENTINEL -2
 
 #define CRR_SPACE 0
 #define USER_SPACE 1

@@ -12,8 +12,14 @@ This project implements [CRDTs](https://crdt.tech/) and [CRRs](https://hal.inria
 
 `crsqlite` exposes two APIs:
 
-- One to upgrade existing tables to "crrs" or "conflict free replicated relations"
-- Another to ask the database for a changeset given a version or to apply a changeset from another database
+- A function extension (`crsql_as_crr`) to upgrade existing tables to "crrs" or "conflict free replicated relations"
+  - `select crsql_as_crr('table_name')`
+- And a virtual table (`crsql_changes`) to ask the database for changesets or to apply changesets from another database
+  -  `select * from crsql_changes where version > x`
+  -  `insert into crsql_changes values ([patches receied from select on another peer])`
+
+Application code would use the function extension to enable crr support on tables.
+Networking code would use the `crsql_changes` virtual table to fetch and apply changes.
 
 Usage looks like:
 

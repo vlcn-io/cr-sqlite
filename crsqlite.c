@@ -35,6 +35,10 @@ unsigned char crsql_siteIdBlob[16] = {
 static int siteIdSet = 0;
 const size_t crsql_siteIdBlobSize = sizeof(crsql_siteIdBlob);
 
+// TODO: we need to keep a set of these variables _per database_
+// keeping 1 per sqlite process ends up sharing these variables
+// with all dbs we ever connect to in that process. bad bad.
+
 /**
  * Cached representation of the version of the database.
  *

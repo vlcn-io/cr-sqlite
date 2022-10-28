@@ -1,5 +1,7 @@
 # [wip] crsql - Convergent, Replicated, SQLite
 
+WIP -- while the base functionality is there, there is still work to be done to make this production ready, test all edge cases & support schema alterations. **ETA beta release -- Nov 15.**
+
 [SQLite](https://www.sqlite.org/index.html) is a foundation of offline, local-first and edge deployed software. Wouldn't it be great, however, if we could merge two or more SQLite databases together and not run into any conflicts?
 
 This project implements [CRDTs](https://crdt.tech/) and [CRRs](https://hal.inria.fr/hal-02983557/document) in `SQLite`, allowing databases that share a common schema to merge their state together. Merges can happen between an arbitrary number of peers and all peers will eventually converge to the same state.
@@ -18,23 +20,38 @@ Usage looks like:
 ```sql
 -- load the extension if it is not statically linked
 .load crsqlite
+.mode column
 -- create tables as normal
 create table foo (a primary key, b);
 create table baz (a primary key, b, c, d);
 
--- upgrade those tables to be crrs
+-- update those tables to be crrs / crdts
 select crsql_as_crr('foo');
 select crsql_as_crr('baz');
 
--- insert values and interact with your tables as normal
+-- insert some data / interact with tables as normal
 insert into foo values (1,2);
-insert into baz values ('k', 'woo', 'doo', 'daa');
+insert into baz values ('a', 'woo', 'doo', 'daa');
 
--- ask the db for changes
-select * from crsql_changes WHERE version > -9223372036854775807;
+-- ask for a record of what has changed
+select * from crsql_changes;
 
--- implementation of patch application is still in progress but the API will look like:
-insert into crsql_changes ("table", "col_vals", "col_versions", "site_id") VALUES (...);
+table  pk   cid  val    version               site_id
+-----  ---  ---  -----  --------------------  -------
+foo    1    1    2      -9223372036854775806
+baz    'a'  1    'woo'  -9223372036854775805
+baz    'a'  2    'doo'  -9223372036854775804
+baz    'a'  3    'daa'  -9223372036854775803
+
+-- merge changes from a peer
+insert into crsql_changes ("table", pk, cid, val, version, site_id) values ('foo', 5, 1, '''thing''', -9223372036854775802, X'7096E2D505314699A59C95FABA14ABB5');
+
+-- check that peer's changes were applied
+select * from foo;
+a  b
+-  -----
+1  2
+5  thing
 ```
 
 # Prior Art

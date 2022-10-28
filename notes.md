@@ -1,5 +1,6 @@
 todo:
 
+- handle ATTACH for shared db memory...
 - register a destructor to tear down shared mem on module unload
 - map shared mem by db file or some other such db isolation
 - ensure -DSQLITE_OMIT_SHARED_CACHE is on when compiling wasm to reduce size

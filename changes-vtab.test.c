@@ -24,9 +24,8 @@ void testChangesTxCommit() {
   tab.perDbData->dbVersion = 0;
 
   tab.maxSeenPatchVersion = 10000;
-  printf("v: %lld", tab.perDbData->dbVersion);
 
-  assert(tab.perDbData->dbVersion < 1000);
+  assert(tab.perDbData->dbVersion == 0);
 
   crsql_changesTxCommit(casted);
   assert(tab.perDbData->dbVersion == 10000);

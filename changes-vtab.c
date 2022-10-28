@@ -45,6 +45,7 @@ static int changesConnect(
   memset(pNew, 0, sizeof(*pNew));
   pNew->db = db;
   pNew->maxSeenPatchVersion = MIN_POSSIBLE_DB_VERSION;
+  pNew->perDbData = (crsql_PerDbData *)pAux;;
 
   rc = crsql_pullAllTableInfos(db, &(pNew->tableInfos), &(pNew->tableInfosLen), &(*ppVtab)->zErrMsg);
   if (rc != SQLITE_OK)
@@ -548,11 +549,11 @@ int crsql_changesTxCommit(sqlite3_vtab *pVTab)
   crsql_Changes_vtab *tab = (crsql_Changes_vtab *)pVTab;
   int64_t maxSeenPatchVersion = tab->maxSeenPatchVersion;
 
-  int64_t priorVersion = crsql_dbVersion;
+  int64_t priorVersion = tab->perDbData->dbVersion;
   while (maxSeenPatchVersion > priorVersion)
   {
     if (atomic_compare_exchange_weak(
-            &crsql_dbVersion,
+            &(tab->perDbData->dbVersion),
             &priorVersion,
             maxSeenPatchVersion))
     {

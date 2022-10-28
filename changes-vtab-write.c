@@ -12,6 +12,7 @@
  */
 int crsql_didCidWin(
     sqlite3 *db,
+    const unsigned char *localSiteId,
     const char *insertTbl,
     const char *pkWhereList,
     const void *insertSiteId,
@@ -21,7 +22,7 @@ int crsql_didCidWin(
     char **errmsg)
 {
   char *zSql = 0;
-  int siteComparison = crsql_siteIdCmp(insertSiteId, insertSiteIdLen, crsql_siteIdBlob, crsql_siteIdBlobSize);
+  int siteComparison = crsql_siteIdCmp(insertSiteId, insertSiteIdLen, localSiteId, SITE_ID_LEN);
 
   if (siteComparison == 0)
   {
@@ -176,7 +177,7 @@ int crsql_mergePkOnlyInsert(
 {
   // TODO: do we need to check that the row doesn't alrdy
   // exist?
-  // if it exists we can skip the merge pks only...
+  // if it exists we can skip the merge pks only bc we alrdy have this state
 
   char *zSql = sqlite3_mprintf(
       "INSERT OR IGNORE INTO \"%s\" (%s) VALUES (%s)",
@@ -364,7 +365,7 @@ int crsql_mergeInsert(
     return rc;
   }
 
-  int doesCidWin = crsql_didCidWin(db, tblInfo->tblName, pkWhereList, insertSiteId, insertSiteIdLen, insertCid, insertVrsn, errmsg);
+  int doesCidWin = crsql_didCidWin(db, pTab->perDbData->siteId, tblInfo->tblName, pkWhereList, insertSiteId, insertSiteIdLen, insertCid, insertVrsn, errmsg);
   sqlite3_free(pkWhereList);
   if (doesCidWin == -1 || doesCidWin == 0)
   {

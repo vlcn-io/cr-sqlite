@@ -9,9 +9,9 @@ SQLITE_EXTENSION_INIT3
 #include <stdatomic.h>
 
 #ifndef UNIT_TEST
-# define STATIC static
+#define STATIC static
 #else
-# define STATIC
+#define STATIC
 #endif
 
 int crsql_createClockTable(
@@ -19,8 +19,18 @@ int crsql_createClockTable(
     crsql_TableInfo *tableInfo,
     char **err);
 
-extern unsigned char crsql_siteIdBlob[];
-extern const size_t crsql_siteIdBlobSize;
-extern _Atomic int64_t crsql_dbVersion;
+typedef struct crsql_PerDbData crsql_PerDbData;
+struct crsql_PerDbData
+{
+  /**
+   * Cached representation of the version of the database.
+   *
+   * This is not an unsigned int since sqlite does not support unsigned ints
+   * as a data type and we do eventually write db version(s) to the db.
+   */
+  _Atomic sqlite3_int64 dbVersion;
+  unsigned char *siteId;
+  int referenceCount;
+};
 
 #endif

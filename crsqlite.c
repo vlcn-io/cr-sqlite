@@ -15,7 +15,7 @@ SQLITE_EXTENSION_INIT1
 #include <stdatomic.h>
 
 /**
- * Global variables to hold the site id and db version.
+ * Per-db global variables to hold the site id and db version.
  * This prevents us from having to query the tables that store
  * these values every time we do a read or write.
  *
@@ -28,25 +28,8 @@ SQLITE_EXTENSION_INIT1
  * DB version is incremented on trnsaction commit via a
  * commit hook.
  */
-unsigned char crsql_siteIdBlob[16] = {
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-// track if siteId was set so we don't re-initialize site id on new connections
-static int siteIdSet = 0;
-const size_t crsql_siteIdBlobSize = sizeof(crsql_siteIdBlob);
-
-// TODO: we need to keep a set of these variables _per database_
-// keeping 1 per sqlite process ends up sharing these variables
-// with all dbs we ever connect to in that process. bad bad.
-
-/**
- * Cached representation of the version of the database.
- *
- * This is not an unsigned int since sqlite does not support unsigned ints
- * as a data type and we do eventually write db version(s) to the db.
- */
-_Atomic int64_t crsql_dbVersion = MIN_POSSIBLE_DB_VERSION;
-static int dbVersionSet = 0;
+#define PER_DB_DATA_BUFFER_LEN 50
+static crsql_PerDbData allPerDbData[PER_DB_DATA_BUFFER_LEN];
 
 static sqlite3_mutex *globalsInitMutex = 0;
 static int sharedMemoryInitialized = 0;
@@ -62,7 +45,7 @@ static void uuid(unsigned char *blob)
  * The site id table is used to persist the site id and
  * populate `siteIdBlob` on initialization of a connection.
  */
-static int createSiteIdTable(sqlite3 *db)
+static int createSiteIdAndSiteIdTable(sqlite3 *db, unsigned char *ret)
 {
   int rc = SQLITE_OK;
   sqlite3_stmt *pStmt = 0;
@@ -79,8 +62,6 @@ static int createSiteIdTable(sqlite3 *db)
     return rc;
   }
 
-  assert(siteIdSet == 0);
-
   zSql = sqlite3_mprintf("INSERT INTO \"%s\" (site_id) VALUES(?)", TBL_SITE_ID);
   rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
   sqlite3_free(zSql);
@@ -91,8 +72,8 @@ static int createSiteIdTable(sqlite3 *db)
     return rc;
   }
 
-  uuid(crsql_siteIdBlob);
-  rc = sqlite3_bind_blob(pStmt, 1, crsql_siteIdBlob, crsql_siteIdBlobSize, SQLITE_STATIC);
+  uuid(ret);
+  rc = sqlite3_bind_blob(pStmt, 1, ret, SITE_ID_LEN, SQLITE_STATIC);
   if (rc != SQLITE_OK)
   {
     return rc;
@@ -113,7 +94,7 @@ static int createSiteIdTable(sqlite3 *db)
  * cannot be found for the given database one is created
  * and saved to the site id table.
  */
-static int initSiteId(sqlite3 *db)
+static int initSiteId(sqlite3 *db, unsigned char *ret)
 {
   char *zSql = 0;
   sqlite3_stmt *pStmt = 0;
@@ -121,28 +102,15 @@ static int initSiteId(sqlite3 *db)
   int tableExists = 0;
   const void *siteIdFromTable = 0;
 
-  // We were already initialized by another connection
-  if (siteIdSet != 0)
-  {
-    return rc;
-  }
-
-  // look for site id tablesql
+  // look for site id table
   tableExists = crsql_doesTableExist(db, TBL_SITE_ID);
 
   if (tableExists == 0)
   {
-    // create the table
-    // generate the site id
-    // insert it
-    rc = createSiteIdTable(db);
-    if (rc != SQLITE_OK)
-    {
-      return rc;
-    }
+    return createSiteIdAndSiteIdTable(db, ret);
   }
 
-  // read site id from the table and save to global
+  // read site id from the table and return it
   zSql = sqlite3_mprintf("SELECT site_id FROM %Q", TBL_SITE_ID);
   rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
   sqlite3_free(zSql);
@@ -160,12 +128,9 @@ static int initSiteId(sqlite3 *db)
   }
 
   siteIdFromTable = sqlite3_column_blob(pStmt, 0);
-  // the blob mem returned to us will be freed so copy it.
-  // https://www.sqlite.org/c3ref/column_blob.html
-  memcpy(crsql_siteIdBlob, siteIdFromTable, crsql_siteIdBlobSize);
-  siteIdSet = 1;
-
+  memcpy(ret, siteIdFromTable, SITE_ID_LEN);
   sqlite3_finalize(pStmt);
+
   return SQLITE_OK;
 }
 
@@ -178,7 +143,7 @@ static int initSiteId(sqlite3 *db)
  *
  * INIT DB VERSION MUST BE CALLED AFTER SITE ID INITIALIZATION
  */
-static int initDbVersion(sqlite3 *db)
+static int initDbVersion(sqlite3 *db, sqlite3_int64 *dbVersion)
 {
   char *zSql;
   sqlite3_stmt *pStmt = 0;
@@ -187,12 +152,7 @@ static int initDbVersion(sqlite3 *db)
   int rNumRows = 0;
   int rNumCols = 0;
   int i = 0;
-
-  // already initialized?
-  if (dbVersionSet != 0)
-  {
-    return rc;
-  }
+  *dbVersion = 0;
 
   // find all `clock` tables
   rc = sqlite3_get_table(
@@ -211,7 +171,6 @@ static int initDbVersion(sqlite3 *db)
 
   if (rNumRows == 0)
   {
-    dbVersionSet = 1;
     sqlite3_free_table(rClockTableNames);
     return rc;
   }
@@ -239,7 +198,6 @@ static int initDbVersion(sqlite3 *db)
   // No rows? Then we're a fresh DB with the min starting version
   if (rc == SQLITE_DONE)
   {
-    dbVersionSet = 1;
     sqlite3_finalize(pStmt);
     return rc;
   }
@@ -257,15 +215,13 @@ static int initDbVersion(sqlite3 *db)
   if (type == SQLITE_NULL)
   {
     // No rows. Keep the initial version.
-    dbVersionSet = 1;
     sqlite3_finalize(pStmt);
     return SQLITE_OK;
   }
 
   // dbVersion is last version written but we always call `nextDbVersion` before writing
   // a dbversion. Hence no +1.
-  crsql_dbVersion = sqlite3_column_int64(pStmt, 0);
-  dbVersionSet = 1;
+  *dbVersion = sqlite3_column_int64(pStmt, 0);
   sqlite3_finalize(pStmt);
 
   return SQLITE_OK;
@@ -282,7 +238,8 @@ static int initDbVersion(sqlite3 *db)
  */
 static void siteIdFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
-  sqlite3_result_blob(context, &crsql_siteIdBlob, crsql_siteIdBlobSize, SQLITE_STATIC);
+  crsql_PerDbData *data = (crsql_PerDbData *)sqlite3_user_data(context);
+  sqlite3_result_blob(context, data->siteId, SITE_ID_LEN, SQLITE_STATIC);
 }
 
 /**
@@ -292,7 +249,8 @@ static void siteIdFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
  */
 static void dbVersionFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
-  sqlite3_result_int64(context, crsql_dbVersion);
+  crsql_PerDbData *data = (crsql_PerDbData *)sqlite3_user_data(context);
+  sqlite3_result_int64(context, data->dbVersion);
 }
 
 /**
@@ -304,7 +262,8 @@ static void nextDbVersionFunc(sqlite3_context *context, int argc, sqlite3_value 
 {
   // dbVersion is an atomic int thus `++dbVersion` is a CAS and will always return
   // a unique version for the given invocation, even under concurrent accesses.
-  sqlite3_result_int64(context, ++crsql_dbVersion);
+  crsql_PerDbData *data = (crsql_PerDbData *)sqlite3_user_data(context);
+  sqlite3_result_int64(context, ++(data->dbVersion));
 }
 
 /**
@@ -339,7 +298,8 @@ int crsql_createClockTable(
   zSql = sqlite3_mprintf("DROP TABLE IF EXISTS \"%s__crsql_clock\"", tableInfo->tblName);
   rc = sqlite3_exec(db, zSql, 0, 0, err);
   sqlite3_free(zSql);
-  if (rc != SQLITE_OK) {
+  if (rc != SQLITE_OK)
+  {
     return rc;
   }
 
@@ -426,40 +386,13 @@ static int createCrr(
   return rc;
 }
 
-static int dropCrr(
-    sqlite3_context *context,
-    sqlite3 *db,
-    const char *schemaName,
-    const char *tblName,
-    char **err)
+static void crsqlSyncBit(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
-  char *zSql = 0;
-  int rc = SQLITE_OK;
-
-  zSql = sqlite3_mprintf("DROP TABLE IF EXISTS \"%s\".\"%s\"", schemaName, tblName);
-  rc = sqlite3_exec(db, zSql, 0, 0, err);
-  sqlite3_free(zSql);
-  if (rc != SQLITE_OK)
-  {
-    return rc;
-  }
-
-  zSql = sqlite3_mprintf("DROP TABLE \"%s\".\"%s\"__crsql_clock", schemaName, tblName);
-  rc = sqlite3_exec(db, zSql, 0, 0, err);
-  sqlite3_free(zSql);
-  if (rc != SQLITE_OK)
-  {
-    return rc;
-  }
-
-  return rc;
-}
-
-static void crsqlSyncBit(sqlite3_context *context, int argc, sqlite3_value **argv) {
-  int *syncBit = (int*)sqlite3_user_data(context);
+  int *syncBit = (int *)sqlite3_user_data(context);
 
   // No args? We're reading the value of the bit.
-  if (argc == 0) {
+  if (argc == 0)
+  {
     sqlite3_result_int(context, *syncBit);
     return;
   }
@@ -483,7 +416,8 @@ static void crsqlMakeCrrFunc(sqlite3_context *context, int argc, sqlite3_value *
   sqlite3 *db = sqlite3_context_db_handle(context);
   char *errmsg = 0;
 
-  if (argc == 0) {
+  if (argc == 0)
+  {
     sqlite3_result_error(context, "Wrong number of args provided to crsql_as_crr. Provide the schema name and table name or just the table name.", -1);
     return;
   }
@@ -526,7 +460,7 @@ __declspec(dllexport)
     int sqlite3_crsqlite_preinit()
 {
   // TODO: document that if this extension is used as a run time loadable extension
-  // then one thread must initialize it before any other threads may be allowed to 
+  // then one thread must initialize it before any other threads may be allowed to
   // start using it.
   // If it is statically linked as an auto-load extension then the user is ok to do anything.
 #if SQLITE_THREADSAFE != 0
@@ -538,37 +472,121 @@ __declspec(dllexport)
   return SQLITE_OK;
 }
 
-static int initSharedMemory(sqlite3 *db)
+static void initSharedMemory(sqlite3 *db)
 {
-// TODO if we were used as a run time loadable extension rather than
-// statically linked, the mutex will not exist.
 #if SQLITE_THREADSAFE != 0
   sqlite3_mutex_enter(globalsInitMutex);
 #endif
 
-  int rc = SQLITE_OK;
-  if (sharedMemoryInitialized != 0)
+  if (sharedMemoryInitialized == 0)
   {
-    return rc;
+    memset(allPerDbData, 0, sizeof(allPerDbData));
+    sharedMemoryInitialized = 1;
   }
+
+#if SQLITE_THREADSAFE != 0
+  sqlite3_mutex_leave(globalsInitMutex);
+#endif
+}
+
+crsql_PerDbData *findPerDbData(unsigned char *siteId)
+{
+  for (int i = 0; i < PER_DB_DATA_BUFFER_LEN; ++i)
+  {
+    if (allPerDbData[i].siteId == 0) {
+      continue;
+    }
+    
+    if (crsql_siteIdCmp(allPerDbData[i].siteId, SITE_ID_LEN, siteId, SITE_ID_LEN) == 0)
+    {
+      return &allPerDbData[i];
+    }
+  }
+
+  return 0;
+}
+
+crsql_PerDbData *getUnusedPerDbData()
+{
+  for (int i = 0; i < PER_DB_DATA_BUFFER_LEN; ++i)
+  {
+    if (allPerDbData[i].referenceCount == 0)
+    {
+      return &allPerDbData[i];
+    }
+  }
+
+  return 0;
+}
+
+static void returnPerDbData(void *d)
+{
+  crsql_PerDbData *data = (crsql_PerDbData *)d;
+  data->referenceCount -= 1;
+  if (data->referenceCount < 0) {
+    // TODO: log. inidcative of a bug if this happens.
+    data->referenceCount = 0;
+  }
+}
+
+// TODO: we need to register destructor(s)
+// to tear down perdb data when extension unloads
+static int createOrGetPerDbData(sqlite3 *db, crsql_PerDbData **ppOut)
+{
+#if SQLITE_THREADSAFE != 0
+  sqlite3_mutex_enter(globalsInitMutex);
+#endif
 
   /**
    * Initialization creates a number of tables.
    * We should ensure we do these in a tx
    * so we cannot have partial initialization.
    */
-  rc = sqlite3_exec(db, "BEGIN", 0, 0, 0);
+  int rc = sqlite3_exec(db, "BEGIN", 0, 0, 0);
+  unsigned char *siteId = sqlite3_malloc(SITE_ID_LEN * sizeof *siteId);
+  sqlite3_int64 dbVersion = 0;
 
   if (rc == SQLITE_OK)
   {
-    rc = initSiteId(db);
+    rc = initSiteId(db, siteId);
   }
 
+  int bAssignedPerDbData = 0;
   if (rc == SQLITE_OK)
+  {
+    // now look in our list of perDbData for already initialized data
+    // for this db.
+    crsql_PerDbData *existing = findPerDbData(siteId);
+    if (existing != 0)
+    {
+      *ppOut = existing;
+      (*ppOut)->referenceCount += 1;
+      bAssignedPerDbData = 1;
+    }
+  }
+
+  if (rc == SQLITE_OK && bAssignedPerDbData == 0)
   {
     // once site id is initialize, we are able to init db version.
     // db version uses site id in its queries hence why it comes after site id init.
-    rc = initDbVersion(db);
+    rc = initDbVersion(db, &dbVersion);
+
+    if (rc == SQLITE_OK)
+    {
+      // grab an unallocated slot in our db data
+      crsql_PerDbData *empty = getUnusedPerDbData();
+      if (empty == 0)
+      {
+        rc = SQLITE_ERROR;
+      }
+      else
+      {
+        *ppOut = empty;
+        empty->dbVersion = dbVersion;
+        empty->siteId = siteId;
+        empty->referenceCount = 1;
+      }
+    }
   }
 
   if (rc == SQLITE_OK)
@@ -582,14 +600,10 @@ static int initSharedMemory(sqlite3 *db)
     sqlite3_exec(db, "ROLLBACK", 0, 0, 0);
   }
 
-  if (rc == SQLITE_OK)
-  {
-    sharedMemoryInitialized = 1;
-  }
-
 #if SQLITE_THREADSAFE != 0
   sqlite3_mutex_leave(globalsInitMutex);
 #endif
+
   return rc;
 }
 
@@ -607,28 +621,36 @@ __declspec(dllexport)
   // then preinit might not have been run.
   sqlite3_crsqlite_preinit();
 
-  rc = initSharedMemory(db);
+  // shared memory will return to us the memory for the given
+  // database.
+  // we should thus then set that into our `userdata`
+  // for our functions and extensions
+  initSharedMemory(db);
+
+  crsql_PerDbData *perDbData = 0;
+  rc = createOrGetPerDbData(db, &perDbData);
+
   if (rc == SQLITE_OK)
   {
     rc = sqlite3_create_function(db, "crsql_siteid", 0,
                                  // siteid never changes -- deterministic and innnocuous
                                  SQLITE_UTF8 | SQLITE_INNOCUOUS |
                                      SQLITE_DETERMINISTIC,
-                                 0, siteIdFunc, 0, 0);
+                                 perDbData, siteIdFunc, 0, 0);
   }
   if (rc == SQLITE_OK)
   {
     rc = sqlite3_create_function(db, "crsql_dbversion", 0,
                                  // dbversion can change on each invocation.
                                  SQLITE_UTF8 | SQLITE_INNOCUOUS,
-                                 0, dbVersionFunc, 0, 0);
+                                 perDbData, dbVersionFunc, 0, 0);
   }
   if (rc == SQLITE_OK)
   {
     rc = sqlite3_create_function(db, "crsql_nextdbversion", 0,
                                  // dbversion can change on each invocation.
                                  SQLITE_UTF8 | SQLITE_INNOCUOUS,
-                                 0, nextDbVersionFunc, 0, 0);
+                                 perDbData, nextDbVersionFunc, 0, 0);
   }
 
   if (rc == SQLITE_OK)
@@ -644,31 +666,39 @@ __declspec(dllexport)
                                  0, crsqlMakeCrrFunc, 0, 0);
   }
 
-  if (rc == SQLITE_OK) {
+  if (rc == SQLITE_OK)
+  {
     // Register a thread & connection local bit to toggle on or off
     // our triggers depending on the source of updates to a table.
     int *syncBit = sqlite3_malloc(sizeof *syncBit);
     *syncBit = 0;
     rc = sqlite3_create_function_v2(
-      db,
-      "crsql_internal_sync_bit",
-      -1, // num args: -1 -> 0 or more
-      SQLITE_UTF8 | SQLITE_INNOCUOUS, // configuration
-      syncBit, // user data
-      crsqlSyncBit,
-      0, // step
-      0, // final
-      sqlite3_free // destroy / free syncBit
+        db,
+        "crsql_internal_sync_bit",
+        -1,                             // num args: -1 -> 0 or more
+        SQLITE_UTF8 | SQLITE_INNOCUOUS, // configuration
+        syncBit,                        // user data
+        crsqlSyncBit,
+        0,           // step
+        0,           // final
+        sqlite3_free // destroy / free syncBit
     );
   }
 
-  if (rc == SQLITE_OK) {
-    rc = sqlite3_create_module(db, "crsql_changes", &crsql_changesModule, 0);
+  if (rc == SQLITE_OK)
+  {
+    rc = sqlite3_create_module_v2(
+        db,
+        "crsql_changes",
+        &crsql_changesModule,
+        perDbData,
+        returnPerDbData);
   }
 
-  // if (rc == SQLITE_OK) {
-  //   sqlite3_commit_hook(db, commitHook, 0);
-  // }
+  if (rc != SQLITE_OK && perDbData != 0)
+  {
+    perDbData->referenceCount -= 1;
+  }
 
   return rc;
 }

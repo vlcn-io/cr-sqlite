@@ -1,15 +1,13 @@
 todo:
 
-> move to `withoutrowid` table for vtab?
->
-> - requires a pk col then... a singular pk col...
->   or is `rowid` fine to never actually set properly in the vtab if you enforce that consumers of the vtab
->   don't use rowid?
-
+- register a destructor to tear down shared mem on module unload
+- map shared mem by db file or some other such db isolation
+- ensure -DSQLITE_OMIT_SHARED_CACHE is on when compiling wasm to reduce size
 - pk only table testing
 - dflt value or null reqs on schema
-- double check utf8 support via emojis and other non latin symbols
-- withoutrowid on vtab given post-merge we can have rowid conflicts
+- https://github.com/aphrodite-sh/cr-sqlite/issues/16
+  - oob cid
+  - fill clocks for old table
 - don't drop if `as_crr` is re-run. rather provide a return of:
   - success if the current crr tables are compatible with current table struct
   - errors if an alteration needs to be performed or constraints are incompatible
@@ -22,11 +20,6 @@ todo:
   - define `crsql_alter()` which runs the alter if it is safe, runs a series of statements to make it safe if not
 - add logging
   - https://www.sqlite.org/capi3ref.html#sqlite3_log
-- bump glob version at end of patch tx
-  - will need to save max of largest version seen during patching
-  - can we save this on the vtab struct?
-    - vtab struct is one per connection
-    - need a cas instruction to swap db vrs if gt existing vrs
 - schema comparison before sync
   - ensure schemas are at same or compatible versions...
 - pk validation
@@ -111,3 +104,20 @@ memtest - https://calcagno.blog/m1dev/ & https://valgrind.org/docs/manual/quick-
 Given that valgrind doesn't work on monterey
 
 ---
+
+xConnect on the vtab tells us the schema name so we can disambiguate attached dbs that way.
+And select version from the vtab rather than fn extension...
+
+Or have the `crsql_dbvserion` take a schema name.
+^- does it need to given it is in a tirgger and thus on the local schema for that trigger?
+^- well you need to know where to look up the dbversion in the global process memory.
+
+---
+
+Current workaround:
+
+- each db has a uuid
+- at extension load, query the uuid
+- in a global, check if an entry exists for that uuid
+  - if so, grab a pointer to that memory
+  - if not, allocate it

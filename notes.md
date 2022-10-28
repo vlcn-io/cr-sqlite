@@ -288,3 +288,13 @@ When the peer is done updating us we can set to the max of the last row received
 We need to send a change per col rather than grouping into rows.
 We could, however, group consecutive changes for the same row into a row.
 This would be an optimization for a later time that can be implemented in the network layer.
+
+---
+
+use same version number for all cols written in the same stmnt?
+thus allowing us to group them...
+does that optimization rly matter? given the grouping can be undone by a merge with a remote?
+solves the create and nullability problem.
+
+well we can do this and not group by.
+it works since we'll commit transactionally.

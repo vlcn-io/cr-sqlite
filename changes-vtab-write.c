@@ -249,7 +249,7 @@ int crsql_mergeInsert(
   if (insertCid == DELETE_CID_SENTINEL)
   {
     // we need version of the delete...
-    // TODO: bump max version seen on all these inserts
+    // TODO: bump/collect max version seen on all these inserts
     // rc = crsql_mergeDelete(db, tblInfo->tblName, pkWhereList, pkValsStr, pkIdentifierList, /*todo*/, insertSiteId, insertSiteIdLen);
 
     sqlite3_free(pkWhereList);

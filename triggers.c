@@ -42,6 +42,8 @@ int crsql_createInsertTrigger(
   // on every column?
   // Keep some event data for create that represents the initial state of the row?
   // Future improvement.
+  // TODO: bump once for the row rather than once per column
+  // we'll need to make our vtab a without rowid table in that case.
   for (int i = 0; i < tableInfo->nonPksLen; ++i)
   {
     subTriggers[i] = sqlite3_mprintf(

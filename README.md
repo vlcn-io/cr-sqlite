@@ -44,7 +44,10 @@ baz    'a'  2    'doo'  3
 baz    'a'  3    'daa'  4
 
 -- merge changes from a peer
-insert into crsql_changes ("table", pk, cid, val, version, site_id) values ('foo', 5, 1, '''thing''', 5, X'7096E2D505314699A59C95FABA14ABB5');
+insert into crsql_changes
+  ("table", pk, cid, val, version, site_id)
+  values
+  ('foo', 5, 1, '''thing''', 5, X'7096E2D505314699A59C95FABA14ABB5');
 
 -- check that peer's changes were applied
 select * from foo;

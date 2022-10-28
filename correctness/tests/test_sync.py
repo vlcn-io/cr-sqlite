@@ -44,13 +44,44 @@ def update_data(c):
   c.execute("UPDATE deck SET title = 'Presto' WHERE id = 1")
   c.execute("COMMIT")
 
-def get_changes_since(db, version, requestor):
-  return 1
+def get_changes_since(c, version, requestor):
+  return c.execute(
+    "SELECT * FROM crsql_changes WHERE version > {v} AND site_id != {r}".format(v=version, r=requestor)
+  ).fetchall()
 
 def apply_patches():
   return 1
 
 def test_changes_since():
+  dbs = init()
+
+  rows = get_changes_since(dbs[0], 0, -1)
+
+  assert(rows == [('user', '1', 1, "'Javi'", 1, None),
+  ('deck', '1', 1, '1', 2, None),
+  ('deck', '1', 2, "'Preso'", 3, None),
+  ('slide', '1', 1, '1', 4, None),
+  ('slide', '1', 2, '0', 5, None),
+  ('component', '1', 1, "'text'", 6, None),
+  ('component', '1', 2, '1', 7, None),
+  ('component', '1', 3, "'wootwoot'", 8, None),
+  ('component', '2', 1, "'text'", 9, None),
+  ('component', '2', 2, '1', 10, None),
+  ('component', '2', 3, "'toottoot'", 11, None),
+  ('component', '3', 1, "'text'", 12, None),
+  ('component', '3', 2, '1', 13, None),
+  ('component', '3', 3, "'footfoot'", 14, None),
+  ('slide', '2', 1, '1', 15, None),
+  ('slide', '2', 2, '1', 16, None),
+  ('slide', '3', 1, '1', 17, None),
+  ('slide', '3', 2, '2', 18, None)])
+
+  update_data(dbs[0])
+
+  rows = get_changes_since(dbs[0], 18, -1)
+
+  pprint.pprint(rows)
+
   return 1
 
 def test_patch():

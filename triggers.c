@@ -36,6 +36,12 @@ int crsql_createInsertTrigger(
     pkNewList = crsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, "NEW.");
   }
 
+  // TODO: handle pk only tables
+  // We need a CREATE_SENTINEL (-3?) to stand in for the create event so we can replicate PKs
+  // If we have a create sentinel how will we insert the created rows without a requirement of nullability
+  // on every column?
+  // Keep some event data for create that represents the initial state of the row?
+  // Future improvement.
   for (int i = 0; i < tableInfo->nonPksLen; ++i)
   {
     subTriggers[i] = sqlite3_mprintf(

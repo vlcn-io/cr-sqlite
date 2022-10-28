@@ -31,7 +31,7 @@ static int changesConnect(
       db,
       // If we go without rowid we need to concat `table || !'! pk` to be the primary key
       // as xUpdate requires a single column to be the primary key if we use without rowid.
-      "CREATE TABLE x([table] NOT NULL, [pk] NOT NULL, [col_vals] NOT NULL, [col_versions] NOT NULL, [version], [site_id] NOT NULL)");
+      "CREATE TABLE x([table] NOT NULL, [pk] NOT NULL, [cid] NOT NULL, [val], [version] NOT NULL, [site_id] NOT NULL)");
   if (rc != SQLITE_OK)
   {
     return rc;
@@ -101,10 +101,8 @@ static int changesCrsrFinalize(crsql_Changes_cursor *crsr)
   rc += sqlite3_finalize(crsr->pRowStmt);
   crsr->pRowStmt = 0;
 
-  // do not free colVrsns as it is a reference
-  // to the data from the pChangesStmt
-  // and is thus managed by that statement
-  crsr->colVrsns = 0;
+  crsr->cid = -1;
+  crsr->version = MIN_POSSIBLE_DB_VERSION;
 
   return rc;
 }
@@ -208,17 +206,8 @@ static int changesNext(sqlite3_vtab_cursor *cur)
 
   const char *tbl = (const char *)sqlite3_column_text(pCur->pChangesStmt, TBL);
   const char *pks = (const char *)sqlite3_column_text(pCur->pChangesStmt, PKS);
-  const char *colVrsns = (const char *)sqlite3_column_text(pCur->pChangesStmt, COL_VRSNS);
-  int numCols = sqlite3_column_int(pCur->pChangesStmt, NUM_COLS);
-  sqlite3_int64 minv = sqlite3_column_int64(pCur->pChangesStmt, MIN_V);
-
-  if (numCols == 0)
-  {
-    // TODO: this could be an insert where the table only has primary keys and no non-primary key columns
-    pTabBase->zErrMsg = sqlite3_mprintf("Received a change set that had 0 columns from table %s", tbl);
-    changesCrsrFinalize(pCur);
-    return SQLITE_ERROR;
-  }
+  int cid = sqlite3_column_int(pCur->pChangesStmt, CID);
+  sqlite3_int64 vrsn = sqlite3_column_int64(pCur->pChangesStmt, VRSN);
 
   crsql_TableInfo *tblInfo = crsql_findTableInfo(pCur->pTab->tableInfos, pCur->pTab->tableInfosLen, tbl);
   if (tblInfo == 0)
@@ -242,12 +231,21 @@ static int changesNext(sqlite3_vtab_cursor *cur)
   // And no need for pRowStmt.
   // Ret -1 for delete case for below?
   // Set a marker on the cursor that it represents a deleted row?
-  char *zSql = crsql_rowPatchDataQuery(pCur->pTab->db, tblInfo, numCols, colVrsns, pks);
+  char *zSql = crsql_rowPatchDataQuery(pCur->pTab->db, tblInfo, cid, pks);
   if (zSql == 0)
   {
     pTabBase->zErrMsg = sqlite3_mprintf("crsql internal error generationg raw data fetch query for table %s", tbl);
     return SQLITE_ERROR;
   }
+
+  if (zSql[0] == '\0') {
+    // it's a delete -- no row data to grab
+    pCur->pRowStmt = 0;
+    sqlite3_free(zSql);
+
+    return SQLITE_OK;
+  }
+
   sqlite3_stmt *pRowStmt;
   rc = sqlite3_prepare_v2(pCur->pTab->db, zSql, -1, &pRowStmt, 0);
   sqlite3_free(zSql);
@@ -272,8 +270,8 @@ static int changesNext(sqlite3_vtab_cursor *cur)
   }
 
   pCur->pRowStmt = pRowStmt;
-  pCur->colVrsns = colVrsns;
-  pCur->version = minv;
+  pCur->cid = cid;
+  pCur->version = vrsn;
 
   return rc;
 }
@@ -299,11 +297,22 @@ static int changesColumn(
   case CHANGES_SINCE_VTAB_PK:
     sqlite3_result_value(ctx, sqlite3_column_value(pCur->pChangesStmt, PKS));
     break;
-  case CHANGES_SINCE_VTAB_COL_VALS:
-    sqlite3_result_value(ctx, sqlite3_column_value(pCur->pRowStmt, 0));
+  case CHANGES_SINCE_VTAB_CVAL:
+    // pRowStmt is null if the event was a delete. i.e., there is no row data.
+    // TODO: there's an edge case here where we can end up replicating a bunch of nulls
+    // for a row that is deleted but has prior events proceeding the delete.
+    // So on row delete we should, in our delete trigger, go drop all
+    // state records for the row except the delete event.
+    // "all" is actually quite small given we only keep max 1 record per col in a row.
+    // so this drop is feasible on delete.
+    if (pCur->pRowStmt == 0) {
+      sqlite3_result_null(ctx);
+    } else {
+      sqlite3_result_value(ctx, sqlite3_column_value(pCur->pRowStmt, 0));
+    }
     break;
-  case CHANGES_SINCE_VTAB_COL_VRSNS:
-    sqlite3_result_text(ctx, pCur->colVrsns, -1, 0);
+  case CHANGES_SINCE_VTAB_CID:
+    sqlite3_result_int(ctx, pCur->cid);
     break;
   case CHANGES_SINCE_VTAB_VRSN:
     sqlite3_result_int64(ctx, pCur->version);

@@ -15,17 +15,15 @@ char *crsql_changesQueryForTable(crsql_TableInfo *tableInfo)
 
   char *zSql = sqlite3_mprintf(
       "SELECT\
-      %z as pks,\
       '%s' as tbl,\
-      json_group_object(__crsql_col_num, __crsql_version) as col_vrsns,\
-      count(__crsql_col_num) as num_cols,\
-      min(__crsql_version) as min_v\
+      %z as pks,\
+      __crsql_col_num as cid,\
+      __crsql_version as vrsn,\
     FROM \"%s__crsql_clock\"\
     WHERE\
       __crsql_site_id != ?\
     AND\
-      __crsql_version > ?\
-    GROUP BY pks",
+      __crsql_version > ?",
       crsql_quoteConcat(tableInfo->pks, tableInfo->pksLen),
       tableInfo->tblName,
       tableInfo->tblName);
@@ -73,76 +71,9 @@ char *crsql_changesUnionQuery(
 
   // compose the final query
   return sqlite3_mprintf(
-      "SELECT tbl, pks, num_cols, col_vrsns, min_v FROM (%z) ORDER BY min_v, tbl ASC",
+      "SELECT tbl, pks, cid, vrsn FROM (%z) ORDER BY vrsn, tbl ASC",
       unionsStr);
   // %z frees unionsStr https://www.sqlite.org/printf.html#percentz
-}
-
-/**
- * Pull the column infos that represent the cids in
- * the version map.
- */
-crsql_ColumnInfo *crsql_pickColumnInfosFromVersionMap(
-    sqlite3 *db,
-    crsql_ColumnInfo *columnInfos,
-    int columnInfosLen,
-    int numVersionCols,
-    const char *colVersions)
-{
-  if (numVersionCols > columnInfosLen)
-  {
-    return 0;
-  }
-
-  int rc = SQLITE_OK;
-  char *zSql = sqlite3_mprintf("SELECT key as cid FROM json_each(?)");
-
-  sqlite3_stmt *pStmt = 0;
-  rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
-  sqlite3_free(zSql);
-
-  if (rc != SQLITE_OK)
-  {
-    sqlite3_finalize(pStmt);
-    return 0;
-  }
-
-  // This is safe, yea?
-  // Binding the result of one statement to another.
-  rc = sqlite3_bind_text(pStmt, 1, colVersions, -1, SQLITE_STATIC);
-  if (rc != SQLITE_OK)
-  {
-    sqlite3_finalize(pStmt);
-    return 0;
-  }
-
-  rc = sqlite3_step(pStmt);
-  crsql_ColumnInfo *ret = sqlite3_malloc(numVersionCols * sizeof *ret);
-  int i = 0;
-  while (rc == SQLITE_ROW)
-  {
-
-    int cid = sqlite3_column_int(pStmt, 0);
-    if (cid >= columnInfosLen || i >= numVersionCols)
-    {
-      sqlite3_free(ret);
-      sqlite3_finalize(pStmt);
-      return 0;
-    }
-    ret[i] = columnInfos[cid];
-
-    rc = sqlite3_step(pStmt);
-    ++i;
-  }
-  sqlite3_finalize(pStmt);
-
-  if (i != numVersionCols)
-  {
-    sqlite3_free(ret);
-    return 0;
-  }
-
-  return ret;
 }
 
 /**
@@ -166,23 +97,20 @@ crsql_ColumnInfo *crsql_pickColumnInfosFromVersionMap(
 char *crsql_rowPatchDataQuery(
     sqlite3 *db,
     crsql_TableInfo *tblInfo,
-    int numVersionCols,
-    const char *colVrsns,
+    int cid,
     const char *pks)
 {
-  crsql_ColumnInfo *changedCols = crsql_pickColumnInfosFromVersionMap(
-      db,
-      tblInfo->baseCols,
-      tblInfo->baseColsLen,
-      numVersionCols,
-      colVrsns);
-  char *colsConcatList = crsql_quoteConcat(changedCols, numVersionCols);
-  sqlite3_free(changedCols);
+  if (cid == DELETE_CID_SENTINEL) {
+    return sqlite3_mprintf("");
+  }
 
   char *pkWhereList = crsql_extractWhereList(tblInfo->pks, tblInfo->pksLen, pks);
+  if (pkWhereList == 0) {
+    return 0;
+  }
   char *zSql = sqlite3_mprintf(
-      "SELECT %z FROM \"%s\" WHERE %z",
-      colsConcatList,
+      "SELECT quote(\"%s\") FROM \"%s\" WHERE %z",
+      tblInfo->baseCols[cid].name,
       tblInfo->tblName,
       pkWhereList);
 

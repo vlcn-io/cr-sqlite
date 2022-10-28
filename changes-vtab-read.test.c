@@ -234,9 +234,10 @@ static void testRowPatchDataQuery()
   CHECK_OK
 
   // TC1: single pk table, 1 col change
-  char *versions = "{\"1\": 1}";
+  int cid = 1;
+  sqlite3_int64 version = 1;
   char *pks = "1";
-  char *q = crsql_rowPatchDataQuery(db, tblInfo, 1, versions, pks);
+  char *q = crsql_rowPatchDataQuery(db, tblInfo, cid, pks);
   assert(strcmp(q, "SELECT quote(\"b\") FROM \"foo\" WHERE \"a\" = 1") == 0);
   sqlite3_free(q);
 

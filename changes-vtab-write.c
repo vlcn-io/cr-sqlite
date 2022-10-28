@@ -9,84 +9,6 @@
 
 /**
  * Given a json map of received col versions,
- * return an array indexed by cid that contains the index
- * of the received col version.
- *
- * Returns r[0] = -1 on delete
- *
- * Returns 0 on failure.
- *
- * totalNumCols represents the max number of columns in the table.
- * rNumReceivedCids is the number of columns in the change.
- */
-int *crsql_allReceivedCids(
-    sqlite3 *db,
-    const unsigned char *colVrsns,
-    int totalNumCols,
-    int *rNumReceivedCids)
-{
-  int rc = SQLITE_OK;
-  sqlite3_stmt *pStmt = 0;
-  char *zSql = sqlite3_mprintf("SELECT key as cid FROM json_each(%Q)", colVrsns);
-  rc = sqlite3_prepare(db, zSql, -1, &pStmt, 0);
-  sqlite3_free(zSql);
-
-  if (rc != SQLITE_OK)
-  {
-    sqlite3_finalize(pStmt);
-    return 0;
-  }
-
-  int *ret = sqlite3_malloc(totalNumCols * sizeof *ret);
-  for (int i = 0; i < totalNumCols; ++i)
-  {
-    // -2 => unmapped
-    // -1 => full row delete
-    ret[i] = -2;
-  }
-  int numReceivedCids = 0;
-  rc = sqlite3_step(pStmt);
-  while (rc == SQLITE_ROW)
-  {
-    int cid = sqlite3_column_int(pStmt, 0);
-    if (cid == DELETE_CID_SENTINEL)
-    {
-      sqlite3_finalize(pStmt);
-      ret[0] = -1;
-      return ret;
-    }
-    if (cid >= totalNumCols || numReceivedCids >= totalNumCols || cid < 0)
-    {
-      sqlite3_free(ret);
-      sqlite3_finalize(pStmt);
-      return 0;
-    }
-    ret[cid] = numReceivedCids;
-    ++numReceivedCids;
-    rc = sqlite3_step(pStmt);
-  }
-
-  if (rc != SQLITE_DONE)
-  {
-    sqlite3_free(ret);
-    sqlite3_finalize(pStmt);
-    return 0;
-  }
-
-  *rNumReceivedCids = numReceivedCids;
-  return ret;
-}
-
-char *crsql_changesTabConflictSets(
-    char **allWinningVals,
-    crsql_ColumnInfo *columnInfosForInsert,
-    int allWinningValsLen)
-{
-  return 0;
-}
-
-/**
- * Given a json map of received col versions,
  * return an array of the cids that should actually
  * overwrite values on the local db.
  *
@@ -98,15 +20,14 @@ char *crsql_changesTabConflictSets(
  *
  * The former is used for extracting data from concatenated col vals.
  */
-int *crsql_allWinningCids(
+int *crsql_didCidWin(
     sqlite3 *db,
-    const unsigned char *insertColVrsns,
-    const unsigned char *insertTbl,
+    const char *insertTbl,
     const char *pkWhereList,
-    int totalNumCols,
-    int *rlen,
     const void *insertSiteId,
     int insertSiteIdLen,
+    int cid,
+    sqlite3_int64 version,
     char **errmsg)
 {
   char *zSql = 0;
@@ -116,35 +37,35 @@ int *crsql_allWinningCids(
   {
     // we're patching into our own site? Makes no sense.
     *errmsg = sqlite3_mprintf("crsql - a site is trying to patch itself.");
-    return 0;
+    return -1;
   }
 
   if (siteComparison > 0)
   {
     zSql = sqlite3_mprintf(
-        "SELECT key as cid FROM json_each(%Q)\
-          LEFT JOIN \"%s__crsql_clock\"\
-          WHERE %z AND value >= \"%s__crsql_clock\".__crsql_version",
-        insertColVrsns,
+        "SELECT count(*) FROM \"%s__crsql_clock\"\
+          WHERE %s AND %d = __crsql_col_num AND %lld >= __crsql_version",
         insertTbl,
         pkWhereList,
+        cid,
+        version,
         insertTbl);
   }
   else if (siteComparison < 0)
   {
     zSql = sqlite3_mprintf(
-        "SELECT key as cid FROM json_each(%Q)\
-          LEFT JOIN \"%s__crsql_clock\"\
-          WHERE %z AND value > \"%s__crsql_clock\".__crsql_version",
-        insertColVrsns,
+        "SELECT count(*) FROM \"%s__crsql_clock\"\
+          WHERE %s AND %d = __crsql_col_num AND %lld > __crsql_version",
         insertTbl,
         pkWhereList,
+        cid,
+        version,
         insertTbl);
   }
   else
   {
     // should be impossible given prior siteComparison == 0 if statement
-    return 0;
+    return -1;
   }
 
   // run zSql
@@ -155,35 +76,19 @@ int *crsql_allWinningCids(
   if (rc != SQLITE_OK)
   {
     sqlite3_finalize(pStmt);
-    return 0;
+    return -1;
   }
 
-  int *ret = sqlite3_malloc(totalNumCols * sizeof *ret);
-  memset(ret, 0, totalNumCols * sizeof *ret);
   rc = sqlite3_step(pStmt);
-  int i = 0;
-  while (rc == SQLITE_ROW)
-  {
-    int cid = sqlite3_column_int(pStmt, 0);
-    if (cid > totalNumCols || i >= totalNumCols)
-    {
-      sqlite3_free(ret);
-      sqlite3_finalize(pStmt);
-      return 0;
-    }
-    ret[i] = cid;
-    ++i;
-    rc = sqlite3_step(pStmt);
-  }
-
-  if (rc != SQLITE_DONE)
-  {
-    sqlite3_free(ret);
+  if (rc != SQLITE_ROW) {
     sqlite3_finalize(pStmt);
-    return 0;
+    return -1;
   }
 
-  return ret;
+  int count = sqlite3_column_int(pStmt, 0);
+  sqlite3_finalize(pStmt);
+
+  return count;
 }
 
 #define DELETED_LOCALLY -1
@@ -304,11 +209,10 @@ int crsql_mergeInsert(
   const unsigned char *insertTbl = sqlite3_value_text(argv[2 + CHANGES_SINCE_VTAB_TBL]);
   // `splitQuoteConcat` will validate these
   const unsigned char *insertPks = sqlite3_value_text(argv[2 + CHANGES_SINCE_VTAB_PK]);
-  // `splitQuoteConcat` will validate these
-  const unsigned char *insertVals = sqlite3_value_text(argv[2 + CHANGES_SINCE_VTAB_COL_VALS]);
-  // safe given we only use via %Q and json processing
-  const unsigned char *insertColVrsns = sqlite3_value_text(argv[2 + CHANGES_SINCE_VTAB_COL_VRSNS]);
-  // sqlite3_int64 insertVrsn = sqlite3_value_int64(argv[2 + CHANGES_SINCE_VTAB_VRSN]);
+  int insertCid = sqlite3_value_int(argv[2 + CHANGES_SINCE_VTAB_CID]);
+  // `splitQuoteConcat` will validate these -- even tho 1 val should do splitquoteconcat for the validation
+  const unsigned char *insertVal = sqlite3_value_text(argv[2 + CHANGES_SINCE_VTAB_CVAL]);
+  sqlite3_int64 insertVrsn = sqlite3_value_int64(argv[2 + CHANGES_SINCE_VTAB_VRSN]);
   int insertSiteIdLen = sqlite3_value_bytes(argv[2 + CHANGES_SINCE_VTAB_SITE_ID]);
   if (insertSiteIdLen > SITE_ID_LEN)
   {
@@ -341,17 +245,6 @@ int crsql_mergeInsert(
     return rc;
   }
 
-  int numReceivedCids = 0;
-  int *allReceivedCidsToIdx = crsql_allReceivedCids(db, insertColVrsns, tblInfo->baseColsLen, &numReceivedCids);
-
-  if (allReceivedCidsToIdx == 0)
-  {
-    sqlite3_free(pkWhereList);
-    sqlite3_free(allReceivedCidsToIdx);
-    *errmsg = sqlite3_mprintf("crsql - failed to extract cids of changed columns");
-    return SQLITE_ERROR;
-  }
-
   // This happens if the state is a delete
   // We must `checkForLocalDelete` prior to merging a delete (happens above).
   // mergeDelete assumes we've already checked for a local delete.
@@ -359,12 +252,11 @@ int crsql_mergeInsert(
   if (pkValsStr == 0)
   {
     sqlite3_free(pkWhereList);
-    sqlite3_free(allReceivedCidsToIdx);
     return SQLITE_ERROR;
   }
 
   char *pkIdentifierList = crsql_asIdentifierList(tblInfo->pks, tblInfo->pksLen, 0);
-  if (allReceivedCidsToIdx[0] == -1)
+  if (insertCid == DELETE_CID_SENTINEL)
   {
     // we need version of the delete...
     // TODO: bump max version seen on all these inserts
@@ -372,7 +264,6 @@ int crsql_mergeInsert(
 
     sqlite3_free(pkWhereList);
     sqlite3_free(pkValsStr);
-    sqlite3_free(allReceivedCidsToIdx);
     sqlite3_free(pkIdentifierList);
     return rc;
   }
@@ -384,92 +275,49 @@ int crsql_mergeInsert(
 
   // process normal merge
 
-  int allWinningCidsLen = 0;
-  int *allWinningCids = crsql_allWinningCids(
-      db,
-      insertColVrsns,
-      insertTbl,
-      pkWhereList,
-      tblInfo->baseColsLen,
-      &allWinningCidsLen,
-      insertSiteId,
-      insertSiteIdLen,
-      errmsg);
-
-  if (allWinningCids == 0 || allWinningCidsLen + tblInfo->pksLen > tblInfo->baseColsLen || allWinningCidsLen == 0)
+  int doesCidWin = crsql_didCidWin(db, insertTbl, pkWhereList, insertSiteId, insertSiteIdLen, insertCid, insertVrsn, errmsg);
+  if (doesCidWin == -1 || doesCidWin == 0)
   {
-    sqlite3_free(allReceivedCidsToIdx);
-    sqlite3_free(allWinningCids);
     sqlite3_free(pkValsStr);
     sqlite3_free(pkWhereList);
     sqlite3_free(pkIdentifierList);
-    // allWinningCidsLen == 0? compared against our clocks, nothing wins. OK and Done.
-    return allWinningCidsLen == 0 && allWinningCids != 0 ? SQLITE_OK : SQLITE_ERROR;
+    // doesCidWin == 0? compared against our clocks, nothing wins. OK and Done.
+    return doesCidWin == 0 ? SQLITE_OK : SQLITE_ERROR;
   }
 
   // crsql_insertWinningChanges();
   // move all code below into insertWinningChanges
 
-  crsql_ColumnInfo columnInfosForInsert[allWinningCidsLen];
-  char **allReceivedNonPkVals = crsql_splitQuoteConcat((const char *)insertVals, numReceivedCids);
-  char *allWinningVals[allWinningCidsLen];
+  char **sanitizedInsertVal = crsql_splitQuoteConcat(insertVal, 1);
 
-  if (allReceivedNonPkVals == 0)
+  if (sanitizedInsertVal == 0)
   {
-    sqlite3_free(allReceivedCidsToIdx);
-    sqlite3_free(allWinningCids);
     sqlite3_free(pkValsStr);
     sqlite3_free(pkWhereList);
     sqlite3_free(pkIdentifierList);
     return SQLITE_ERROR;
   }
 
-  for (int i = 0; i < allWinningCidsLen; ++i)
-  {
-    int cid = allWinningCids[i];
-    int valIdx = allReceivedCidsToIdx[cid];
-    if (valIdx < 0 || valIdx >= numReceivedCids)
-    {
-      sqlite3_free(allReceivedCidsToIdx);
-      sqlite3_free(allWinningCids);
-      sqlite3_free(pkIdentifierList);
-      sqlite3_free(pkWhereList);
-      sqlite3_free(pkValsStr);
-      return SQLITE_ERROR;
-    }
-    allWinningVals[i] = allReceivedNonPkVals[valIdx];
-    columnInfosForInsert[i] = tblInfo->baseCols[cid];
-  }
-
-  char *conflictSets = crsql_changesTabConflictSets(
-      allWinningVals,
-      columnInfosForInsert,
-      allWinningCidsLen);
-
   zSql = sqlite3_mprintf(
-      "INSERT INTO \"%s\" (%s, %z)\
-      VALUES (%z, %z)\
+      "INSERT INTO \"%s\" (%s, %s)\
+      VALUES (%z, %s)\
       ON CONFLICT (%z) DO UPDATE\
-      %z",
+      %s = %s",
       tblInfo->tblName,
       pkIdentifierList,
-      crsql_asIdentifierList(columnInfosForInsert, allWinningCidsLen, 0),
+      tblInfo->baseCols[insertCid].name,
       pkValsStr,
-      crsql_quotedValuesAsList(allWinningVals, allWinningCidsLen),
+      sanitizedInsertVal[0],
       pkIdentifierList,
-      conflictSets);
-
-  for (int i = 0; i < numReceivedCids; ++i)
-  {
-    sqlite3_free(allReceivedNonPkVals[i]);
-  }
-  sqlite3_free(allReceivedNonPkVals);
+      tblInfo->baseCols[insertCid].name,
+      sanitizedInsertVal[0]);
+  
+  sqlite3_free(sanitizedInsertVal[0]);
+  sqlite3_free(sanitizedInsertVal);
 
   rc = sqlite3_exec(db, SET_SYNC_BIT, 0, 0, errmsg);
   if (rc != SQLITE_OK)
   {
-    sqlite3_free(allReceivedCidsToIdx);
-    sqlite3_free(allWinningCids);
     sqlite3_free(pkWhereList);
     sqlite3_exec(db, CLEAR_SYNC_BIT, 0, 0, 0);
     return rc;
@@ -481,18 +329,13 @@ int crsql_mergeInsert(
 
   if (rc != SQLITE_OK)
   {
-    sqlite3_free(allReceivedCidsToIdx);
-    sqlite3_free(allWinningCids);
     sqlite3_free(pkWhereList);
     return rc;
   }
 
-  sqlite3_free(allReceivedCidsToIdx);
-  sqlite3_free(allWinningCids);
   sqlite3_free(pkWhereList);
   // update clocks to new vals now
-  // insert into x__crr_clock (table, pk, cid, version) values (...)
-  // for each cid & version in allWinningCids
+  // insert into x__crr_clock (pks, __crsql_col_num, __crsql_version, __crsql_site_id) values (...)
 
   // TODO: Post merge it is technically possible to have non-unique version vals in the clock table...
   // so deal with that and/or make vtab `without rowid`
@@ -500,18 +343,6 @@ int crsql_mergeInsert(
   // (1) pick their clock and put it for the column
   // (2) push our db version if it is behind their clock so we don't issue
   //     events in the past.
-
-  /*
-  - go thru allChangedCids
-  - build new colInfoArray from it
-  - asIdentifierList that colInfoArray for INSER INTO x (identlist)
-    - including pks!
-  - create an array of values to insert based on allChangedCids
-    - split insertVals
-    - go thru allChangedCids
-    - look up insertVals index based on allReceivedCids
-  - VALUES (pks, valsarr) <-- "as value list" ?
-  */
 
   // sqlite is going to somehow provide us with a rowid.
   // TODO: how in the world does it know the rowid of a vtab?

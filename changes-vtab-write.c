@@ -227,10 +227,46 @@ int crsql_checkForLocalDelete(
 int crsql_mergeDelete(
     sqlite3 *db,
     const char *tblName,
-    char *pkWhereList,
-    char *pkValsStr)
+    const char *pkWhereList,
+    const char *pkValsStr,
+    const char *pkIdentifiers,
+    sqlite3_int64 remoteVersion,
+    char * remoteSiteId,
+    int remoteSiteIdLen)
 {
-  // rc = sqlite3_exec(db, SET_SYNC_BIT, 0, 0, errmsg);
+  char *zSql = sqlite3_mprintf(
+    "DELETE FROM \"%s\" WHERE %s",
+    tblName,
+    pkWhereList
+  );
+  int rc = sqlite3_exec(db, SET_SYNC_BIT, 0, 0, 0);
+  if (rc != SQLITE_OK) {
+    sqlite3_free(zSql);
+    return rc;
+  }
+
+  rc = sqlite3_exec(db, zSql, 0, 0, 0);
+  sqlite3_free(zSql);
+  sqlite3_exec(db, CLEAR_SYNC_BIT, 0, 0, 0);
+  if (rc != SQLITE_OK) {
+    return rc;
+  }
+
+  // now update clock with delete sentinel
+
+  zSql = sqlite3_mprintf(
+    "INSERT INTO \"%s__crsql_clock\" (%s, __crsql_col_num, __crsql_version, __crsql_site_id) VALUES (\
+      %s,\
+      %d,\
+      ?,\
+      ?\
+    )",
+    tblName,
+    pkIdentifiers,
+    pkValsStr,
+    DELETE_CID_SENTINEL
+  );
+
   // merging delete needs to create a record of the delete in the clock table
   // we know we don't have one b/c we checked for it prior to being here.
   // so just:
@@ -326,13 +362,18 @@ int crsql_mergeInsert(
     sqlite3_free(allReceivedCidsToIdx);
     return SQLITE_ERROR;
   }
+
+  char *pkIdentifierList = crsql_asIdentifierList(tblInfo->pks, tblInfo->pksLen, 0);
   if (allReceivedCidsToIdx[0] == -1)
   {
-    rc = crsql_mergeDelete(db, tblInfo->tblName, pkWhereList, pkValsStr);
+    // we need version of the delete...
+    // TODO: bump max version seen on all these inserts
+    // rc = crsql_mergeDelete(db, tblInfo->tblName, pkWhereList, pkValsStr, pkIdentifierList, /*todo*/, insertSiteId, insertSiteIdLen);
 
     sqlite3_free(pkWhereList);
     sqlite3_free(pkValsStr);
     sqlite3_free(allReceivedCidsToIdx);
+    sqlite3_free(pkIdentifierList);
     return rc;
   }
 
@@ -361,6 +402,7 @@ int crsql_mergeInsert(
     sqlite3_free(allWinningCids);
     sqlite3_free(pkValsStr);
     sqlite3_free(pkWhereList);
+    sqlite3_free(pkIdentifierList);
     // allWinningCidsLen == 0? compared against our clocks, nothing wins. OK and Done.
     return allWinningCidsLen == 0 && allWinningCids != 0 ? SQLITE_OK : SQLITE_ERROR;
   }
@@ -378,6 +420,7 @@ int crsql_mergeInsert(
     sqlite3_free(allWinningCids);
     sqlite3_free(pkValsStr);
     sqlite3_free(pkWhereList);
+    sqlite3_free(pkIdentifierList);
     return SQLITE_ERROR;
   }
 
@@ -389,14 +432,14 @@ int crsql_mergeInsert(
     {
       sqlite3_free(allReceivedCidsToIdx);
       sqlite3_free(allWinningCids);
+      sqlite3_free(pkIdentifierList);
+      sqlite3_free(pkWhereList);
+      sqlite3_free(pkValsStr);
       return SQLITE_ERROR;
     }
     allWinningVals[i] = allReceivedNonPkVals[valIdx];
     columnInfosForInsert[i] = tblInfo->baseCols[cid];
   }
-
-  char *pkIdentifierList = crsql_asIdentifierList(tblInfo->pks, tblInfo->pksLen, 0);
-  int len = 0;
 
   char *conflictSets = crsql_changesTabConflictSets(
       allWinningVals,

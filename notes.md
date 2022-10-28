@@ -265,3 +265,22 @@ Rly no other way to do it if you want to extract the cols and pks appropriately
 
 memtest - https://calcagno.blog/m1dev/ & https://valgrind.org/docs/manual/quick-start.html
 Given that valgrind doesn't work on monterey
+
+---
+
+TODO:
+What to do with clock pushing...
+
+If the network is grouping into rows..
+we could have a row with a very late clock along with a very early clock.
+
+we order changes by min version when fetching a patch set
+
+We can push our clock to the min of a row and set our "last seen" for the peer to the min
+of the row.
+
+We do this since we do not want to skip ahead past later changes.
+I suppose this could create some weird interactions where we merge a change, write a change and lose the merge with
+a now lower clock value...
+
+When the peer is done updating us we can set to the max of the last row received? Since there is no more.

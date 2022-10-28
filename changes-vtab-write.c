@@ -78,9 +78,9 @@ int *crsql_allReceivedCids(
 }
 
 char *crsql_changesTabConflictSets(
-    char **nonPkValsForInsert,
+    char **allWinningVals,
     crsql_ColumnInfo *columnInfosForInsert,
-    int allChangedCidsLen)
+    int allWinningValsLen)
 {
   return 0;
 }
@@ -98,7 +98,7 @@ char *crsql_changesTabConflictSets(
  *
  * The former is used for extracting data from concatenated col vals.
  */
-int *crsql_allChangedCids(
+int *crsql_allWinningCids(
     sqlite3 *db,
     const unsigned char *insertColVrsns,
     const unsigned char *insertTbl,
@@ -332,62 +332,62 @@ int crsql_mergeInsert(
   //   rc = crsql_processPkOnlyInsert(db, tblInfo->tblName, tblInfo->pks, tblInfo->pksLen, insertPks);
   // }
 
-  int allChangedCidsLen = 0;
-  int *allChangedCids = crsql_allChangedCids(
+  int allWinningCidsLen = 0;
+  int *allWinningCids = crsql_allWinningCids(
       db,
       insertColVrsns,
       insertTbl,
       pkWhereList,
       tblInfo->baseColsLen,
-      &allChangedCidsLen,
+      &allWinningCidsLen,
       insertSiteId,
       insertSiteIdLen,
       errmsg);
   sqlite3_free(pkWhereList);
 
-  if (allChangedCids == 0 || allChangedCidsLen + tblInfo->pksLen > tblInfo->baseColsLen)
+  if (allWinningCids == 0 || allWinningCidsLen + tblInfo->pksLen > tblInfo->baseColsLen)
   {
     sqlite3_free(allReceivedCidsToIdx);
-    sqlite3_free(allChangedCids);
+    sqlite3_free(allWinningCids);
     return SQLITE_ERROR;
   }
 
   // compared against our clocks, nothing win.
-  if (allChangedCidsLen == 0)
+  if (allWinningCidsLen == 0)
   {
     // TODO: confirm you still get results back even if the row does not exist
     // on local. You should givenv left join usage.
     sqlite3_free(allReceivedCidsToIdx);
-    sqlite3_free(allChangedCids);
+    sqlite3_free(allWinningCids);
     return rc;
   }
 
   // crsql_insertWinningChanges();
   // move all code below into insertWinningChanges
 
-  crsql_ColumnInfo columnInfosForInsert[allChangedCidsLen];
+  crsql_ColumnInfo columnInfosForInsert[allWinningCidsLen];
   char **pkValsForInsert = crsql_splitQuoteConcat((const char *)insertPks, tblInfo->pksLen);
   char **allReceivedNonPkVals = crsql_splitQuoteConcat((const char *)insertVals, numReceivedCids);
-  char *nonPkValsForInsert[allChangedCidsLen];
+  char *allWinningVals[allWinningCidsLen];
 
   // TODO: handle the case where only pks to process
   if (pkValsForInsert == 0 || allReceivedNonPkVals == 0)
   {
     sqlite3_free(allReceivedCidsToIdx);
-    sqlite3_free(allChangedCids);
+    sqlite3_free(allWinningCids);
     return SQLITE_ERROR;
   }
 
-  for (int i = 0; i < allChangedCidsLen; ++i)
+  for (int i = 0; i < allWinningCidsLen; ++i)
   {
-    int cid = allChangedCids[i];
+    int cid = allWinningCids[i];
     int valIdx = allReceivedCidsToIdx[cid];
     if (valIdx < 0 || valIdx >= numReceivedCids) {
       sqlite3_free(allReceivedCidsToIdx);
-      sqlite3_free(allChangedCids);
+      sqlite3_free(allWinningCids);
       return SQLITE_ERROR;
     }
-    nonPkValsForInsert[i] = allReceivedNonPkVals[valIdx];
+    allWinningVals[i] = allReceivedNonPkVals[valIdx];
     columnInfosForInsert[i] = tblInfo->baseCols[cid];
   }
 
@@ -401,17 +401,17 @@ int crsql_mergeInsert(
   crsql_joinWith(pkValsStr, pkValsForInsert, tblInfo->pksLen, ',');
 
   len = 0;
-  for (int i = 0; i < allChangedCidsLen; ++i)
+  for (int i = 0; i < allWinningCidsLen; ++i)
   {
-    len += strlen(nonPkValsForInsert[i]);
+    len += strlen(allWinningVals[i]);
   }
   char *nonPkValsStr = sqlite3_malloc((len + 1) * sizeof *nonPkValsStr);
-  crsql_joinWith(nonPkValsStr, nonPkValsForInsert, allChangedCidsLen, ',');
+  crsql_joinWith(nonPkValsStr, allWinningVals, allWinningCidsLen, ',');
 
   char *conflictSets = crsql_changesTabConflictSets(
-      nonPkValsForInsert,
+      allWinningVals,
       columnInfosForInsert,
-      allChangedCidsLen);
+      allWinningCidsLen);
 
   // TODO: handle case where there are only pks to process
   zSql = sqlite3_mprintf(
@@ -421,7 +421,7 @@ int crsql_mergeInsert(
       %z",
       tblInfo->tblName,
       pkIdentifierList,
-      crsql_asIdentifierList(columnInfosForInsert, allChangedCidsLen, 0),
+      crsql_asIdentifierList(columnInfosForInsert, allWinningCidsLen, 0),
       pkValsStr,
       nonPkValsStr,
       pkIdentifierList,

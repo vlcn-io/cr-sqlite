@@ -24,7 +24,7 @@ char *crsql_changesTabConflictSets(
     crsql_ColumnInfo *columnInfosForInsert,
     int allChangedCidsLen);
 
-int *crsql_allChangedCids(
+int *crsql_allWinningCids(
     sqlite3 *db,
     const unsigned char *insertColVrsns,
     const unsigned char *insertTbl,

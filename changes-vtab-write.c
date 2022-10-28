@@ -120,58 +120,6 @@ int crsql_checkForLocalDelete(
   return SQLITE_OK;
 }
 
-int crsql_mergeDelete(
-    sqlite3 *db,
-    const char *tblName,
-    const char *pkWhereList,
-    const char *pkValsStr,
-    const char *pkIdentifiers,
-    sqlite3_int64 remoteVersion,
-    char *remoteSiteId,
-    int remoteSiteIdLen)
-{
-  char *zSql = sqlite3_mprintf(
-      "DELETE FROM \"%s\" WHERE %s",
-      tblName,
-      pkWhereList);
-  int rc = sqlite3_exec(db, SET_SYNC_BIT, 0, 0, 0);
-  if (rc != SQLITE_OK)
-  {
-    sqlite3_free(zSql);
-    return rc;
-  }
-
-  rc = sqlite3_exec(db, zSql, 0, 0, 0);
-  sqlite3_free(zSql);
-  sqlite3_exec(db, CLEAR_SYNC_BIT, 0, 0, 0);
-  if (rc != SQLITE_OK)
-  {
-    return rc;
-  }
-
-  // now update clock with delete sentinel
-
-  zSql = sqlite3_mprintf(
-      "INSERT INTO \"%s__crsql_clock\" (%s, __crsql_col_num, __crsql_version, __crsql_site_id) VALUES (\
-      %s,\
-      %d,\
-      ?,\
-      ?\
-    )",
-      tblName,
-      pkIdentifiers,
-      pkValsStr,
-      DELETE_CID_SENTINEL);
-
-  // merging delete needs to create a record of the delete in the clock table
-  // we know we don't have one b/c we checked for it prior to being here.
-  // so just:
-  // 1. delete from main table where pkWhereList
-  // 2. insert into clock table pkVals, col_num = sentinel_delete, version=curr_db_version, site_id=provided_id
-
-  return SQLITE_OK;
-}
-
 int crsql_setWinnerClock(
     sqlite3 *db,
     crsql_TableInfo *tblInfo,
@@ -212,11 +160,98 @@ int crsql_setWinnerClock(
   rc = sqlite3_step(pStmt);
   sqlite3_finalize(pStmt);
 
-  if (rc == SQLITE_DONE) {
+  if (rc == SQLITE_DONE)
+  {
     return SQLITE_OK;
-  } else {
+  }
+  else
+  {
     return SQLITE_ERROR;
   }
+}
+
+int crsql_mergePkOnlyInsert(
+    sqlite3 *db,
+    crsql_TableInfo *tblInfo,
+    const char *pkValsStr,
+    const char *pkIdentifiers,
+    sqlite3_int64 remoteVersion,
+    const void *remoteSiteId,
+    int remoteSiteIdLen)
+{
+  // TODO: do we need to check that the row doesn't alrdy
+  // exist?
+  // if it exists we can skip the merge pks only...
+
+  char *zSql = sqlite3_mprintf(
+      "INSERT OR IGNORE INTO \"%s\" (%s) VALUES (%s)",
+      tblInfo->tblName,
+      pkIdentifiers,
+      pkValsStr);
+  int rc = sqlite3_exec(db, SET_SYNC_BIT, 0, 0, 0);
+  if (rc != SQLITE_OK)
+  {
+    sqlite3_free(zSql);
+    return rc;
+  }
+
+  rc = sqlite3_exec(db, zSql, 0, 0, 0);
+  sqlite3_free(zSql);
+  sqlite3_exec(db, CLEAR_SYNC_BIT, 0, 0, 0);
+  if (rc != SQLITE_OK)
+  {
+    return rc;
+  }
+
+  return crsql_setWinnerClock(
+      db,
+      tblInfo,
+      pkIdentifiers,
+      pkValsStr,
+      PKS_ONLY_CID_SENTINEL,
+      remoteVersion,
+      remoteSiteId,
+      remoteSiteIdLen);
+}
+
+int crsql_mergeDelete(
+    sqlite3 *db,
+    crsql_TableInfo *tblInfo,
+    const char *pkWhereList,
+    const char *pkValsStr,
+    const char *pkIdentifiers,
+    sqlite3_int64 remoteVersion,
+    const void *remoteSiteId,
+    int remoteSiteIdLen)
+{
+  char *zSql = sqlite3_mprintf(
+      "DELETE FROM \"%s\" WHERE %s",
+      tblInfo->tblName,
+      pkWhereList);
+  int rc = sqlite3_exec(db, SET_SYNC_BIT, 0, 0, 0);
+  if (rc != SQLITE_OK)
+  {
+    sqlite3_free(zSql);
+    return rc;
+  }
+
+  rc = sqlite3_exec(db, zSql, 0, 0, 0);
+  sqlite3_free(zSql);
+  sqlite3_exec(db, CLEAR_SYNC_BIT, 0, 0, 0);
+  if (rc != SQLITE_OK)
+  {
+    return rc;
+  }
+
+  return crsql_setWinnerClock(
+      db,
+      tblInfo,
+      pkIdentifiers,
+      pkValsStr,
+      DELETE_CID_SENTINEL,
+      remoteVersion,
+      remoteSiteId,
+      remoteSiteIdLen);
 }
 
 int crsql_mergeInsert(
@@ -302,7 +337,15 @@ int crsql_mergeInsert(
   char *pkIdentifierList = crsql_asIdentifierList(tblInfo->pks, tblInfo->pksLen, 0);
   if (insertCid == DELETE_CID_SENTINEL)
   {
-    // rc = crsql_mergeDelete(db, tblInfo->tblName, pkWhereList, pkValsStr, pkIdentifierList, /*todo*/, insertSiteId, insertSiteIdLen);
+    rc = crsql_mergeDelete(
+        db,
+        tblInfo,
+        pkWhereList,
+        pkValsStr,
+        pkIdentifierList,
+        insertVrsn,
+        insertSiteId,
+        insertSiteIdLen);
 
     sqlite3_free(pkWhereList);
     sqlite3_free(pkValsStr);
@@ -312,7 +355,14 @@ int crsql_mergeInsert(
 
   if (insertCid == PKS_ONLY_CID_SENTINEL)
   {
-    //   rc = crsql_processPkOnlyInsert(db, tblInfo->tblName, tblInfo->pks, tblInfo->pksLen, insertPks);
+    rc = crsql_mergePkOnlyInsert(
+        db,
+        tblInfo,
+        pkValsStr,
+        pkIdentifierList,
+        insertVrsn,
+        insertSiteId,
+        insertSiteIdLen);
     sqlite3_free(pkWhereList);
     sqlite3_free(pkValsStr);
     sqlite3_free(pkIdentifierList);

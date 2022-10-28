@@ -284,3 +284,7 @@ I suppose this could create some weird interactions where we merge a change, wri
 a now lower clock value...
 
 When the peer is done updating us we can set to the max of the last row received? Since there is no more.
+
+We need to send a change per col rather than grouping into rows.
+We could, however, group consecutive changes for the same row into a row.
+This would be an optimization for a later time that can be implemented in the network layer.

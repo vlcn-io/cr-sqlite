@@ -36,15 +36,15 @@ insert into baz values ('a', 'woo', 'doo', 'daa');
 -- ask for a record of what has changed
 select * from crsql_changes;
 
-table  pk   cid  val    version               site_id
------  ---  ---  -----  --------------------  -------
-foo    1    1    2      -9223372036854775806
-baz    'a'  1    'woo'  -9223372036854775805
-baz    'a'  2    'doo'  -9223372036854775804
-baz    'a'  3    'daa'  -9223372036854775803
+table  pk   cid  val    version  site_id
+-----  ---  ---  -----  -------  -------
+foo    1    1    2      1
+baz    'a'  1    'woo'  2
+baz    'a'  2    'doo'  3
+baz    'a'  3    'daa'  4
 
 -- merge changes from a peer
-insert into crsql_changes ("table", pk, cid, val, version, site_id) values ('foo', 5, 1, '''thing''', -9223372036854775802, X'7096E2D505314699A59C95FABA14ABB5');
+insert into crsql_changes ("table", pk, cid, val, version, site_id) values ('foo', 5, 1, '''thing''', 5, X'7096E2D505314699A59C95FABA14ABB5');
 
 -- check that peer's changes were applied
 select * from foo;

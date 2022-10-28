@@ -529,8 +529,6 @@ static void returnPerDbData(void *d)
   }
 }
 
-// TODO: we need to register destructor(s)
-// to tear down perdb data when extension unloads
 static int createOrGetPerDbData(sqlite3 *db, crsql_PerDbData **ppOut)
 {
 #if SQLITE_THREADSAFE != 0

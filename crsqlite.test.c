@@ -114,4 +114,6 @@ void crsqlTestSuite()
   // testSyncBit();
   // testDbVersion();
   // testSiteId();
+  // test all the new logic around perDbData
+  // getting, freeing, reusing, releasing, refcounting, etc.
 }

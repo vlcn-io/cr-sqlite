@@ -1,7 +1,9 @@
 #ifndef CRSQLITE_CONSTS_H
 #define CRSQLITE_CONSTS_H
 
-#define MIN_POSSIBLE_DB_VERSION -9223372036854775807L
+// db version is a signed 64bit int since sqlite doesn't support saving and retrieving unsigned 64bit ints.
+// (2^64 / 2) is a big enough number to write 1 million entries per second for 3,000 centuries.
+#define MIN_POSSIBLE_DB_VERSION 0L
 
 #define __CRSQL_CLOCK_LEN 13
 #define QC_DELIM '|'

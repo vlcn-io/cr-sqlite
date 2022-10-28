@@ -266,6 +266,8 @@ insert into baz values ('k', 'woo', 'doo', 'daa');
 select * from crsql_changes;
 
 insert into crsql_changes ("table", pk, cid, val, version, site_id) values ('foo', 5, 1, '''thing''', -9223372036854775802, X'7096E2D505314699A59C95FABA14ABB5');
+
+insert into crsql_changes ("table", pk, cid, val, version, site_id) values ('baz', '''k''', 1, '''thing''', -9223372036854775802, X'7096E2D505314699A59C95FABA14ABB5');
 ```
 
 ```sql

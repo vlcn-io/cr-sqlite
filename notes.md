@@ -1,5 +1,11 @@
 todo:
 
+> move to `withoutrowid` table for vtab?
+>
+> - requires a pk col then... a singular pk col...
+>   or is `rowid` fine to never actually set properly in the vtab if you enforce that consumers of the vtab
+>   don't use rowid?
+
 - double check utf8 support via emojis and other non latin symbols
 - withoutrowid on vtab given post-merge we can have rowid conflicts
 - don't drop if `as_crr` is re-run. rather provide a return of:

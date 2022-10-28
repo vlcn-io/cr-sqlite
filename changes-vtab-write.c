@@ -203,6 +203,12 @@ int crsql_mergeInsert(
   // `splitQuoteConcat` will validate these -- even tho 1 val should do splitquoteconcat for the validation
   const unsigned char *insertVal = sqlite3_value_text(argv[2 + CHANGES_SINCE_VTAB_CVAL]);
   sqlite3_int64 insertVrsn = sqlite3_value_int64(argv[2 + CHANGES_SINCE_VTAB_VRSN]);
+
+  // Track the maximum version seen in this sync transaction
+  // on commit we'll push the local db's clock forward if the version seen
+  // exceeds our local version. I.e., a lamport clock.
+  pTab->maxSeenPatchVersion = pTab->maxSeenPatchVersion > insertVrsn ? pTab->maxSeenPatchVersion : insertVrsn;
+
   int insertSiteIdLen = sqlite3_value_bytes(argv[2 + CHANGES_SINCE_VTAB_SITE_ID]);
   if (insertSiteIdLen > SITE_ID_LEN)
   {
@@ -248,8 +254,6 @@ int crsql_mergeInsert(
   char *pkIdentifierList = crsql_asIdentifierList(tblInfo->pks, tblInfo->pksLen, 0);
   if (insertCid == DELETE_CID_SENTINEL)
   {
-    // we need version of the delete...
-    // TODO: bump/collect max version seen on all these inserts
     // rc = crsql_mergeDelete(db, tblInfo->tblName, pkWhereList, pkValsStr, pkIdentifierList, /*todo*/, insertSiteId, insertSiteIdLen);
 
     sqlite3_free(pkWhereList);
@@ -327,13 +331,6 @@ int crsql_mergeInsert(
   sqlite3_free(pkWhereList);
   // update clocks to new vals now
   // insert into x__crr_clock (pks, __crsql_col_num, __crsql_version, __crsql_site_id) values (...)
-
-  // TODO: Post merge it is technically possible to have non-unique version vals in the clock table...
-  // so deal with that and/or make vtab `without rowid`
-  // For the merge:
-  // (1) pick their clock and put it for the column
-  // (2) push our db version if it is behind their clock so we don't issue
-  //     events in the past.
 
   // sqlite is going to somehow provide us with a rowid.
   // TODO: how in the world does it know the rowid of a vtab?

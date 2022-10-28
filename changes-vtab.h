@@ -76,7 +76,7 @@ struct crsql_Changes_vtab
   crsql_TableInfo **tableInfos;
   int tableInfosLen;
 
-  int64_t maxSeenPatchVersion;
+  sqlite3_int64 maxSeenPatchVersion;
 };
 
 /**

@@ -186,6 +186,57 @@ int *crsql_allChangedCids(
   return ret;
 }
 
+#define DELETED_LOCALLY -1
+int crsql_checkForLocalDelete(
+  sqlite3 *db,
+  const char *tblName,
+  char *pkWhereList
+) {
+  char *zSql = sqlite3_mprintf(
+    "SELECT count(*) FROM \"%s__crsql_clock\" WHERE %s AND __crsql_col_num = %d",
+    tblName,
+    pkWhereList,
+    DELETE_CID_SENTINEL
+  );
+  sqlite3_stmt *pStmt;
+  int rc = sqlite3_prepare(db, zSql, -1, &pStmt, 0);
+  sqlite3_free(zSql);
+
+  if (rc != SQLITE_OK) {
+    sqlite3_finalize(pStmt);
+    return rc;
+  }
+
+  rc = sqlite3_step(pStmt);
+  if (rc != SQLITE_ROW) {
+    sqlite3_finalize(pStmt);
+    return SQLITE_ERROR;
+  }
+
+  int count = sqlite3_column_int(pStmt, 0);
+  sqlite3_finalize(pStmt);
+  if (count == 1) {
+    return DELETED_LOCALLY;
+  }
+
+  return SQLITE_OK;
+}
+
+int crsql_mergeDelete(
+  sqlite3 *db,
+  const char *tblName,
+  char *pkWhereList
+) {
+  // rc = sqlite3_exec(db, SET_SYNC_BIT, 0, 0, errmsg);
+  // merging delete needs to create a record of the delete in the clock table
+  // we know we don't have one b/c we checked for it prior to being here.
+  // so just:
+  // 1. delete from main table where pkWhereList
+  // 2. insert into clock table pkVals, col_num = sentinel_delete, version=curr_db_version, site_id=provided_id
+
+  return SQLITE_OK;
+}
+
 int crsql_mergeInsert(
     sqlite3_vtab *pVTab,
     int argc,
@@ -245,15 +296,6 @@ int crsql_mergeInsert(
     return SQLITE_ERROR;
   }
 
-  if (allReceivedCidsToIdx[0] == -1)
-  {
-    sqlite3_free(allReceivedCidsToIdx);
-    *errmsg = sqlite3_mprintf("crsql - patching deletes is not yet implemented");
-    // can just issue a delete via pkwherelist and be done.
-    // rc = sqlite3_exec(db, SET_SYNC_BIT, 0, 0, errmsg);
-    return SQLITE_ERROR;
-  }
-
   char *pkWhereList = crsql_extractWhereList(tblInfo->pks, tblInfo->pksLen, (const char *)insertPks);
   if (pkWhereList == 0)
   {
@@ -262,13 +304,28 @@ int crsql_mergeInsert(
     return SQLITE_ERROR;
   }
 
-  // SELECT count(*) FROM clock WHERE pkWhereList AND __crsql_col_num = -1;
-  // rc = crsql_checkForLocalDelete(db, tblInfo->tblName, pkWhereList);
-  // if (rc == DELETED_LOCALLY) {
-  //   // delete wins. bail on merge.
-  //   sqlite3_free(allReceivedCidsToIdx);
-  //   return SQLITE_OK;
-  // }
+  rc = crsql_checkForLocalDelete(db, tblInfo->tblName, pkWhereList);
+  if (rc == DELETED_LOCALLY) {
+    rc = SQLITE_OK;
+    // delete wins. we're all done.
+    sqlite3_free(allReceivedCidsToIdx);
+    sqlite3_free(pkWhereList);
+    return rc;
+  }
+
+  // This happens if the state is a delete
+  // We must `checkForLocalDelete` prior to merging a delete.
+  // mergeDelete assumes we've already checked for a local delete
+  if (allReceivedCidsToIdx[0] == -1)
+  {
+    sqlite3_free(allReceivedCidsToIdx);
+
+    // can just issue a delete via pkwherelist and be done.
+    rc = crsql_mergeDelete(db, tblInfo->tblName, pkWhereList);
+
+    sqlite3_free(pkWhereList);
+    return rc;
+  }
 
   // if (numReceivedCids == 0) {
   //   // on conflict ignore this.
@@ -295,6 +352,7 @@ int crsql_mergeInsert(
     return SQLITE_ERROR;
   }
 
+  // compared against our clocks, nothing win.
   if (allChangedCidsLen == 0)
   {
     // TODO: confirm you still get results back even if the row does not exist

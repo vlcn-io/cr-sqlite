@@ -19,13 +19,14 @@ char *crsql_changesQueryForTable(crsql_TableInfo *tableInfo)
       %z as pks,\
       __crsql_col_num as cid,\
       __crsql_version as vrsn,\
+      __crsql_site_id as site_id\
     FROM \"%s__crsql_clock\"\
     WHERE\
-      __crsql_site_id != ?\
+      site_id != ?\
     AND\
-      __crsql_version > ?",
-      crsql_quoteConcat(tableInfo->pks, tableInfo->pksLen),
+      vrsn > ?",
       tableInfo->tblName,
+      crsql_quoteConcat(tableInfo->pks, tableInfo->pksLen),
       tableInfo->tblName);
 
   return zSql;
@@ -71,7 +72,7 @@ char *crsql_changesUnionQuery(
 
   // compose the final query
   return sqlite3_mprintf(
-      "SELECT tbl, pks, cid, vrsn FROM (%z) ORDER BY vrsn, tbl ASC",
+      "SELECT tbl, pks, cid, vrsn, site_id FROM (%z) ORDER BY vrsn, tbl ASC",
       unionsStr);
   // %z frees unionsStr https://www.sqlite.org/printf.html#percentz
 }

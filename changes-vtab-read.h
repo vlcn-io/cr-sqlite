@@ -13,6 +13,7 @@ char *crsql_changesQueryForTable(crsql_TableInfo *tableInfo);
 #define PKS 1
 #define CID 2
 #define VRSN 3
+#define SITE_ID 4
 char *crsql_changesUnionQuery(
     crsql_TableInfo **tableInfos,
     int tableInfosLen);

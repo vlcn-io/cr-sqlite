@@ -318,8 +318,11 @@ static int changesColumn(
     sqlite3_result_int64(ctx, pCur->version);
     break;
   case CHANGES_SINCE_VTAB_SITE_ID:
-    // TODO: thread through site id result
-    sqlite3_result_int(ctx, 0);
+    if (pCur->pRowStmt == 0) {
+      sqlite3_result_null(ctx);
+    } else {
+      sqlite3_result_value(ctx, sqlite3_column_value(pCur->pRowStmt, SITE_ID));
+    }
     break;
   default:
     return SQLITE_ERROR;

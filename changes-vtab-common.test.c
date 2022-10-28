@@ -55,6 +55,16 @@ static void testQuoteConcatedValuesAsList() {
 
   char *l = crsql_quoteConcatedValuesAsList("5", 1);
   assert(strcmp(l, "5") == 0);
+  sqlite3_free(l);
+
+  l = crsql_quoteConcatedValuesAsList("'h'", 1);
+  assert(strcmp(l, "'h'") == 0);
+  sqlite3_free(l);
+
+  l = crsql_quoteConcatedValuesAsList("'h'|1|X'aa'", 3);
+  printf("l: %s!\n\n", l);
+  assert(strcmp(l, "'h',1,X'aa'") == 0);
+  sqlite3_free(l);
 
   printf("\t\e[0;32mSuccess\e[0m\n");
 }

@@ -256,6 +256,7 @@ rowid can be used to break up large changes within a single version
 ---
 
 ```sql
+.mode column
 create table foo (a primary key, b);
 create table baz (a primary key, b, c, d);
 select crsql_as_crr('foo');
@@ -263,6 +264,17 @@ select crsql_as_crr('baz');
 insert into foo values (1,2);
 insert into baz values ('k', 'woo', 'doo', 'daa');
 select * from crsql_changes;
+
+insert into crsql_changes ("table", pk, cid, val, version, site_id) values ('foo', 5, 1, '''thing''', -9223372036854775802, X'7096E2D505314699A59C95FABA14ABB5');
+```
+
+```sql
+table  pk   cid  val    version               site_id
+-----  ---  ---  -----  --------------------  -------
+foo    1    1    2      -9223372036854775806
+baz    'k'  1    'woo'  -9223372036854775805
+baz    'k'  2    'doo'  -9223372036854775804
+baz    'k'  3    'daa'  -922337203685477580
 ```
 
 Any concern over using cids?

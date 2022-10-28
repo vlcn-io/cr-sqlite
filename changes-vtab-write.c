@@ -30,33 +30,12 @@ int crsql_didCidWin(
     return -1;
   }
 
-  if (siteComparison > 0)
-  {
-    zSql = sqlite3_mprintf(
-        "SELECT count(*) FROM \"%s__crsql_clock\"\
-          WHERE %s AND %d = __crsql_col_num AND %lld >= __crsql_version",
-        insertTbl,
-        pkWhereList,
-        cid,
-        version,
-        insertTbl);
-  }
-  else if (siteComparison < 0)
-  {
-    zSql = sqlite3_mprintf(
-        "SELECT count(*) FROM \"%s__crsql_clock\"\
-          WHERE %s AND %d = __crsql_col_num AND %lld > __crsql_version",
-        insertTbl,
-        pkWhereList,
-        cid,
-        version,
-        insertTbl);
-  }
-  else
-  {
-    // should be impossible given prior siteComparison == 0 if statement
-    return -1;
-  }
+  zSql = sqlite3_mprintf(
+    "SELECT __crsql_version FROM \"%s__crsql_clock\" WHERE %s AND %d = __crsql_col_num",
+    insertTbl,
+    pkWhereList,
+    cid
+  );
 
   // run zSql
   sqlite3_stmt *pStmt = 0;
@@ -70,16 +49,32 @@ int crsql_didCidWin(
   }
 
   rc = sqlite3_step(pStmt);
-  if (rc != SQLITE_ROW)
-  {
-    sqlite3_finalize(pStmt);
+  if (rc == SQLITE_DONE) {
+    // no rows returned
+    // we of course win if there's nothing there.
+    return 1;
+  }
+
+  if (rc != SQLITE_ROW) {
     return -1;
   }
 
-  int count = sqlite3_column_int(pStmt, 0);
+  sqlite3_int64 localVersion = sqlite3_column_int64(pStmt, 0);
   sqlite3_finalize(pStmt);
 
-  return count;
+  if (siteComparison > 0)
+  {
+    return version >= localVersion;
+  }
+  else if (siteComparison < 0)
+  {
+    return version > localVersion;
+  }
+  else
+  {
+    // should be impossible given prior siteComparison == 0 if statement
+    return -1;
+  }
 }
 
 #define DELETED_LOCALLY -1
@@ -390,10 +385,10 @@ int crsql_mergeInsert(
   }
 
   zSql = sqlite3_mprintf(
-      "INSERT INTO \"%s\" (%s, %s)\
+      "INSERT INTO \"%s\" (%s, \"%s\")\
       VALUES (%s, %s)\
       ON CONFLICT (%s) DO UPDATE\
-      %s = %s",
+      SET \"%s\" = %s",
       tblInfo->tblName,
       pkIdentifierList,
       tblInfo->baseCols[insertCid].name,

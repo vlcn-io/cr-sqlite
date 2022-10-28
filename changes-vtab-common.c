@@ -43,9 +43,10 @@ char *crsql_extractWhereList(
 }
 
 // parts must already be properly quoted and escaped for inclusion in a SQL statement
-char *crsql_quotedValuesAsList(char **parts, int len)
+char *crsql_quotedValuesAsList(char **parts, int numParts)
 {
-  for (int i = 0; i < len; ++i)
+  int len = 0;
+  for (int i = 0; i < numParts; ++i)
   {
     len += strlen(parts[i]);
   }

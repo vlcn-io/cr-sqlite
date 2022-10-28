@@ -506,7 +506,7 @@ static int changesApply(
     sqlite3_int64 *pRowid)
 {
   int argv0Type = sqlite3_value_type(argv[0]);
-  char *errmsg;
+  char *errmsg = 0;
   int rc = SQLITE_OK;
   // if (argc == 1 && argv[0] != 0)
   // {

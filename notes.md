@@ -7,6 +7,7 @@ todo:
 >   don't use rowid?
 
 - pk only table testing
+- dflt value or null reqs on schema
 - double check utf8 support via emojis and other non latin symbols
 - withoutrowid on vtab given post-merge we can have rowid conflicts
 - don't drop if `as_crr` is re-run. rather provide a return of:
@@ -276,7 +277,7 @@ table  pk   cid  val    version               site_id
 foo    1    1    2      -9223372036854775806
 baz    'k'  1    'woo'  -9223372036854775805
 baz    'k'  2    'doo'  -9223372036854775804
-baz    'k'  3    'daa'  -922337203685477580
+baz    'k'  3    'daa'  -9223372036854775803
 ```
 
 Any concern over using cids?

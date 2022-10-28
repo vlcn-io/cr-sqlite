@@ -7,4 +7,4 @@ def connect(db_file):
   c.load_extension(extension)
   return c
 
-min_db_v = -9223372036854775807 + 1
+min_db_v = 0

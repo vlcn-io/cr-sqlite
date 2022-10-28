@@ -8,16 +8,17 @@ def test_c1_min_on_init():
 def test_c2_increments():
   c = connect(":memory:")
   c.execute("create table foo (id primary key, a)")
+  c.execute("select crsql_as_crr('foo')")
   c.execute("insert into foo values (1, 2)")
   c.execute("commit")
   # +2 since create table statements bump version too
-  assert c.execute("SELECT crsql_dbversion()").fetchone()[0] == min_db_v + 2
+  assert c.execute("SELECT crsql_dbversion()").fetchone()[0] == min_db_v + 1
   c.execute("update foo set a = 3 where id = 1")
   c.execute("commit")
-  assert c.execute("SELECT crsql_dbversion()").fetchone()[0] == min_db_v + 3
+  assert c.execute("SELECT crsql_dbversion()").fetchone()[0] == min_db_v + 2
   c.execute("delete from foo where id = 1")
   c.execute("commit")
-  assert c.execute("SELECT crsql_dbversion()").fetchone()[0] == min_db_v + 4
+  assert c.execute("SELECT crsql_dbversion()").fetchone()[0] == min_db_v + 3
 
 def test_c3_restored():
   dbfile = "./dbversion_c3.db"

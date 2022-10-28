@@ -12,12 +12,11 @@ def test_c1_c2_c3_c4_c6_c7_crr_values():
   row = c.execute("select id, __crsql_col_num, __crsql_version, __crsql_site_id from foo__crsql_clock").fetchone()
   assert row[0] == 1
   assert row[1] == 1
-  # + 2 -- +1 for insert, +1 for create table
-  assert row[2] == init_version + 2
+  assert row[2] == init_version + 1
   assert row[3] == 0
   new_version = c.execute("SELECT crsql_dbversion()").fetchone()[0]
 
-  assert new_version == init_version + 3
+  assert new_version == init_version + 1
 
   clock_rows = c.execute("select * from foo__crsql_clock").fetchall()
   assert len(clock_rows) == 1
@@ -28,5 +27,5 @@ def test_c1_c2_c3_c4_c6_c7_crr_values():
 
   new_version = c.execute("SELECT crsql_dbversion()").fetchone()[0]
 
-  assert new_version == init_version + 3
+  assert new_version == init_version + 1
 

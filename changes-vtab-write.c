@@ -188,34 +188,36 @@ int *crsql_allWinningCids(
 
 #define DELETED_LOCALLY -1
 int crsql_checkForLocalDelete(
-  sqlite3 *db,
-  const char *tblName,
-  char *pkWhereList
-) {
+    sqlite3 *db,
+    const char *tblName,
+    char *pkWhereList)
+{
   char *zSql = sqlite3_mprintf(
-    "SELECT count(*) FROM \"%s__crsql_clock\" WHERE %s AND __crsql_col_num = %d",
-    tblName,
-    pkWhereList,
-    DELETE_CID_SENTINEL
-  );
+      "SELECT count(*) FROM \"%s__crsql_clock\" WHERE %s AND __crsql_col_num = %d",
+      tblName,
+      pkWhereList,
+      DELETE_CID_SENTINEL);
   sqlite3_stmt *pStmt;
   int rc = sqlite3_prepare(db, zSql, -1, &pStmt, 0);
   sqlite3_free(zSql);
 
-  if (rc != SQLITE_OK) {
+  if (rc != SQLITE_OK)
+  {
     sqlite3_finalize(pStmt);
     return rc;
   }
 
   rc = sqlite3_step(pStmt);
-  if (rc != SQLITE_ROW) {
+  if (rc != SQLITE_ROW)
+  {
     sqlite3_finalize(pStmt);
     return SQLITE_ERROR;
   }
 
   int count = sqlite3_column_int(pStmt, 0);
   sqlite3_finalize(pStmt);
-  if (count == 1) {
+  if (count == 1)
+  {
     return DELETED_LOCALLY;
   }
 
@@ -223,10 +225,11 @@ int crsql_checkForLocalDelete(
 }
 
 int crsql_mergeDelete(
-  sqlite3 *db,
-  const char *tblName,
-  char *pkWhereList
-) {
+    sqlite3 *db,
+    const char *tblName,
+    char *pkWhereList,
+    char *pkValsStr)
+{
   // rc = sqlite3_exec(db, SET_SYNC_BIT, 0, 0, errmsg);
   // merging delete needs to create a record of the delete in the clock table
   // we know we don't have one b/c we checked for it prior to being here.
@@ -286,44 +289,50 @@ int crsql_mergeInsert(
     return SQLITE_ERROR;
   }
 
+  char *pkWhereList = crsql_extractWhereList(tblInfo->pks, tblInfo->pksLen, (const char *)insertPks);
+  if (pkWhereList == 0)
+  {
+    *errmsg = sqlite3_mprintf("crsql - failed decoding primary keys for insert");
+    return SQLITE_ERROR;
+  }
+
+  rc = crsql_checkForLocalDelete(db, tblInfo->tblName, pkWhereList);
+  if (rc == DELETED_LOCALLY)
+  {
+    rc = SQLITE_OK;
+    // delete wins. we're all done.
+    sqlite3_free(pkWhereList);
+    return rc;
+  }
+
   int numReceivedCids = 0;
   int *allReceivedCidsToIdx = crsql_allReceivedCids(db, insertColVrsns, tblInfo->baseColsLen, &numReceivedCids);
 
   if (allReceivedCidsToIdx == 0)
   {
+    sqlite3_free(pkWhereList);
     sqlite3_free(allReceivedCidsToIdx);
     *errmsg = sqlite3_mprintf("crsql - failed to extract cids of changed columns");
     return SQLITE_ERROR;
   }
 
-  char *pkWhereList = crsql_extractWhereList(tblInfo->pks, tblInfo->pksLen, (const char *)insertPks);
-  if (pkWhereList == 0)
+  // This happens if the state is a delete
+  // We must `checkForLocalDelete` prior to merging a delete (happens above).
+  // mergeDelete assumes we've already checked for a local delete.
+  char *pkValsStr = crsql_quoteConcatedValuesAsList((const char*)insertPks, tblInfo->pksLen);
+  if (pkValsStr == 0)
   {
-    *errmsg = sqlite3_mprintf("crsql - failed decoding primary keys for insert");
+    sqlite3_free(pkWhereList);
     sqlite3_free(allReceivedCidsToIdx);
     return SQLITE_ERROR;
   }
-
-  rc = crsql_checkForLocalDelete(db, tblInfo->tblName, pkWhereList);
-  if (rc == DELETED_LOCALLY) {
-    rc = SQLITE_OK;
-    // delete wins. we're all done.
-    sqlite3_free(allReceivedCidsToIdx);
-    sqlite3_free(pkWhereList);
-    return rc;
-  }
-
-  // This happens if the state is a delete
-  // We must `checkForLocalDelete` prior to merging a delete.
-  // mergeDelete assumes we've already checked for a local delete
   if (allReceivedCidsToIdx[0] == -1)
   {
-    sqlite3_free(allReceivedCidsToIdx);
-
-    // can just issue a delete via pkwherelist and be done.
-    rc = crsql_mergeDelete(db, tblInfo->tblName, pkWhereList);
+    rc = crsql_mergeDelete(db, tblInfo->tblName, pkWhereList, pkValsStr);
 
     sqlite3_free(pkWhereList);
+    sqlite3_free(pkValsStr);
+    sqlite3_free(allReceivedCidsToIdx);
     return rc;
   }
 
@@ -331,6 +340,8 @@ int crsql_mergeInsert(
   //   // on conflict ignore this.
   //   rc = crsql_processPkOnlyInsert(db, tblInfo->tblName, tblInfo->pks, tblInfo->pksLen, insertPks);
   // }
+
+  // process normal merge
 
   int allWinningCidsLen = 0;
   int *allWinningCids = crsql_allWinningCids(
@@ -343,38 +354,30 @@ int crsql_mergeInsert(
       insertSiteId,
       insertSiteIdLen,
       errmsg);
-  sqlite3_free(pkWhereList);
 
-  if (allWinningCids == 0 || allWinningCidsLen + tblInfo->pksLen > tblInfo->baseColsLen)
+  if (allWinningCids == 0 || allWinningCidsLen + tblInfo->pksLen > tblInfo->baseColsLen || allWinningCidsLen == 0)
   {
     sqlite3_free(allReceivedCidsToIdx);
     sqlite3_free(allWinningCids);
-    return SQLITE_ERROR;
-  }
-
-  // compared against our clocks, nothing win.
-  if (allWinningCidsLen == 0)
-  {
-    // TODO: confirm you still get results back even if the row does not exist
-    // on local. You should givenv left join usage.
-    sqlite3_free(allReceivedCidsToIdx);
-    sqlite3_free(allWinningCids);
-    return rc;
+    sqlite3_free(pkValsStr);
+    sqlite3_free(pkWhereList);
+    // allWinningCidsLen == 0? compared against our clocks, nothing wins. OK and Done.
+    return allWinningCidsLen == 0 && allWinningCids != 0 ? SQLITE_OK : SQLITE_ERROR;
   }
 
   // crsql_insertWinningChanges();
   // move all code below into insertWinningChanges
 
   crsql_ColumnInfo columnInfosForInsert[allWinningCidsLen];
-  char **pkValsForInsert = crsql_splitQuoteConcat((const char *)insertPks, tblInfo->pksLen);
   char **allReceivedNonPkVals = crsql_splitQuoteConcat((const char *)insertVals, numReceivedCids);
   char *allWinningVals[allWinningCidsLen];
 
-  // TODO: handle the case where only pks to process
-  if (pkValsForInsert == 0 || allReceivedNonPkVals == 0)
+  if (allReceivedNonPkVals == 0)
   {
     sqlite3_free(allReceivedCidsToIdx);
     sqlite3_free(allWinningCids);
+    sqlite3_free(pkValsStr);
+    sqlite3_free(pkWhereList);
     return SQLITE_ERROR;
   }
 
@@ -382,7 +385,8 @@ int crsql_mergeInsert(
   {
     int cid = allWinningCids[i];
     int valIdx = allReceivedCidsToIdx[cid];
-    if (valIdx < 0 || valIdx >= numReceivedCids) {
+    if (valIdx < 0 || valIdx >= numReceivedCids)
+    {
       sqlite3_free(allReceivedCidsToIdx);
       sqlite3_free(allWinningCids);
       return SQLITE_ERROR;
@@ -393,27 +397,12 @@ int crsql_mergeInsert(
 
   char *pkIdentifierList = crsql_asIdentifierList(tblInfo->pks, tblInfo->pksLen, 0);
   int len = 0;
-  for (int i = 0; i < tblInfo->pksLen; ++i)
-  {
-    len += strlen(pkValsForInsert[i]);
-  }
-  char *pkValsStr = sqlite3_malloc(len * sizeof *pkValsStr + 1);
-  crsql_joinWith(pkValsStr, pkValsForInsert, tblInfo->pksLen, ',');
-
-  len = 0;
-  for (int i = 0; i < allWinningCidsLen; ++i)
-  {
-    len += strlen(allWinningVals[i]);
-  }
-  char *nonPkValsStr = sqlite3_malloc((len + 1) * sizeof *nonPkValsStr);
-  crsql_joinWith(nonPkValsStr, allWinningVals, allWinningCidsLen, ',');
 
   char *conflictSets = crsql_changesTabConflictSets(
       allWinningVals,
       columnInfosForInsert,
       allWinningCidsLen);
 
-  // TODO: handle case where there are only pks to process
   zSql = sqlite3_mprintf(
       "INSERT INTO \"%s\" (%s, %z)\
       VALUES (%z, %z)\
@@ -423,7 +412,7 @@ int crsql_mergeInsert(
       pkIdentifierList,
       crsql_asIdentifierList(columnInfosForInsert, allWinningCidsLen, 0),
       pkValsStr,
-      nonPkValsStr,
+      crsql_quotedValuesAsList(allWinningVals, allWinningCidsLen),
       pkIdentifierList,
       conflictSets);
 
@@ -432,15 +421,13 @@ int crsql_mergeInsert(
     sqlite3_free(allReceivedNonPkVals[i]);
   }
   sqlite3_free(allReceivedNonPkVals);
-  for (int i = 0; i < tblInfo->pksLen; ++i)
-  {
-    sqlite3_free(pkValsForInsert[i]);
-  }
-  sqlite3_free(pkValsForInsert);
 
   rc = sqlite3_exec(db, SET_SYNC_BIT, 0, 0, errmsg);
   if (rc != SQLITE_OK)
   {
+    sqlite3_free(allReceivedCidsToIdx);
+    sqlite3_free(allWinningCids);
+    sqlite3_free(pkWhereList);
     sqlite3_exec(db, CLEAR_SYNC_BIT, 0, 0, 0);
     return rc;
   }
@@ -451,12 +438,18 @@ int crsql_mergeInsert(
 
   if (rc != SQLITE_OK)
   {
+    sqlite3_free(allReceivedCidsToIdx);
+    sqlite3_free(allWinningCids);
+    sqlite3_free(pkWhereList);
     return rc;
   }
 
+  sqlite3_free(allReceivedCidsToIdx);
+  sqlite3_free(allWinningCids);
+  sqlite3_free(pkWhereList);
   // update clocks to new vals now
   // insert into x__crr_clock (table, pk, cid, version) values (...)
-  // for each cid & version in allChangedCids
+  // for each cid & version in allWinningCids
 
   // TODO: Post merge it is technically possible to have non-unique version vals in the clock table...
   // so deal with that and/or make vtab `without rowid`

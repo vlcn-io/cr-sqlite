@@ -41,3 +41,30 @@ char *crsql_extractWhereList(
   sqlite3_free(zzParts);
   return ret;
 }
+
+// parts must already be properly quoted and escaped for inclusion in a SQL statement
+char *crsql_quotedValuesAsList(char **parts, int len)
+{
+  for (int i = 0; i < len; ++i)
+  {
+    len += strlen(parts[i]);
+  }
+  char *ret = sqlite3_malloc((len + 1) * sizeof *ret);
+  crsql_joinWith(ret, parts, len, ',');
+  ret[len] = '\0';
+
+  return ret;
+}
+
+char *crsql_quoteConcatedValuesAsList(
+    const char *quoteConcatedVals,
+    int len)
+{
+  char **parts = crsql_splitQuoteConcat(quoteConcatedVals, len);
+  if (parts == 0)
+  {
+    return 0;
+  }
+
+  return crsql_quotedValuesAsList(parts, len);
+}

@@ -17,4 +17,9 @@ char *crsql_extractWhereList(
     int columnInfosLen,
     const char *quoteConcatedVals);
 
+char *crsql_quotedValuesAsList(char **parts, int len);
+char *crsql_quoteConcatedValuesAsList(
+    const char *quoteConcatedVals,
+    int len);
+
 #endif

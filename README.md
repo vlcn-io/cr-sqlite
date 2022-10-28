@@ -30,8 +30,8 @@ select crsql_as_crr('foo');
 select crsql_as_crr('baz');
 
 -- insert some data / interact with tables as normal
-insert into foo values (1,2);
-insert into baz values ('a', 'woo', 'doo', 'daa');
+insert into foo (a,b) values (1,2);
+insert into baz (a,b,c,d) values ('a', 'woo', 'doo', 'daa');
 
 -- ask for a record of what has changed
 select * from crsql_changes;
@@ -48,6 +48,9 @@ insert into crsql_changes
   ("table", pk, cid, val, version, site_id)
   values
   ('foo', 5, 1, '''thing''', 5, X'7096E2D505314699A59C95FABA14ABB5');
+insert into crsql_changes ("table", pk, cid, val, version, site_id)
+  values
+  ('baz', '''a''', 1, 123, 101, X'7096E2D505314699A59C95FABA14ABB5');
 
 -- check that peer's changes were applied
 select * from foo;
@@ -55,6 +58,11 @@ a  b
 -  -----
 1  2
 5  thing
+
+select * from baz;
+a  b    c    d
+-  ---  ---  ---
+a  123  doo  daa
 ```
 
 # Prior Art

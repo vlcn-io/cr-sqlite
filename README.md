@@ -1,6 +1,8 @@
 # [wip] crsql - Convergent, Replicated, SQLite
 
-WIP -- while the base functionality is there, there is still work to be done to make this production ready, test all edge cases & support schema alterations. **ETA beta release -- Nov 15.**
+A standalone component the overall [Aphrodite](https://aphrodite.sh) | [discord](https://discord.gg/AtdVY6zDW3)
+
+**WIP** -- while the base functionality is there, there is still work to be done to make this production ready. **ETA beta release -- Nov 15.**
 
 [SQLite](https://www.sqlite.org/index.html) is a foundation of offline, local-first and edge deployed software. Wouldn't it be great, however, if we could merge two or more SQLite databases together and not run into any conflicts?
 

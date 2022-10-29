@@ -1,6 +1,6 @@
 # [wip] crsql - Convergent, Replicated, SQLite
 
-A standalone component the [Aphrodite](https://aphrodite.sh) project | [discord](https://discord.gg/AtdVY6zDW3)
+A standalone component of the [Aphrodite](https://aphrodite.sh) project | [discord](https://discord.gg/AtdVY6zDW3)
 
 **WIP** -- while the base functionality is there, there is still work to be done to make this production ready. **ETA beta release -- Nov 15.**
 

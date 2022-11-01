@@ -33,6 +33,7 @@ void crsql_freeExtData(crsql_ExtData *pExtData)
 // Should _only_ be called when disconnecting from the db
 // for some reason finalization in extension unload methods doesn't
 // work as expected
+// see https://sqlite.org/forum/forumpost/c94f943821
 void crsql_finalize(crsql_ExtData *pExtData) {
   sqlite3_finalize(pExtData->pDbVersionStmt);
   sqlite3_finalize(pExtData->pPragmaSchemaVersionStmt);

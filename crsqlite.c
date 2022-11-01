@@ -420,6 +420,7 @@ __declspec(dllexport)
   }
 
   if (rc == SQLITE_OK) {
+    // see https://sqlite.org/forum/forumpost/c94f943821
     rc = sqlite3_create_function(db, "crsql_finalize", -1, SQLITE_UTF8 | SQLITE_DIRECTONLY, pExtData, crsqlFinalize, 0, 0);
   }
 

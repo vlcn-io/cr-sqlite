@@ -154,3 +154,5 @@ extra tests:
 - test clean then crr db version
 - test reload
 ^-- these exist in correcntess tests
+
+repro finalization problem with prepared statement in pExtData and extension destructor.

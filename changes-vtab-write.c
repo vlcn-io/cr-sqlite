@@ -283,11 +283,6 @@ int crsql_mergeInsert(
   const unsigned char *insertVal = sqlite3_value_text(argv[2 + CHANGES_SINCE_VTAB_CVAL]);
   sqlite3_int64 insertVrsn = sqlite3_value_int64(argv[2 + CHANGES_SINCE_VTAB_VRSN]);
 
-  // Track the maximum version seen in this sync transaction
-  // on commit we'll push the local db's clock forward if the version seen
-  // exceeds our local version. I.e., a lamport clock.
-  pTab->maxSeenPatchVersion = pTab->maxSeenPatchVersion > insertVrsn ? pTab->maxSeenPatchVersion : insertVrsn;
-
   int insertSiteIdLen = sqlite3_value_bytes(argv[2 + CHANGES_SINCE_VTAB_SITE_ID]);
   if (insertSiteIdLen > SITE_ID_LEN)
   {
@@ -365,7 +360,7 @@ int crsql_mergeInsert(
     return rc;
   }
 
-  int doesCidWin = crsql_didCidWin(db, pTab->perDbData->siteId, tblInfo->tblName, pkWhereList, insertSiteId, insertSiteIdLen, insertCid, insertVrsn, errmsg);
+  int doesCidWin = crsql_didCidWin(db, pTab->pExtData->siteId, tblInfo->tblName, pkWhereList, insertSiteId, insertSiteIdLen, insertCid, insertVrsn, errmsg);
   sqlite3_free(pkWhereList);
   if (doesCidWin == -1 || doesCidWin == 0)
   {

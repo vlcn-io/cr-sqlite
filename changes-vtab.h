@@ -41,6 +41,7 @@ SQLITE_EXTENSION_INIT3
 
 #include "tableinfo.h"
 #include "crsqlite.h"
+#include "ext-data.h"
 #include <stdint.h>
 
 extern sqlite3_module crsql_changesModule;
@@ -77,8 +78,7 @@ struct crsql_Changes_vtab
   crsql_TableInfo **tableInfos;
   int tableInfosLen;
 
-  sqlite3_int64 maxSeenPatchVersion;
-  crsql_PerDbData *perDbData;
+  crsql_ExtData *pExtData;
 };
 
 /**

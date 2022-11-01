@@ -1,8 +1,9 @@
 todo:
 
+- c tests for db version bumping
+- document `crsql_finalize()`
+- test cases for closed & open bug issues
 - handle ATTACH for shared db memory...
-- register a destructor to tear down shared mem on module unload
-- map shared mem by db file or some other such db isolation
 - ensure -DSQLITE_OMIT_SHARED_CACHE is on when compiling wasm to reduce size
 - pk only table testing
 - dflt value or null reqs on schema
@@ -144,3 +145,14 @@ So get rid of `crsql_nextdbversion()`
 
 (2) should be split into its own function since vtab needs to check schema version and re-pull
 table infos too
+
+
+
+--- 
+extra tests:
+- test clean db version
+- test clean then crr db version
+- test reload
+^-- these exist in correcntess tests
+
+repro finalization problem with prepared statement in pExtData and extension destructor.

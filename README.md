@@ -71,6 +71,10 @@ select * from baz;
 a  b    c    d
 -  ---  ---  ---
 a  123  doo  daa
+
+-- tear down the extension before closing the connection
+-- https://sqlite.org/forum/forumpost/c94f943821
+select crsql_finalize();
 ```
 
 # Prior Art

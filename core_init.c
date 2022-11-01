@@ -6,12 +6,5 @@
 #include "ext.h"
 
 int core_init(const char *dummy) {
-  int rc = SQLITE_OK;
-
-  rc = sqlite3_crsqlite_preinit();
-  if (rc == SQLITE_OK) {
-    rc = sqlite3_auto_extension((void *)sqlite3_crsqlite_init);
-  }
-  
-  return rc;
+  return sqlite3_auto_extension((void *)sqlite3_crsqlite_init);
 }

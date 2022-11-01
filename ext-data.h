@@ -22,4 +22,11 @@ struct crsql_ExtData
   crsql_TableInfo **zpTableInfos;
 };
 
+crsql_ExtData *crsql_newExtData(sqlite3 *db);
+void crsql_freeExtData(crsql_ExtData *pExtData);
+int crsql_fetchPragmaSchemaVersion(sqlite3 *db, crsql_ExtData *pExtData);
+int crsql_recreateDbVersionStmt(sqlite3 *db, crsql_ExtData *pExtData);
+int crsql_fetchDbVersionFromStorage(sqlite3 *db, crsql_ExtData *pExtData);
+int crsql_getDbVersion(sqlite3 *db, crsql_ExtData *pExtData);
+
 #endif

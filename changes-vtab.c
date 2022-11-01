@@ -9,6 +9,7 @@
 #include "changes-vtab-read.h"
 #include "changes-vtab-write.h"
 #include "changes-vtab-common.h"
+#include "ext-data.h"
 
 /**
  * Created when the virtual table is initialized.
@@ -44,8 +45,7 @@ static int changesConnect(
   }
   memset(pNew, 0, sizeof(*pNew));
   pNew->db = db;
-  pNew->maxSeenPatchVersion = MIN_POSSIBLE_DB_VERSION;
-  pNew->perDbData = (crsql_PerDbData *)pAux;;
+  pNew->pExtData = (crsql_ExtData *)pAux;
 
   rc = crsql_pullAllTableInfos(db, &(pNew->tableInfos), &(pNew->tableInfosLen), &(*ppVtab)->zErrMsg);
   if (rc != SQLITE_OK)
@@ -534,44 +534,6 @@ static int changesApply(
   return SQLITE_OK;
 }
 
-static int changesTxBegin(sqlite3_vtab *pVTab)
-{
-  int rc = SQLITE_OK;
-  crsql_Changes_vtab *tab = (crsql_Changes_vtab *)pVTab;
-  tab->maxSeenPatchVersion = MIN_POSSIBLE_DB_VERSION;
-  return rc;
-}
-
-int crsql_changesTxCommit(sqlite3_vtab *pVTab)
-{
-  int rc = SQLITE_OK;
-
-  crsql_Changes_vtab *tab = (crsql_Changes_vtab *)pVTab;
-  int64_t maxSeenPatchVersion = tab->maxSeenPatchVersion;
-
-  int64_t priorVersion = tab->perDbData->dbVersion;
-  while (maxSeenPatchVersion > priorVersion)
-  {
-    if (atomic_compare_exchange_weak(
-            &(tab->perDbData->dbVersion),
-            &priorVersion,
-            maxSeenPatchVersion))
-    {
-      break;
-    }
-  }
-
-  return rc;
-}
-
-static int changesTxRollback(sqlite3_vtab *pVTab)
-{
-  int rc = SQLITE_OK;
-  crsql_Changes_vtab *tab = (crsql_Changes_vtab *)pVTab;
-  tab->maxSeenPatchVersion = MIN_POSSIBLE_DB_VERSION;
-  return rc;
-}
-
 sqlite3_module crsql_changesModule = {
     /* iVersion    */ 0,
     /* xCreate     */ 0,
@@ -587,10 +549,10 @@ sqlite3_module crsql_changesModule = {
     /* xColumn     */ changesColumn,
     /* xRowid      */ changesRowid,
     /* xUpdate     */ changesApply,
-    /* xBegin      */ changesTxBegin,
+    /* xBegin      */ 0,
     /* xSync       */ 0,
-    /* xCommit     */ crsql_changesTxCommit,
-    /* xRollback   */ changesTxRollback,
+    /* xCommit     */ 0,
+    /* xRollback   */ 0,
     /* xFindMethod */ 0,
     /* xRename     */ 0,
     /* xSavepoint  */ 0,

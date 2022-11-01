@@ -14,25 +14,6 @@ SQLITE_EXTENSION_INIT1
 #include <assert.h>
 #include <stdatomic.h>
 
-/**
- * Per-db global variables to hold the site id and db version.
- * This prevents us from having to query the tables that store
- * these values every time we do a read or write.
- *
- * The db version must be correctly updated on every write transaction.
- * All writes within the same transaction must use the same db version.
- * The reason for this is so we can replicate all rows changed by
- * a given transaction together and commit them together on the
- * other end.
- *
- * DB version is incremented on trnsaction commit via a
- * commit hook.
- */
-#define PER_DB_DATA_BUFFER_LEN 50
-static crsql_PerDbData allPerDbData[PER_DB_DATA_BUFFER_LEN];
-
-static sqlite3_mutex *globalsInitMutex = 0;
-static int sharedMemoryInitialized = 0;
 
 static void uuid(unsigned char *blob)
 {
@@ -454,163 +435,8 @@ static void crsqlMakeCrrFunc(sqlite3_context *context, int argc, sqlite3_value *
   sqlite3_exec(db, "COMMIT", 0, 0, 0);
 }
 
-#ifdef _WIN32
-__declspec(dllexport)
-#endif
-    int sqlite3_crsqlite_preinit()
-{
-  // TODO: document that if this extension is used as a run time loadable extension
-  // then one thread must initialize it before any other threads may be allowed to
-  // start using it.
-  // If it is statically linked as an auto-load extension then the user is ok to do anything.
-#if SQLITE_THREADSAFE != 0
-  if (globalsInitMutex == 0)
-  {
-    globalsInitMutex = sqlite3_mutex_alloc(SQLITE_MUTEX_FAST);
-  }
-#endif
-  return SQLITE_OK;
-}
+static void freeConnectionExtData(void * pUserData) {
 
-static void initSharedMemory(sqlite3 *db)
-{
-#if SQLITE_THREADSAFE != 0
-  sqlite3_mutex_enter(globalsInitMutex);
-#endif
-
-  if (sharedMemoryInitialized == 0)
-  {
-    memset(allPerDbData, 0, sizeof(allPerDbData));
-    sharedMemoryInitialized = 1;
-  }
-
-#if SQLITE_THREADSAFE != 0
-  sqlite3_mutex_leave(globalsInitMutex);
-#endif
-}
-
-crsql_PerDbData *findPerDbData(unsigned char *siteId)
-{
-  for (int i = 0; i < PER_DB_DATA_BUFFER_LEN; ++i)
-  {
-    if (allPerDbData[i].siteId == 0) {
-      continue;
-    }
-    
-    if (crsql_siteIdCmp(allPerDbData[i].siteId, SITE_ID_LEN, siteId, SITE_ID_LEN) == 0)
-    {
-      return &allPerDbData[i];
-    }
-  }
-
-  return 0;
-}
-
-crsql_PerDbData *getUnusedPerDbData()
-{
-  for (int i = 0; i < PER_DB_DATA_BUFFER_LEN; ++i)
-  {
-    if (allPerDbData[i].referenceCount == 0)
-    {
-      return &allPerDbData[i];
-    }
-  }
-
-  return 0;
-}
-
-static void returnPerDbData(void *d)
-{
-  crsql_PerDbData *data = (crsql_PerDbData *)d;
-  data->referenceCount -= 1;
-  if (data->referenceCount < 0) {
-    // TODO: log. inidcative of a bug if this happens.
-    data->referenceCount = 0;
-  }
-}
-
-static int createOrGetPerDbData(sqlite3 *db, crsql_PerDbData **ppOut)
-{
-#if SQLITE_THREADSAFE != 0
-  sqlite3_mutex_enter(globalsInitMutex);
-#endif
-
-  /**
-   * Initialization creates a number of tables.
-   * We should ensure we do these in a tx
-   * so we cannot have partial initialization.
-   */
-  int rc = sqlite3_exec(db, "BEGIN", 0, 0, 0);
-  unsigned char *siteId = sqlite3_malloc(SITE_ID_LEN * sizeof *siteId);
-  sqlite3_int64 dbVersion = 0;
-
-  if (rc == SQLITE_OK)
-  {
-    rc = initSiteId(db, siteId);
-  }
-
-  int bAssignedPerDbData = 0;
-  if (rc == SQLITE_OK)
-  {
-    // now look in our list of perDbData for already initialized data
-    // for this db.
-    crsql_PerDbData *existing = findPerDbData(siteId);
-    if (existing != 0)
-    {
-      *ppOut = existing;
-      (*ppOut)->referenceCount += 1;
-      bAssignedPerDbData = 1;
-      sqlite3_free(siteId);
-      siteId = 0;
-    }
-  }
-
-  if (rc == SQLITE_OK && bAssignedPerDbData == 0)
-  {
-    // once site id is initialize, we are able to init db version.
-    // db version uses site id in its queries hence why it comes after site id init.
-    rc = initDbVersion(db, &dbVersion);
-
-    if (rc == SQLITE_OK)
-    {
-      // grab an unallocated slot in our db data
-      crsql_PerDbData *empty = getUnusedPerDbData();
-      if (empty == 0)
-      {
-        rc = SQLITE_ERROR;
-      }
-      else
-      {
-        *ppOut = empty;
-        empty->dbVersion = dbVersion;
-
-        // we are reclaiming someone's slot. free their siteid.
-        unsigned char * priorSiteId = empty->siteId;
-        sqlite3_free(priorSiteId);
-
-        empty->siteId = siteId;
-        empty->referenceCount = 1;
-      }
-    }
-  }
-
-  if (rc == SQLITE_OK)
-  {
-    rc = sqlite3_exec(db, "COMMIT", 0, 0, 0);
-  }
-  else
-  {
-    // Intentionally not setting the RC.
-    // We already have a failure and do not want to record rollback success.
-    sqlite3_exec(db, "ROLLBACK", 0, 0, 0);
-    sqlite3_free(siteId);
-  }
-
-#if SQLITE_THREADSAFE != 0
-  sqlite3_mutex_leave(globalsInitMutex);
-#endif
-
-  return rc;
 }
 
 #ifdef _WIN32
@@ -622,10 +448,6 @@ __declspec(dllexport)
   int rc = SQLITE_OK;
 
   SQLITE_EXTENSION_INIT2(pApi);
-
-  // If this is used as a runtime loadable extension
-  // then preinit might not have been run.
-  sqlite3_crsqlite_preinit();
 
   // shared memory will return to us the memory for the given
   // database.
@@ -698,7 +520,7 @@ __declspec(dllexport)
         "crsql_changes",
         &crsql_changesModule,
         perDbData,
-        returnPerDbData);
+        freeConnectionExtData);
   }
 
   if (rc != SQLITE_OK && perDbData != 0)

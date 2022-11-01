@@ -19,16 +19,13 @@ int crsql_createClockTable(
     crsql_TableInfo *tableInfo,
     char **err);
 
-typedef struct crsql_PerDbData crsql_PerDbData;
-struct crsql_PerDbData
+typedef struct crsql_ExtData crsql_ExtData;
+struct crsql_ExtData
 {
-  /**
-   * Cached representation of the version of the database.
-   *
-   * This is not an unsigned int since sqlite does not support unsigned ints
-   * as a data type and we do eventually write db version(s) to the db.
-   */
-  _Atomic sqlite3_int64 dbVersion;
+  // this gets set at the start of each transaction on the first invocation
+  // to crsql_nextdbversion()
+  // and re-set on transaction commit or rollback.
+  sqlite3_int64 dbVersion;
   unsigned char *siteId;
   int referenceCount;
 };

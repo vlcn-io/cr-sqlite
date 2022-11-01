@@ -366,6 +366,18 @@ static void crsqlFinalize(sqlite3_context *context, int argc, sqlite3_value **ar
   crsql_finalize(pExtData);
 }
 
+static void commitHook(void *pUserData) {
+  crsql_ExtData *pExtData = (crsql_ExtData *)pUserData;
+
+  pExtData->dbVersion = -1;
+}
+
+static void rollbackHook(void *pUserData) {
+  crsql_ExtData *pExtData = (crsql_ExtData *)pUserData;
+
+  pExtData->dbVersion = -1;
+}
+
 #ifdef _WIN32
 __declspec(dllexport)
 #endif
@@ -451,6 +463,12 @@ __declspec(dllexport)
         &crsql_changesModule,
         pExtData,
         0);
+  }
+
+  if (rc == SQLITE_OK) {
+    // TODO: get the prior callback so we can call it rather than replace it?
+    sqlite3_commit_hook(db, commitHook, pExtData);
+    sqlite3_rollback_hook(db, rollbackHook, pExtData);
   }
 
 

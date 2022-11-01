@@ -85,6 +85,7 @@ insert into baz values ('a', 'woo', 'doo', 'daa');
 select * from crsql_changes;
 
 insert into crsql_changes ("table", pk, cid, val, version, site_id) values ('foo', 5, 1, '''thing''', 100, X'7096E2D505314699A59C95FABA14ABB5');
+insert into crsql_changes ("table", pk, cid, val, version, site_id) values ('baz', '''a''', 1, 123, 101, X'7096E2D505314699A59C95FABA14ABB5');
 ```
 
 ```sql

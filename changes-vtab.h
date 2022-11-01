@@ -43,7 +43,7 @@ SQLITE_EXTENSION_INIT3
 #include "crsqlite.h"
 #include <stdint.h>
 
-sqlite3_module crsql_changesModule;
+extern sqlite3_module crsql_changesModule;
 
 /**
  * Data maintained by the virtual table across

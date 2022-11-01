@@ -5,6 +5,7 @@
 SQLITE_EXTENSION_INIT3
 
 #include <ctype.h>
+#include <stddef.h>
 
 typedef struct crsql_ColumnInfo crsql_ColumnInfo;
 struct crsql_ColumnInfo

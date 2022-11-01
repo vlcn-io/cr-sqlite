@@ -1,5 +1,6 @@
 todo:
 
+- c tests for db version bumping
 - handle ATTACH for shared db memory...
 - register a destructor to tear down shared mem on module unload
 - map shared mem by db file or some other such db isolation
@@ -144,3 +145,12 @@ So get rid of `crsql_nextdbversion()`
 
 (2) should be split into its own function since vtab needs to check schema version and re-pull
 table infos too
+
+
+
+--- 
+extra tests:
+- test clean db version
+- test clean then crr db version
+- test reload
+^-- these exist in correcntess tests

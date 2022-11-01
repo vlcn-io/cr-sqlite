@@ -361,6 +361,11 @@ static void freeConnectionExtData(void * pUserData) {
   crsql_freeExtData(pExtData);
 }
 
+static void crsqlFinalize(sqlite3_context *context, int argc, sqlite3_value **argv) {
+  crsql_ExtData *pExtData = (crsql_ExtData *)sqlite3_user_data(context);
+  crsql_finalize(pExtData);
+}
+
 #ifdef _WIN32
 __declspec(dllexport)
 #endif
@@ -388,10 +393,10 @@ __declspec(dllexport)
   }
   if (rc == SQLITE_OK)
   {
-    rc = sqlite3_create_function(db, "crsql_dbversion", 0,
+    rc = sqlite3_create_function_v2(db, "crsql_dbversion", 0,
                                  // dbversion can change on each invocation.
                                  SQLITE_UTF8 | SQLITE_INNOCUOUS,
-                                 pExtData, dbVersionFunc, 0, 0);
+                                 pExtData, dbVersionFunc, 0, 0, freeConnectionExtData);
   }
   if (rc == SQLITE_OK)
   {
@@ -412,6 +417,10 @@ __declspec(dllexport)
                                  // existing database state. directonly.
                                  SQLITE_UTF8 | SQLITE_DIRECTONLY,
                                  0, crsqlMakeCrrFunc, 0, 0);
+  }
+
+  if (rc == SQLITE_OK) {
+    rc = sqlite3_create_function(db, "crsql_finalize", -1, SQLITE_UTF8 | SQLITE_DIRECTONLY, pExtData, crsqlFinalize, 0, 0);
   }
 
   if (rc == SQLITE_OK)
@@ -440,7 +449,7 @@ __declspec(dllexport)
         "crsql_changes",
         &crsql_changesModule,
         pExtData,
-        freeConnectionExtData);
+        0);
   }
 
 

@@ -30,6 +30,16 @@ void crsql_freeExtData(crsql_ExtData *pExtData)
   sqlite3_free(pExtData);
 }
 
+// Should _only_ be called when disconnecting from the db
+// for some reason finalization in extension unload methods doesn't
+// work as expected
+void crsql_finalize(crsql_ExtData *pExtData) {
+  sqlite3_finalize(pExtData->pDbVersionStmt);
+  sqlite3_finalize(pExtData->pPragmaSchemaVersionStmt);
+  pExtData->pDbVersionStmt = 0;
+  pExtData->pPragmaSchemaVersionStmt = 0;
+}
+
 int crsql_fetchPragmaSchemaVersion(sqlite3 *db, crsql_ExtData *pExtData)
 {
   int rc = sqlite3_step(pExtData->pPragmaSchemaVersionStmt);
@@ -60,6 +70,7 @@ int crsql_recreateDbVersionStmt(sqlite3 *db, crsql_ExtData *pExtData)
   int rc = SQLITE_OK;
 
   sqlite3_finalize(pExtData->pDbVersionStmt);
+  pExtData->pDbVersionStmt = 0;
 
   sqlite3_get_table(
       db,
@@ -78,8 +89,7 @@ int crsql_recreateDbVersionStmt(sqlite3 *db, crsql_ExtData *pExtData)
   if (rNumRows == 0)
   {
     sqlite3_free_table(rClockTableNames);
-    pExtData->dbVersion = 0;
-    return rc;
+    return -1;
   }
 
   zSql = crsql_getDbVersionUnionQuery(rNumRows, rClockTableNames);
@@ -90,7 +100,6 @@ int crsql_recreateDbVersionStmt(sqlite3 *db, crsql_ExtData *pExtData)
 
   if (rc != SQLITE_OK) {
     sqlite3_finalize(pExtData->pDbVersionStmt);
-    pExtData->pDbVersionStmt = 0;
   }
 
   return rc;
@@ -110,6 +119,11 @@ int crsql_fetchDbVersionFromStorage(sqlite3 *db, crsql_ExtData *pExtData) {
   if (bSchemaChanged > 0)
   {
     rc = crsql_recreateDbVersionStmt(db, pExtData);
+    if (rc == -1) {
+      // this means there are no clock tables / this is a clean db
+      pExtData->dbVersion = MIN_POSSIBLE_DB_VERSION;
+      return SQLITE_OK;
+    }
     if (rc != SQLITE_OK)
     {
       return rc;
@@ -150,7 +164,7 @@ int crsql_getDbVersion(sqlite3 *db, crsql_ExtData *pExtData)
   // without checking the schema version.
   // It is an error to use crsqlite in such a way that you modify
   // a schema and fetch changes in the same transaction.
-  if (pExtData->dbVersion != 0)
+  if (pExtData->dbVersion != -1)
   {
     return SQLITE_OK;
   }

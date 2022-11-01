@@ -123,3 +123,24 @@ Current workaround:
 - in a global, check if an entry exists for that uuid
   - if so, grab a pointer to that memory
   - if not, allocate it
+
+
+----
+
+single clock table impact on perf???
+- would most likely impact bulk operations and concurrent transactions by creating contention on one dependency
+or are they tracked by row so fine?
+
+Multi tab --
+`crsql_dbversion()`
+(1) check if version alrdy set for tx in extData
+  if so, return it
+(2) check the schema version via pragma https://www.sqlite.org/pragma.html#pragma_schema_version against ext data pragma v 
+  if delta, finalize pStmt, fetch tblSchemas, re-create pStmt
+(3) fetch max db version via pStmt
+(4) return max
+
+So get rid of `crsql_nextdbversion()`
+
+(2) should be split into its own function since vtab needs to check schema version and re-pull
+table infos too

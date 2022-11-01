@@ -1,3 +1,6 @@
 [submodule "platforms/sqlite"]
 	path = platforms/sqlite
 	url = git@github.com:sqlite/sqlite.git
+[submodule "platforms/sql.js"]
+	path = platforms/sql.js
+	url = git@github.com:sql-js/sql.js.git

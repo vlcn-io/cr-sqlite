@@ -14,35 +14,8 @@
   }
 #endif
 
-// TODO: spawn some threads and test various orders of updates
-void testChangesTxCommit() {
-  printf("ChangesTxCommit\n");
-
-  crsql_Changes_vtab tab;
-  sqlite3_vtab *casted = (sqlite3_vtab *)&tab;
-  tab.perDbData = sqlite3_malloc(sizeof(crsql_PerDbData));
-  tab.perDbData->dbVersion = 0;
-
-  tab.maxSeenPatchVersion = 10000;
-
-  assert(tab.perDbData->dbVersion == 0);
-
-  crsql_changesTxCommit(casted);
-  assert(tab.perDbData->dbVersion == 10000);
-
-  tab.maxSeenPatchVersion = MIN_POSSIBLE_DB_VERSION;
-  crsql_changesTxCommit(casted);
-  assert(tab.perDbData->dbVersion == 10000);
-
-  tab.maxSeenPatchVersion = 30000;
-  crsql_changesTxCommit(casted);
-  assert(tab.perDbData->dbVersion == 30000);
-
-  printf("\t\e[0;32mSuccess\e[0m\n");
-}
 
 void crsqlChangesVtabTestSuite()
 {
   printf("\e[47m\e[1;30mSuite: crsql_changesVtab\e[0m\n");
-  testChangesTxCommit();
 }

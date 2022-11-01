@@ -1,5 +1,6 @@
 #include "ext-data.h"
 #include "consts.h"
+#include "util.h"
 
 crsql_ExtData *crsql_newExtData(sqlite3 *db)
 {
@@ -136,7 +137,7 @@ int crsql_fetchDbVersionFromStorage(sqlite3 *db, crsql_ExtData *pExtData) {
     return rc;
   }
 
-  pExtData->dbVersion = (pExtData->pDbVersionStmt, 0);
+  pExtData->dbVersion = sqlite3_column_int64(pExtData->pDbVersionStmt, 0);
   return sqlite3_reset(pExtData->pDbVersionStmt);
 }
 
@@ -157,3 +158,5 @@ int crsql_getDbVersion(sqlite3 *db, crsql_ExtData *pExtData)
   rc = crsql_fetchDbVersionFromStorage(db, pExtData);
   return rc;
 }
+
+// TODO: a `getAllTableInfo` that checks against `pExtData`

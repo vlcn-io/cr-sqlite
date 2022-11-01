@@ -6,6 +6,7 @@ SQLITE_EXTENSION_INIT1
 #include "consts.h"
 #include "triggers.h"
 #include "changes-vtab.h"
+#include "ext-data.h"
 
 #include <ctype.h>
 #include <stdint.h>
@@ -116,99 +117,6 @@ static int initSiteId(sqlite3 *db, unsigned char *ret)
 }
 
 /**
- * Computes the current version of the database
- * and saves it in the global variable.
- * The version is incremented on every transaction commit.
- * The version is used on every write to update clock values for the
- * rows written.
- *
- * INIT DB VERSION MUST BE CALLED AFTER SITE ID INITIALIZATION
- */
-static int initDbVersion(sqlite3 *db, sqlite3_int64 *dbVersion)
-{
-  char *zSql;
-  sqlite3_stmt *pStmt = 0;
-  int rc = SQLITE_OK;
-  char **rClockTableNames = 0;
-  int rNumRows = 0;
-  int rNumCols = 0;
-  int i = 0;
-  *dbVersion = 0;
-
-  // find all `clock` tables
-  rc = sqlite3_get_table(
-      db,
-      CLOCK_TABLES_SELECT,
-      &rClockTableNames,
-      &rNumRows,
-      &rNumCols,
-      0);
-
-  if (rc != SQLITE_OK)
-  {
-    sqlite3_free_table(rClockTableNames);
-    return rc;
-  }
-
-  if (rNumRows == 0)
-  {
-    sqlite3_free_table(rClockTableNames);
-    return rc;
-  }
-
-  // builds the query string
-  zSql = crsql_getDbVersionUnionQuery(rNumRows, rClockTableNames);
-  sqlite3_free_table(rClockTableNames);
-  // now prepare the statement
-  // and bind site id param
-  rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
-  sqlite3_free(zSql);
-
-  if (rc != SQLITE_OK)
-  {
-    return rc;
-  }
-
-  if (rc != SQLITE_OK)
-  {
-    sqlite3_finalize(pStmt);
-    return rc;
-  }
-
-  rc = sqlite3_step(pStmt);
-  // No rows? Then we're a fresh DB with the min starting version
-  if (rc == SQLITE_DONE)
-  {
-    sqlite3_finalize(pStmt);
-    return rc;
-  }
-
-  // error condition
-  if (rc != SQLITE_ROW)
-  {
-    sqlite3_finalize(pStmt);
-    return rc;
-  }
-
-  // had a row? grab the version returned to us
-  // columns are 0 indexed.
-  int type = sqlite3_column_type(pStmt, 0);
-  if (type == SQLITE_NULL)
-  {
-    // No rows. Keep the initial version.
-    sqlite3_finalize(pStmt);
-    return SQLITE_OK;
-  }
-
-  // dbVersion is last version written but we always call `nextDbVersion` before writing
-  // a dbversion. Hence no +1.
-  *dbVersion = sqlite3_column_int64(pStmt, 0);
-  sqlite3_finalize(pStmt);
-
-  return SQLITE_OK;
-}
-
-/**
  * return the uuid which uniquely identifies this database.
  *
  * `select crsql_siteid()`
@@ -219,8 +127,8 @@ static int initDbVersion(sqlite3 *db, sqlite3_int64 *dbVersion)
  */
 static void siteIdFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
-  crsql_PerDbData *data = (crsql_PerDbData *)sqlite3_user_data(context);
-  sqlite3_result_blob(context, data->siteId, SITE_ID_LEN, SQLITE_STATIC);
+  crsql_ExtData *pExtData = (crsql_ExtData *)sqlite3_user_data(context);
+  sqlite3_result_blob(context, pExtData->siteId, SITE_ID_LEN, SQLITE_STATIC);
 }
 
 /**
@@ -230,8 +138,15 @@ static void siteIdFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
  */
 static void dbVersionFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
-  crsql_PerDbData *data = (crsql_PerDbData *)sqlite3_user_data(context);
-  sqlite3_result_int64(context, data->dbVersion);
+  crsql_ExtData *pExtData = (crsql_ExtData *)sqlite3_user_data(context);
+  sqlite3 *db = sqlite3_context_db_handle(context);
+  int rc = crsql_getDbVersion(db, pExtData);
+  if (rc != SQLITE_OK) {
+    sqlite3_result_error(context, "failed to load the database version", -1);
+    return;
+  }
+
+  sqlite3_result_int64(context, pExtData->dbVersion);
 }
 
 /**
@@ -241,10 +156,15 @@ static void dbVersionFunc(sqlite3_context *context, int argc, sqlite3_value **ar
  */
 static void nextDbVersionFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
-  // dbVersion is an atomic int thus `++dbVersion` is a CAS and will always return
-  // a unique version for the given invocation, even under concurrent accesses.
-  crsql_PerDbData *data = (crsql_PerDbData *)sqlite3_user_data(context);
-  sqlite3_result_int64(context, ++(data->dbVersion));
+  crsql_ExtData *pExtData = (crsql_ExtData *)sqlite3_user_data(context);
+  sqlite3 *db = sqlite3_context_db_handle(context);
+  int rc = crsql_getDbVersion(db, pExtData);
+  if (rc != SQLITE_OK) {
+    sqlite3_result_error(context, "failed to load the database version", -1);
+    return;
+  }
+  
+  sqlite3_result_int64(context, pExtData->dbVersion + 1);
 }
 
 /**
@@ -436,7 +356,9 @@ static void crsqlMakeCrrFunc(sqlite3_context *context, int argc, sqlite3_value *
 }
 
 static void freeConnectionExtData(void * pUserData) {
+  crsql_ExtData *pExtData = (crsql_ExtData*)pUserData;
 
+  crsql_freeExtData(pExtData);
 }
 
 #ifdef _WIN32
@@ -449,14 +371,12 @@ __declspec(dllexport)
 
   SQLITE_EXTENSION_INIT2(pApi);
 
-  // shared memory will return to us the memory for the given
-  // database.
-  // we should thus then set that into our `userdata`
-  // for our functions and extensions
-  initSharedMemory(db);
+  crsql_ExtData *pExtData = crsql_newExtData(db);
+  if (pExtData == 0) {
+    return SQLITE_ERROR;
+  }
 
-  crsql_PerDbData *perDbData = 0;
-  rc = createOrGetPerDbData(db, &perDbData);
+  initSiteId(db, pExtData->siteId);
 
   if (rc == SQLITE_OK)
   {
@@ -464,21 +384,21 @@ __declspec(dllexport)
                                  // siteid never changes -- deterministic and innnocuous
                                  SQLITE_UTF8 | SQLITE_INNOCUOUS |
                                      SQLITE_DETERMINISTIC,
-                                 perDbData, siteIdFunc, 0, 0);
+                                 pExtData, siteIdFunc, 0, 0);
   }
   if (rc == SQLITE_OK)
   {
     rc = sqlite3_create_function(db, "crsql_dbversion", 0,
                                  // dbversion can change on each invocation.
                                  SQLITE_UTF8 | SQLITE_INNOCUOUS,
-                                 perDbData, dbVersionFunc, 0, 0);
+                                 pExtData, dbVersionFunc, 0, 0);
   }
   if (rc == SQLITE_OK)
   {
     rc = sqlite3_create_function(db, "crsql_nextdbversion", 0,
                                  // dbversion can change on each invocation.
                                  SQLITE_UTF8 | SQLITE_INNOCUOUS,
-                                 perDbData, nextDbVersionFunc, 0, 0);
+                                 pExtData, nextDbVersionFunc, 0, 0);
   }
 
   if (rc == SQLITE_OK)
@@ -519,14 +439,16 @@ __declspec(dllexport)
         db,
         "crsql_changes",
         &crsql_changesModule,
-        perDbData,
+        pExtData,
         freeConnectionExtData);
   }
 
-  if (rc != SQLITE_OK && perDbData != 0)
-  {
-    perDbData->referenceCount -= 1;
-  }
+
+  // TODO: we need rollback and commit hooks to reset db version in user data struct
+  // such that the next tx will pull the latest v
+  // we no longer cache v in our process given we need to coordinate with other processes
+  // outside of ours that may be attached to the db.
+  // this is rather likely in the browser case with many tabs open to the same app.
 
   return rc;
 }

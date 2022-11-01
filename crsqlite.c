@@ -366,10 +366,11 @@ static void crsqlFinalize(sqlite3_context *context, int argc, sqlite3_value **ar
   crsql_finalize(pExtData);
 }
 
-static void commitHook(void *pUserData) {
+static int commitHook(void *pUserData) {
   crsql_ExtData *pExtData = (crsql_ExtData *)pUserData;
 
   pExtData->dbVersion = -1;
+  return SQLITE_OK;
 }
 
 static void rollbackHook(void *pUserData) {

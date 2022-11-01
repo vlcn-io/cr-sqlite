@@ -1,6 +1,8 @@
 # [wip] crsql - Convergent, Replicated, SQLite
 
-WIP -- while the base functionality is there, there is still work to be done to make this production ready, test all edge cases & support schema alterations. **ETA beta release -- Nov 15.**
+A standalone component of the [Aphrodite](https://aphrodite.sh) project | [discord](https://discord.gg/AtdVY6zDW3)
+
+**WIP** -- while the base functionality is there, there is still work to be done to make this production ready. **ETA beta release -- Nov 15.**
 
 [SQLite](https://www.sqlite.org/index.html) is a foundation of offline, local-first and edge deployed software. Wouldn't it be great, however, if we could merge two or more SQLite databases together and not run into any conflicts?
 
@@ -12,8 +14,14 @@ This project implements [CRDTs](https://crdt.tech/) and [CRRs](https://hal.inria
 
 `crsqlite` exposes two APIs:
 
-- One to upgrade existing tables to "crrs" or "conflict free replicated relations"
-- Another to ask the database for a changeset given a version or to apply a changeset from another database
+- A function extension (`crsql_as_crr`) to upgrade existing tables to "crrs" or "conflict free replicated relations"
+  - `select crsql_as_crr('table_name')`
+- And a virtual table (`crsql_changes`) to ask the database for changesets or to apply changesets from another database
+  -  `select * from crsql_changes where version > x`
+  -  `insert into crsql_changes values ([patches receied from select on another peer])`
+
+Application code would use the function extension to enable crr support on tables.
+Networking code would use the `crsql_changes` virtual table to fetch and apply changes.
 
 Usage looks like:
 
@@ -30,8 +38,8 @@ select crsql_as_crr('foo');
 select crsql_as_crr('baz');
 
 -- insert some data / interact with tables as normal
-insert into foo values (1,2);
-insert into baz values ('a', 'woo', 'doo', 'daa');
+insert into foo (a,b) values (1,2);
+insert into baz (a,b,c,d) values ('a', 'woo', 'doo', 'daa');
 
 -- ask for a record of what has changed
 select * from crsql_changes;
@@ -48,6 +56,9 @@ insert into crsql_changes
   ("table", pk, cid, val, version, site_id)
   values
   ('foo', 5, 1, '''thing''', 5, X'7096E2D505314699A59C95FABA14ABB5');
+insert into crsql_changes ("table", pk, cid, val, version, site_id)
+  values
+  ('baz', '''a''', 1, 123, 101, X'7096E2D505314699A59C95FABA14ABB5');
 
 -- check that peer's changes were applied
 select * from foo;
@@ -55,6 +66,11 @@ a  b
 -  -----
 1  2
 5  thing
+
+select * from baz;
+a  b    c    d
+-  ---  ---  ---
+a  123  doo  daa
 ```
 
 # Prior Art

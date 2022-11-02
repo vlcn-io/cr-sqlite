@@ -47,10 +47,9 @@ static int changesConnect(
   pNew->db = db;
   pNew->pExtData = (crsql_ExtData *)pAux;
 
-  rc = crsql_pullAllTableInfos(db, &(pNew->tableInfos), &(pNew->tableInfosLen), &(*ppVtab)->zErrMsg);
+  rc = crsql_ensureTableInfosAreUpToDate(db, pNew->pExtData, &(*ppVtab)->zErrMsg);
   if (rc != SQLITE_OK)
   {
-    crsql_freeAllTableInfos(pNew->tableInfos, pNew->tableInfosLen);
     sqlite3_free(pNew);
     return rc;
   }
@@ -67,9 +66,7 @@ static int changesConnect(
 static int changesDisconnect(sqlite3_vtab *pVtab)
 {
   crsql_Changes_vtab *p = (crsql_Changes_vtab *)pVtab;
-  crsql_freeAllTableInfos(p->tableInfos, p->tableInfosLen);
-  p->tableInfos = 0;
-  p->tableInfosLen = 0;
+  // ext data is free by other registered extensions
   sqlite3_free(p);
   return SQLITE_OK;
 }
@@ -210,7 +207,10 @@ static int changesNext(sqlite3_vtab_cursor *cur)
   int cid = sqlite3_column_int(pCur->pChangesStmt, CID);
   sqlite3_int64 vrsn = sqlite3_column_int64(pCur->pChangesStmt, VRSN);
 
-  crsql_TableInfo *tblInfo = crsql_findTableInfo(pCur->pTab->tableInfos, pCur->pTab->tableInfosLen, tbl);
+  crsql_TableInfo *tblInfo = crsql_findTableInfo(
+      pCur->pTab->pExtData->zpTableInfos,
+      pCur->pTab->pExtData->tableInfosLen,
+      tbl);
   if (tblInfo == 0)
   {
     pTabBase->zErrMsg = sqlite3_mprintf("crsql internal error. Could not find schema for table %s", tbl);
@@ -239,7 +239,8 @@ static int changesNext(sqlite3_vtab_cursor *cur)
     return SQLITE_ERROR;
   }
 
-  if (zSql[0] == '\0') {
+  if (zSql[0] == '\0')
+  {
     // it's a delete -- no row data to grab
     pCur->pRowStmt = 0;
     sqlite3_free(zSql);
@@ -306,9 +307,12 @@ static int changesColumn(
     // state records for the row except the delete event.
     // "all" is actually quite small given we only keep max 1 record per col in a row.
     // so this drop is feasible on delete.
-    if (pCur->pRowStmt == 0) {
+    if (pCur->pRowStmt == 0)
+    {
       sqlite3_result_null(ctx);
-    } else {
+    }
+    else
+    {
       sqlite3_result_value(ctx, sqlite3_column_value(pCur->pRowStmt, 0));
     }
     break;
@@ -319,9 +323,12 @@ static int changesColumn(
     sqlite3_result_int64(ctx, pCur->version);
     break;
   case CHANGES_SINCE_VTAB_SITE_ID:
-    if (pCur->pRowStmt == 0) {
+    if (pCur->pRowStmt == 0)
+    {
       sqlite3_result_null(ctx);
-    } else {
+    }
+    else
+    {
       sqlite3_result_value(ctx, sqlite3_column_value(pCur->pRowStmt, SITE_ID));
     }
     break;
@@ -360,7 +367,13 @@ static int changesFilter(
   }
 
   // construct and prepare our union for fetching changes
-  char *zSql = crsql_changesUnionQuery(pTab->tableInfos, pTab->tableInfosLen);
+  rc = crsql_ensureTableInfosAreUpToDate(db, pTab->pExtData, &(pTabBase->zErrMsg));
+  if (rc != SQLITE_OK)
+  {
+    return rc;
+  }
+
+  char *zSql = crsql_changesUnionQuery(pTab->pExtData->zpTableInfos, pTab->pExtData->tableInfosLen);
 
   if (zSql == 0)
   {
@@ -407,7 +420,7 @@ static int changesFilter(
   // 1. the site id
   // 2. the version
   int j = 1;
-  for (i = 0; i < pTab->tableInfosLen; ++i)
+  for (i = 0; i < pTab->pExtData->tableInfosLen; ++i)
   {
     sqlite3_bind_blob(pStmt, j++, requestorSiteId, requestorSiteIdLen, SQLITE_STATIC);
     sqlite3_bind_int64(pStmt, j++, versionBound);

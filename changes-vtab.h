@@ -75,9 +75,6 @@ struct crsql_Changes_vtab
   sqlite3_vtab base;
   sqlite3 *db;
 
-  crsql_TableInfo **tableInfos;
-  int tableInfosLen;
-
   crsql_ExtData *pExtData;
 };
 

@@ -6,6 +6,7 @@
 #include "changes-vtab.h"
 #include "changes-vtab-common.h"
 #include "util.h"
+#include "ext-data.h"
 
 /**
  *
@@ -32,11 +33,10 @@ int crsql_didCidWin(
   }
 
   zSql = sqlite3_mprintf(
-    "SELECT __crsql_version FROM \"%s__crsql_clock\" WHERE %s AND %d = __crsql_col_num",
-    insertTbl,
-    pkWhereList,
-    cid
-  );
+      "SELECT __crsql_version FROM \"%s__crsql_clock\" WHERE %s AND %d = __crsql_col_num",
+      insertTbl,
+      pkWhereList,
+      cid);
 
   // run zSql
   sqlite3_stmt *pStmt = 0;
@@ -50,13 +50,15 @@ int crsql_didCidWin(
   }
 
   rc = sqlite3_step(pStmt);
-  if (rc == SQLITE_DONE) {
+  if (rc == SQLITE_DONE)
+  {
     // no rows returned
     // we of course win if there's nothing there.
     return 1;
   }
 
-  if (rc != SQLITE_ROW) {
+  if (rc != SQLITE_ROW)
+  {
     return -1;
   }
 
@@ -266,6 +268,11 @@ int crsql_mergeInsert(
   char *zSql = 0;
   int ignore = 0;
 
+  rc = crsql_ensureTableInfosAreUpToDate(
+      db,
+      pTab->pExtData,
+      errmsg);
+
   // column values exist in argv[2] and following.
   const int insertTblLen = sqlite3_value_bytes(argv[2 + CHANGES_SINCE_VTAB_TBL]);
   if (insertTblLen > MAX_TBL_NAME_LEN)
@@ -292,7 +299,9 @@ int crsql_mergeInsert(
   // safe given we only use siteid via `bind`
   const void *insertSiteId = sqlite3_value_blob(argv[2 + CHANGES_SINCE_VTAB_SITE_ID]);
 
-  crsql_TableInfo *tblInfo = crsql_findTableInfo(pTab->tableInfos, pTab->tableInfosLen, (const char *)insertTbl);
+  crsql_TableInfo *tblInfo = crsql_findTableInfo(
+      pTab->pExtData->zpTableInfos,
+      pTab->pExtData->tableInfosLen, (const char *)insertTbl);
   if (tblInfo == 0)
   {
     *errmsg = sqlite3_mprintf("crsql - could not find the schema information for table %s", insertTbl);

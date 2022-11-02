@@ -30,5 +30,6 @@ int crsql_recreateDbVersionStmt(sqlite3 *db, crsql_ExtData *pExtData);
 int crsql_fetchDbVersionFromStorage(sqlite3 *db, crsql_ExtData *pExtData);
 int crsql_getDbVersion(sqlite3 *db, crsql_ExtData *pExtData);
 void crsql_finalize(crsql_ExtData *pExtData);
+int crsql_ensureTableInfosAreUpToDate(sqlite3* db, crsql_ExtData *pExtData, char **errmsg);
 
 #endif

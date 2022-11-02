@@ -418,7 +418,14 @@ int crsql_getTableInfo(
   columnInfos = sqlite3_malloc(numColInfos * sizeof *columnInfos);
   while (rc == SQLITE_ROW)
   {
-    assert(i < numColInfos);
+    if (i >= numColInfos) {
+      sqlite3_finalize(pStmt);
+      for (int j = 0; j < i; ++j) {
+        crsql_freeColumnInfoContents(&columnInfos[j]);
+      }
+      sqlite3_free(columnInfos);
+      return SQLITE_ERROR;
+    }
 
     columnInfos[i].cid = sqlite3_column_int(pStmt, 0);
 
@@ -435,6 +442,15 @@ int crsql_getTableInfo(
   }
   sqlite3_finalize(pStmt);
 
+  if (i < numColInfos) {
+    for (int j = 0; j < i; ++j) {
+      crsql_freeColumnInfoContents(&columnInfos[j]);
+    }
+    sqlite3_free(columnInfos);
+    *pErrMsg = sqlite3_mprintf("Number of fetched columns did not match expected number of columns");
+    return SQLITE_ERROR;
+  }
+
   crsql_IndexInfo *indexInfos = 0;
   int numIndexInfos = 0;
 
@@ -448,6 +464,10 @@ int crsql_getTableInfo(
 
   if (rc != SQLITE_OK)
   {
+    for (int j = 0; j < i; ++j) {
+      crsql_freeColumnInfoContents(&columnInfos[j]);
+    }
+    sqlite3_free(columnInfos);
     return rc;
   }
 

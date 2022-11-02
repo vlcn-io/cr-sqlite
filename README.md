@@ -114,7 +114,7 @@ This will create a `sqlite3` binary at `dist/sqlite3`
 make test
 ```
 
-There is also a collection of python integration tests (which, at the time of this writing need to be updated to account for new fixes):
+There is also a collection of python integration tests:
 
 ```bash
 cd correctness

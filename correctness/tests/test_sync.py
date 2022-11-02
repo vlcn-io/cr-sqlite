@@ -57,30 +57,30 @@ def test_changes_since():
 
   rows = get_changes_since(dbs[0], 0, -1)
 
-  assert(rows == [('user', '1', 1, "'Javi'", 1, None),
-  ('deck', '1', 1, '1', 2, None),
-  ('deck', '1', 2, "'Preso'", 3, None),
-  ('slide', '1', 1, '1', 4, None),
-  ('slide', '1', 2, '0', 5, None),
-  ('component', '1', 1, "'text'", 6, None),
-  ('component', '1', 2, '1', 7, None),
-  ('component', '1', 3, "'wootwoot'", 8, None),
-  ('component', '2', 1, "'text'", 9, None),
-  ('component', '2', 2, '1', 10, None),
-  ('component', '2', 3, "'toottoot'", 11, None),
-  ('component', '3', 1, "'text'", 12, None),
-  ('component', '3', 2, '1', 13, None),
-  ('component', '3', 3, "'footfoot'", 14, None),
-  ('slide', '2', 1, '1', 15, None),
-  ('slide', '2', 2, '1', 16, None),
-  ('slide', '3', 1, '1', 17, None),
-  ('slide', '3', 2, '2', 18, None)])
+  assert(rows == [('component', '1', 1, "'text'", 1, None),
+ ('component', '1', 2, '1', 1, None),
+ ('component', '1', 3, "'wootwoot'", 1, None),
+ ('component', '2', 1, "'text'", 1, None),
+ ('component', '2', 2, '1', 1, None),
+ ('component', '2', 3, "'toottoot'", 1, None),
+ ('component', '3', 1, "'text'", 1, None),
+ ('component', '3', 2, '1', 1, None),
+ ('component', '3', 3, "'footfoot'", 1, None),
+ ('deck', '1', 1, '1', 1, None),
+ ('deck', '1', 2, "'Preso'", 1, None),
+ ('slide', '1', 1, '1', 1, None),
+ ('slide', '1', 2, '0', 1, None),
+ ('slide', '2', 1, '1', 1, None),
+ ('slide', '2', 2, '1', 1, None),
+ ('slide', '3', 1, '1', 1, None),
+ ('slide', '3', 2, '2', 1, None),
+ ('user', '1', 1, "'Javi'", 1, None)])
 
   update_data(dbs[0])
 
-  rows = get_changes_since(dbs[0], 18, -1)
+  rows = get_changes_since(dbs[0], 1, -1)
 
-  pprint.pprint(rows)
+  assert(rows == [('deck', '1', 2, "'Presto'", 2, None), ('user', '1', 1, "'Maestro'", 2, None)]);
 
   return 1
 

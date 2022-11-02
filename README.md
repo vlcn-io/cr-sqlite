@@ -77,6 +77,93 @@ a  123  doo  daa
 select crsql_finalize();
 ```
 
+# Building
+
+## Non-WASM Library
+
+Instructions on building a native library that can be loaded into SQLite in non-wasm environments.
+
+In the root directory of the project, run:
+
+```bash
+make loadable
+```
+
+This will create a shared library at `dist/crsqlite.[lib extension]`
+
+[lib extension]:
+- Linux: `.so`
+- Darwin / OS X: `.dylib`
+- Windows: `.dll`
+
+## Non-WASM CLI
+
+Instructions on building a `sqlite3` CLI that has `cr-sqlite` statically linked and pre-loaded.
+
+In the root directory of the project, run:
+
+```bash
+make sqlite3
+```
+
+This will create a `sqlite3` binary at `dist/sqlite3`
+
+## Tests
+
+```bash
+make test
+```
+
+There is also a collection of python integration tests (which, at the time of this writing need to be updated to account for new fixes):
+
+```bash
+cd correctness
+pytest
+```
+
+And eventually browser tests.
+
+## SQLite WASM
+
+Instructions on building a new SQLite WASM distribution that statically links `crsqlite`.
+
+The WASM build is fairly new and the rough edges are being ironed out, hence the somewhat involved build process below. Expect this to improve in the near future.
+
+If you do not have `emsdk` installed and activated, follow these steps:
+
+```bash
+# Clone the emscripten repository:
+sudo apt install git
+git clone https://github.com/emscripten-core/emsdk.git
+cd emsdk
+
+# Download and install the latest SDK tools:
+./emsdk install latest
+
+# Make the "latest" SDK "active" for the current user:
+./emsdk activate latest
+```
+
+If you already have `emsdk` cloned, the SDK can be updated using:
+
+```
+git pull
+./emsdk install latest
+./emsdk activate latest
+```
+
+Next (in a terminal with emsdk activated) --
+
+1. Ensure that this repository is cloned including all sub-modules
+2. `cd platforms/sqlite`
+3. `./configure`
+4. `make`
+5. `cd ext/wasm`
+6. `make crsqlite-extra`
+7. `make dist`
+
+This will place all `sqlite3` wasm artifacts in `platforms/sqlites/ext/wasm/jswasm` with `crsqlite` compiled in.
+
 # Prior Art
 
 ## [1] Towards a General Database Management System of Conflict-Free Replicated Relations

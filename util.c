@@ -7,6 +7,30 @@
 #include <stdlib.h>
 #include <assert.h>
 
+size_t strnlen(const char *s, size_t n)
+{
+	const char *p = memchr(s, 0, n);
+	return p ? p-s : n;
+}
+
+char *strndup(const char *s, size_t n)
+{
+	size_t l = strnlen(s, n);
+	char *d = sqlite3_malloc(l+1);
+	if (!d) return NULL;
+	memcpy(d, s, l);
+	d[l] = 0;
+	return d;
+}
+
+char *strdup(const char *s)
+{
+	size_t l = strlen(s);
+	char *d = sqlite3_malloc(l+1);
+	if (!d) return NULL;
+	return memcpy(d, s, l+1);
+}
+
 static char *joinHelper(char **in, size_t inlen, size_t inpos, size_t accum)
 {
   if (inpos == inlen)

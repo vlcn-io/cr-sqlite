@@ -437,7 +437,8 @@ int crsql_getIndexedCols(
     sqlite3 *db,
     const char *indexName,
     char ***pIndexedCols,
-    int *pIndexedColsLen)
+    int *pIndexedColsLen,
+    char **pErrMsg)
 {
   int rc = SQLITE_OK;
   int numCols = 0;
@@ -447,7 +448,7 @@ int crsql_getIndexedCols(
   *pIndexedColsLen = 0;
 
   char *zSql = sqlite3_mprintf(
-      "SELECT count(*) FROM temp.pragma_index_info('%s')",
+      "SELECT count(*) FROM pragma_index_info('%s')",
       indexName);
   numCols = crsql_getCount(db, zSql);
   sqlite3_free(zSql);
@@ -457,11 +458,12 @@ int crsql_getIndexedCols(
     return numCols;
   }
 
-  zSql = sqlite3_mprintf("SELECT \"name\" FROM temp.pragma_index_info('%s') ORDER BY \"seq\" ASC");
+  zSql = sqlite3_mprintf("SELECT \"name\" FROM pragma_index_info('%s') ORDER BY \"seqno\" ASC", indexName);
   rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
   sqlite3_free(zSql);
   if (rc != SQLITE_OK)
   {
+    *pErrMsg = sqlite3_mprintf("Failed preparing pragma_index_info('%s') stmt", indexName);
     sqlite3_finalize(pStmt);
     return rc;
   }
@@ -470,7 +472,7 @@ int crsql_getIndexedCols(
   if (rc != SQLITE_ROW)
   {
     sqlite3_finalize(pStmt);
-    return rc;
+    return SQLITE_OK;
   }
 
   int j = 0;
@@ -493,6 +495,7 @@ int crsql_getIndexedCols(
       sqlite3_free(indexedCols[i]);
     }
     sqlite3_free(indexedCols);
+    *pErrMsg = sqlite3_mprintf("Failed allocating index info");
     return rc;
   }
 

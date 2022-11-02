@@ -21,7 +21,8 @@ int crsql_getIndexedCols(
     sqlite3 *db,
     const char *indexName,
     char ***pIndexedCols,
-    int *pIndexedColsLen);
+    int *pIndexedColsLen,
+    char **pErrMsg);
 
 char *crsql_join2(char *(*map)(const char *), char **in, size_t len, char *delim);
 const char *crsql_identity(const char *x);

@@ -305,6 +305,7 @@ int crsql_getIndexList(
 
   if (rc != SQLITE_OK)
   {
+    *pErrMsg = sqlite3_mprintf("Failed to select from pragma_index_list");
     sqlite3_finalize(pStmt);
     return rc;
   }
@@ -313,7 +314,7 @@ int crsql_getIndexList(
   if (rc != SQLITE_ROW)
   {
     sqlite3_finalize(pStmt);
-    return rc;
+    return SQLITE_OK;
   }
 
   indexInfos = sqlite3_malloc(numIndices * sizeof *indexInfos);
@@ -333,6 +334,7 @@ int crsql_getIndexList(
 
   if (rc != SQLITE_DONE)
   {
+    *pErrMsg = sqlite3_mprintf("Failed fetching an index list row");
     goto FAIL;
   }
 
@@ -342,7 +344,8 @@ int crsql_getIndexList(
         db,
         indexInfos[i].name,
         &(indexInfos[i].indexedCols),
-        &(indexInfos[i].indexedColsLen));
+        &(indexInfos[i].indexedColsLen),
+        pErrMsg);
 
     if (rc != SQLITE_OK)
     {
@@ -383,7 +386,7 @@ int crsql_getTableInfo(
   int i = 0;
   crsql_ColumnInfo *columnInfos = 0;
 
-  zSql = sqlite3_mprintf("select count(*) from pragma_table_info(\"%s\")", tblName);
+  zSql = sqlite3_mprintf("select count(*) from pragma_table_info('%s')", tblName);
   numColInfos = crsql_getCount(db, zSql);
   sqlite3_free(zSql);
 
@@ -393,7 +396,7 @@ int crsql_getTableInfo(
     return numColInfos;
   }
 
-  zSql = sqlite3_mprintf("select \"cid\", \"name\", \"type\", \"notnull\", \"pk\" from pragma_table_info(\"%s\") order by cid asc",
+  zSql = sqlite3_mprintf("select \"cid\", \"name\", \"type\", \"notnull\", \"pk\" from pragma_table_info('%s') order by cid asc",
                          tblName);
   rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
   sqlite3_free(zSql);

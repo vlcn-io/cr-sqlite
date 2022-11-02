@@ -20,6 +20,7 @@ struct crsql_ExtData
   unsigned char *siteId;
   sqlite3_stmt *pDbVersionStmt;
   crsql_TableInfo **zpTableInfos;
+  int tableInfosLen;
 };
 
 crsql_ExtData *crsql_newExtData(sqlite3 *db);

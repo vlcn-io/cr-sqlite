@@ -1,5 +1,6 @@
 todo:
 
+- https://llvm.org/docs/LibFuzzer.html integration
 - c tests for db version bumping
 - document `crsql_finalize()`
 - test cases for closed & open bug issues

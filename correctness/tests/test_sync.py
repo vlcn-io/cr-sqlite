@@ -82,7 +82,20 @@ def test_changes_since():
 
   assert(rows == [('deck', '1', 2, "'Presto'", 2, None), ('user', '1', 1, "'Maestro'", 2, None)]);
 
-  return 1
+  # test delete
+
+  # test insert
+
+  # test pk only row(s)
+
+  # test no change insert (settings values to what they were before)
+
+  # test new table after a call to get_changes_since
 
 def test_patch():
+  # test delete
+  # test pk only
+  # test create
+  # test update
+
   return 1

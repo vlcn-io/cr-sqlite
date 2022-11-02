@@ -18,6 +18,7 @@ crsql_ExtData *crsql_newExtData(sqlite3 *db)
   pExtData->siteId = sqlite3_malloc(SITE_ID_LEN * sizeof *(pExtData->siteId));
   pExtData->pDbVersionStmt = 0;
   pExtData->zpTableInfos = 0;
+  pExtData->tableInfosLen = 0;
 
   return pExtData;
 }
@@ -156,6 +157,14 @@ int crsql_fetchDbVersionFromStorage(sqlite3 *db, crsql_ExtData *pExtData) {
   return sqlite3_reset(pExtData->pDbVersionStmt);
 }
 
+/**
+ * This will return the db version if it exists in `pExtData`
+ * 
+ * If it does not exist there, it will fetch the current db version
+ * from the database.
+ * 
+ * `pExtData->dbVersion` is cleared on every tx commit or rollback.
+ */
 int crsql_getDbVersion(sqlite3 *db, crsql_ExtData *pExtData)
 {
   int rc = SQLITE_OK;
@@ -174,4 +183,41 @@ int crsql_getDbVersion(sqlite3 *db, crsql_ExtData *pExtData)
   return rc;
 }
 
-// TODO: a `getAllTableInfo` that checks against `pExtData`
+/**
+ * Should only ever be called when absolutely required.
+ * This can be an expensive operation.
+ * 
+ * (1) checks if the db schema has changed
+ * (2) if so, re-pulls table infos after de-allocating previous set of table infos
+ * 
+ * due to 2, nobody should ever save a reference
+ * to a table info or contained object.
+ * 
+ * This is called in two cases:
+ * (1) in `xFilter` of the changes-vtab to ensure we hit the right tables for changes
+ * (2) in `xUpdate` of the changes-vtab to ensure we apply received changed correctly
+ */
+int crsql_ensureTableInfosAreUpToDate(sqlite3* db, crsql_ExtData *pExtData, char **errmsg) {
+  int rc = SQLITE_OK;
+
+  int bSchemaChanged = crsql_fetchPragmaSchemaVersion(db, pExtData);
+  if (bSchemaChanged < 0) {
+    return SQLITE_ERROR;
+  }
+
+  if (bSchemaChanged || pExtData->zpTableInfos == 0) {
+    // clean up old table infos
+    crsql_freeAllTableInfos(pExtData->zpTableInfos, pExtData->tableInfosLen);
+
+    // re-fetch table infos
+    rc = crsql_pullAllTableInfos(db, &(pExtData->zpTableInfos), &(pExtData->tableInfosLen), errmsg);
+    if (rc != SQLITE_OK) {
+      crsql_freeAllTableInfos(pExtData->zpTableInfos, pExtData->tableInfosLen);
+      pExtData->zpTableInfos = 0;
+      pExtData->tableInfosLen = 0;
+      return rc;
+    }
+  }
+
+  return rc;
+}

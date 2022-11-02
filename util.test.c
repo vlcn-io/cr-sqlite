@@ -111,6 +111,7 @@ static void testGetIndexedCols()
   int rc = SQLITE_OK;
   char **indexedCols = 0;
   int indexedColsLen;
+  char *pErrMsg = 0;
 
   rc = sqlite3_open(":memory:", &db);
   sqlite3_exec(db, "CREATE TABLE foo (a);", 0, 0, 0);
@@ -120,7 +121,8 @@ static void testGetIndexedCols()
       db,
       "sqlite_autoindex_foo_1",
       &indexedCols,
-      &indexedColsLen);
+      &indexedColsLen,
+      &pErrMsg);
   CHECK_OK
 
   assert(indexedColsLen == 0);
@@ -130,7 +132,8 @@ static void testGetIndexedCols()
       db,
       "sqlite_autoindex_bar_1",
       &indexedCols,
-      &indexedColsLen);
+      &indexedColsLen,
+      &pErrMsg);
   CHECK_OK
 
   assert(indexedColsLen == 1);
@@ -143,6 +146,7 @@ static void testGetIndexedCols()
   return;
 
 fail:
+  sqlite3_free(pErrMsg);
   printf("bad return code: %d\n", rc);
 }
 

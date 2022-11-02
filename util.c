@@ -392,7 +392,7 @@ int crsql_doesTableExist(sqlite3 *db, const char *tblName)
   int ret = 0;
 
   zSql = sqlite3_mprintf(
-      "SELECT count(*) as c FROM sqlite_master WHERE type='table' AND tbl_name = \"%s\"",
+      "SELECT count(*) as c FROM sqlite_master WHERE type='table' AND tbl_name = '%s'",
       tblName);
   ret = crsql_getCount(db, zSql);
   sqlite3_free(zSql);

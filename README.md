@@ -1,6 +1,8 @@
 # [wip] crsql - Convergent, Replicated, SQLite
 
-A standalone component of the [vlcn](https://vlcn.io) project | [discord](https://discord.gg/AtdVY6zDW3)
+A standalone component of the [vlcn](https://vlcn.io) project | [discord](https://discord.gg/AtdVY6zDW3).
+
+`crsql` is a [run time loadable extension](https://www.sqlite.org/loadext.html) for SQLite that adds CRDT and sync support.
 
 **WIP** -- while the base functionality is there, there is still work to be done to make this production ready. **ETA beta release -- Nov 15.**
 

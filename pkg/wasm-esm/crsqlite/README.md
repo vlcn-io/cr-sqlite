@@ -1,5 +1,8 @@
 Until docs exist, see `src/wrapper.ts` and `../examples`
 
+```
+npm i @vlcn.io/crsqlite-wasm
+```
 
 ## Main thread in-memory usage:
 

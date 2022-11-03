@@ -15,6 +15,7 @@ crsql_ExtData *crsql_newExtData(sqlite3 *db)
 
   pExtData->dbVersion = -1;
   pExtData->pragmaSchemaVersion = -1;
+  pExtData->pragmaSchemaVersionForTableInfos = -1;
   pExtData->siteId = sqlite3_malloc(SITE_ID_LEN * sizeof *(pExtData->siteId));
   pExtData->pDbVersionStmt = 0;
   pExtData->zpTableInfos = 0;
@@ -42,17 +43,28 @@ void crsql_finalize(crsql_ExtData *pExtData) {
   pExtData->pPragmaSchemaVersionStmt = 0;
 }
 
-int crsql_fetchPragmaSchemaVersion(sqlite3 *db, crsql_ExtData *pExtData)
+#define DB_VERSION_SCHEMA_VERSION 0
+#define TABLE_INFO_SCHEMA_VERSION 1
+
+int crsql_fetchPragmaSchemaVersion(sqlite3 *db, crsql_ExtData *pExtData, int which)
 {
   int rc = sqlite3_step(pExtData->pPragmaSchemaVersionStmt);
   if (rc == SQLITE_ROW)
   {
     int version = sqlite3_column_int(pExtData->pPragmaSchemaVersionStmt, 0);
     sqlite3_reset(pExtData->pPragmaSchemaVersionStmt);
-    if (version > pExtData->pragmaSchemaVersion)
-    {
-      pExtData->pragmaSchemaVersion = version;
-      return 1;
+    if (which == DB_VERSION_SCHEMA_VERSION) {
+      if (version > pExtData->pragmaSchemaVersion)
+      {
+        pExtData->pragmaSchemaVersion = version;
+        return 1;
+      }
+    } else {
+      if (version > pExtData->pragmaSchemaVersionForTableInfos)
+      {
+        pExtData->pragmaSchemaVersion = version;
+        return 1;
+      }
     }
 
     return 0;
@@ -112,7 +124,7 @@ int crsql_fetchDbVersionFromStorage(sqlite3 *db, crsql_ExtData *pExtData) {
 
   // version was not cached
   // check if the schema changed and rebuild version stmt if so
-  int bSchemaChanged = crsql_fetchPragmaSchemaVersion(db, pExtData);
+  int bSchemaChanged = crsql_fetchPragmaSchemaVersion(db, pExtData, DB_VERSION_SCHEMA_VERSION);
   if (bSchemaChanged < 0)
   {
     return SQLITE_ERROR;
@@ -200,7 +212,7 @@ int crsql_getDbVersion(sqlite3 *db, crsql_ExtData *pExtData)
 int crsql_ensureTableInfosAreUpToDate(sqlite3* db, crsql_ExtData *pExtData, char **errmsg) {
   int rc = SQLITE_OK;
 
-  int bSchemaChanged = crsql_fetchPragmaSchemaVersion(db, pExtData);
+  int bSchemaChanged = crsql_fetchPragmaSchemaVersion(db, pExtData, TABLE_INFO_SCHEMA_VERSION);
   if (bSchemaChanged < 0) {
     return SQLITE_ERROR;
   }

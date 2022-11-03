@@ -17,6 +17,11 @@ struct crsql_ExtData
   // and re-set on transaction commit or rollback.
   sqlite3_int64 dbVersion;
   int pragmaSchemaVersion;
+
+  // we need another schema version number that tracks when we checked it
+  // for zpTableInfos.
+  int pragmaSchemaVersionForTableInfos;
+
   unsigned char *siteId;
   sqlite3_stmt *pDbVersionStmt;
   crsql_TableInfo **zpTableInfos;
@@ -25,7 +30,7 @@ struct crsql_ExtData
 
 crsql_ExtData *crsql_newExtData(sqlite3 *db);
 void crsql_freeExtData(crsql_ExtData *pExtData);
-int crsql_fetchPragmaSchemaVersion(sqlite3 *db, crsql_ExtData *pExtData);
+int crsql_fetchPragmaSchemaVersion(sqlite3 *db, crsql_ExtData *pExtData, int which);
 int crsql_recreateDbVersionStmt(sqlite3 *db, crsql_ExtData *pExtData);
 int crsql_fetchDbVersionFromStorage(sqlite3 *db, crsql_ExtData *pExtData);
 int crsql_getDbVersion(sqlite3 *db, crsql_ExtData *pExtData);

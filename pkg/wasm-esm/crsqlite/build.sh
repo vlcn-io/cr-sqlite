@@ -18,6 +18,7 @@ source ./emsdk_env.sh
 
 # Build the wasm targets
 cd ../sqlite/ext/wasm
+make crsqlite-extra
 make dist
 
 cp jswasm/sqlite3.wasm jswasm/sqlite3-opfs-async-proxy.js ../../../../pkg/wasm-esm/crsqlite/dist

@@ -135,42 +135,10 @@ And eventually browser tests.
 
 Instructions on building a new SQLite WASM distribution that statically links `crsqlite`.
 
-The WASM build is fairly new and the rough edges are being ironed out, hence the somewhat involved build process below. Expect this to improve in the near future.
-
-If you do not have `emsdk` installed and activated, follow these steps:
-
-```bash
-# Clone the emscripten repository:
-sudo apt install git
-git clone https://github.com/emscripten-core/emsdk.git
-cd emsdk
-
-# Download and install the latest SDK tools:
-./emsdk install latest
-
-# Make the "latest" SDK "active" for the current user:
-./emsdk activate latest
-```
-
-If you already have `emsdk` cloned, the SDK can be updated using:
-
-```
-git pull
-./emsdk install latest
-./emsdk activate latest
-```
-
-Next (in a terminal with emsdk activated) --
-
-1. Ensure that this repository is cloned including all sub-modules
-2. `cd deps/sqlite`
-3. `./configure`
-4. `make`
-5. `cd ext/wasm`
-6. `make crsqlite-extra`
-7. `make dist`
-
-This will place all `sqlite3` wasm artifacts in `deps/sqlite/ext/wasm/jswasm` with `crsqlite` compiled in.
+1. clone this repo + all submodules
+2. `cd pkg/wasm-esm/crsqlite`
+3. `./build.sh`
+4. artifacts will be in `pkg/wasm-esm/crsqlite/dist`
 
 # Prior Art
 

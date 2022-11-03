@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "sourceMap": true,
+    "strictNullChecks": true,
+    "module": "esnext",
+    "target": "esnext",
+    "skipLibCheck": true,
+    "moduleResolution": "Node",
+    "baseUrl": "./src/",
+    "declaration": true,
+    "allowJs": true,
+    "declarationMap": true,
+    "strict": true,
+    "outDir": "./dist/",
+    "rootDir": "./src"
+  },
+  "include": ["./src/"],
+}

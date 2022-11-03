@@ -1,8 +1,8 @@
 // @ts-ignore
-import sqliteWasm from "@vlcn/crsqlite-wasm";
+import sqliteWasm from "@vlcn.io/crsqlite-wasm";
 
 sqliteWasm().then((sqlite3) => {
-  const db = new sqlite3.opfs!.OpfsDb("my-db", "c");
+  const db = new sqlite3.opfs!.OpfsDb("example-db", "c");
   // const db = new sqlite3.oo1.DB(":memory:");
 
   db.exec([
@@ -18,5 +18,6 @@ sqliteWasm().then((sqlite3) => {
   });
   console.log(rows);
 
+  db.exec("SELECT crsql_finalize()");
   db.close();
 });

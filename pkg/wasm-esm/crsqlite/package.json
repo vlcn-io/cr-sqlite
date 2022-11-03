@@ -1,5 +1,5 @@
 {
-  "name": "@vlcn/crsqlite-wasm",
+  "name": "@vlcn.io/crsqlite-wasm",
   "type": "module",
   "version": "0.0.1",
   "files": [
@@ -8,9 +8,11 @@
   "module": "dist/sqlite3.js",
   "types": "dist/sqlite3.d.ts",
   "sideEffects": false,
-  "dependencies": {
+  "devDependencies": {
+    "typescript": "^4.8.4"
   },
   "scripts": {
-    "build": "./build.sh"
+    "tsc": "tsc",
+    "watch": "tsc --watch"
   }
 }

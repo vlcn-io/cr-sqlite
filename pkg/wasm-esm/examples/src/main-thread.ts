@@ -1,5 +1,5 @@
 // @ts-ignore
-import sqliteWasm from "@vlcn/crsqlite-wasm";
+import sqliteWasm from "@vlcn.io/crsqlite-wasm";
 import { Uuid } from "uuid-tool";
 
 const sqlite = await sqliteWasm();

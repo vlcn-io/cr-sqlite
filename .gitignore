@@ -7,3 +7,4 @@ bench/
 .ipynb_checkpoints/
 *.db
 __pycache__/
+node_modules/

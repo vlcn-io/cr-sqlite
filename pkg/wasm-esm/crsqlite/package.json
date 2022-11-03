@@ -1,0 +1,16 @@
+{
+  "name": "@vlcn/crsqlite-wasm",
+  "type": "module",
+  "version": "0.0.1",
+  "files": [
+    "dist"
+  ],
+  "module": "dist/sqlite3-wrapper.js",
+  "types": "dist/sqlite3.d.ts",
+  "sideEffects": false,
+  "dependencies": {
+  },
+  "scripts": {
+    "build": "./build.sh"
+  }
+}

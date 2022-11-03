@@ -4,7 +4,7 @@ import { Uuid } from "uuid-tool";
 
 const sqlite = await sqliteWasm();
 
-const db = new sqlite.oo1.DB(":memory:");
+const db = sqlite.open(":memory:");
 
 // @ts-ignore
 window.db = db;
@@ -13,25 +13,15 @@ let rows = [];
 db.exec("CREATE TABLE foo (a primary key, b);");
 db.exec("SELECT crsql_as_crr('foo');");
 db.exec("INSERT INTO foo VALUES (1, 2);");
-db.exec("select crsql_dbversion();", { resultRows: rows });
+rows = db.execA("select crsql_dbversion();");
 console.log("DB Version: ", rows[0][0]);
-rows = [];
-db.exec("select crsql_siteid();", { resultRows: rows });
+rows = db.execA("select crsql_siteid();");
 console.log("Site ID: ", new Uuid(rows[0][0]).toString());
 
-rows = [];
-db.exec("select * from crsql_changes();", { resultRows: rows });
+rows = db.execA("select * from crsql_changes();");
 console.log("Changes: ", rows);
 
-rows = [];
-db.exec({
-  sql: "SELECT * FROM foo",
-  resultRows: rows,
-  rowMode: "object",
-});
+rows = db.execA("SELECT * FROM foo");
 console.log(rows[0]);
 
-// you _MUST_ run this before closing `crsql` db connections
-// see -- https://sqlite.org/forum/forumpost/a38be46f01
-db.exec("SELECT crsql_finalize()");
 db.close();

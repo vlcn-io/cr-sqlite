@@ -16,9 +16,11 @@ class Sqlite3 {
    * 
    * @param filename undefined file name opens an in-memory database
    */
-  open(filename?: string) {
+  open(filename?: string, mode: string = 'c') {
     if (filename == null || filename === ":memory:") {
-      return new DB(new this.baseSqlite3.DB());
+      return new DB(new this.baseSqlite3.oo1.DB());
+    } else {
+      return new DB(new this.baseSqlite3.opfs.OpfsDb(filename, mode));
     }
   }
 }
@@ -26,18 +28,28 @@ class Sqlite3 {
 class DB {
   constructor(private baseDb: any) {}
 
+  exec(sql: string, bind?: unknown[]) {
+    this.baseDb.exec(
+      sql,
+      {
+        bind,
+      }
+    );
+  }
+
   /**
    * Returns rows as JSON objects.
    * I.e., column names are keys, column values are values
    * @param sql query to run
-   * @param bindings values, if any, to bind
+   * @param bind values, if any, to bind
    */
-  execO(sql: string, bindings?: unknown[]) {
-    this.baseDb.exec(
+  execO(sql: string, bind?: unknown[]) {
+    return this.baseDb.exec(
       sql,
       {
         returnValue: "resultRows",
-        rowMode: "object"
+        rowMode: "object",
+        bind,
       }
     );
   }
@@ -45,21 +57,58 @@ class DB {
   /**
    * Returns rows as arrays.
    * @param sql query to run
-   * @param bindings values, if any, to bind
+   * @param bind values, if any, to bind
    */
-  execA(sql: string, bindings?: unknown[]) {
-    this.baseDb.exec(
+  execA(sql: string, bind?: unknown[]) {
+    return this.baseDb.exec(
       sql,
       {
         returnValue: "resultRows",
-        rowMode: "array"
+        rowMode: "array",
+        bind,
       }
     );
   }
 
+  isOpen() {
+    return this.baseDb.isOpen();
+  }
+
+  dbFilename() {
+    return this.baseDb.dbFilename();
+  }
+
+  dbName() {
+    return this.baseDb.dbName();
+  }
+
+  openStatementCount() {
+    return this.baseDb.openStatementCount();
+  }
+
+  // TODO: hopefully we don't have to wrap this too for sensible defaults
+  prepare() {
+    return this.baseDb.prepare();
+  }
+
+  // We must wind down the crsql extension.
+  // TODO: should we register open DBs with the browser
+  // and close them on tab close?
   close() {
     this.baseDb.exec("select crsql_finalize();");
     this.baseDb.close();
+  }
+  
+  createFunction(name: string, fn: (...args: any) => unknown, opts?: {}) {
+    this.baseDb.createFunction(name, fn, opts);
+  }
+
+  savepoint(cb: () => void) {
+    this.baseDb.savepoint(cb);
+  }
+
+  transaction(cb: () => void) {
+    this.baseDb.transaction(cb);
   }
 }
 

@@ -5,7 +5,7 @@
   "files": [
     "dist"
   ],
-  "module": "dist/sqlite3-wrapper.js",
+  "module": "dist/sqlite3.js",
   "types": "dist/sqlite3.d.ts",
   "sideEffects": false,
   "dependencies": {

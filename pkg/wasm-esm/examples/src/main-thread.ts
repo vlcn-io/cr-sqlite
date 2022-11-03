@@ -2,8 +2,6 @@
 import sqliteWasm from "@vlcn/crsqlite-wasm";
 import { Uuid } from "uuid-tool";
 
-console.log(sqliteWasm);
-
 const sqlite = await sqliteWasm();
 
 const db = new sqlite.oo1.DB(":memory:");
@@ -37,9 +35,3 @@ console.log(rows[0]);
 // see -- https://sqlite.org/forum/forumpost/a38be46f01
 db.exec("SELECT crsql_finalize()");
 db.close();
-
-// Spawning into a worker
-console.log("Try running the db in a worker");
-new Worker(new URL("./crsqlite-worker.ts", import.meta.url), {
-  type: "module",
-});

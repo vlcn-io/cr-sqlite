@@ -6,8 +6,9 @@ export default defineConfig({
   build: {
     rollupOptions: {
       input: {
-        sqlite: resolve(__dirname, "sqlite.html"),
-        crsqlite: resolve(__dirname, "crsqlite.html"),
+        index: resolve(__dirname, "index.html"),
+        mainThread: resolve(__dirname, "main-thread.html"),
+        onWorker: resolve(__dirname, "on-worker.html")
       },
     },
   },

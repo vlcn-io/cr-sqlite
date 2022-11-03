@@ -262,8 +262,15 @@ static int changesNext(sqlite3_vtab_cursor *cur)
   rc = sqlite3_step(pRowStmt);
   if (rc != SQLITE_ROW)
   {
-    pTabBase->zErrMsg = sqlite3_mprintf("crsql internal error fetching row data");
     sqlite3_finalize(pRowStmt);
+    // getting 0 rows for something we have clock entries for is not an error
+    // it could just be the case that the thing was deleted so we have nothing to retrieve
+    // to fill in values for
+    // do we re-write cids in this case?
+    if (rc == SQLITE_DONE) {
+      return SQLITE_OK;
+    }
+    pTabBase->zErrMsg = sqlite3_mprintf("crsql internal error fetching row data");
     return SQLITE_ERROR;
   }
   else
@@ -317,12 +324,21 @@ static int changesColumn(
     }
     break;
   case CHANGES_SINCE_VTAB_CID:
-    sqlite3_result_int(ctx, pCur->cid);
+    // we have no row -- the thing is deleted
+    // TODO: we could skip all these events that can no longer be sent due to deletion
+    if (pCur->pRowStmt == 0) {
+      sqlite3_result_int(ctx, DELETE_CID_SENTINEL);
+    } else {
+      sqlite3_result_int(ctx, pCur->cid);
+    }
     break;
   case CHANGES_SINCE_VTAB_VRSN:
     sqlite3_result_int64(ctx, pCur->version);
     break;
   case CHANGES_SINCE_VTAB_SITE_ID:
+    // TODO: why do we not have site id available to us?
+    // do we even need to return it since we've done pre-filtering on it anyhow?
+    // maybe for curious network layer authors.
     if (pCur->pRowStmt == 0)
     {
       sqlite3_result_null(ctx);

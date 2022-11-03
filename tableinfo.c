@@ -539,11 +539,16 @@ int crsql_pullAllTableInfos(
       &rNumCols,
       0);
 
-  if (rc != SQLITE_OK || rNumRows == 0)
+  if (rc != SQLITE_OK)
   {
     *errmsg = sqlite3_mprintf("crsql internal error discovering crr tables.");
     sqlite3_free_table(zzClockTableNames);
     return SQLITE_ERROR;
+  }
+
+  if (rNumRows == 0) {
+    sqlite3_free_table(zzClockTableNames);
+    return SQLITE_OK;
   }
 
   // TODO: validate index info

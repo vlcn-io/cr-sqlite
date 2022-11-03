@@ -373,6 +373,11 @@ static int changesFilter(
     return rc;
   }
 
+  // nothing to fetch, no crrs exist.
+  if (pTab->pExtData->tableInfosLen == 0) {
+    return SQLITE_OK;
+  }
+
   char *zSql = crsql_changesUnionQuery(pTab->pExtData->zpTableInfos, pTab->pExtData->tableInfosLen);
 
   if (zSql == 0)

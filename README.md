@@ -79,6 +79,13 @@ a  123  doo  daa
 select crsql_finalize();
 ```
 
+# Packages
+
+Note -- these are pre-release. Please look at [the open bugs](https://github.com/vlcn-io/cr-sqlite/issues?q=is%3Aissue+is%3Aopen+label%3Abug) if you're planning on taking them for a spin.
+
+- Node - [sqlite-crsql-wasm-esm](https://www.npmjs.com/package/sqlite-crsql-wasm-esm)
+  - [Example usage](https://github.com/overtone-app/sqlite-wasm-esm/blob/main/packages/example/src/crsqlite.ts)
+
 # Building
 
 ## Non-WASM Library

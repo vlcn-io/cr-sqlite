@@ -1,1 +1,0 @@
-CREATE INDEX IF NOT EXISTS track_media_type_id ON track (mediaTypeId);

@@ -1,1 +1,0 @@
-CREATE INDEX IF NOT EXISTS invoice_customer_id ON invoice (customerId);

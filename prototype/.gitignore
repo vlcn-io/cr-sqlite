@@ -1,6 +1,0 @@
-node_modules/
-dist/
-lib/
-tsconfig.tsbuildinfo
-bin/
-dba.db

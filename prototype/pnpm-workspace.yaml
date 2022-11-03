@@ -1,4 +1,0 @@
-packages:
-  - "migrator"
-  - "replicator"
-  - "examples/music-store"

@@ -1,1 +1,0 @@
-CREATE INDEX IF NOT EXISTS invoice_line_track ON invoiceline (trackId);

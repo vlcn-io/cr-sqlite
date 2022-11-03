@@ -83,7 +83,7 @@ select crsql_finalize();
 
 Note -- these are pre-release. Please look at [the open bugs](https://github.com/vlcn-io/cr-sqlite/issues?q=is%3Aissue+is%3Aopen+label%3Abug) if you're planning on taking them for a spin.
 
-- Node - 
+- Node - https://github.com/vlcn-io/cr-sqlite/tree/main/pkg/wasm-esm/crsqlite
 
 # Building
 

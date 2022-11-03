@@ -14,5 +14,10 @@
   "scripts": {
     "tsc": "tsc",
     "watch": "tsc --watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:vlcn-io/cr-sqlite.git",
+    "directory": "https://github.com/vlcn-io/cr-sqlite/tree/main/pkg/wasm-esm/crsqlite"
   }
 }

@@ -164,14 +164,14 @@ git pull
 Next (in a terminal with emsdk activated) --
 
 1. Ensure that this repository is cloned including all sub-modules
-2. `cd platforms/sqlite`
+2. `cd deps/sqlite`
 3. `./configure`
 4. `make`
 5. `cd ext/wasm`
 6. `make crsqlite-extra`
 7. `make dist`
 
-This will place all `sqlite3` wasm artifacts in `platforms/sqlites/ext/wasm/jswasm` with `crsqlite` compiled in.
+This will place all `sqlite3` wasm artifacts in `deps/sqlite/ext/wasm/jswasm` with `crsqlite` compiled in.
 
 # Prior Art
 

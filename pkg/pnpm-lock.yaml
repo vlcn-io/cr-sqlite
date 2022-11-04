@@ -23,6 +23,17 @@ importers:
     devDependencies:
       typescript: 4.8.4
 
+  replicators/whole-db:
+    specifiers:
+      '@vlcn.io/crsqlite-wasm': workspace:*
+      peerjs: ^1.4.7
+      typescript: ^4.8.4
+    dependencies:
+      '@vlcn.io/crsqlite-wasm': link:../../wasm-esm/crsqlite
+      peerjs: 1.4.7
+    devDependencies:
+      typescript: 4.8.4
+
   wasm-esm/crsqlite:
     specifiers:
       comlink: ^4.3.1

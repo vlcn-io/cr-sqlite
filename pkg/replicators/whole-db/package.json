@@ -1,0 +1,26 @@
+{
+  "name": "@vlcn.io/replicator-wholedb",
+  "type": "module",
+  "version": "0.0.1",
+  "files": [
+    "dist"
+  ],
+  "module": "dist/index.js",
+  "sideEffects": false,
+  "devDependencies": {
+    "typescript": "^4.8.4"
+  },
+  "scripts": {
+    "tsc": "tsc",
+    "watch": "tsc --watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:vlcn-io/cr-sqlite.git",
+    "directory": "https://github.com/vlcn-io/cr-sqlite/tree/main/pkg/replicators/whole-db"
+  },
+  "dependencies": {
+    "peerjs": "^1.4.7",
+    "@vlcn.io/crsqlite-wasm": "workspace:*"
+  }
+}

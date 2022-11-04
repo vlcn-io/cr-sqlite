@@ -1,5 +1,7 @@
 Until docs exist, see `src/wrapper.ts` and `../examples`
 
+**NB:** This package has only been tested with [Vite](https://vitejs.dev/)
+
 # Install
 
 ```

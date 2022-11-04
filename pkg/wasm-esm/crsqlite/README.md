@@ -1,16 +1,23 @@
 Until docs exist, see `src/wrapper.ts` and `../examples`
 
+# Install
+
 ```
 npm i @vlcn.io/crsqlite-wasm
 ```
 
-## Main thread in-memory usage:
+# Example Usage
+
+## Create a DB in the main thread
 
 ```js
 import sqliteWasm from "@vlcn.io/crsqlite-wasm";
+import { Uuid } from "uuid-tool";
 
 const sqlite = await sqliteWasm();
+
 const db = sqlite.open(":memory:");
+let rows = [];
 
 db.exec("CREATE TABLE foo (a primary key, b);");
 db.exec("SELECT crsql_as_crr('foo');");
@@ -25,9 +32,11 @@ console.log("Changes: ", rows);
 
 rows = db.execA("SELECT * FROM foo");
 console.log(rows[0]);
+
+db.close();
 ```
 
-## Creating a DB in a worker, calling it from main thread
+## Creating a DB in a worker, query it from the main thread
 
 See `examples/src/comlink.ts`
 
@@ -60,7 +69,7 @@ function onError(e: any) {
 db.onReady(Comlink.proxy(onReady), Comlink.proxy(onError));
 ```
 
-## Worker + Persistence:
+## Bare Worker + Persistence:
 
 main.js:
 ```js

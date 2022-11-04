@@ -8,7 +8,8 @@ export default defineConfig({
       input: {
         index: resolve(__dirname, "index.html"),
         mainThread: resolve(__dirname, "main-thread.html"),
-        onWorker: resolve(__dirname, "on-worker.html")
+        onWorker: resolve(__dirname, "on-worker.html"),
+        comlink: resolve(__dirname, "comlink.html")
       },
     },
   },

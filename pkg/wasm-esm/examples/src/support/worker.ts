@@ -1,4 +1,3 @@
-// @ts-ignore
 import sqliteWasm from "@vlcn.io/crsqlite-wasm";
 
 sqliteWasm().then((sqlite3) => {

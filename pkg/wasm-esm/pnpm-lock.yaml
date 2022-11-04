@@ -14,17 +14,22 @@ importers:
 
   crsqlite:
     specifiers:
+      comlink: ^4.3.1
       typescript: ^4.8.4
+    dependencies:
+      comlink: 4.3.1
     devDependencies:
       typescript: 4.8.4
 
   examples:
     specifiers:
       '@vlcn.io/crsqlite-wasm': workspace:*
+      comlink: ^4.3.1
       uuid-tool: ^2.0.3
       vite: ^3.2.2
     dependencies:
       '@vlcn.io/crsqlite-wasm': link:../crsqlite
+      comlink: 4.3.1
       uuid-tool: 2.0.3
     devDependencies:
       vite: 3.2.2
@@ -481,6 +486,10 @@ packages:
   /color-name/1.1.4:
     resolution: {integrity: sha512-dOy+3AuW3a2wNbZHIuMZpTcgjGuLU/uBL/ubcZF9OXbDo8ff4O8yVp5Bf0efS8uEoYo5q4Fx7dY9OgQGXgAsQA==}
     dev: true
+
+  /comlink/4.3.1:
+    resolution: {integrity: sha512-+YbhUdNrpBZggBAHWcgQMLPLH1KDF3wJpeqrCKieWQ8RL7atmgsgTQko1XEBK6PsecfopWNntopJ+ByYG1lRaA==}
+    dev: false
 
   /cross-spawn/5.1.0:
     resolution: {integrity: sha512-pTgQJ5KC0d2hcY8eyL1IzlBPYjTkyH72XRZPnLyKus2mBfNjQs3klqbJU2VILqZryAZUt9JOb3h/mWMy23/f5A==}

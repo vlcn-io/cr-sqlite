@@ -8,7 +8,7 @@ import sqlite3InitModule from './sqlite3.js';
  * E.g., the base sqlite api requires passing row objects
  * that it'll then mutate and fill for you. A bit odd.
  */
-class Sqlite3 {
+export class SQLite3 {
   constructor(private baseSqlite3: any) {
   }
 
@@ -25,10 +25,12 @@ class Sqlite3 {
   }
 }
 
-class DB {
+export type Stringish = string | string[];
+
+export class DB {
   constructor(private baseDb: any) {}
 
-  exec(sql: string, bind?: unknown[]) {
+  exec(sql: Stringish, bind?: unknown[]) {
     this.baseDb.exec(
       sql,
       {
@@ -43,7 +45,7 @@ class DB {
    * @param sql query to run
    * @param bind values, if any, to bind
    */
-  execO(sql: string, bind?: unknown[]) {
+  execO(sql: Stringish, bind?: unknown[]) {
     return this.baseDb.exec(
       sql,
       {
@@ -59,7 +61,7 @@ class DB {
    * @param sql query to run
    * @param bind values, if any, to bind
    */
-  execA(sql: string, bind?: unknown[]) {
+  execA(sql: Stringish, bind?: unknown[]) {
     return this.baseDb.exec(
       sql,
       {
@@ -112,8 +114,8 @@ class DB {
   }
 }
 
-export default function initWasm(): Promise<Sqlite3> {
+export default function initWasm(): Promise<SQLite3> {
   return sqlite3InitModule().then((baseSqlite3: any) => {
-    return new Sqlite3(baseSqlite3);
+    return new SQLite3(baseSqlite3);
   })
 }

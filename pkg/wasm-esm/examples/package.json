@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@vlcn.io/crsqlite-wasm": "workspace:*",
+    "comlink": "^4.3.1",
     "uuid-tool": "^2.0.3"
   },
   "devDependencies": {

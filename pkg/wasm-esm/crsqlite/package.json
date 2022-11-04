@@ -5,6 +5,9 @@
   "files": [
     "dist"
   ],
+  "exports": {
+    "./dist/comlinked": "./dist/comlinked.js"
+  },
   "module": "dist/wrapper.js",
   "types": "dist/wrapper.d.ts",
   "sideEffects": false,
@@ -19,5 +22,8 @@
     "type": "git",
     "url": "git@github.com:vlcn-io/cr-sqlite.git",
     "directory": "https://github.com/vlcn-io/cr-sqlite/tree/main/pkg/wasm-esm/crsqlite"
+  },
+  "dependencies": {
+    "comlink": "^4.3.1"
   }
 }

@@ -20,6 +20,7 @@
     "directory": "https://github.com/vlcn-io/cr-sqlite/tree/main/pkg/network/webrtc"
   },
   "dependencies": {
-    "peerjs": "^1.4.7"
+    "peerjs": "^1.4.7",
+    "@vlcn.io/crsqlite-wasm": "workspace:*"
   }
 }

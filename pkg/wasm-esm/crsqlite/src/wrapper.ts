@@ -28,6 +28,8 @@ export class SQLite3 {
 export type Stringish = string | string[];
 
 export class DB {
+  #closeListeners = new Set<() => void>();
+
   constructor(private baseDb: any) {}
 
   exec(sql: Stringish, bind?: unknown[]) {
@@ -45,7 +47,7 @@ export class DB {
    * @param sql query to run
    * @param bind values, if any, to bind
    */
-  execO(sql: Stringish, bind?: unknown[]) {
+  execO(sql: Stringish, bind?: unknown[]): {[key: string]: any}[] {
     return this.baseDb.exec(
       sql,
       {
@@ -61,7 +63,7 @@ export class DB {
    * @param sql query to run
    * @param bind values, if any, to bind
    */
-  execA(sql: Stringish, bind?: unknown[]) {
+  execA(sql: Stringish, bind?: unknown[]): any[] {
     return this.baseDb.exec(
       sql,
       {
@@ -93,14 +95,12 @@ export class DB {
     return this.baseDb.prepare();
   }
 
-  // We must wind down the crsql extension.
-  // TODO: should we register open DBs with the browser
-  // and close them on tab close?
   close() {
+    this.#closeListeners.forEach(l => l());
     this.baseDb.exec("select crsql_finalize();");
     this.baseDb.close();
   }
-  
+
   createFunction(name: string, fn: (...args: any) => unknown, opts?: {}) {
     this.baseDb.createFunction(name, fn, opts);
   }
@@ -111,6 +111,14 @@ export class DB {
 
   transaction(cb: () => void) {
     this.baseDb.transaction(cb);
+  }
+
+  onClose(l: () => void) {
+    this.#closeListeners.add(l);
+  }
+
+  removeOnClose(l: () => void) {
+    this.#closeListeners.delete(l);
   }
 }
 

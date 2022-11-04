@@ -36,7 +36,7 @@ console.log(rows[0]);
 db.close();
 ```
 
-## Creating a DB in a worker, query it from the main thread
+## Create a DB in a worker, query it from the main thread
 
 See `examples/src/comlink.ts`
 

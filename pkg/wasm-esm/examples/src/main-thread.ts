@@ -1,4 +1,3 @@
-// @ts-ignore
 import sqliteWasm from "@vlcn.io/crsqlite-wasm";
 import { Uuid } from "uuid-tool";
 

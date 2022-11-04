@@ -339,6 +339,8 @@ static int changesColumn(
     // TODO: why do we not have site id available to us?
     // do we even need to return it since we've done pre-filtering on it anyhow?
     // maybe for curious network layer authors.
+    // no  -- we need it to forward the responsible site so sites can exclude themselves
+    // when proxying changes thru others
     if (pCur->pRowStmt == 0)
     {
       sqlite3_result_null(ctx);

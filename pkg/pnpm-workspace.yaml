@@ -1,0 +1,4 @@
+packages:
+  - "wasm-esm/crsqlite"
+  - "wasm-esm/examples"
+  - "network/webrtc"

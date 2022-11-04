@@ -83,6 +83,7 @@ class WholeDbReplicator {
     this.db = db;
     db.createFunction('crsql_wdbreplicator', this.crrChanged);
 
+    // TODO: need to get as blob
     this.siteId = db.execA("SELECT crsql_siteid()")[0][0];
     this.installTriggers();
     this.createPeerTrackingTable();
@@ -109,12 +110,15 @@ class WholeDbReplicator {
 
   private installTriggers() {
     // find all crr tables
+    // TODO: ensure we all not notified
+    // if we're in the process of applying sync changes.
+    // TODO: we can also just track that internally.
     const crrs = this.db.execA("SELECT name FROM sqlite_master WHERE name LIKE '%__crsql_clock'");
     crrs.forEach(crr => {
       this.db.exec(
         `CREATE TRIGGER "${crr}__crsql_wdbreplicator" AFTER UPDATE ON "${crr}"
         BEGIN
-          select crsql_wdbreplicator();
+          select crsql_wdbreplicator() WHERE crsql_internal_sync_bit() = 0;
         END;
       `)
     });
@@ -139,6 +143,8 @@ class WholeDbReplicator {
   };
 
   private poked = (pokedBy: SiteID, pokerVersion: string) => {
+    // TODO: probs need to `X''` it to get correct conversion
+    // or `bindBlob` via `prepare`
     const ourVersionForPoker = this.db.execA("SELECT version FROM __crsql_wdbreplicator_peers WHERE site_id = ?", pokedBy)[0][0];
     
     // the poker version can be less than our version for poker if a set of
@@ -157,12 +163,48 @@ class WholeDbReplicator {
   };
 
   // if we fail to apply, re-request
+  // TODO: other retry mechanisms
   private changesReceived = (changesets: Changeset[]) => {
-    // appply
+    const stmt = this.db.prepare("INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?)");
+    // TODO: may want to chunk
+    try {
+      changesets.forEach(cs => {
+        for (let i = 1; i <= 6; ++i) {
+          if (i == 6) {
+            stmt.bindBlob(i, cs[i - 1]);
+          } else {
+            stmt.bind(i, cs[i - 1]);
+          }
+        }
+        stmt.step();
+        stmt.reset(true);
+      });
+    } finally {
+      stmt.finalize();
+    }
   };
 
   private changesRequested = (from: SiteID, since: string) => {
-    // query the changes table where siteid != from and version > since
+    const stmt = this.db.prepare("SELECT * FROM crsql_changes WHERE site_id != ? AND version > ?");
+
+    const changes: any[] = [];
+    try {
+      stmt.bindBlob(1, this.siteId);
+      stmt.bind(2, since);
+      while (stmt.step()) {
+        const row: any[] = [];
+        stmt.get(row);
+        changes.push(row);
+      }
+    } finally {
+      stmt.finalize();
+    }
+    // if no changes, just send them a "increase yo version"?
+
+    if (changes.length == 0) {
+      return;
+    }
+    this.network.pushChanges(from, changes);
   };
 }
 

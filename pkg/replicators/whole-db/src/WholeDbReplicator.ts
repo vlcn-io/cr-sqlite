@@ -42,11 +42,17 @@ interface PokeProtocol {
    */
   onNewConnection(cb: (siteID: string) => void): void;
 
+  /**
+   * A peer has requested changes from us.
+   */
   onChangesRequested(cb: (from: SiteID, since: string) => void): void;
 
-  // changesets encode the `from` site id since peers can be proxying changes for
-  // other peers.
+  /**
+   * We have received changes from a peer.
+   */
   onChangesReceived(cb: (changesets: Changeset[]) => void): void;
+
+  dispose(): void;
 };
 
 type Changeset = [
@@ -83,6 +89,8 @@ class WholeDbReplicator {
 
     this.network.onPoked(this.poked);
     this.network.onNewConnection(this.newConnection);
+    this.network.onChangesReceived(this.changesReceived);
+    this.network.onChangesRequested(this.changesRequested);
   }
 
   dispose() {
@@ -92,11 +100,11 @@ class WholeDbReplicator {
       this.db.exec(`DROP TRIGGER IF EXISTS "${crr}__crsql_wdbreplicator";`)
     });
 
-    // TODO: dispose poke network or remove self from
+    this.network.dispose();
   }
 
   schemaChanged() {
-    // re-install triggers if this happens
+    this.installTriggers();
   }
 
   private installTriggers() {
@@ -131,22 +139,30 @@ class WholeDbReplicator {
   };
 
   private poked = (pokedBy: SiteID, pokerVersion: string) => {
-    // see when we last asked that site for their changes.
-    // ask for changes.
-    // TODO: prep statement and bind.
-    // this.db.execA("SELECT version FROM __crsql_wdbreplicator_peers WHERE site_id = ")
-    const ourVersionForPoker = 0n;
-    if (BigInt(pokerVersion) <= ourVersionForPoker) {
+    const ourVersionForPoker = this.db.execA("SELECT version FROM __crsql_wdbreplicator_peers WHERE site_id = ?", pokedBy)[0][0];
+    
+    // the poker version can be less than our version for poker if a set of
+    // poke messages were queued up behind a sync.
+    if (BigInt(pokerVersion) <= BigInt(ourVersionForPoker)) {
       return;
     }
 
     // ask the poker for changes since our version
-    this.network.requestChanges(this.siteId, ourVersionForPoker.toString());
+    this.network.requestChanges(this.siteId, ourVersionForPoker);
   };
 
   private newConnection = (siteId: SiteID) => {
     // treat it as a crr change so we can kick off sync
     this.crrChanged(null);
+  };
+
+  // if we fail to apply, re-request
+  private changesReceived = (changesets: Changeset[]) => {
+    // appply
+  };
+
+  private changesRequested = (from: SiteID, since: string) => {
+    // query the changes table where siteid != from and version > since
   };
 }
 

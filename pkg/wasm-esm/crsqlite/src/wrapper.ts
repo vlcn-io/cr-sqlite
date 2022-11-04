@@ -32,7 +32,7 @@ export class DB {
 
   constructor(private baseDb: any) {}
 
-  exec(sql: Stringish, bind?: unknown[]) {
+  exec(sql: Stringish, bind?: unknown | unknown[]) {
     this.baseDb.exec(
       sql,
       {
@@ -47,7 +47,7 @@ export class DB {
    * @param sql query to run
    * @param bind values, if any, to bind
    */
-  execO(sql: Stringish, bind?: unknown[]): {[key: string]: any}[] {
+  execO(sql: Stringish, bind?: unknown | unknown[]): {[key: string]: any}[] {
     return this.baseDb.exec(
       sql,
       {
@@ -63,7 +63,7 @@ export class DB {
    * @param sql query to run
    * @param bind values, if any, to bind
    */
-  execA(sql: Stringish, bind?: unknown[]): any[] {
+  execA(sql: Stringish, bind?: unknown | unknown[]): any[] {
     return this.baseDb.exec(
       sql,
       {
@@ -91,8 +91,8 @@ export class DB {
   }
 
   // TODO: hopefully we don't have to wrap this too for sensible defaults
-  prepare() {
-    return this.baseDb.prepare();
+  prepare(sql: string) {
+    return this.baseDb.prepare(sql);
   }
 
   close() {

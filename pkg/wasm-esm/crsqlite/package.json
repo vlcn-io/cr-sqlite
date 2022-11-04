@@ -6,7 +6,8 @@
     "dist"
   ],
   "exports": {
-    "./dist/comlinked": "./dist/comlinked.js"
+    "./dist/comlinked": "./dist/comlinked.js",
+    ".": "./dist/wrapper.js"
   },
   "module": "dist/wrapper.js",
   "types": "dist/wrapper.d.ts",

@@ -7,7 +7,7 @@ const db = sqlite.open(":memory:");
 
 // @ts-ignore
 window.db = db;
-let rows = [];
+let rows: any[] = [];
 
 db.exec("CREATE TABLE foo (a primary key, b);");
 db.exec("SELECT crsql_as_crr('foo');");

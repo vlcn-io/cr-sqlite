@@ -1,5 +1,5 @@
 {
-  "name": "crsqlite",
+  "name": "@vlcn.io/crsqlite",
   "version": "0.0.1",
   "description": "CR-SQLite loadable extension",
   "homepage": "https://vlcn.io",
@@ -7,7 +7,7 @@
     "type": "git",
     "url": "git://github.com/vlcn-io/cr-sqlite"
   },
-  "main": "node-dist/index.js",
+  "main": "build/Release/crsqlite.node",
   "files": [
     "binding.gyp",
     "src/**"

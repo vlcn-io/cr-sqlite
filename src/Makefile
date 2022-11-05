@@ -2,7 +2,7 @@ COMMIT=$(shell git rev-parse HEAD)
 VERSION=$(shell cat VERSION)
 DATE=$(shell date +'%FT%TZ%z')
 
-LOADABLE_CFLAGS=-fPIC -shared
+LOADABLE_CFLAGS=-std=c99 -fPIC -shared
 
 ifeq ($(shell uname -s),Darwin)
 CONFIG_DARWIN=y
@@ -40,7 +40,7 @@ TARGET_SQLJS_WASM=$(prefix)/sqljs.wasm
 TARGET_SQLJS=$(TARGET_SQLJS_JS) $(TARGET_SQLJS_WASM)
 TARGET_TEST=$(prefix)/test
 
-ext_files=crsqlite.c util.c tableinfo.c triggers.c normalize.c changes-vtab.c changes-vtab-read.c changes-vtab-common.c changes-vtab-write.c ext-data.c
+ext_files=crsqlite.c util.c tableinfo.c triggers.c changes-vtab.c changes-vtab-read.c changes-vtab-common.c changes-vtab-write.c ext-data.c
 ext_headers=crsqlite.h csflite-utils.h tablinfo.h triggers.h changes-vtab.h changes-vtab-read.h changes-vtab-common.h changes-vtab-write.h ext-data.h
 
 $(prefix):
@@ -68,7 +68,6 @@ $(TARGET_LOADABLE): $(ext_files)
 	gcc -I./ -I./sqlite \
 	$(LOADABLE_CFLAGS) \
 	$(DEFINE_SQLITE_PATH) \
-	-DSQLITE_ENABLE_NORMALIZE \
 	$(ext_files) -o $@
 
 $(TARGET_SQLITE3): $(prefix) $(TARGET_SQLITE3_EXTRA_C) sqlite/shell.c $(ext_files)

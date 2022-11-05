@@ -261,12 +261,10 @@ int crsql_mergeInsert(
 {
   // he argv[1] parameter is the rowid of a new row to be inserted into the virtual table.
   // If argv[1] is an SQL NULL, then the implementation must choose a rowid for the newly inserted row
-  int rowidType = sqlite3_value_type(argv[1]);
   int rc = 0;
   crsql_Changes_vtab *pTab = (crsql_Changes_vtab *)pVTab;
   sqlite3 *db = pTab->db;
   char *zSql = 0;
-  int ignore = 0;
 
   rc = crsql_ensureTableInfosAreUpToDate(
       db,

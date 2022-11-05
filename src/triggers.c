@@ -192,7 +192,6 @@ char *crsql_deleteTriggerQuery(crsql_TableInfo *tableInfo)
   char *zSql;
   char *pkList = 0;
   char *pkOldList = 0;
-  int rc = SQLITE_OK;
 
   if (tableInfo->pksLen == 0)
   {

@@ -67,7 +67,7 @@ char *crsql_join(char **in, size_t inlen)
 void crsql_joinWith(char *dest, char **src, size_t srcLen, char delim)
 {
   int j = 0;
-  for (int i = 0; i < srcLen; ++i)
+  for (size_t i = 0; i < srcLen; ++i)
   {
     // copy mapped thing into ret at offset j.
     strcpy(dest + j, src[i]);
@@ -93,7 +93,7 @@ char *crsql_join2(char *(*map)(const char *), char **in, size_t len, char *delim
   char *toJoin[len];
   int resultLen = 0;
   char *ret = 0;
-  for (int i = 0; i < len; ++i)
+  for (size_t i = 0; i < len; ++i)
   {
     toJoin[i] = map(in[i]);
     resultLen += strlen(toJoin[i]);
@@ -103,7 +103,7 @@ char *crsql_join2(char *(*map)(const char *), char **in, size_t len, char *delim
   ret[resultLen] = '\0';
 
   int j = 0;
-  for (int i = 0; i < len; ++i)
+  for (size_t i = 0; i < len; ++i)
   {
     // copy mapped thing into ret at offset j.
     strcpy(ret + j, toJoin[i]);
@@ -333,7 +333,7 @@ char *crsql_asIdentifierListStr(char **in, size_t inlen, char delim)
   char *ret = 0;
   char *mapped[inlen];
 
-  for (int i = 0; i < inlen; ++i)
+  for (size_t i = 0; i < inlen; ++i)
   {
     mapped[i] = sqlite3_mprintf("\"%w\"", in[i]);
     finalLen += strlen(mapped[i]);
@@ -349,7 +349,7 @@ char *crsql_asIdentifierListStr(char **in, size_t inlen, char delim)
 
   // free everything we allocated, except ret.
   // caller will free ret.
-  for (int i = 0; i < inlen; ++i)
+  for (size_t i = 0; i < inlen; ++i)
   {
     sqlite3_free(mapped[i]);
   }
@@ -411,8 +411,6 @@ char *crsql_getDbVersionUnionQuery(
 int crsql_doesTableExist(sqlite3 *db, const char *tblName)
 {
   char *zSql;
-  sqlite3_stmt *pStmt = 0;
-  int rc = SQLITE_OK;
   int ret = 0;
 
   zSql = sqlite3_mprintf(

@@ -374,7 +374,6 @@ static int changesFilter(
   crsql_Changes_vtab *pTab = pCrsr->pTab;
   sqlite3_vtab *pTabBase = (sqlite3_vtab *)pTab;
   sqlite3 *db = pTab->db;
-  char *err = 0;
 
   // This should never happen. pChangesStmt should be finalized
   // before filter is ever invoked.

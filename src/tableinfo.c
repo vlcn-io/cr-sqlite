@@ -21,7 +21,7 @@ char *crsql_asIdentifierList(crsql_ColumnInfo *in, size_t inlen, char *prefix)
   int finalLen = 0;
   char *ret = 0;
 
-  for (int i = 0; i < inlen; ++i)
+  for (size_t i = 0; i < inlen; ++i)
   {
     mapped[i] = sqlite3_mprintf("%s\"%w\"", prefix, in[i].name);
     finalLen += strlen(mapped[i]);
@@ -37,7 +37,7 @@ char *crsql_asIdentifierList(crsql_ColumnInfo *in, size_t inlen, char *prefix)
 
   // free everything we allocated, except ret.
   // caller will free ret.
-  for (int i = 0; i < inlen; ++i)
+  for (size_t i = 0; i < inlen; ++i)
   {
     sqlite3_free(mapped[i]);
   }
@@ -250,7 +250,6 @@ static crsql_TableInfo *crsql_tableInfo(
     int indexInfosLen)
 {
   crsql_TableInfo *ret = sqlite3_malloc(sizeof *ret);
-  int tmpLen = 0;
 
   ret->baseCols = colInfos;
   ret->baseColsLen = colInfosLen;

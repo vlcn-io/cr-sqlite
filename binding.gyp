@@ -70,7 +70,7 @@
         './src/changes-vtab.c',
         './src/changes-vtab-read.c',
         './src/changes-vtab-common.c',
-        './src/chnages-vtab-write.c',
+        './src/changes-vtab-write.c',
         './src/ext-data.c',
       ],
       'include_dirs': [

@@ -262,7 +262,6 @@ static int createCrr(
     char **err)
 {
   int rc = SQLITE_OK;
-  char *zSql = 0;
   crsql_TableInfo *tableInfo = 0;
 
   rc = crsql_getTableInfo(
@@ -313,7 +312,6 @@ static void crsqlMakeCrrFunc(sqlite3_context *context, int argc, sqlite3_value *
   const char *tblName = 0;
   const char *schemaName = 0;
   int rc = SQLITE_OK;
-  char *found = 0;
   sqlite3 *db = sqlite3_context_db_handle(context);
   char *errmsg = 0;
 

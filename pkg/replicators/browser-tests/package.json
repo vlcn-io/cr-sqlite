@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "pnpm cypress run --component"
   },
   "devDependencies": {
     "@types/chai": "^4.3.3",

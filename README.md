@@ -92,6 +92,15 @@ Note -- these are pre-release. Please look at [the open bugs](https://github.com
   const db = sqlite("filename.db");
   db.loadExtension(require.resolve('@vlcn.io/crsqlite'));
   ```
+  or, es6:
+  ```js
+  import {resolve} from 'import-meta-resolve';
+  import Database from 'better-sqlite3';
+
+  const db = new Database(":memory");
+  const modulePath = await resolve('@vlcn.io/crsqlite', import.meta.url);
+  db.loadExtension(new URL(modulePath).pathname);
+  ```
 
 # Building
 

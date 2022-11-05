@@ -24,7 +24,9 @@
     "directory": "https://github.com/vlcn-io/cr-sqlite/tree/main/pkg/replicators/whole-db"
   },
   "dependencies": {
-    "@vlcn.io/crsqlite": "link:../../"
+    "@vlcn.io/crsqlite": "link:../../",
+    "better-sqlite3": "^7.6.2",
+    "import-meta-resolve": "^2.1.0"
   },
   "jest": {
     "testMatch": [

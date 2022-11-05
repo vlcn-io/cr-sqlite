@@ -217,7 +217,7 @@ Tables are modeled as [GSets](<https://en.wikipedia.org/wiki/Conflict-free_repli
 
 ## Rows
 
-Rows are currently modeled as [LWWW maps](https://bartoszsypytkowski.com/crdt-map/#crdtmapwithlastwritewinsupdates). I.e., each column in a row is a [LWW Register](https://bartoszsypytkowski.com/operation-based-crdts-registers-and-sets/#lastwritewinsregister).
+Rows are currently modeled as [LWW maps](https://bartoszsypytkowski.com/crdt-map/#crdtmapwithlastwritewinsupdates). I.e., each column in a row is a [LWW Register](https://bartoszsypytkowski.com/operation-based-crdts-registers-and-sets/#lastwritewinsregister).
 
 Things to support in the future
 

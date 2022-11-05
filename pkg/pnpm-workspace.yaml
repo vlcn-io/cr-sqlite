@@ -4,4 +4,4 @@ packages:
   - "network/webrtc"
   - "replicators/whole-db"
   - "replicators/browser-tests"
-  - "integration-tests"
+  - "node-example"

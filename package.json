@@ -7,7 +7,7 @@
     "type": "git",
     "url": "git://github.com/vlcn-io/cr-sqlite"
   },
-  "main": "build/Release/crsqlite.node",
+  "main": "build/Debug/crsqlite.node",
   "files": [
     "binding.gyp",
     "src/**"

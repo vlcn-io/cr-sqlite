@@ -25,7 +25,7 @@
           'SQLITE_WIN32_MALLOC_VALIDATE',
         ],
         'cflags': [
-          '-O0',
+          '-O0 -g',
         ],
         'xcode_settings': {
           'MACOSX_DEPLOYMENT_TARGET': '10.7',

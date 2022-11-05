@@ -1,3 +1,15 @@
+/**
+ * NOTE !!!!!
+ * 
+ * something seems to be wrong with `better-sqlite3`
+ * 
+ * it core dumps when using `crsql_dbversion` where as
+ * `sqlite3`, `sqlite`, python, cli usage, etc. all work fine.
+ * 
+ * NOTE !!!!!
+ */
+
+
 import {resolve} from 'import-meta-resolve';
 // @ts-ignore
 import Database from 'better-sqlite3';
@@ -23,8 +35,9 @@ both(x => x.prepare("SELECT crsql_as_crr('foo')").run());
 both(x => seed(x))
 
 // get current version
-// const [va, vb] = both(x => x.prepare("SELECT crsql_dbversion()").get());
-// console.log(va, vb);
+const [va, vb] = both(x => x.prepare("SELECT crsql_dbversion()").get());
+// both(x => x.prepare("SELECT crsql_dbversion()").get());
+console.log(va, vb);
 
 function makeStr(length: number) {
   var result           = '';

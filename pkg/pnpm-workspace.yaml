@@ -3,3 +3,4 @@ packages:
   - "wasm-esm/examples"
   - "network/webrtc"
   - "replicators/whole-db"
+  - "replicators/browser-tests"

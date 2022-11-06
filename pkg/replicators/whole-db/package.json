@@ -23,8 +23,10 @@
     "directory": "https://github.com/vlcn-io/cr-sqlite/tree/main/pkg/replicators/whole-db"
   },
   "dependencies": {
+    "@types/uuid": "^8.3.4",
     "@vlcn.io/crsqlite-wasm": "workspace:*",
-    "peerjs": "^1.4.7"
+    "peerjs": "^1.4.7",
+    "uuid": "^9.0.0"
   },
   "jest": {
     "testMatch": [

@@ -69,13 +69,17 @@ importers:
   replicators/whole-db:
     specifiers:
       '@types/jest': ^29.2.2
+      '@types/uuid': ^8.3.4
       '@vlcn.io/crsqlite-wasm': workspace:*
       jest: ^29.2.2
       peerjs: ^1.4.7
       typescript: ^4.8.4
+      uuid: ^9.0.0
     dependencies:
+      '@types/uuid': 8.3.4
       '@vlcn.io/crsqlite-wasm': link:../../wasm-esm/crsqlite
       peerjs: 1.4.7
+      uuid: 9.0.0
     devDependencies:
       '@types/jest': 29.2.2
       jest: 29.2.2
@@ -91,6 +95,19 @@ importers:
       typescript: 4.8.4
 
   wasm-esm/examples:
+    specifiers:
+      '@vlcn.io/crsqlite-wasm': workspace:*
+      comlink: ^4.3.1
+      uuid-tool: ^2.0.3
+      vite: ^3.2.2
+    dependencies:
+      '@vlcn.io/crsqlite-wasm': link:../crsqlite
+      comlink: 4.3.1
+      uuid-tool: 2.0.3
+    devDependencies:
+      vite: 3.2.2
+
+  wasm-esm/sandbox:
     specifiers:
       '@vlcn.io/crsqlite-wasm': workspace:*
       comlink: ^4.3.1
@@ -1183,6 +1200,10 @@ packages:
   /@types/stack-utils/2.0.1:
     resolution: {integrity: sha512-Hl219/BT5fLAaz6NDkSuhzasy49dwQS/DSdu4MdggFB8zcXv7vflBI3xp7FEmkmdDkBUI2bPUNeMttp2knYdxw==}
     dev: true
+
+  /@types/uuid/8.3.4:
+    resolution: {integrity: sha512-c/I8ZRb51j+pYGAu5CrFMRxqZ2ke4y2grEBO5AUjgSkSk+qT2Ea+OdWElz/OiMf5MNpn2b17kuVBwZLQJXzihw==}
+    dev: false
 
   /@types/yargs-parser/21.0.0:
     resolution: {integrity: sha512-iO9ZQHkZxHn4mSakYV0vFHAVDyEOIJQrV2uZ06HxEPcx+mt8swXoZHIbaaJ2crJYFfErySgktuTZ3BeLz+XmFA==}
@@ -5293,6 +5314,11 @@ packages:
     resolution: {integrity: sha512-+NYs2QeMWy+GWFOEm9xnn6HCDp0l7QBD7ml8zLUmJ+93Q5NF0NocErnwkTkXVFNiX3/fpC6afS8Dhb/gz7R7eg==}
     hasBin: true
     dev: true
+
+  /uuid/9.0.0:
+    resolution: {integrity: sha512-MXcSTerfPa4uqyzStbRoTgt5XIe3x5+42+q1sDuy3R5MDk66URdLMOZe5aPX/SQd+kuYAh0FdP/pO28IkQyTeg==}
+    hasBin: true
+    dev: false
 
   /v8-to-istanbul/9.0.1:
     resolution: {integrity: sha512-74Y4LqY74kLE6IFyIjPtkSTWzUZmj8tdHT9Ii/26dvQ6K9Dl2NbEfj0XgU2sHCtKgt5VupqhlO/5aWuqS+IY1w==}

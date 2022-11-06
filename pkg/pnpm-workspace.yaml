@@ -1,6 +1,7 @@
 packages:
   - "wasm-esm/crsqlite"
   - "wasm-esm/examples"
+  - "wasm-esm/sandbox"
   - "network/webrtc"
   - "replicators/whole-db"
   - "replicators/browser-tests"

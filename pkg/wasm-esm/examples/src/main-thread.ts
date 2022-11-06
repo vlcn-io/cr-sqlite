@@ -1,5 +1,5 @@
 import sqliteWasm from "@vlcn.io/crsqlite-wasm";
-import { Uuid } from "uuid-tool";
+import { UuidTool } from "uuid-tool";
 
 const sqlite = await sqliteWasm();
 
@@ -15,7 +15,7 @@ db.exec("INSERT INTO foo VALUES (1, 2);");
 rows = db.execA("select crsql_dbversion();");
 console.log("DB Version: ", rows[0][0]);
 rows = db.execA("select crsql_siteid();");
-console.log("Site ID: ", new Uuid(rows[0][0]).toString());
+console.log("Site ID: ", UuidTool.toString(rows[0][0]));
 
 rows = db.execA("select * from crsql_changes();");
 console.log("Changes: ", rows);

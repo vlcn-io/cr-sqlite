@@ -1,5 +1,7 @@
-import {DB} from '@vlcn.io/crsqlite-wasm';
-type SiteID = string;
+import { DB } from "@vlcn.io/crsqlite-wasm";
+import { parse as uuidParse, stringify as uuidStringify } from "uuid";
+type SiteIDWire = string;
+type SiteIDLocal = Uint8Array;
 type CID = string;
 type QuoteConcatedPKs = string;
 type TableName = string;
@@ -7,7 +9,7 @@ type Version = string;
 type TODO = any;
 
 /**
- * The `poke` protocol is the simplest option in terms of 
+ * The `poke` protocol is the simplest option in terms of
  * - causal delivery of messages
  * - retry on drop
  */
@@ -16,36 +18,36 @@ interface PokeProtocol {
    * Tell all connected sites that we have updates from this site
    * ending at `pokerVersion`
    */
-  poke(poker: SiteID, pokerVersion: string): void;
+  poke(poker: SiteIDWire, pokerVersion: BigInt): void;
 
   /**
    * Push changes to the given site in response to their request for changes.
    */
-  pushChanges(to: SiteID, changesets: Changeset[]): void;
+  pushChanges(to: SiteIDWire, changesets: Changeset[]): void;
 
   /**
    * Request changes from a given site since a given version
    * in response to a poke from that site.
    */
-  requestChanges(from: SiteID, since: string): void;
+  requestChanges(from: SiteIDWire, since: BigInt): void;
 
   /**
    * Receive a poke froma given site.
    * In response, we'll compute what changes we're missing from that site
    * and request those changes.
    */
-  onPoked(cb: (pokedBy: SiteID, pokerVersion: string) => void): void;
+  onPoked(cb: (pokedBy: SiteIDWire, pokerVersion: BigInt) => void): void;
 
   /**
    * When someone new connects we can just poke them to kick off
    * initial sync. Simple.
    */
-  onNewConnection(cb: (siteID: string) => void): void;
+  onNewConnection(cb: (siteID: SiteIDWire) => void): void;
 
   /**
    * A peer has requested changes from us.
    */
-  onChangesRequested(cb: (from: SiteID, since: string) => void): void;
+  onChangesRequested(cb: (from: SiteIDWire, since: BigInt) => void): void;
 
   /**
    * We have received changes from a peer.
@@ -53,7 +55,7 @@ interface PokeProtocol {
   onChangesReceived(cb: (changesets: Changeset[]) => void): void;
 
   dispose(): void;
-};
+}
 
 type Changeset = [
   TableName,
@@ -61,14 +63,14 @@ type Changeset = [
   CID,
   any, // val,
   Version,
-  SiteID, // site_id
+  SiteIDWire // site_id
 ];
 
 const api = {
   install(db: DB, network: PokeProtocol): WholeDbReplicator {
     const ret = new WholeDbReplicator(db, network);
     return ret;
-  }
+  },
 };
 
 // TODO: we need to handle initial sync.
@@ -77,14 +79,15 @@ const api = {
 class WholeDbReplicator {
   private crrs: string[] = [];
   private pendingNotification = false;
-  private siteId: SiteID;
+  private siteId: SiteIDLocal;
+  private siteIdWire: SiteIDWire;
 
   constructor(private db: DB, private network: PokeProtocol) {
     this.db = db;
-    db.createFunction('crsql_wdbreplicator', this.crrChanged);
+    db.createFunction("crsql_wdbreplicator", this.crrChanged);
 
-    // TODO: need to get as blob
     this.siteId = db.execA("SELECT crsql_siteid()")[0][0];
+    this.siteIdWire = uuidStringify(this.siteId);
     this.installTriggers();
     this.createPeerTrackingTable();
 
@@ -97,8 +100,8 @@ class WholeDbReplicator {
   dispose() {
     // remove trigger(s)
     // function extension is fine to stay, it'll get removed on connection termination
-    this.crrs.forEach(crr => {
-      this.db.exec(`DROP TRIGGER IF EXISTS "${crr}__crsql_wdbreplicator";`)
+    this.crrs.forEach((crr) => {
+      this.db.exec(`DROP TRIGGER IF EXISTS "${crr}__crsql_wdbreplicator";`);
     });
 
     this.network.dispose();
@@ -113,20 +116,25 @@ class WholeDbReplicator {
     // TODO: ensure we all not notified
     // if we're in the process of applying sync changes.
     // TODO: we can also just track that internally.
-    const crrs = this.db.execA("SELECT name FROM sqlite_master WHERE name LIKE '%__crsql_clock'");
-    crrs.forEach(crr => {
+    const crrs = this.db.execA(
+      "SELECT name FROM sqlite_master WHERE name LIKE '%__crsql_clock'"
+    );
+    crrs.forEach((crr) => {
       this.db.exec(
         `CREATE TRIGGER "${crr}__crsql_wdbreplicator" AFTER UPDATE ON "${crr}"
         BEGIN
           select crsql_wdbreplicator() WHERE crsql_internal_sync_bit() = 0;
         END;
-      `)
+      `
+      );
     });
     this.crrs = crrs;
   }
 
   private createPeerTrackingTable() {
-    this.db.exec("CREATE TABLE IF NOT EXISTS __crsql_wdbreplicator_peers (site_id primary key, version)");
+    this.db.exec(
+      "CREATE TABLE IF NOT EXISTS __crsql_wdbreplicator_peers (site_id primary key, version)"
+    );
   }
 
   private crrChanged = (context: TODO) => {
@@ -138,26 +146,38 @@ class WholeDbReplicator {
     queueMicrotask(() => {
       this.pendingNotification = false;
       const dbv = this.db.execA("SELECT crsql_dbversion()")[0][0];
-      this.network.poke(this.siteId, dbv);
+      this.network.poke(this.siteIdWire, dbv);
     });
   };
 
-  private poked = (pokedBy: SiteID, pokerVersion: string) => {
-    // TODO: probs need to `X''` it to get correct conversion
-    // or `bindBlob` via `prepare`
-    const ourVersionForPoker = this.db.execA("SELECT version FROM __crsql_wdbreplicator_peers WHERE site_id = ?", pokedBy)[0][0];
-    
+  private poked = (pokedBy: SiteIDWire, pokerVersion: BigInt) => {
+    const stmt = this.db.prepare(
+      "SELECT version FROM __crsql_wdbreplicator_peers WHERE site_id = ?"
+    );
+    let ourVersionForPoker: BigInt | null = null;
+    try {
+      stmt.bindBlob(uuidParse(pokedBy));
+      stmt.step();
+      ourVersionForPoker = BigInt(stmt.get(1));
+    } finally {
+      stmt.finalize();
+    }
+
+    if (ourVersionForPoker == null) {
+      throw new Error("unable to determin db version to return to poker");
+    }
+
     // the poker version can be less than our version for poker if a set of
     // poke messages were queued up behind a sync.
-    if (BigInt(pokerVersion) <= BigInt(ourVersionForPoker)) {
+    if (pokerVersion <= ourVersionForPoker) {
       return;
     }
 
     // ask the poker for changes since our version
-    this.network.requestChanges(this.siteId, ourVersionForPoker);
+    this.network.requestChanges(this.siteIdWire, ourVersionForPoker);
   };
 
-  private newConnection = (siteId: SiteID) => {
+  private newConnection = (siteId: SiteIDWire) => {
     // treat it as a crr change so we can kick off sync
     this.crrChanged(null);
   };
@@ -165,14 +185,15 @@ class WholeDbReplicator {
   // if we fail to apply, re-request
   // TODO: other retry mechanisms
   private changesReceived = (changesets: Changeset[]) => {
-    // TODO: may not need to explcitly bind blob
-    const stmt = this.db.prepare("INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?)");
+    const stmt = this.db.prepare(
+      "INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?)"
+    );
     // TODO: may want to chunk
     try {
-      changesets.forEach(cs => {
+      changesets.forEach((cs) => {
         for (let i = 1; i <= 6; ++i) {
           if (i == 6) {
-            stmt.bindBlob(i, cs[i - 1]);
+            stmt.bindBlob(i, uuidParse(cs[i - 1]));
           } else {
             stmt.bind(i, cs[i - 1]);
           }
@@ -185,12 +206,15 @@ class WholeDbReplicator {
     }
   };
 
-  private changesRequested = (from: SiteID, since: string) => {
-    const stmt = this.db.prepare("SELECT * FROM crsql_changes WHERE site_id != ? AND version > ?");
+  private changesRequested = (from: SiteIDWire, since: BigInt) => {
+    const fromAsBlob = uuidParse(from);
+    const stmt = this.db.prepare(
+      "SELECT * FROM crsql_changes WHERE site_id != ? AND version > ?"
+    );
 
     const changes: any[] = [];
     try {
-      stmt.bindBlob(1, this.siteId);
+      stmt.bindBlob(1, fromAsBlob);
       stmt.bind(2, since);
       while (stmt.step()) {
         const row: any[] = [];
@@ -200,7 +224,6 @@ class WholeDbReplicator {
     } finally {
       stmt.finalize();
     }
-    // if no changes, just send them a "increase yo version"?
 
     if (changes.length == 0) {
       return;

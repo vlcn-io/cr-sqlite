@@ -36,7 +36,6 @@ both(x => seed(x))
 
 // get current version
 const [va, vb] = both(x => x.prepare("SELECT crsql_dbversion()").get());
-// both(x => x.prepare("SELECT crsql_dbversion()").get());
 console.log(va, vb);
 
 function makeStr(length: number) {
@@ -55,10 +54,12 @@ function seed(db: any) {
     for (const item of items) insert.run(item);
   });
 
-  Array.from({length: 200}).map(x => {
+  const items = Array.from({length: 200}).map(x => {
     return {
       a: randomUUID(),
       b: makeStr((Math.random() * 24) | 0),
     };
-  })
+  });
+
+  fn(items);
 }

@@ -50,6 +50,7 @@ importers:
     specifiers:
       '@types/chai': ^4.3.3
       '@types/cypress': ^1.1.3
+      '@types/mocha': ^10.0.0
       '@types/node': ^18.11.9
       cypress: ^10.11.0
       react: ^18.2.0
@@ -59,6 +60,7 @@ importers:
     devDependencies:
       '@types/chai': 4.3.3
       '@types/cypress': 1.1.3
+      '@types/mocha': 10.0.0
       '@types/node': 18.11.9
       cypress: 10.11.0
       react: 18.2.0
@@ -1163,6 +1165,10 @@ packages:
 
   /@types/minimist/1.2.2:
     resolution: {integrity: sha512-jhuKLIRrhvCPLqwPcx6INqmKeiA5EWrsCOPhrlFSrbrmU4ZMPjj5Ul/oLCMDO98XRUIwVm78xICz4EPCektzeQ==}
+    dev: true
+
+  /@types/mocha/10.0.0:
+    resolution: {integrity: sha512-rADY+HtTOA52l9VZWtgQfn4p+UDVM2eDVkMZT1I6syp0YKxW2F9v+0pbRZLsvskhQv/vMb6ZfCay81GHbz5SHg==}
     dev: true
 
   /@types/node/12.20.55:

@@ -14,7 +14,7 @@
     "noUnusedParameters": true,
     "noImplicitReturns": true,
     "skipLibCheck": true,
-    "types": ["cypress", "node"]
+    "types": ["cypress", "node", "chai", "mocha"]
   },
   "include": ["src"]
 }

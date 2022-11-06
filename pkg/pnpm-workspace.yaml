@@ -5,4 +5,5 @@ packages:
   - "network/webrtc"
   - "replicators/whole-db"
   - "replicators/browser-tests"
-  - "node-example"
+  - "node-deno/allinone"
+  - "node-deno/examples"

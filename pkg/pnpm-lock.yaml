@@ -23,7 +23,20 @@ importers:
     devDependencies:
       typescript: 4.8.4
 
-  node-example:
+  node-deno/allinone:
+    specifiers:
+      '@vlcn.io/crsqlite': ^0.0.2
+      better-sqlite3: ^7.6.2
+      import-meta-resolve: ^2.1.0
+      typescript: ^4.8.4
+    dependencies:
+      '@vlcn.io/crsqlite': 0.0.2
+      better-sqlite3: 7.6.2
+      import-meta-resolve: 2.1.0
+    devDependencies:
+      typescript: 4.8.4
+
+  node-deno/examples:
     specifiers:
       '@types/jest': ^29.2.2
       '@types/node': ^18.11.9
@@ -1228,6 +1241,14 @@ packages:
       '@types/node': 18.11.9
     dev: true
     optional: true
+
+  /@vlcn.io/crsqlite/0.0.2:
+    resolution: {integrity: sha512-QrlzBI+/SYYsaSqDD9ZfPUjqh37tEdS9g+nY8GkOs6WlSKIrobiS+AUT5wcqmLXM44iKKKbbFGoeZLPgjQG4OQ==}
+    requiresBuild: true
+    dependencies:
+      bindings: 1.5.0
+      prebuild-install: 7.1.1
+    dev: false
 
   /abbrev/1.1.1:
     resolution: {integrity: sha512-nne9/IiQ/hzIhY6pdDnbBtz7DjPTKrY00P/zvPSm5pOFkl6xuGrGnXn/VtTNNfNtAfZ9/1RtehkszU9qcTii0Q==}

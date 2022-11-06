@@ -27,6 +27,7 @@
     "@vlcn.io/crsqlite": "link:../../",
     "better-sqlite3": "^7.6.2",
     "import-meta-resolve": "^2.1.0",
+    "sqlite": "^4.1.2",
     "sqlite3": "^5.1.2"
   },
   "jest": {

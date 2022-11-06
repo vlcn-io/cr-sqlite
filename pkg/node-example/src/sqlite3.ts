@@ -7,8 +7,11 @@ const modulePath = new URL(
 
 const db = new sqlite3.Database(':memory:');
 db.loadExtension(modulePath, (e: any) => {
-  console.log(e);
   db.get("select crsql_dbversion()", (err: any, row: any) => {
     console.log(row);
   });
-})
+
+  // Must run `finalize` prior to closing the DB
+  db.run("select crsql_finalize()");
+  db.close();
+});

@@ -1,6 +1,7 @@
 #include "ext-data.h"
 #include "consts.h"
 #include "util.h"
+#include "get-table.h"
 
 crsql_ExtData *crsql_newExtData(sqlite3 *db)
 {
@@ -86,7 +87,7 @@ int crsql_recreateDbVersionStmt(sqlite3 *db, crsql_ExtData *pExtData)
   sqlite3_finalize(pExtData->pDbVersionStmt);
   pExtData->pDbVersionStmt = 0;
 
-  sqlite3_get_table(
+  crsql_get_table(
       db,
       CLOCK_TABLES_SELECT,
       &rClockTableNames,
@@ -96,18 +97,18 @@ int crsql_recreateDbVersionStmt(sqlite3 *db, crsql_ExtData *pExtData)
 
   if (rc != SQLITE_OK)
   {
-    sqlite3_free_table(rClockTableNames);
+    crsql_free_table(rClockTableNames);
     return rc;
   }
 
   if (rNumRows == 0)
   {
-    sqlite3_free_table(rClockTableNames);
+    crsql_free_table(rClockTableNames);
     return -1;
   }
 
   zSql = crsql_getDbVersionUnionQuery(rNumRows, rClockTableNames);
-  sqlite3_free_table(rClockTableNames);
+  crsql_free_table(rClockTableNames);
 
   rc = sqlite3_prepare_v3(db, zSql, -1, SQLITE_PREPARE_PERSISTENT, &(pExtData->pDbVersionStmt), 0);
   sqlite3_free(zSql);

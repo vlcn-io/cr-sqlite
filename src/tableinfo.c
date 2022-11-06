@@ -2,6 +2,7 @@
 #include "crsqlite.h"
 #include "util.h"
 #include "consts.h"
+#include "get-table.h"
 
 #include <ctype.h>
 #include <string.h>
@@ -530,7 +531,7 @@ int crsql_pullAllTableInfos(
   int rc = SQLITE_OK;
 
   // Find all clock tables
-  rc = sqlite3_get_table(
+  rc = crsql_get_table(
       db,
       CLOCK_TABLES_SELECT,
       &zzClockTableNames,
@@ -541,12 +542,12 @@ int crsql_pullAllTableInfos(
   if (rc != SQLITE_OK)
   {
     *errmsg = sqlite3_mprintf("crsql internal error discovering crr tables.");
-    sqlite3_free_table(zzClockTableNames);
+    crsql_free_table(zzClockTableNames);
     return SQLITE_ERROR;
   }
 
   if (rNumRows == 0) {
-    sqlite3_free_table(zzClockTableNames);
+    crsql_free_table(zzClockTableNames);
     return SQLITE_OK;
   }
 
@@ -563,13 +564,13 @@ int crsql_pullAllTableInfos(
 
     if (rc != SQLITE_OK)
     {
-      sqlite3_free_table(zzClockTableNames);
+      crsql_free_table(zzClockTableNames);
       crsql_freeAllTableInfos(tableInfos, rNumRows);
       return rc;
     }
   }
 
-  sqlite3_free_table(zzClockTableNames);
+  crsql_free_table(zzClockTableNames);
 
   *pzpTableInfos = tableInfos;
   *rTableInfosLen = rNumRows;

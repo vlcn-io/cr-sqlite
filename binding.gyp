@@ -72,6 +72,7 @@
         './src/changes-vtab-common.c',
         './src/changes-vtab-write.c',
         './src/ext-data.c',
+        './src/get-table.c',
       ],
       'include_dirs': [
         './src',

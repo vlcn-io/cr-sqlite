@@ -84,7 +84,7 @@ select crsql_finalize();
 Note -- these are pre-release. Please look at [the open bugs](https://github.com/vlcn-io/cr-sqlite/issues?q=is%3Aissue+is%3Aopen+label%3Abug) if you're planning on taking them for a spin.
 
 - Browser - [@vlcn.io/crsqlite-wasm](https://github.com/vlcn-io/cr-sqlite/tree/main/pkg/wasm-esm/crsqlite)
-  - [usage](https://github.com/vlcn-io/cr-sqlite/tree/main/pkg/wasm-esm/crsqlite#example-usage)
+  - [usage](https://github.com/vlcn-io/cr-sqlite/tree/main/pkg/wasm-esm/crsqlite)
 - NodeJS - (does not work. See [issue 33](https://github.com/vlcn-io/cr-sqlite/issues/33)) [@vlcn.io/crsqlite](https://www.npmjs.com/package/@vlcn.io/crsqlite)
   - Usage: 
   ```js

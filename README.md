@@ -85,7 +85,7 @@ Note -- these are pre-release. Please look at [the open bugs](https://github.com
 
 - Browser - [@vlcn.io/crsqlite-wasm](https://github.com/vlcn-io/cr-sqlite/tree/main/pkg/wasm-esm/crsqlite)
   - [usage](https://github.com/vlcn-io/cr-sqlite/tree/main/pkg/wasm-esm/crsqlite)
-- NodeJS - (does not work. See [issue 33](https://github.com/vlcn-io/cr-sqlite/issues/33)) [@vlcn.io/crsqlite](https://www.npmjs.com/package/@vlcn.io/crsqlite)
+- NodeJS - [@vlcn.io/crsqlite](https://www.npmjs.com/package/@vlcn.io/crsqlite)
   - Usage: 
   ```js
   const sqlite = require('better-sqlite3');

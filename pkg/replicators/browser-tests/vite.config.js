@@ -1,6 +1,6 @@
 // vite.config.js
 import { resolve } from "path";
-import { defineConfig } from "vite";
+import { defineConfig, searchForWorkspaceRoot } from "vite";
 
 export default defineConfig({
   build: {
@@ -9,7 +9,7 @@ export default defineConfig({
         index: resolve(__dirname, "index.html"),
         mainThread: resolve(__dirname, "main-thread.html"),
         onWorker: resolve(__dirname, "on-worker.html"),
-        comlink: resolve(__dirname, "comlink.html")
+        comlink: resolve(__dirname, "comlink.html"),
       },
     },
   },
@@ -17,6 +17,12 @@ export default defineConfig({
     headers: {
       "Cross-Origin-Opener-Policy": "same-origin",
       "Cross-Origin-Embedder-Policy": "require-corp",
+    },
+    fs: {
+      allow: [
+        // search up for workspace root
+        searchForWorkspaceRoot(process.cwd()),
+      ],
     },
   },
 });

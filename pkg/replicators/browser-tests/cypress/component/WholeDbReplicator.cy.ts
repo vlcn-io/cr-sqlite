@@ -1,6 +1,16 @@
+import { wdbTests } from "@vlcn.io/replicator-xplat-tests";
+import sqliteWasm from "@vlcn.io/crsqlite-wasm";
+
+const crsqlite = await sqliteWasm();
+
 describe("WholeDbReplicator.cy.ts", () => {
-  it("playground", () => {
-    // cy.mount()
-    expect(false).to.equal(true);
+  Object.entries(wdbTests).forEach((x) => {
+    it(x[0], () => {
+      const tc = x[1];
+      tc(
+        () => crsqlite.open(),
+        (p: boolean) => expect(p).to.equal(true)
+      );
+    });
   });
 });

@@ -6,8 +6,8 @@ import { Changeset } from "@vlcn.io/replicator-wholedb";
 
 function createSimpleSchema(db: DB) {
   db.execMany([
-    "CREATE TABLE foo (a primary key, b)",
-    "SELECT crsql_as_crr('foo')",
+    "CREATE TABLE foo (a primary key, b);",
+    "SELECT crsql_as_crr('foo');",
   ]);
 }
 

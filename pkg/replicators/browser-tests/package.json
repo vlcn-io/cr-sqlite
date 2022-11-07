@@ -9,6 +9,10 @@
     "preview": "vite preview",
     "test": "pnpm cypress run --component"
   },
+  "dependencies": {
+    "@vlcn.io/replicator-xplat-tests": "workspace:*",
+    "@vlcn.io/crsqlite-wasm": "workspace:*"
+  },
   "devDependencies": {
     "@types/chai": "^4.3.3",
     "@types/cypress": "^1.1.3",

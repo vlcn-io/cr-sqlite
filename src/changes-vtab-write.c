@@ -270,6 +270,11 @@ int crsql_mergeInsert(
       db,
       pTab->pExtData,
       errmsg);
+    
+  if (rc != SQLITE_OK) {
+    *errmsg = sqlite3_mprintf("Failed to update crr table information");
+    return rc;
+  }
 
   // column values exist in argv[2] and following.
   const int insertTblLen = sqlite3_value_bytes(argv[2 + CHANGES_SINCE_VTAB_TBL]);
@@ -303,6 +308,11 @@ int crsql_mergeInsert(
   if (tblInfo == 0)
   {
     *errmsg = sqlite3_mprintf("crsql - could not find the schema information for table %s", insertTbl);
+    return SQLITE_ERROR;
+  }
+
+  if (insertCid >= tblInfo->baseColsLen) {
+    *errmsg = sqlite3_mprintf("out of bounds column id (%d) provided for patch to %s", insertCid, insertTbl);
     return SQLITE_ERROR;
   }
 
@@ -377,7 +387,6 @@ int crsql_mergeInsert(
     return doesCidWin == 0 ? SQLITE_OK : SQLITE_ERROR;
   }
 
-  // TODO: double check unicode handling
   char **sanitizedInsertVal = crsql_splitQuoteConcat((const char *)insertVal, 1);
 
   if (sanitizedInsertVal == 0)

@@ -126,19 +126,19 @@ Current workaround:
   - if so, grab a pointer to that memory
   - if not, allocate it
 
-
-----
+---
 
 single clock table impact on perf???
+
 - would most likely impact bulk operations and concurrent transactions by creating contention on one dependency
-or are they tracked by row so fine?
+  or are they tracked by row so fine?
 
 Multi tab --
 `crsql_dbversion()`
 (1) check if version alrdy set for tx in extData
-  if so, return it
-(2) check the schema version via pragma https://www.sqlite.org/pragma.html#pragma_schema_version against ext data pragma v 
-  if delta, finalize pStmt, fetch tblSchemas, re-create pStmt
+if so, return it
+(2) check the schema version via pragma https://www.sqlite.org/pragma.html#pragma_schema_version against ext data pragma v
+if delta, finalize pStmt, fetch tblSchemas, re-create pStmt
 (3) fetch max db version via pStmt
 (4) return max
 
@@ -147,13 +147,19 @@ So get rid of `crsql_nextdbversion()`
 (2) should be split into its own function since vtab needs to check schema version and re-pull
 table infos too
 
+---
 
-
---- 
 extra tests:
+
 - test clean db version
 - test clean then crr db version
 - test reload
-^-- these exist in correcntess tests
+  ^-- these exist in correcntess tests
 
 repro finalization problem with prepared statement in pExtData and extension destructor.
+
+# Gyp
+
+node-gyp build --debug
+node-gyp rebuild --debug
+node-gyp configure --debug

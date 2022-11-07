@@ -15,7 +15,7 @@
   "scripts": {
     "build": "tsc --build",
     "watch": "tsc --build --watch",
-    "test": "vitest"
+    "test": "vitest run"
   },
   "repository": {
     "type": "git",

@@ -243,8 +243,9 @@ export const tests = {
     const r = wdbr.install(db, protocol);
 
     // TODO: check when version exceeds max and gets flipped to a string -- must be stored as int.
+    // pk got encoded as decimal? wtf?
     const changeset: readonly Changeset[] = [
-      ["foo", 1, 2, "'foobar'", 1, uuidv4()],
+      ["foo", 1, 1, "'foobar'", 1, uuidv4()],
     ];
 
     changesReceived!(changeset);
@@ -257,4 +258,6 @@ export const tests = {
     dbProvider: () => DB,
     assert: (p: boolean) => void
   ) => {},
+
+  // test out of bounds cids, bad pks, bad vals, etc.
 };

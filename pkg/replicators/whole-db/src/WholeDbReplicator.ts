@@ -194,7 +194,7 @@ class WholeDbReplicator {
   // TODO: other retry mechanisms
   private changesReceived = (changesets: readonly Changeset[]) => {
     const stmt = this.db.prepare(
-      "INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?)"
+      'INSERT INTO crsql_changes ("table", "pk", "cid", "val", "version", "site_id") VALUES (?, ?, ?, ?, ?, ?)'
     );
     // TODO: may want to chunk
     try {

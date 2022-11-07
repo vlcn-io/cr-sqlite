@@ -1,5 +1,5 @@
 import sqliteWasm from "@vlcn.io/crsqlite-wasm";
-import { UuidTool } from "uuid-tool";
+import { stringify as uuidStringify } from "uuid";
 
 async function run() {
   const sqlite = await sqliteWasm();
@@ -16,7 +16,7 @@ async function run() {
   rows = db.execA("select crsql_dbversion();");
   console.log("DB Version: ", rows[0][0]);
   rows = db.execA("select crsql_siteid();");
-  console.log("Site ID: ", UuidTool.toString(rows[0][0]));
+  console.log("Site ID: ", uuidStringify(rows[0][0]));
 
   rows = db.execA("select * from crsql_changes();");
   console.log("Changes: ", rows);

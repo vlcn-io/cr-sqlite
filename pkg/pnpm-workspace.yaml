@@ -7,6 +7,6 @@ packages:
   - "replicators/browser-tests"
   - "replicators/xplat-tests"
   - "replicators/nodeno-tests"
-  - "node-deno/allinone"
-  - "node-deno/examples"
+  - "nodeno/allinone"
+  - "nodeno/examples"
   - "xplat-api"

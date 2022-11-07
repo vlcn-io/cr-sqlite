@@ -7,9 +7,11 @@
   "include": ["./src/"],
   "references": [
     { "path": "../network/webrtc" },
-    { "path": "../node-deno/examples" },
-    { "path": "../node-deno/allinone" },
+    { "path": "../nodeno/examples" },
+    { "path": "../nodeno/allinone" },
     { "path": "../replicators/whole-db" },
+    { "path": "../replicators/xplat-tests" },
+    { "path": "../replicators/nodeno-tests" },
     { "path": "../wasm-esm/crsqlite" }
   ]
 }

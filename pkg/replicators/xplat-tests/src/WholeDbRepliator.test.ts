@@ -1,4 +1,23 @@
 import { DB } from "@vlcn.io/xplat-api";
+import wdbr, { PokeProtocol } from "@vlcn.io/replicator-wholedb";
+
+function createSimpleSchema(db: DB) {
+  db.execMany([
+    "CREATE TABLE foo (a primary key, b)",
+    "SELECT crsql_as_crr('foo')",
+  ]);
+}
+
+const dummyPoke: PokeProtocol = {
+  dispose() {},
+  onChangesReceived(cb) {},
+  onChangesRequested(cb) {},
+  onNewConnection(cb) {},
+  onPoked(cb) {},
+  poke(poker, pokerVersion) {},
+  pushChanges(to, changesets) {},
+  requestChanges(from, since) {},
+};
 
 /**
  * Write the test code once, run it on all platforms that support crsqlite.
@@ -12,17 +31,27 @@ import { DB } from "@vlcn.io/xplat-api";
  * Node/Deno use Jest assetions.
  *
  * Hence the assertion provider.
- *
  */
 export const tests = {
   "triggers installed": (
     dbProvider: () => DB,
     assert: (p: boolean) => void
-  ) => {},
-  "peer tracking tabe": (
+  ) => {
+    const db = dbProvider();
+    createSimpleSchema(db);
+    wdbr.install(db, dummyPoke);
+
+    console.log(db.execA("SELECT * FROM sqlite_master WHERE type = 'trigger'"));
+  },
+  "peer tracking table": (
     dbProvider: () => DB,
     assert: (p: boolean) => void
-  ) => {},
+  ) => {
+    const db = dbProvider();
+    wdbr.install(db, dummyPoke);
+
+    console.log(db.execA("SELECT * FROM sqlite_master WHERE type = 'table'"));
+  },
   "changes causes trigger causes poke": (
     dbProvider: () => DB,
     assert: (p: boolean) => void

@@ -13,7 +13,7 @@ type TODO = any;
  * - causal delivery of messages
  * - retry on drop
  */
-interface PokeProtocol {
+export interface PokeProtocol {
   /**
    * Tell all connected sites that we have updates from this site
    * ending at `pokerVersion`

@@ -216,26 +216,14 @@ export const tests = {
   "receiving changes applies changes": (
     dbProvider: () => DB,
     assert: (p: boolean) => void
-  ) => {},
-
-  "pushes changes when changes requested": (
-    dbProvider: () => DB,
-    assert: (p: boolean) => void
-  ) => {},
-
-  // network should re-push those on its own to other peers connected but not sending this change
-  "sync/applying changes does not trigger a poke": (
-    dbProvider: () => DB,
-    assert: (p: boolean) => void
   ) => {
     const protocol = { ...dummyPoke };
-    let changesReceived: null | ((cs: readonly Changeset[]) => void) = null;
+    let changesReceived:
+      | null
+      | ((sender: string, cs: readonly Changeset[]) => void) = null;
+    const changeSender = uuidv4();
     protocol.onChangesReceived = (cb) => {
       changesReceived = cb;
-    };
-    let poked: ((poker: string, pokerVersion: bigint) => void) | null = null;
-    protocol.onPoked = (cb) => {
-      poked = cb;
     };
 
     const db = dbProvider();
@@ -248,11 +236,91 @@ export const tests = {
       ["foo", 1, 1, "'foobar'", 1, uuidv4()],
     ];
 
-    changesReceived!(changeset);
+    changesReceived!(changeSender, changeset);
+
+    const row = db.execA<any>("select * from foo")[0];
+    assert(row[0] == 1);
+    assert(row[1] == "foobar");
+
+    r.dispose();
+    db.close();
   },
 
-  "applying changes from a remote updates _our version for that remote_":
-    () => {},
+  "pushes changes when changes requested": (
+    dbProvider: () => DB,
+    assert: (p: boolean) => void
+  ) => {},
+
+  // network should re-push those on its own to other peers connected but not sending this change
+  "sync/applying changes does not trigger a poke": async (
+    dbProvider: () => DB,
+    assert: (p: boolean) => void
+  ) => {
+    const protocol = { ...dummyPoke };
+    const changeSender = uuidv4();
+    let changesReceived:
+      | null
+      | ((siteId: string, cs: readonly Changeset[]) => void) = null;
+    protocol.onChangesReceived = (cb) => {
+      changesReceived = cb;
+    };
+    let sentPoke: boolean = false;
+    protocol.poke = (_, __) => {
+      sentPoke = true;
+    };
+
+    const db = dbProvider();
+    createSimpleSchema(db);
+    const r = wdbr.install(db, protocol);
+
+    // TODO: check when version exceeds max and gets flipped to a string -- must be stored as int.
+    // pk got encoded as decimal? wtf?
+    const changeset: readonly Changeset[] = [
+      ["foo", 1, 1, "'foobar'", 1, uuidv4()],
+    ];
+
+    changesReceived!(changeSender, changeset);
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    // @ts-ignore -- typescript being dumb thinks sentPoke cannot be true
+    assert(sentPoke == false);
+
+    r.dispose();
+    db.close();
+  },
+
+  "applying changes from a remote updates _our version for that remote_": (
+    dbProvider: () => DB,
+    assert: (p: boolean) => void
+  ) => {
+    const protocol = { ...dummyPoke };
+    let changesReceived:
+      | null
+      | ((sender: string, cs: readonly Changeset[]) => void) = null;
+    const changeSender = uuidv4();
+    protocol.onChangesReceived = (cb) => {
+      changesReceived = cb;
+    };
+
+    const db = dbProvider();
+    createSimpleSchema(db);
+    const r = wdbr.install(db, protocol);
+
+    const changeset: readonly Changeset[] = [
+      ["foo", 1, 1, "'foobar'", 1, uuidv4()],
+    ];
+
+    changesReceived!(changeSender, changeset);
+
+    const row = db.execA<any>(
+      "select site_id, version from __crsql_wdbreplicator_peers"
+    )[0];
+    assert(uuidStringify(row[0]) == changeSender);
+    assert(row[1] == 1);
+
+    r.dispose();
+    db.close();
+  },
 
   "tear down removes triggers": (
     dbProvider: () => DB,

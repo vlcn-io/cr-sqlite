@@ -52,7 +52,9 @@ export interface PokeProtocol {
   /**
    * We have received changes from a peer.
    */
-  onChangesReceived(cb: (changesets: readonly Changeset[]) => void): void;
+  onChangesReceived(
+    cb: (fromSiteId: SiteIDWire, changesets: readonly Changeset[]) => void
+  ): void;
 
   dispose(): void;
 }
@@ -192,18 +194,35 @@ class WholeDbReplicator {
 
   // if we fail to apply, re-request
   // TODO: other retry mechanisms
-  private changesReceived = (changesets: readonly Changeset[]) => {
-    const stmt = this.db.prepare(
-      'INSERT INTO crsql_changes ("table", "pk", "cid", "val", "version", "site_id") VALUES (?, ?, ?, ?, ?, ?)'
-    );
-    // TODO: may want to chunk
-    try {
-      changesets.forEach((cs) => {
-        stmt.run(cs[0], cs[1], cs[2], cs[3], cs[4], uuidParse(cs[5]));
-      });
-    } finally {
-      stmt.finalize();
-    }
+  // todo: need to know who received from. cs site id can be a forwarded site id
+  private changesReceived = (
+    fromSiteId: SiteIDWire,
+    changesets: readonly Changeset[]
+  ) => {
+    this.db.transaction(() => {
+      let maxVersion = 0n;
+      const stmt = this.db.prepare(
+        'INSERT INTO crsql_changes ("table", "pk", "cid", "val", "version", "site_id") VALUES (?, ?, ?, ?, ?, ?)'
+      );
+      // TODO: may want to chunk
+      try {
+        // TODO: should we discard the changes altogether if they're less than the tracking version
+        // we have for this peer?
+        // that'd preclude resetting tho.
+        changesets.forEach((cs) => {
+          const v = BigInt(cs[4]);
+          maxVersion = v > maxVersion ? v : maxVersion;
+          stmt.run(cs[0], cs[1], cs[2], cs[3], cs[4], uuidParse(cs[5]));
+        });
+      } finally {
+        stmt.finalize();
+      }
+
+      this.db.exec(
+        `INSERT OR REPLACE INTO __crsql_wdbreplicator_peers (site_id, version) VALUES (?, ?)`,
+        [uuidParse(fromSiteId), maxVersion]
+      );
+    });
   };
 
   private changesRequested = (from: SiteIDWire, since: bigint) => {

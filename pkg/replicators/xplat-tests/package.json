@@ -9,14 +9,11 @@
   "main": "dist/index.js",
   "sideEffects": false,
   "devDependencies": {
-    "@types/jest": "^29.2.2",
-    "jest": "^29.2.2",
     "typescript": "^4.8.4"
   },
   "scripts": {
     "build": "tsc --build",
-    "watch": "tsc --build --watch",
-    "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js"
+    "watch": "tsc --build --watch"
   },
   "repository": {
     "type": "git",
@@ -27,10 +24,5 @@
     "@vlcn.io/replicator-wholedb": "workspace:*",
     "@vlcn.io/xplat-api": "workspace:*",
     "uuid": "^9.0.0"
-  },
-  "jest": {
-    "testMatch": [
-      "**/__tests__/**/*.test.js"
-    ]
   }
 }

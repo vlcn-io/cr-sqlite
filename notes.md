@@ -1,5 +1,8 @@
 todo:
 
+- test ntwrk trigger callback gets invoked even from other connections...
+  - or will those fail b/c the extension doesn't exist in that connection?
+  - should we then just register commit hooks for the replicator connection?
 - https://llvm.org/docs/LibFuzzer.html integration
 - c tests for db version bumping
 - document `crsql_finalize()`

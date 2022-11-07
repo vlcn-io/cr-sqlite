@@ -1,4 +1,4 @@
-import { test } from "vitest";
+import { test, expect } from "vitest";
 
 import { wdbTests } from "@vlcn.io/replicator-xplat-tests";
 import crsqlite from "@vlcn.io/crsqlite-allinone";

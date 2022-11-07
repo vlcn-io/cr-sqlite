@@ -2,10 +2,10 @@ import { DB } from "@vlcn.io/xplat-api";
 import { parse as uuidParse, stringify as uuidStringify } from "uuid";
 type SiteIDWire = string;
 type SiteIDLocal = Uint8Array;
-type CID = string;
-type QuoteConcatedPKs = string;
+type CID = number;
+type QuoteConcatedPKs = string | number;
 type TableName = string;
-type Version = string;
+type Version = number | string;
 type TODO = any;
 
 /**
@@ -18,25 +18,25 @@ export interface PokeProtocol {
    * Tell all connected sites that we have updates from this site
    * ending at `pokerVersion`
    */
-  poke(poker: SiteIDWire, pokerVersion: BigInt): void;
+  poke(poker: SiteIDWire, pokerVersion: bigint): void;
 
   /**
    * Push changes to the given site in response to their request for changes.
    */
-  pushChanges(to: SiteIDWire, changesets: Changeset[]): void;
+  pushChanges(to: SiteIDWire, changesets: readonly Changeset[]): void;
 
   /**
    * Request changes from a given site since a given version
    * in response to a poke from that site.
    */
-  requestChanges(from: SiteIDWire, since: BigInt): void;
+  requestChanges(from: SiteIDWire, since: bigint): void;
 
   /**
    * Receive a poke froma given site.
    * In response, we'll compute what changes we're missing from that site
    * and request those changes.
    */
-  onPoked(cb: (pokedBy: SiteIDWire, pokerVersion: BigInt) => void): void;
+  onPoked(cb: (pokedBy: SiteIDWire, pokerVersion: bigint) => void): void;
 
   /**
    * When someone new connects we can just poke them to kick off
@@ -47,17 +47,17 @@ export interface PokeProtocol {
   /**
    * A peer has requested changes from us.
    */
-  onChangesRequested(cb: (from: SiteIDWire, since: BigInt) => void): void;
+  onChangesRequested(cb: (from: SiteIDWire, since: bigint) => void): void;
 
   /**
    * We have received changes from a peer.
    */
-  onChangesReceived(cb: (changesets: Changeset[]) => void): void;
+  onChangesReceived(cb: (changesets: readonly Changeset[]) => void): void;
 
   dispose(): void;
 }
 
-type Changeset = [
+export type Changeset = [
   TableName,
   QuoteConcatedPKs,
   CID,
@@ -84,7 +84,7 @@ class WholeDbReplicator {
 
   constructor(private db: DB, private network: PokeProtocol) {
     this.db = db;
-    db.createFunction("crsql_wdbreplicator", this.crrChanged);
+    db.createFunction("crsql_wdbreplicator", () => this.crrChanged());
 
     this.siteId = db.execA<[Uint8Array]>("SELECT crsql_siteid()")[0][0];
     this.siteIdWire = uuidStringify(this.siteId);
@@ -128,13 +128,15 @@ class WholeDbReplicator {
         0,
         fullTblName.lastIndexOf("__crsql_clock")
       );
-      this.db.exec(
-        `CREATE TRIGGER "${baseTblName}__crsql_wdbreplicator" AFTER UPDATE ON "${baseTblName}"
-        BEGIN
-          select crsql_wdbreplicator() WHERE crsql_internal_sync_bit() = 0;
-        END;
-      `
-      );
+      ["INSERT", "UPDATE", "DELETE"].map((verb) => {
+        this.db.exec(
+          `CREATE TRIGGER IF NOT EXISTS "${baseTblName}__crsql_wdbreplicator_${verb.toLowerCase()}" AFTER ${verb} ON "${baseTblName}"
+          BEGIN
+            select crsql_wdbreplicator() WHERE crsql_internal_sync_bit() = 0;
+          END;
+        `
+        );
+      });
 
       return baseTblName;
     });
@@ -147,7 +149,7 @@ class WholeDbReplicator {
     );
   }
 
-  private crrChanged = (context: TODO) => {
+  private crrChanged() {
     if (this.pendingNotification) {
       return;
     }
@@ -160,14 +162,16 @@ class WholeDbReplicator {
       )[0][0];
       this.network.poke(this.siteIdWire, BigInt(dbv));
     });
-  };
+  }
 
-  private poked = (pokedBy: SiteIDWire, pokerVersion: BigInt) => {
+  private poked = (pokedBy: SiteIDWire, pokerVersion: bigint) => {
     const rows = this.db.execA(
-      "SELECT version FROM __crsql_wdbreplicator_peers WHERE site_id = ?"
+      "SELECT version FROM __crsql_wdbreplicator_peers WHERE site_id = ?",
+      [uuidParse(pokedBy)]
     );
-    let ourVersionForPoker: BigInt = 0n;
-    if (rows != null) {
+    let ourVersionForPoker: bigint = 0n;
+    if (rows != null && rows.length > 0) {
+      // ensure it is a bigint. sqlite will return number if in js int range and bigint if out of range.
       ourVersionForPoker = BigInt(rows[0][0]);
     }
 
@@ -183,12 +187,12 @@ class WholeDbReplicator {
 
   private newConnection = (siteId: SiteIDWire) => {
     // treat it as a crr change so we can kick off sync
-    this.crrChanged(null);
+    this.crrChanged();
   };
 
   // if we fail to apply, re-request
   // TODO: other retry mechanisms
-  private changesReceived = (changesets: Changeset[]) => {
+  private changesReceived = (changesets: readonly Changeset[]) => {
     const stmt = this.db.prepare(
       "INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?)"
     );
@@ -202,9 +206,9 @@ class WholeDbReplicator {
     }
   };
 
-  private changesRequested = (from: SiteIDWire, since: BigInt) => {
+  private changesRequested = (from: SiteIDWire, since: bigint) => {
     const fromAsBlob = uuidParse(from);
-    const changes: Changeset[] = this.db.execA(
+    const changes: Changeset[] = this.db.execA<Changeset>(
       "SELECT * FROM crsql_changes WHERE site_id != ? AND version > ?",
       [fromAsBlob, since]
     );

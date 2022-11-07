@@ -24,8 +24,9 @@
     "directory": "https://github.com/vlcn-io/cr-sqlite/tree/main/pkg/replicators/whole-db"
   },
   "dependencies": {
+    "@vlcn.io/replicator-wholedb": "workspace:*",
     "@vlcn.io/xplat-api": "workspace:*",
-    "@vlcn.io/replicator-wholedb": "workspace:*"
+    "uuid": "^9.0.0"
   },
   "jest": {
     "testMatch": [

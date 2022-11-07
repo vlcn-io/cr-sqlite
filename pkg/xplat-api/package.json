@@ -1,16 +1,12 @@
 {
-  "name": "@vlcn.io/crsqlite-wasm",
+  "name": "@vlcn.io/xplat-api",
   "type": "module",
   "version": "0.0.2",
   "files": [
     "dist"
   ],
-  "exports": {
-    "./dist/comlinked": "./dist/comlinked.js",
-    ".": "./dist/wrapper.js"
-  },
-  "module": "dist/wrapper.js",
-  "types": "dist/wrapper.d.ts",
+  "module": "dist/xplat-api.js",
+  "main": "dist/xplat-api.js",
   "sideEffects": false,
   "devDependencies": {
     "typescript": "^4.8.4"
@@ -22,10 +18,9 @@
   "repository": {
     "type": "git",
     "url": "git@github.com:vlcn-io/cr-sqlite.git",
-    "directory": "https://github.com/vlcn-io/cr-sqlite/tree/main/pkg/wasm-esm/crsqlite"
+    "directory": "https://github.com/vlcn-io/cr-sqlite/tree/main/pkg/xplat-api"
   },
   "dependencies": {
-    "comlink": "^4.3.1",
-    "@vlcn.io/xplat-api": "workspace:*"
+    "comlink": "^4.3.1"
   }
 }

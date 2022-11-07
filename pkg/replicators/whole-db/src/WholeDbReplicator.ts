@@ -113,22 +113,32 @@ class WholeDbReplicator {
 
   private installTriggers() {
     // find all crr tables
-    // TODO: ensure we all not notified
+    // TODO: ensure we are not notified
     // if we're in the process of applying sync changes.
     // TODO: we can also just track that internally.
-    const crrs = this.db.execA(
+    // well we do want to pass on to sites that are not the site
+    // that just send the patch.
+    const crrs: string[][] = this.db.execA(
       "SELECT name FROM sqlite_master WHERE name LIKE '%__crsql_clock'"
     );
-    crrs.forEach((crr) => {
+
+    const baseTableNames = crrs.map((crr) => {
+      const fullTblName = crr[0];
+      const baseTblName = fullTblName.substring(
+        0,
+        fullTblName.lastIndexOf("__crsql_clock")
+      );
       this.db.exec(
-        `CREATE TRIGGER "${crr}__crsql_wdbreplicator" AFTER UPDATE ON "${crr}"
+        `CREATE TRIGGER "${baseTblName}__crsql_wdbreplicator" AFTER UPDATE ON "${baseTblName}"
         BEGIN
           select crsql_wdbreplicator() WHERE crsql_internal_sync_bit() = 0;
         END;
       `
       );
+
+      return baseTblName;
     });
-    this.crrs = crrs;
+    this.crrs = baseTableNames;
   }
 
   private createPeerTrackingTable() {
@@ -145,26 +155,20 @@ class WholeDbReplicator {
     this.pendingNotification = true;
     queueMicrotask(() => {
       this.pendingNotification = false;
-      const dbv = this.db.execA("SELECT crsql_dbversion()")[0][0];
-      this.network.poke(this.siteIdWire, dbv);
+      const dbv = this.db.execA<[number | bigint]>(
+        "SELECT crsql_dbversion()"
+      )[0][0];
+      this.network.poke(this.siteIdWire, BigInt(dbv));
     });
   };
 
   private poked = (pokedBy: SiteIDWire, pokerVersion: BigInt) => {
-    const stmt = this.db.prepare(
+    const rows = this.db.execA(
       "SELECT version FROM __crsql_wdbreplicator_peers WHERE site_id = ?"
     );
-    let ourVersionForPoker: BigInt | null = null;
-    try {
-      stmt.bindBlob(uuidParse(pokedBy));
-      stmt.step();
-      ourVersionForPoker = BigInt(stmt.get(1));
-    } finally {
-      stmt.finalize();
-    }
-
-    if (ourVersionForPoker == null) {
-      throw new Error("unable to determin db version to return to poker");
+    let ourVersionForPoker: BigInt = 0n;
+    if (rows != null) {
+      ourVersionForPoker = BigInt(rows[0][0]);
     }
 
     // the poker version can be less than our version for poker if a set of
@@ -191,14 +195,7 @@ class WholeDbReplicator {
     // TODO: may want to chunk
     try {
       changesets.forEach((cs) => {
-        for (let i = 1; i <= 6; ++i) {
-          if (i == 6) {
-            stmt.bindBlob(i, uuidParse(cs[i - 1]));
-          } else {
-            stmt.bind(i, cs[i - 1]);
-          }
-        }
-        stmt.step();
+        stmt.run(cs[0], cs[1], cs[2], cs[3], cs[4], uuidParse(cs[5]));
         stmt.reset(true);
       });
     } finally {
@@ -208,22 +205,10 @@ class WholeDbReplicator {
 
   private changesRequested = (from: SiteIDWire, since: BigInt) => {
     const fromAsBlob = uuidParse(from);
-    const stmt = this.db.prepare(
-      "SELECT * FROM crsql_changes WHERE site_id != ? AND version > ?"
+    const changes: Changeset[] = this.db.execA(
+      "SELECT * FROM crsql_changes WHERE site_id != ? AND version > ?",
+      [fromAsBlob, since]
     );
-
-    const changes: any[] = [];
-    try {
-      stmt.bindBlob(1, fromAsBlob);
-      stmt.bind(2, since);
-      while (stmt.step()) {
-        const row: any[] = [];
-        stmt.get(row);
-        changes.push(row);
-      }
-    } finally {
-      stmt.finalize();
-    }
 
     if (changes.length == 0) {
       return;

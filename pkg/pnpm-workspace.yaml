@@ -7,3 +7,4 @@ packages:
   - "replicators/browser-tests"
   - "node-deno/allinone"
   - "node-deno/examples"
+  - "xplat-api"

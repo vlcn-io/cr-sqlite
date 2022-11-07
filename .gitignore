@@ -9,3 +9,4 @@ bench/
 __pycache__/
 node_modules/
 build/
+tsconfig.tsbuildinfo

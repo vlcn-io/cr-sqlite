@@ -1,5 +1,7 @@
 import sqlite3InitModule from "./sqlite3.js";
 
+import { DB as IDB, Stmt as IStmt } from "@vlcn.io/xplat-api";
+
 /**
  * Create wrapper types for two reasons:
  * 1. Types (which we can get without wrappers)
@@ -24,7 +26,7 @@ export class SQLite3 {
   }
 }
 
-export class DB {
+export class DB implements IDB {
   #closeListeners = new Set<() => void>();
   #inTx = false;
 
@@ -42,7 +44,7 @@ export class DB {
    * @param sql query to run
    * @param bind values, if any, to bind
    */
-  execO(sql: string, bind?: unknown | unknown[]): { [key: string]: any }[] {
+  execO<T extends {}>(sql: string, bind?: unknown | unknown[]): T[] {
     return this.baseDb.exec(sql, {
       returnValue: "resultRows",
       rowMode: "object",
@@ -55,7 +57,7 @@ export class DB {
    * @param sql query to run
    * @param bind values, if any, to bind
    */
-  execA(sql: string, bind?: unknown | unknown[]): any[] {
+  execA<T extends any[]>(sql: string, bind?: unknown | unknown[]): T[] {
     return this.baseDb.exec(sql, {
       returnValue: "resultRows",
       rowMode: "array",
@@ -121,51 +123,72 @@ export class DB {
   }
 }
 
-export class Stmt {
+export class Stmt implements IStmt {
   private mode: "col" | "obj" = "obj";
+  private bound = false;
   constructor(private baseStmt: any) {}
 
-  // wrap stmt in a better-sqlite3 like interface
   run(...bindArgs: any[]) {
-    this.baseStmt.bind(bindArgs);
-    while (this.baseStmt.step()) {}
+    this.bind(bindArgs);
+    this.baseStmt.step();
+    this.baseStmt.reset();
   }
 
   get(...bindArgs: any[]): any[] {
-    this.baseStmt.bind(bindArgs);
+    this.bind(bindArgs);
     if (this.baseStmt.step()) {
-      return this.baseStmt.get(this.mode == "col" ? [] : {});
+      const ret = this.baseStmt.get(this.mode == "col" ? [] : {});
+      this.baseStmt.reset();
+      return ret;
     } else {
+      this.baseStmt.reset();
       return [];
     }
   }
 
   all(...bindArgs: any[]) {
-    this.baseStmt.bind(bindArgs);
+    this.bind(bindArgs);
     const ret: any[] = [];
     while (this.baseStmt.step()) {
       ret.push(this.baseStmt.get(this.mode == "col" ? [] : {}));
     }
+    this.reset();
     return ret;
   }
 
   *iterate(...bindArgs: any[]) {
-    this.baseStmt.bind(bindArgs);
+    this.bind(bindArgs);
     while (this.baseStmt.step()) {
       yield this.baseStmt.get(this.mode == "col" ? [] : {});
     }
+    this.reset();
   }
 
-  raw(isRaw: boolean = true) {
+  raw(isRaw: boolean = true): this {
     if (isRaw) {
       this.mode = "col";
     } else {
       this.mode = "obj";
     }
+
+    return this;
   }
 
   bind(args: any[] | { [key: string]: any }) {
+    if (this.bound) {
+      this.baseStmt.clearBindings();
+    }
     this.baseStmt.bind(args);
+    this.bound = true;
+    return this;
+  }
+
+  reset(clearBindings: boolean = false): this {
+    if (clearBindings) {
+      this.bound = false;
+    }
+    this.baseStmt.reset(clearBindings);
+    return this;
   }
 
   finalize() {

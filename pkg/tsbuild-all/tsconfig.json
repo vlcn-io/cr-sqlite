@@ -1,0 +1,15 @@
+{
+  "extends": "../tsconfig-template.json",
+  "compilerOptions": {
+    "outDir": "./lib/",
+    "rootDir": "./src"
+  },
+  "include": ["./src/"],
+  "references": [
+    { "path": "../network/webrtc" },
+    { "path": "../node-deno/examples" },
+    { "path": "../node-deno/allinone" },
+    { "path": "../replicators/whole-db" },
+    { "path": "../wasm-esm/crsqlite" }
+  ]
+}

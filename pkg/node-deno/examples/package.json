@@ -14,8 +14,8 @@
     "typescript": "^4.8.4"
   },
   "scripts": {
-    "tsc": "tsc",
-    "watch": "tsc --watch",
+    "build": "tsc --build",
+    "watch": "tsc --build -w",
     "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js"
   },
   "repository": {

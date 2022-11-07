@@ -1,22 +1,21 @@
-import sqlite3InitModule from './sqlite3.js';
+import sqlite3InitModule from "./sqlite3.js";
 
 /**
  * Create wrapper types for two reasons:
  * 1. Types (which we can get without wrappers)
  * 2. More ergonomic API(s)
- * 
+ *
  * E.g., the base sqlite api requires passing row objects
  * that it'll then mutate and fill for you. A bit odd.
  */
 export class SQLite3 {
-  constructor(private baseSqlite3: any) {
-  }
+  constructor(private baseSqlite3: any) {}
 
   /**
-   * 
+   *
    * @param filename undefined file name opens an in-memory database
    */
-  open(filename?: string, mode: string = 'c') {
+  open(filename?: string, mode: string = "c") {
     if (filename == null || filename === ":memory:") {
       return new DB(new this.baseSqlite3.oo1.DB());
     } else {
@@ -25,20 +24,16 @@ export class SQLite3 {
   }
 }
 
-export type Stringish = string | string[];
-
 export class DB {
   #closeListeners = new Set<() => void>();
+  #inTx = false;
 
   constructor(private baseDb: any) {}
 
-  exec(sql: Stringish, bind?: unknown | unknown[]) {
-    this.baseDb.exec(
-      sql,
-      {
-        bind,
-      }
-    );
+  exec(sql: string, bind?: unknown | unknown[]) {
+    this.baseDb.exec(sql, {
+      bind,
+    });
   }
 
   /**
@@ -47,15 +42,12 @@ export class DB {
    * @param sql query to run
    * @param bind values, if any, to bind
    */
-  execO(sql: Stringish, bind?: unknown | unknown[]): {[key: string]: any}[] {
-    return this.baseDb.exec(
-      sql,
-      {
-        returnValue: "resultRows",
-        rowMode: "object",
-        bind,
-      }
-    );
+  execO(sql: string, bind?: unknown | unknown[]): { [key: string]: any }[] {
+    return this.baseDb.exec(sql, {
+      returnValue: "resultRows",
+      rowMode: "object",
+      bind,
+    });
   }
 
   /**
@@ -63,15 +55,12 @@ export class DB {
    * @param sql query to run
    * @param bind values, if any, to bind
    */
-  execA(sql: Stringish, bind?: unknown | unknown[]): any[] {
-    return this.baseDb.exec(
-      sql,
-      {
-        returnValue: "resultRows",
-        rowMode: "array",
-        bind,
-      }
-    );
+  execA(sql: string, bind?: unknown | unknown[]): any[] {
+    return this.baseDb.exec(sql, {
+      returnValue: "resultRows",
+      rowMode: "array",
+      bind,
+    });
   }
 
   isOpen() {
@@ -90,13 +79,13 @@ export class DB {
     return this.baseDb.openStatementCount();
   }
 
-  // TODO: hopefully we don't have to wrap this too for sensible defaults
   prepare(sql: string) {
-    return this.baseDb.prepare(sql);
+    const stmt = this.baseDb.prepare(sql);
+    return new Stmt(stmt);
   }
 
   close() {
-    this.#closeListeners.forEach(l => l());
+    this.#closeListeners.forEach((l) => l());
     this.baseDb.exec("select crsql_finalize();");
     this.baseDb.close();
   }
@@ -110,7 +99,17 @@ export class DB {
   }
 
   transaction(cb: () => void) {
-    this.baseDb.transaction(cb);
+    if (this.#inTx) {
+      this.savepoint(cb);
+      return;
+    }
+
+    this.#inTx = true;
+    try {
+      this.baseDb.transaction(cb);
+    } finally {
+      this.#inTx = false;
+    }
   }
 
   onClose(l: () => void) {
@@ -122,8 +121,60 @@ export class DB {
   }
 }
 
+export class Stmt {
+  private mode: "col" | "obj" = "obj";
+  constructor(private baseStmt: any) {}
+
+  // wrap stmt in a better-sqlite3 like interface
+  run(...bindArgs: any[]) {
+    this.baseStmt.bind(bindArgs);
+    while (this.baseStmt.step()) {}
+  }
+
+  get(...bindArgs: any[]): any[] {
+    this.baseStmt.bind(bindArgs);
+    if (this.baseStmt.step()) {
+      return this.baseStmt.get(this.mode == "col" ? [] : {});
+    } else {
+      return [];
+    }
+  }
+
+  all(...bindArgs: any[]) {
+    this.baseStmt.bind(bindArgs);
+    const ret: any[] = [];
+    while (this.baseStmt.step()) {
+      ret.push(this.baseStmt.get(this.mode == "col" ? [] : {}));
+    }
+    return ret;
+  }
+
+  *iterate(...bindArgs: any[]) {
+    this.baseStmt.bind(bindArgs);
+    while (this.baseStmt.step()) {
+      yield this.baseStmt.get(this.mode == "col" ? [] : {});
+    }
+  }
+
+  raw(isRaw: boolean = true) {
+    if (isRaw) {
+      this.mode = "col";
+    } else {
+      this.mode = "obj";
+    }
+  }
+
+  bind(args: any[] | { [key: string]: any }) {
+    this.baseStmt.bind(args);
+  }
+
+  finalize() {
+    this.baseStmt.finalize();
+  }
+}
+
 export default function initWasm(): Promise<SQLite3> {
   return sqlite3InitModule().then((baseSqlite3: any) => {
     return new SQLite3(baseSqlite3);
-  })
+  });
 }

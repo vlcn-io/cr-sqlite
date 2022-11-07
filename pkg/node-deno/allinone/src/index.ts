@@ -1,3 +1,4 @@
+// @ts-ignore
 import Database from "better-sqlite3";
 import { resolve } from "import-meta-resolve";
 const modulePath = new URL(await resolve("@vlcn.io/crsqlite", import.meta.url))
@@ -10,32 +11,70 @@ const api = {
 };
 
 export class DB {
-  db: Database;
-  constructor(filename: string) {
+  private db: Database;
+  private open: boolean;
+  constructor(private filename: string) {
     this.db = new Database(filename);
     this.db.loadExtension(modulePath);
+    this.open = true;
   }
 
-  exec() {}
+  exec(sql: string, bind?: unknown | unknown[]): void {
+    if (Array.isArray(bind)) {
+      this.db.prepare(sql).run(...bind);
+    } else {
+      this.db.prepare(sql).run();
+    }
+  }
 
-  execO() {}
+  execO(sql: string, bind?: unknown | unknown[]) {
+    if (Array.isArray(bind)) {
+      return this.db.prepare(sql).all(...bind);
+    } else {
+      return this.db.prepare(sql).all();
+    }
+  }
 
-  execA() {}
+  execA(sql: string, bind?: unknown | unknown[]) {
+    if (Array.isArray(bind)) {
+      return this.db
+        .prepare(sql)
+        .raw()
+        .all(...bind);
+    } else {
+      return this.db.prepare(sql).raw().all();
+    }
+  }
 
-  isOpen() {}
+  isOpen() {
+    return this.open;
+  }
 
-  dbFilename() {}
+  dbFilename() {
+    return this.filename;
+  }
 
-  openStatementCount() {}
+  openStatementCount() {
+    return -1;
+  }
 
-  prepare() {}
+  prepare(sql: string) {
+    const ret = this.db.prepare(sql);
+    // better-sqlite3 doesn't expose a finalize? hmm..
+    ret.finalize = () => {};
+    return ret;
+  }
 
-  createFunction() {}
+  createFunction(name: string, fn: (...args: any) => unknown) {
+    this.db.function(name, fn);
+  }
 
-  savepoint(bc: () => void) {}
+  savepoint(cb: () => void) {
+    // better-sqlite3 auto makes a tx a savepoint if nested
+    this.transaction(cb);
+  }
 
   transaction(cb: () => void) {
-    // TODO: do as manual...
     const cb2 = this.db.transaction(cb);
     cb2();
   }
@@ -43,7 +82,12 @@ export class DB {
   close() {
     this.db.prepare("select crsql_finalize();").run();
     this.db.close();
+    this.open = false;
   }
+}
+
+class Stmt {
+  constructor() {}
 }
 
 export default api;

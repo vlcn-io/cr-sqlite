@@ -20,7 +20,9 @@
     "directory": "https://github.com/vlcn-io/cr-sqlite/tree/main/pkg/network/webrtc"
   },
   "dependencies": {
+    "@vlcn.io/replicator-wholedb": "workspace:*",
+    "@vlcn.io/xplat-api": "workspace:*",
     "peerjs": "^1.4.7",
-    "@vlcn.io/crsqlite-wasm": "workspace:*"
+    "uuid": "^9.0.0"
   }
 }

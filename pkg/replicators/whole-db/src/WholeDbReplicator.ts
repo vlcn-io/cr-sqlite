@@ -1,7 +1,7 @@
 import { DB } from "@vlcn.io/xplat-api";
 import { parse as uuidParse, stringify as uuidStringify } from "uuid";
-type SiteIDWire = string;
-type SiteIDLocal = Uint8Array;
+export type SiteIDWire = string;
+export type SiteIDLocal = Uint8Array;
 type CID = number;
 type QuoteConcatedPKs = string | number;
 type TableName = string;
@@ -78,7 +78,7 @@ const api = {
 // TODO: we need to handle initial sync.
 // Well, that should be easy. Just poke people on connect.
 
-class WholeDbReplicator {
+export class WholeDbReplicator {
   private crrs: string[] = [];
   private pendingNotification = false;
   private siteId: SiteIDLocal;

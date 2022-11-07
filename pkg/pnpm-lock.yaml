@@ -17,12 +17,16 @@ importers:
 
   network/webrtc:
     specifiers:
-      '@vlcn.io/crsqlite-wasm': workspace:*
+      '@vlcn.io/replicator-wholedb': workspace:*
+      '@vlcn.io/xplat-api': workspace:*
       peerjs: ^1.4.7
       typescript: ^4.8.4
+      uuid: ^9.0.0
     dependencies:
-      '@vlcn.io/crsqlite-wasm': link:../../wasm-esm/crsqlite
+      '@vlcn.io/replicator-wholedb': link:../../replicators/whole-db
+      '@vlcn.io/xplat-api': link:../../xplat-api
       peerjs: 1.4.7
+      uuid: 9.0.0
     devDependencies:
       typescript: 4.8.4
 
@@ -112,13 +116,11 @@ importers:
       '@types/uuid': ^8.3.4
       '@vlcn.io/xplat-api': workspace:*
       jest: ^29.2.2
-      peerjs: ^1.4.7
       typescript: ^4.8.4
       uuid: ^9.0.0
     dependencies:
       '@types/uuid': 8.3.4
       '@vlcn.io/xplat-api': link:../../xplat-api
-      peerjs: 1.4.7
       uuid: 9.0.0
     devDependencies:
       '@types/jest': 29.2.2

@@ -3,6 +3,7 @@ import Database from "better-sqlite3";
 import { resolve } from "import-meta-resolve";
 const modulePath = new URL(await resolve("@vlcn.io/crsqlite", import.meta.url))
   .pathname;
+import { DB as IDB, Stmt as IStmt } from "@vlcn.io/xplat-api";
 
 const api = {
   open(filename?: string, mode: string = "c"): DB {
@@ -10,13 +11,17 @@ const api = {
   },
 };
 
-export class DB {
+export class DB implements IDB {
   private db: Database;
   private open: boolean;
   constructor(private filename: string) {
     this.db = new Database(filename);
     this.db.loadExtension(modulePath);
     this.open = true;
+  }
+
+  execMany(sql: string[]): void {
+    this.db.exec(sql.join(";"));
   }
 
   exec(sql: string, bind?: unknown | unknown[]): void {
@@ -27,7 +32,7 @@ export class DB {
     }
   }
 
-  execO(sql: string, bind?: unknown | unknown[]) {
+  execO<T extends {}>(sql: string, bind?: unknown | unknown[]): T[] {
     if (Array.isArray(bind)) {
       return this.db.prepare(sql).all(...bind);
     } else {
@@ -35,7 +40,7 @@ export class DB {
     }
   }
 
-  execA(sql: string, bind?: unknown | unknown[]) {
+  execA<T extends any[]>(sql: string, bind?: unknown | unknown[]): T[] {
     if (Array.isArray(bind)) {
       return this.db
         .prepare(sql)
@@ -58,7 +63,7 @@ export class DB {
     return -1;
   }
 
-  prepare(sql: string) {
+  prepare(sql: string): IStmt {
     const ret = this.db.prepare(sql);
     // better-sqlite3 doesn't expose a finalize? hmm..
     ret.finalize = () => {};
@@ -84,10 +89,6 @@ export class DB {
     this.db.close();
     this.open = false;
   }
-}
-
-class Stmt {
-  constructor() {}
 }
 
 export default api;

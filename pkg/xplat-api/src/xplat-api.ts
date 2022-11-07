@@ -18,7 +18,6 @@ export interface Stmt {
   iterate(...bindArgs: any[]): Generator<any>;
   raw(isRaw?: boolean): this;
   bind(args: any[] | { [key: string]: any }): this;
-  reset(clearBindings?: boolean): this;
   finalize(): void;
 }
 

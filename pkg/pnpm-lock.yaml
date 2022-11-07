@@ -26,11 +26,13 @@ importers:
   node-deno/allinone:
     specifiers:
       '@vlcn.io/crsqlite': link:../../
+      '@vlcn.io/xplat-api': workspace:*
       better-sqlite3: ^7.6.2
       import-meta-resolve: ^2.1.0
       typescript: ^4.8.4
     dependencies:
       '@vlcn.io/crsqlite': link:../..
+      '@vlcn.io/xplat-api': link:../../xplat-api
       better-sqlite3: 7.6.2
       import-meta-resolve: 2.1.0
     devDependencies:

@@ -196,7 +196,6 @@ class WholeDbReplicator {
     try {
       changesets.forEach((cs) => {
         stmt.run(cs[0], cs[1], cs[2], cs[3], cs[4], uuidParse(cs[5]));
-        stmt.reset(true);
       });
     } finally {
       stmt.finalize();

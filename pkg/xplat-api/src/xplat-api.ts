@@ -2,7 +2,7 @@ export interface DB {
   execMany(sql: string[]): void;
   exec(sql: string, bind?: unknown | unknown[]): void;
   execO<T extends {}>(sql: string, bind?: unknown | unknown[]): T[];
-  execA<T extends []>(sql: string, bind?: unknown | unknown[]): T[];
+  execA<T extends any[]>(sql: string, bind?: unknown | unknown[]): T[];
 
   prepare(sql: string): Stmt;
   close(): void;

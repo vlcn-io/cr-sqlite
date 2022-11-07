@@ -1,4 +1,4 @@
-import { DB } from "@vlcn.io/crsqlite-wasm";
+import { DB } from "@vlcn.io/xplat-api";
 import { parse as uuidParse, stringify as uuidStringify } from "uuid";
 type SiteIDWire = string;
 type SiteIDLocal = Uint8Array;
@@ -86,7 +86,7 @@ class WholeDbReplicator {
     this.db = db;
     db.createFunction("crsql_wdbreplicator", this.crrChanged);
 
-    this.siteId = db.execA("SELECT crsql_siteid()")[0][0];
+    this.siteId = db.execA<[Uint8Array]>("SELECT crsql_siteid()")[0][0];
     this.siteIdWire = uuidStringify(this.siteId);
     this.installTriggers();
     this.createPeerTrackingTable();

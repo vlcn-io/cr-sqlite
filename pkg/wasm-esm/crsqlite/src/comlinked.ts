@@ -27,6 +27,10 @@ const api = {
     db!.exec(sql, bind);
   },
 
+  execMany(sql: string[]) {
+    db!.execMany(sql);
+  },
+
   execO(sql: string, bind?: unknown[]) {
     return db!.execO(sql, bind);
   },

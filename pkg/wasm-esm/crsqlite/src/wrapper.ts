@@ -32,6 +32,10 @@ export class DB implements IDB {
 
   constructor(private baseDb: any) {}
 
+  execMany(sql: string[]): void {
+    this.baseDb.exec(sql);
+  }
+
   exec(sql: string, bind?: unknown | unknown[]) {
     this.baseDb.exec(sql, {
       bind,

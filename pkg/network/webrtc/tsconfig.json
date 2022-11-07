@@ -5,5 +5,5 @@
     "rootDir": "./src"
   },
   "include": ["./src/"],
-  "references": [{ "path": "../../wasm-esm" }]
+  "references": [{ "path": "../../wasm-esm/crsqlite" }]
 }

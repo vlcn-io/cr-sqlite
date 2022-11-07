@@ -5,6 +5,8 @@ packages:
   - "network/webrtc"
   - "replicators/whole-db"
   - "replicators/browser-tests"
+  - "replicators/xplat-tests"
+  - "replicators/nodeno-tests"
   - "node-deno/allinone"
   - "node-deno/examples"
   - "xplat-api"

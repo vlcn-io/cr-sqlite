@@ -108,7 +108,7 @@ Note -- these are pre-release. Please look at [the open bugs](https://github.com
 
 Instructions on building a native library that can be loaded into SQLite in non-wasm environments.
 
-In the root directory of the project, run:
+In the src directory of the project, run:
 
 ```bash
 make loadable
@@ -125,7 +125,7 @@ This will create a shared library at `dist/crsqlite.[lib extension]`
 
 Instructions on building a `sqlite3` CLI that has `cr-sqlite` statically linked and pre-loaded.
 
-In the root directory of the project, run:
+In the src directory of the project, run:
 
 ```bash
 make sqlite3

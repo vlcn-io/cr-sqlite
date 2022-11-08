@@ -11,7 +11,7 @@
     { "path": "../nodeno/allinone" },
     { "path": "../replicators/whole-db" },
     { "path": "../replicators/xplat-tests" },
-    { "path": "../replicators/nodeno-tests" },
+    { "path": "../tests/nodeno-tests" },
     { "path": "../wasm-esm/crsqlite" },
     { "path": "../rx/table-based" }
   ]

@@ -7,6 +7,18 @@ import tblrx from "@vlcn.io/rx-tbl";
 import wdbRtc from "@vlcn.io/network-webrtc";
 import { DB } from "@vlcn.io/crsqlite-wasm";
 
+declare module "@vlcn.io/crsqlite-wasm/dist/comlinkable" {
+  interface ComlinkableAPI {
+    onTblChange(dbid: DBID, cb: (tbls: Set<string>) => void): () => void;
+    schemaChanged(dbid: DBID): void;
+    onConnectionsChanged(
+      dbid: DBID,
+      cb: (pending: string[], established: string[]) => void
+    ): void;
+    connectTo(dbid: DBID, other: string): void;
+  }
+}
+
 const rtcs = new Map<DBID, ReturnType<typeof wdbRtc>>();
 const rxs = new Map<DBID, ReturnType<typeof tblrx>>();
 registerDbExtension((dbid: DBID, db: DB) => {
@@ -26,10 +38,9 @@ registerDbExtension((dbid: DBID, db: DB) => {
   };
 });
 
-// TODO extend the comlinkable type
 // TODO: simpler way to compose extensions to a comlinked interface
 // can we just auto-convert these APIs to comlink compatible ones?
-(comlinkable as any).onTblChange = (
+comlinkable.onTblChange = (
   dbid: DBID,
   cb: (tbls: Set<string>) => void
 ): (() => void) => {
@@ -38,14 +49,14 @@ registerDbExtension((dbid: DBID, db: DB) => {
 };
 
 // TODO: test returned functions work as expected thru a comlink
-(comlinkable as any).schemaChanged = (dbid: DBID) => {
+comlinkable.schemaChanged = (dbid: DBID) => {
   const rx = rxs.get(dbid);
   const rtc = rtcs.get(dbid);
   rx!.schemaChanged();
   rtc!.schemaChanged();
 };
 
-(comlinkable as any).onConnectionsChanged = (
+comlinkable.onConnectionsChanged = (
   dbid: DBID,
   cb: (pending: string[], established: string[]) => void
 ) => {
@@ -53,6 +64,9 @@ registerDbExtension((dbid: DBID, db: DB) => {
   return rtc!.onConnectionsChanged(cb);
 };
 
-(comlinkable as any).connectTo = () => {};
+comlinkable.connectTo = (dbid: DBID, other: string) => {
+  const rtc = rtcs.get(dbid);
+  rtc!.connectTo(other);
+};
 
 Comlink.expose(comlinkable);

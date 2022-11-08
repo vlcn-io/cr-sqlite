@@ -97,7 +97,14 @@ export class DB implements IDB {
   }
 
   createFunction(name: string, fn: (...args: any) => unknown, opts?: {}) {
-    this.baseDb.createFunction(name, fn, opts);
+    // Unfortunate requirement for better-sqlite3 compatibility
+    // better-sqlite3 doesn't pass `ctx` and isn't aware of it.
+    // sqlite wasm is -- https://sqlite.org/wasm/doc/tip/api-oo1.md#db-createfunction
+    // and thus compensates for it in function arity
+    this.baseDb.createFunction(name, (ctx: any, ...args: any) => fn(...args), {
+      arity: fn.length,
+      ...opts,
+    });
   }
 
   savepoint(cb: () => void) {

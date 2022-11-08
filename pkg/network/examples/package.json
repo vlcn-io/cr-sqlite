@@ -1,0 +1,28 @@
+{
+  "name": "@vlcn.io/network-examples",
+  "type": "module",
+  "version": "0.0.1",
+  "files": [
+    "dist"
+  ],
+  "module": "dist/index.js",
+  "sideEffects": false,
+  "devDependencies": {
+    "typescript": "^4.8.4"
+  },
+  "scripts": {
+    "tsc": "tsc",
+    "watch": "tsc --watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:vlcn-io/cr-sqlite.git",
+    "directory": "https://github.com/vlcn-io/cr-sqlite/tree/main/pkg/network/webrtc"
+  },
+  "dependencies": {
+    "@vlcn.io/replicator-wholedb": "workspace:*",
+    "@vlcn.io/xplat-api": "workspace:*",
+    "peerjs": "^1.4.7",
+    "uuid": "^9.0.0"
+  }
+}

@@ -103,6 +103,7 @@ export class WholeDbRtc implements PokeProtocol {
   }
 
   dispose(): void {
+    this.replicator.dispose();
     this.site.destroy();
   }
 

@@ -200,6 +200,12 @@ class WholeDbRtcPublic {
     return () => this.listeners.delete(cb);
   }
 
+  offConnectionsChanged(
+    cb: (pending: SiteIDWire[], established: SiteIDWire[]) => void
+  ) {
+    this.listeners.delete(cb);
+  }
+
   schemaChanged() {
     this.wdbrtc.schemaChanged();
   }

@@ -31,9 +31,22 @@ registerDbExtension((dbid: DBID, db: DB) => {
 comlinkable.onTblChange = (
   dbid: DBID,
   cb: (tbls: Set<string>) => void
-): (() => void) => {
+): void => {
   const rx = rxs.get(dbid);
-  return rx!.on(cb);
+  rx!.on(cb);
+};
+
+comlinkable.offTblChange = (dbid: DBID, cb: (tbls: Set<string>) => void) => {
+  const rx = rxs.get(dbid);
+  rx!.off(cb);
+};
+
+comlinkable.offConnectionsChanged = (
+  dbid: DBID,
+  cb: (pending: string[], established: string[]) => void
+) => {
+  const rtc = rtcs.get(dbid);
+  rtc!.offConnectionsChanged(cb);
 };
 
 // TODO: test returned functions work as expected thru a comlink
@@ -49,7 +62,7 @@ comlinkable.onConnectionsChanged = (
   cb: (pending: string[], established: string[]) => void
 ) => {
   const rtc = rtcs.get(dbid);
-  return rtc!.onConnectionsChanged(cb);
+  rtc!.onConnectionsChanged(cb);
 };
 
 comlinkable.connectTo = (dbid: DBID, other: string) => {

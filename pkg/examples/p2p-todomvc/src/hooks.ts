@@ -1,6 +1,6 @@
 import * as Comlink from "comlink";
 import { ComlinkableAPI } from "@vlcn.io/crsqlite-wasm/dist/comlinkable";
-import "dbapi-ext.js";
+import "./dbapi-ext.js";
 import { useEffect, useState } from "react";
 
 export type Ctx = {
@@ -59,6 +59,9 @@ export function useQuery<T>(
 
     const proxy = Comlink.proxy(runQuery);
     ctx.sqlite.onTblChange(ctx.dbid, proxy);
+
+    // initial kickoff to get initial data.
+    runQuery(null);
 
     return () => {
       isMounted = false;

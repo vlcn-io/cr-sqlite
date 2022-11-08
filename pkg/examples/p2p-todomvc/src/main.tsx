@@ -5,7 +5,7 @@ import * as Comlink from "comlink";
 // @ts-ignore -- todo
 import DBWorker from "./dbworker.js?worker";
 import { ComlinkableAPI } from "@vlcn.io/crsqlite-wasm/dist/comlinkable";
-import "dbapi-ext.js";
+import "./dbapi-ext.js";
 import App from "./App";
 
 const sqlite = Comlink.wrap<ComlinkableAPI>(new DBWorker());
@@ -16,6 +16,7 @@ async function onReady() {
     dbid,
     "CREATE TABLE IF NOT EXISTS todo (id, text, completed)"
   );
+  sqlite.schemaChanged(dbid);
 
   startApp({
     dbid,

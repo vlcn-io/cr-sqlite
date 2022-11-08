@@ -6,17 +6,10 @@ import { API } from "@vlcn.io/crsqlite-wasm/dist/comlinked";
 const db = Comlink.wrap<API>(new DBWorker());
 
 async function onReady() {
-  console.log("ready");
-
   await db.open(/* optional file name */);
+  await db.exec("CREATE TABLE IF NOT EXISTS todo (id, text, completed)");
 
-  await db.execMany([
-    "CREATE TABLE foo (a, b);",
-    "INSERT INTO foo VALUES (1, 2), (3, 4);",
-  ]);
-
-  const rows = await db.execO("SELECT * FROM foo");
-  console.log(rows);
+  // startApp();
 }
 
 function onError(e: any) {

@@ -12,3 +12,4 @@ packages:
   - "nodeno/examples"
   - "xplat-api"
   - "tsbuild-all"
+  - "examples/p2p-todomvc"

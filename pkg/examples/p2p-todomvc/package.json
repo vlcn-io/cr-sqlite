@@ -1,0 +1,24 @@
+{
+  "name": "@vlcn.io/crsqlite-p2p-todomvc",
+  "private": true,
+  "type": "module",
+  "version": "0.0.1",
+  "sideEffects": false,
+  "scripts": {
+    "start": "vite",
+    "build": "vite build",
+    "tsc": "tsc --noEmit",
+    "preview": "vite preview",
+    "test:unit": "vitest"
+  },
+  "dependencies": {
+    "@vlcn.io/crsqlite-wasm": "workspace:*",
+    "comlink": "^4.3.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.0.25",
+    "vite": "^3.2.2"
+  }
+}

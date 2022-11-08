@@ -32,9 +32,17 @@ type RequestChangesMsg = {
 };
 
 export class WholeDbRtc implements PokeProtocol {
-  private site: Peer;
-  private establishedConnections: { [key: SiteIDWire]: DataConnection } = {};
+  private readonly site: Peer;
+  private establishedConnections: Map<SiteIDWire, DataConnection> = new Map();
+  private pendingConnections: Map<SiteIDWire, DataConnection> = new Map();
   private replicator: WholeDbReplicator;
+
+  public onConnectionsChanged:
+    | ((
+        pending: Map<SiteIDWire, DataConnection>,
+        established: Map<SiteIDWire, DataConnection>
+      ) => void)
+    | null = null;
 
   private _onPoked:
     | ((pokedBy: SiteIDWire, pokerVersion: bigint) => void)
@@ -47,11 +55,25 @@ export class WholeDbRtc implements PokeProtocol {
     | ((fromSiteId: SiteIDWire, changesets: readonly Changeset[]) => void)
     | null = null;
 
-  constructor(private siteId: SiteIDLocal, private db: DB) {
+  constructor(public readonly siteId: SiteIDLocal, private db: DB) {
     this.site = new Peer(uuidStringify(siteId));
     this.site.on("connection", this._newConnection);
 
     this.replicator = WDB.install(db, this);
+  }
+
+  connectTo(other: SiteIDWire) {
+    if (this.pendingConnections.has(other)) {
+      const c = this.pendingConnections.get(other);
+      c?.close();
+    }
+
+    const conn = this.site.connect(other);
+    this.pendingConnections.set(other, conn);
+    this._connectionsChanged();
+    conn.on("open", () => {
+      this._newConnection(conn);
+    });
   }
 
   poke(poker: SiteIDWire, pokerVersion: bigint): void {
@@ -107,18 +129,27 @@ export class WholeDbRtc implements PokeProtocol {
     this.site.destroy();
   }
 
-  _newConnection = (conn: DataConnection) => {
+  private _newConnection = (conn: DataConnection) => {
+    this.pendingConnections.delete(conn.peer);
+
     conn.on("data", (data) => this._dataReceived(conn.peer, data as Msg));
-    conn.on("close", () => delete this.establishedConnections[conn.peer]);
+    conn.on("close", () => {
+      this.establishedConnections.delete(conn.peer);
+      this._connectionsChanged();
+    });
     conn.on("error", (e) => {
       // TODO: more reporting to the callers of us
       console.error(e);
-      delete this.establishedConnections[conn.peer];
+      this.establishedConnections.delete(conn.peer);
+      this._connectionsChanged();
     });
-    this.establishedConnections[conn.peer] = conn;
+
+    this.establishedConnections.set(conn.peer, conn);
+    this._connectionsChanged();
+    this._onNewConnection && this._onNewConnection(conn.peer);
   };
 
-  _dataReceived(from: SiteIDWire, data: Msg) {
+  private _dataReceived(from: SiteIDWire, data: Msg) {
     switch (data.tag) {
       case "poke":
         this._onPoked && this._onPoked(from, BigInt(data.version));
@@ -132,9 +163,65 @@ export class WholeDbRtc implements PokeProtocol {
         break;
     }
   }
+
+  private _connectionsChanged() {
+    this.onConnectionsChanged &&
+      this.onConnectionsChanged(
+        this.pendingConnections,
+        this.establishedConnections
+      );
+  }
 }
 
-export default function wholeDbRtc(db: DB): WholeDbRtc {
+class WholeDbRtcPublic {
+  private listeners = new Set<
+    (
+      pending: Map<SiteIDWire, DataConnection>,
+      established: Map<SiteIDWire, DataConnection>
+    ) => void
+  >();
+  constructor(private wdbrtc: WholeDbRtc) {
+    wdbrtc.onConnectionsChanged = this._connectionsChanged;
+  }
+
+  get siteId() {
+    return this.wdbrtc.siteId;
+  }
+
+  connectTo(other: SiteIDWire) {
+    this.wdbrtc.connectTo(other);
+  }
+
+  onConnectionsChanged(
+    cb: (
+      pending: Map<SiteIDWire, DataConnection>,
+      established: Map<SiteIDWire, DataConnection>
+    ) => void
+  ) {
+    this.listeners.add(cb);
+    return () => this.listeners.delete(cb);
+  }
+
+  private _connectionsChanged(
+    pending: Map<SiteIDWire, DataConnection>,
+    established: Map<SiteIDWire, DataConnection>
+  ): void {
+    // notify listeners
+    for (const l of this.listeners) {
+      try {
+        l(pending, established);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  }
+
+  dispose(): void {
+    this.wdbrtc.dispose();
+  }
+}
+
+export default function wholeDbRtc(db: DB): WholeDbRtcPublic {
   const siteId = db.execA<[Uint8Array]>("SELECT crsql_siteid();")[0][0];
-  return new WholeDbRtc(siteId, db);
+  return new WholeDbRtcPublic(new WholeDbRtc(siteId, db));
 }

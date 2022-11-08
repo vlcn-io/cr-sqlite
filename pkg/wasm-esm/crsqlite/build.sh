@@ -2,7 +2,7 @@
 
 set -e
 
-mkdir dist
+mkdir -p dist
 
 # Setup sqlite
 cd ../../../deps/sqlite

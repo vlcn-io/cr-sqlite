@@ -7,6 +7,6 @@
   "include": ["./src/"],
   "references": [
     { "path": "../../nodeno/allinone" },
-    { "path": "../xplat-tests" }
+    { "path": "../../replicators/xplat-tests" }
   ]
 }

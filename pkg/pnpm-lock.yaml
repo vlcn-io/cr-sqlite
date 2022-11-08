@@ -23,7 +23,7 @@ importers:
       typescript: ^4.8.4
       uuid: ^9.0.0
     dependencies:
-      '@vlcn.io/replicator-wholedb': link:../../replicators/whole-db
+      '@vlcn.io/replicator-wholedb': link:../../tests/nodeno-tests
       '@vlcn.io/xplat-api': link:../../xplat-api
       peerjs: 1.4.7
       uuid: 9.0.0
@@ -68,48 +68,6 @@ importers:
       jest: 29.2.2_@types+node@18.11.9
       typescript: 4.8.4
 
-  replicators/browser-tests:
-    specifiers:
-      '@types/chai': ^4.3.3
-      '@types/cypress': ^1.1.3
-      '@types/mocha': ^10.0.0
-      '@types/node': ^18.11.9
-      '@vlcn.io/crsqlite-wasm': workspace:*
-      '@vlcn.io/replicator-xplat-tests': workspace:*
-      cypress: ^10.11.0
-      react: ^18.2.0
-      react-dom: ^18.2.0
-      typescript: ^4.6.4
-      vite: ^3.2.0
-    dependencies:
-      '@vlcn.io/crsqlite-wasm': link:../../wasm-esm/crsqlite
-      '@vlcn.io/replicator-xplat-tests': link:../xplat-tests
-    devDependencies:
-      '@types/chai': 4.3.3
-      '@types/cypress': 1.1.3
-      '@types/mocha': 10.0.0
-      '@types/node': 18.11.9
-      cypress: 10.11.0
-      react: 18.2.0
-      react-dom: 18.2.0_react@18.2.0
-      typescript: 4.8.4
-      vite: 3.2.2
-
-  replicators/nodeno-tests:
-    specifiers:
-      '@vlcn.io/crsqlite-allinone': workspace:*
-      '@vlcn.io/replicator-xplat-tests': workspace:*
-      '@vlcn.io/xplat-api': workspace:*
-      typescript: ^4.8.4
-      vitest: ^0.25.0
-    dependencies:
-      '@vlcn.io/crsqlite-allinone': link:../../nodeno/allinone
-      '@vlcn.io/replicator-xplat-tests': link:../xplat-tests
-      '@vlcn.io/xplat-api': link:../../xplat-api
-    devDependencies:
-      typescript: 4.8.4
-      vitest: 0.25.0
-
   replicators/whole-db:
     specifiers:
       '@types/jest': ^29.2.2
@@ -134,7 +92,7 @@ importers:
       typescript: ^4.8.4
       uuid: ^9.0.0
     dependencies:
-      '@vlcn.io/replicator-wholedb': link:../whole-db
+      '@vlcn.io/replicator-wholedb': link:../../tests/nodeno-tests
       '@vlcn.io/xplat-api': link:../../xplat-api
       uuid: 9.0.0
     devDependencies:
@@ -148,6 +106,46 @@ importers:
       '@vlcn.io/xplat-api': link:../../xplat-api
     devDependencies:
       typescript: 4.8.4
+
+  tests/browser-tests:
+    specifiers:
+      '@types/chai': ^4.3.3
+      '@types/mocha': ^10.0.0
+      '@types/node': ^18.11.9
+      '@vlcn.io/crsqlite-wasm': workspace:*
+      '@vlcn.io/replicator-xplat-tests': workspace:*
+      cypress: ^10.11.0
+      react: ^18.2.0
+      react-dom: ^18.2.0
+      typescript: ^4.6.4
+      vite: ^3.2.0
+    dependencies:
+      '@vlcn.io/crsqlite-wasm': link:../../wasm-esm/crsqlite
+      '@vlcn.io/replicator-xplat-tests': link:../../replicators/xplat-tests
+    devDependencies:
+      '@types/chai': 4.3.3
+      '@types/mocha': 10.0.0
+      '@types/node': 18.11.9
+      cypress: 10.11.0
+      react: 18.2.0
+      react-dom: 18.2.0_react@18.2.0
+      typescript: 4.8.4
+      vite: 3.2.2
+
+  tests/nodeno-tests:
+    specifiers:
+      '@vlcn.io/crsqlite-allinone': workspace:*
+      '@vlcn.io/replicator-xplat-tests': workspace:*
+      '@vlcn.io/xplat-api': workspace:*
+      typescript: ^4.8.4
+      vitest: ^0.25.0
+    dependencies:
+      '@vlcn.io/crsqlite-allinone': link:../../nodeno/allinone
+      '@vlcn.io/replicator-xplat-tests': link:../../replicators/xplat-tests
+      '@vlcn.io/xplat-api': link:../../xplat-api
+    devDependencies:
+      typescript: 4.8.4
+      vitest: 0.25.0
 
   wasm-esm/crsqlite:
     specifiers:
@@ -1184,13 +1182,6 @@ packages:
 
   /@types/chai/4.3.3:
     resolution: {integrity: sha512-hC7OMnszpxhZPduX+m+nrx+uFoLkWOMiR4oa/AZF3MuSETYTZmFfJAHqZEM8MVlvfG7BEUcgvtwoCTxBp6hm3g==}
-    dev: true
-
-  /@types/cypress/1.1.3:
-    resolution: {integrity: sha512-OXe0Gw8LeCflkG1oPgFpyrYWJmEKqYncBsD/J0r17r0ETx/TnIGDNLwXt/pFYSYuYTpzcq1q3g62M9DrfsBL4g==}
-    deprecated: This is a stub types definition for cypress (https://cypress.io). cypress provides its own type definitions, so you don't need @types/cypress installed!
-    dependencies:
-      cypress: 10.11.0
     dev: true
 
   /@types/graceful-fs/4.1.5:
@@ -2716,7 +2707,7 @@ packages:
     dev: true
 
   /extsprintf/1.3.0:
-    resolution: {integrity: sha1-lpGEQOMEGnpBT4xS48V06zw+HgU=}
+    resolution: {integrity: sha512-11Ndz7Nv+mvAC1j0ktTa7fAb0vLyGGX+rMHNBYQviQDGU0Hw7lhctJANqbPhu9nV9/izT/IntTgZ7Im/9LJs9g==}
     engines: {'0': node >=0.6.0}
     dev: true
 

@@ -1,9 +1,7 @@
 import sqliteWasm, { SQLite3, DB } from "./wrapper.js";
 
-const promise = sqliteWasm();
-
-let sqlite3: SQLite3 | null;
-promise.then((s) => (sqlite3 = s));
+let promise: Promise<SQLite3> | null = null;
+let sqlite3: SQLite3 | null = null;
 let dbid = 0;
 
 export type DBID = number;
@@ -42,6 +40,9 @@ export interface ComlinkableAPI {
 
 const api = {
   onReady(cb: () => void, err: (e: any) => void) {
+    if (promise == null) {
+      promise = sqliteWasm().then((s) => (sqlite3 = s));
+    }
     promise.then(
       () => cb(),
       (e) => err(e)
@@ -49,6 +50,11 @@ const api = {
   },
 
   open(file?: string, mode: string = "c"): DBID {
+    if (promise == null) {
+      throw new Error(
+        "You must await initialization by calling `onReady` first"
+      );
+    }
     const db = sqlite3!.open(file, mode);
     // appl extensions
     dbs.set(++dbid, db);

@@ -7,18 +7,6 @@ import tblrx from "@vlcn.io/rx-tbl";
 import wdbRtc from "@vlcn.io/network-webrtc";
 import { DB } from "@vlcn.io/crsqlite-wasm";
 
-declare module "@vlcn.io/crsqlite-wasm/dist/comlinkable" {
-  interface ComlinkableAPI {
-    onTblChange(dbid: DBID, cb: (tbls: Set<string>) => void): () => void;
-    schemaChanged(dbid: DBID): void;
-    onConnectionsChanged(
-      dbid: DBID,
-      cb: (pending: string[], established: string[]) => void
-    ): void;
-    connectTo(dbid: DBID, other: string): void;
-  }
-}
-
 const rtcs = new Map<DBID, ReturnType<typeof wdbRtc>>();
 const rxs = new Map<DBID, ReturnType<typeof tblrx>>();
 registerDbExtension((dbid: DBID, db: DB) => {

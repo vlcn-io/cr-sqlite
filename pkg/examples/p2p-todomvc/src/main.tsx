@@ -1,13 +1,14 @@
 import * as Comlink from "comlink";
 // @ts-ignore -- todo
-import DBWorker from "@vlcn.io/crsqlite-wasm/dist/comlinked?worker";
-import { API } from "@vlcn.io/crsqlite-wasm/dist/comlinked";
+import DBWorker from "./dbworker.js?worker";
+import { ComlinkableAPI } from "@vlcn.io/crsqlite-wasm/dist/comlinkable";
+import "dbapi-ext.js";
 
-const db = Comlink.wrap<API>(new DBWorker());
+const db = Comlink.wrap<ComlinkableAPI>(new DBWorker());
 
 async function onReady() {
-  await db.open(/* optional file name */);
-  await db.exec("CREATE TABLE IF NOT EXISTS todo (id, text, completed)");
+  const dbid = await db.open(/* optional file name */);
+  await db.exec(dbid, "CREATE TABLE IF NOT EXISTS todo (id, text, completed)");
 
   // startApp();
 }

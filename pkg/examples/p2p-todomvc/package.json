@@ -13,6 +13,8 @@
   },
   "dependencies": {
     "@vlcn.io/crsqlite-wasm": "workspace:*",
+    "@vlcn.io/rx-tbl": "workspace:*",
+    "@vlcn.io/network-webrtc": "workspace:*",
     "comlink": "^4.3.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"

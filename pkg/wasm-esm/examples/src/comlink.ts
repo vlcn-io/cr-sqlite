@@ -1,26 +1,28 @@
 import * as Comlink from "comlink";
 // @ts-ignore -- todo
 import DBWorker from "@vlcn.io/crsqlite-wasm/dist/comlinked?worker";
-import { API } from "@vlcn.io/crsqlite-wasm/dist/comlinked";
+import { API } from "@vlcn.io/crsqlite-wasm/dist/comlinkable";
 
-const db = Comlink.wrap<API>(new DBWorker());
+const sqlite = Comlink.wrap<API>(new DBWorker());
 
 async function onReady() {
   console.log("ready");
 
-  await db.open(/* optional file name */);
+  const db = await sqlite.open(/* optional file name */);
 
-  await db.execMany([
+  await sqlite.execMany(db, [
     "CREATE TABLE foo (a, b);",
     "INSERT INTO foo VALUES (1, 2), (3, 4);",
   ]);
 
-  const rows = await db.execO("SELECT * FROM foo");
+  const rows = await sqlite.execO(db, "SELECT * FROM foo");
   console.log(rows);
+
+  sqlite.close(db);
 }
 
 function onError(e: any) {
   console.error(e);
 }
 
-db.onReady(Comlink.proxy(onReady), Comlink.proxy(onError));
+sqlite.onReady(Comlink.proxy(onReady), Comlink.proxy(onError));

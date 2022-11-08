@@ -62,6 +62,10 @@ export class WholeDbRtc implements PokeProtocol {
     this.replicator = WDB.install(db, this);
   }
 
+  schemaChanged() {
+    this.replicator.schemaChanged();
+  }
+
   connectTo(other: SiteIDWire) {
     if (this.pendingConnections.has(other)) {
       const c = this.pendingConnections.get(other);
@@ -175,10 +179,7 @@ export class WholeDbRtc implements PokeProtocol {
 
 class WholeDbRtcPublic {
   private listeners = new Set<
-    (
-      pending: Map<SiteIDWire, DataConnection>,
-      established: Map<SiteIDWire, DataConnection>
-    ) => void
+    (pending: SiteIDWire[], established: SiteIDWire[]) => void
   >();
   constructor(private wdbrtc: WholeDbRtc) {
     wdbrtc.onConnectionsChanged = this._connectionsChanged;
@@ -193,13 +194,14 @@ class WholeDbRtcPublic {
   }
 
   onConnectionsChanged(
-    cb: (
-      pending: Map<SiteIDWire, DataConnection>,
-      established: Map<SiteIDWire, DataConnection>
-    ) => void
+    cb: (pending: SiteIDWire[], established: SiteIDWire[]) => void
   ) {
     this.listeners.add(cb);
     return () => this.listeners.delete(cb);
+  }
+
+  schemaChanged() {
+    this.wdbrtc.schemaChanged();
   }
 
   private _connectionsChanged(
@@ -209,7 +211,7 @@ class WholeDbRtcPublic {
     // notify listeners
     for (const l of this.listeners) {
       try {
-        l(pending, established);
+        l([...pending.keys()], [...established.keys()]);
       } catch (e) {
         console.error(e);
       }

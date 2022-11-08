@@ -5,5 +5,8 @@
     "rootDir": "./src"
   },
   "include": ["./src/"],
-  "references": [{ "path": "../../xplat-api" }, { "path": "../whole-db" }]
+  "references": [
+    { "path": "../../xplat-api" },
+    { "path": "../../replicators/whole-db" }
+  ]
 }

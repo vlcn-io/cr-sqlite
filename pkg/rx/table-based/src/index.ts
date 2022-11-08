@@ -57,7 +57,7 @@ export default function tblrx(db: DB, ignoreTables: string[] = []) {
     schemaChanged() {
       // reinstall
       const toWatch = db.execA<string[]>(
-        `SELECT name FROM sqlite_master WHERE name NOT LIKE '%__crsql_clock' AND name NOT IN (${ignoreTables
+        `SELECT name FROM sqlite_master WHERE name NOT LIKE '%__crsql%' AND type = 'table' AND name NOT IN (${ignoreTables
           .map((t) => `'${t}'`)
           .join("\n")})`
       );
@@ -80,6 +80,16 @@ export default function tblrx(db: DB, ignoreTables: string[] = []) {
 
     get watching(): readonly string[] {
       return watching;
+    },
+
+    dispose() {
+      watching.forEach((tbl) => {
+        ["INSERT", "UPDATE", "DELETE"].forEach((verb) =>
+          db.exec(
+            `DROP TRIGGER IF EXISTS "${tbl}__crsql_tblrx_${verb.toLowerCase()}";`
+          )
+        );
+      });
     },
 
     on(cb: (tbls: Set<string>) => void) {

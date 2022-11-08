@@ -1,5 +1,5 @@
 import { DB } from "@vlcn.io/xplat-api";
-import tblrx from "../index.js";
+import tblrx from "@vlcn.io/rx-tbl";
 
 function createSimpleSchema(db: DB) {
   db.execMany([

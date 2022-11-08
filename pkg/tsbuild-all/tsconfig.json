@@ -10,7 +10,7 @@
     { "path": "../nodeno/examples" },
     { "path": "../nodeno/allinone" },
     { "path": "../replicators/whole-db" },
-    { "path": "../replicators/xplat-tests" },
+    { "path": "../tests/xplat-tests" },
     { "path": "../tests/nodeno-tests" },
     { "path": "../wasm-esm/crsqlite" },
     { "path": "../rx/table-based" }

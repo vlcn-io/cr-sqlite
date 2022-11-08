@@ -85,19 +85,6 @@ importers:
       jest: 29.2.2
       typescript: 4.8.4
 
-  replicators/xplat-tests:
-    specifiers:
-      '@vlcn.io/replicator-wholedb': workspace:*
-      '@vlcn.io/xplat-api': workspace:*
-      typescript: ^4.8.4
-      uuid: ^9.0.0
-    dependencies:
-      '@vlcn.io/replicator-wholedb': link:../whole-db
-      '@vlcn.io/xplat-api': link:../../xplat-api
-      uuid: 9.0.0
-    devDependencies:
-      typescript: 4.8.4
-
   rx/table-based:
     specifiers:
       '@vlcn.io/xplat-api': workspace:*
@@ -113,7 +100,7 @@ importers:
       '@types/mocha': ^10.0.0
       '@types/node': ^18.11.9
       '@vlcn.io/crsqlite-wasm': workspace:*
-      '@vlcn.io/replicator-xplat-tests': workspace:*
+      '@vlcn.io/xplat-tests': workspace:*
       cypress: ^10.11.0
       react: ^18.2.0
       react-dom: ^18.2.0
@@ -121,7 +108,7 @@ importers:
       vite: ^3.2.0
     dependencies:
       '@vlcn.io/crsqlite-wasm': link:../../wasm-esm/crsqlite
-      '@vlcn.io/replicator-xplat-tests': link:../../replicators/xplat-tests
+      '@vlcn.io/xplat-tests': link:../xplat-tests
     devDependencies:
       '@types/chai': 4.3.3
       '@types/mocha': 10.0.0
@@ -135,17 +122,40 @@ importers:
   tests/nodeno-tests:
     specifiers:
       '@vlcn.io/crsqlite-allinone': workspace:*
-      '@vlcn.io/replicator-xplat-tests': workspace:*
+      '@vlcn.io/rx-tbl': workspace:*
       '@vlcn.io/xplat-api': workspace:*
+      '@vlcn.io/xplat-tests': workspace:*
       typescript: ^4.8.4
       vitest: ^0.25.0
     dependencies:
       '@vlcn.io/crsqlite-allinone': link:../../nodeno/allinone
-      '@vlcn.io/replicator-xplat-tests': link:../../replicators/xplat-tests
+      '@vlcn.io/rx-tbl': link:../../rx/table-based
       '@vlcn.io/xplat-api': link:../../xplat-api
+      '@vlcn.io/xplat-tests': link:../xplat-tests
     devDependencies:
       typescript: 4.8.4
       vitest: 0.25.0
+
+  tests/xplat-tests:
+    specifiers:
+      '@vlcn.io/replicator-wholedb': workspace:*
+      '@vlcn.io/rx-tbl': workspace:*
+      '@vlcn.io/xplat-api': workspace:*
+      typescript: ^4.8.4
+      uuid: ^9.0.0
+    dependencies:
+      '@vlcn.io/replicator-wholedb': link:../../replicators/whole-db
+      '@vlcn.io/rx-tbl': link:../../rx/table-based
+      '@vlcn.io/xplat-api': link:../../xplat-api
+      uuid: 9.0.0
+    devDependencies:
+      typescript: 4.8.4
+
+  tsbuild-all:
+    specifiers:
+      typescript: ^4.8.2
+    devDependencies:
+      typescript: 4.8.4
 
   wasm-esm/crsqlite:
     specifiers:

@@ -8,6 +8,9 @@ type TableName = string;
 type Version = number | string;
 type TODO = any;
 
+const DOES_EXTENSION_EXIST =
+  "SELECT 1 FROM pragma_function_list WHERE name = 'crsql_wdbreplicator'";
+
 /**
  * The `poke` protocol is the simplest option in terms of
  * - causal delivery of messages
@@ -103,7 +106,11 @@ export class WholeDbReplicator {
     // remove trigger(s)
     // function extension is fine to stay, it'll get removed on connection termination
     this.crrs.forEach((crr) => {
-      this.db.exec(`DROP TRIGGER IF EXISTS "${crr}__crsql_wdbreplicator";`);
+      ["INSERT", "UPDATE", "DELETE"].forEach((verb) =>
+        this.db.exec(
+          `DROP TRIGGER IF EXISTS "${crr}__crsql_wdbreplicator_${verb.toLowerCase()}";`
+        )
+      );
     });
 
     this.network.dispose();
@@ -134,7 +141,7 @@ export class WholeDbReplicator {
         this.db.exec(
           `CREATE TRIGGER IF NOT EXISTS "${baseTblName}__crsql_wdbreplicator_${verb.toLowerCase()}" AFTER ${verb} ON "${baseTblName}"
           BEGIN
-            select crsql_wdbreplicator() WHERE crsql_internal_sync_bit() = 0;
+            select crsql_wdbreplicator() WHERE crsql_internal_sync_bit() = 0 AND EXISTS (${DOES_EXTENSION_EXIST});
           END;
         `
         );

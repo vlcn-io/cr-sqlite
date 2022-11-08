@@ -1,10 +1,10 @@
-import { wdbTests } from "@vlcn.io/xplat-tests";
+import { tblrxTests } from "@vlcn.io/xplat-tests";
 import sqliteWasm from "@vlcn.io/crsqlite-wasm";
 
 const crsqlite = await sqliteWasm();
 
 describe("WholeDbReplicator.cy.ts", () => {
-  Object.entries(wdbTests).forEach((x) => {
+  Object.entries(tblrxTests).forEach((x) => {
     it(x[0], () => {
       const tc = x[1];
       tc(

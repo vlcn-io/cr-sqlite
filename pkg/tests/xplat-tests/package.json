@@ -1,5 +1,5 @@
 {
-  "name": "@vlcn.io/replicator-xplat-tests",
+  "name": "@vlcn.io/xplat-tests",
   "private": true,
   "type": "module",
   "version": "0.0.1",
@@ -23,6 +23,7 @@
   "dependencies": {
     "@vlcn.io/replicator-wholedb": "workspace:*",
     "@vlcn.io/xplat-api": "workspace:*",
+    "@vlcn.io/rx-tbl": "workspace:*",
     "uuid": "^9.0.0"
   }
 }

@@ -24,8 +24,9 @@
   },
   "dependencies": {
     "@vlcn.io/crsqlite-allinone": "workspace:*",
-    "@vlcn.io/replicator-xplat-tests": "workspace:*",
-    "@vlcn.io/xplat-api": "workspace:*"
+    "@vlcn.io/xplat-tests": "workspace:*",
+    "@vlcn.io/xplat-api": "workspace:*",
+    "@vlcn.io/rx-tbl": "workspace:*"
   },
   "jest": {
     "transform": {}

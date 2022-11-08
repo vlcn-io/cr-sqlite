@@ -23,7 +23,7 @@ importers:
       typescript: ^4.8.4
       uuid: ^9.0.0
     dependencies:
-      '@vlcn.io/replicator-wholedb': link:../../tests/nodeno-tests
+      '@vlcn.io/replicator-wholedb': link:../../replicators/whole-db
       '@vlcn.io/xplat-api': link:../../xplat-api
       peerjs: 1.4.7
       uuid: 9.0.0
@@ -92,7 +92,7 @@ importers:
       typescript: ^4.8.4
       uuid: ^9.0.0
     dependencies:
-      '@vlcn.io/replicator-wholedb': link:../../tests/nodeno-tests
+      '@vlcn.io/replicator-wholedb': link:../whole-db
       '@vlcn.io/xplat-api': link:../../xplat-api
       uuid: 9.0.0
     devDependencies:

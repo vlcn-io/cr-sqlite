@@ -31,7 +31,7 @@ function Header({ ctx }: { ctx: Ctx }) {
         onKeyUp={(e) => {
           const target = e.target as HTMLInputElement;
           if (e.key === "Enter" && target.value.trim() !== "") {
-            ctx.sqlite.exec(ctx.dbid, "INSERT INTO todo VALUES (?, ?, ?)", [
+            ctx.db.exec("INSERT INTO todo VALUES (?, ?, ?)", [
               nanoid(),
               target.value,
               false,
@@ -62,10 +62,10 @@ const TodoView = ({
 
   const [text, setText] = useState(todo.text);
   const deleteTodo = () => {
-    ctx.sqlite.exec(ctx.dbid, `DELETE FROM todo WHERE id = ?`, [todo.id]);
+    ctx.db.exec(`DELETE FROM todo WHERE id = ?`, [todo.id]);
   };
   const toggleTodo = () => {
-    ctx.sqlite.exec(ctx.dbid, `UPDATE todo SET completed = ? WHERE id = ?`, [
+    ctx.db.exec(`UPDATE todo SET completed = ? WHERE id = ?`, [
       !todo.completed,
       todo.id,
     ]);
@@ -180,7 +180,7 @@ export default function App({ ctx }: { ctx: Ctx }) {
     filter: "all",
   });
   const clearCompleted = () => {
-    ctx.sqlite.exec(ctx.dbid, `DELETE FROM todo WHERE completed = true`);
+    ctx.db.exec(`DELETE FROM todo WHERE completed = true`);
   };
   const startEditing = useCallback(
     (todo: Todo) => {
@@ -193,26 +193,17 @@ export default function App({ ctx }: { ctx: Ctx }) {
   );
   const saveTodo = useCallback(
     (todo: Todo, text: string) => {
-      ctx.sqlite.exec(ctx.dbid, `UPDATE todo SET text = ? WHERE id = ?`, [
-        text,
-        todo.id,
-      ]);
+      ctx.db.exec(`UPDATE todo SET text = ? WHERE id = ?`, [text, todo.id]);
     },
     [list]
   );
   const toggleAll = () => {
     if (remaining === 0) {
       // uncomplete all
-      ctx.sqlite.exec(
-        ctx.dbid,
-        `UPDATE todo SET completed = false WHERE completed = true`
-      );
+      ctx.db.exec(`UPDATE todo SET completed = false WHERE completed = true`);
     } else {
       // complete all
-      ctx.sqlite.exec(
-        ctx.dbid,
-        `UPDATE todo SET completed = true WHERE completed = false`
-      );
+      ctx.db.exec(`UPDATE todo SET completed = true WHERE completed = false`);
     }
   };
   let toggleAllCheck;

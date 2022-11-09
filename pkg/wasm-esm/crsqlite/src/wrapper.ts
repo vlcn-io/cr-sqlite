@@ -11,7 +11,7 @@ import { DB as IDB, Stmt as IStmt } from "@vlcn.io/xplat-api";
  * that it'll then mutate and fill for you. A bit odd.
  */
 export class SQLite3 {
-  constructor(private baseSqlite3: any) {}
+  constructor(public readonly baseSqlite3: any) {}
 
   /**
    *

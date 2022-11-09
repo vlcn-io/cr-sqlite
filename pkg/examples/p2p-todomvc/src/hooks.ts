@@ -1,12 +1,14 @@
-import * as Comlink from "comlink";
-import { ComlinkableAPI } from "@vlcn.io/crsqlite-wasm/dist/comlinkable";
-import "./dbapi-ext.js";
+import "./worker/dbapi-ext.js";
 import { useEffect, useState } from "react";
+import { DB } from "@vlcn.io/crsqlite-wasm";
+import wdbRtc from "@vlcn.io/network-webrtc";
+import tblrx from "@vlcn.io/rx-tbl";
 
 export type Ctx = {
-  dbid: number;
-  sqlite: Comlink.Remote<ComlinkableAPI>;
+  db: DB;
   siteid: string;
+  rtc: ReturnType<typeof wdbRtc>;
+  rx: ReturnType<typeof tblrx>;
 };
 
 type QueryData<T> = {
@@ -15,7 +17,7 @@ type QueryData<T> = {
   data: T[];
 };
 
-export function useQuery<T>(
+export function useQuery<T extends {}>(
   ctx: Ctx,
   tables: string[],
   query: string,
@@ -38,32 +40,20 @@ export function useQuery<T>(
         }
       }
 
-      ctx.sqlite.execO(ctx.dbid, query).then(
-        (r) => {
-          setState({
-            data: r as any,
-            loading: false,
-          });
-        },
-        (e) => {
-          setState((p) => ({
-            error: e,
-            data: p.data,
-            loading: false,
-          }));
-        }
-      );
+      setState({
+        data: ctx.db.execO<T>(query),
+        loading: false,
+      });
     };
 
-    const proxy = Comlink.proxy(runQuery);
-    ctx.sqlite.onTblChange(ctx.dbid, proxy);
+    const disposer = ctx.rx.on(runQuery);
 
     // initial kickoff to get initial data.
     runQuery(null);
 
     return () => {
       isMounted = false;
-      ctx.sqlite.offTblChange(ctx.dbid, proxy);
+      disposer();
     };
   }, [query, ...(bindings || [])]);
 

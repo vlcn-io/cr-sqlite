@@ -2,38 +2,46 @@ import * as React from "react";
 import { createRoot } from "react-dom/client";
 import { stringify as uuidStringify } from "uuid";
 
-import * as Comlink from "comlink";
-// @ts-ignore -- todo
-import DBWorker from "./dbworker.js?worker";
-import { ComlinkableAPI } from "@vlcn.io/crsqlite-wasm/dist/comlinkable";
-import "./dbapi-ext.js";
 import App from "./App";
 import { Ctx } from "./hooks";
+import sqliteWasm, { DB, SQLite3 } from "@vlcn.io/crsqlite-wasm";
+import tblrx from "@vlcn.io/rx-tbl";
+import wdbRtc from "@vlcn.io/network-webrtc";
 
-const w = new DBWorker();
-const sqlite = Comlink.wrap<ComlinkableAPI>(w);
+/*
+try dis:
+const dirName = sqlite3.capi.sqlite3_wasmfs_opfs_dir()
+if( dirName ) { ... OPFS is active ... }
+else { ... OPFS is not available ... }
 
-async function onReady() {
-  const dbid = await sqlite.open();
-  // "p2pwdb-todo-example"
-  await sqlite.exec(
-    dbid,
-    "CREATE TABLE IF NOT EXISTS todo (id, text, completed)"
-  );
-  const siteid = uuidStringify(
-    (await sqlite.execA(dbid, "SELECT crsql_siteid()"))[0][0]
-  );
-  sqlite.schemaChanged(dbid);
+then dis:
+file:local?vfs=kvvs
+*/
 
-  startApp({
-    dbid,
-    sqlite,
-    siteid,
-  });
+async function main() {
+  const sqlite = await sqliteWasm();
+
+  const dirname = sqlite.baseSqlite3.sqlite3_wasmfs_opfs_dir();
+  let db: DB = dirname
+    ? sqlite.open(dirname + "/p2p-todomvc-wdb.db")
+    : sqlite.open("file:local?vfs=kvvs");
+
+  db.exec("CREATE TABLE IF NOT EXISTS todo (id, text, completed)");
+  const siteid = uuidStringify(db.execA("SELECT crsql_siteid()")[0][0]);
+
+  const rx = tblrx(db);
+  const rtc = wdbRtc(db);
 
   window.onbeforeunload = () => {
-    return sqlite.close(dbid);
+    return db.close();
   };
+
+  startApp({
+    db,
+    siteid,
+    rtc,
+    rx,
+  });
 }
 
 function startApp(ctx: Ctx) {
@@ -41,9 +49,3 @@ function startApp(ctx: Ctx) {
   const root = createRoot(document.getElementById("container")!);
   root.render(<App ctx={ctx} />);
 }
-
-function onError(e: any) {
-  console.error(e);
-}
-
-sqlite.onReady(Comlink.proxy(onReady), Comlink.proxy(onError));

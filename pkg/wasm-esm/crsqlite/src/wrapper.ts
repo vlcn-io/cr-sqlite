@@ -147,7 +147,7 @@ export class Stmt implements IStmt {
     this.baseStmt.reset();
   }
 
-  get(...bindArgs: any[]): any[] {
+  get(...bindArgs: any[]): any {
     this.bind(bindArgs);
     if (this.baseStmt.step()) {
       const ret = this.baseStmt.get(this.mode == "col" ? [] : {});
@@ -155,7 +155,7 @@ export class Stmt implements IStmt {
       return ret;
     } else {
       this.baseStmt.reset();
-      return [];
+      return null;
     }
   }
 
@@ -187,7 +187,10 @@ export class Stmt implements IStmt {
     return this;
   }
 
-  bind(args: any[] | { [key: string]: any }) {
+  bind(args: any[]) {
+    if (args.length == 0) {
+      return this;
+    }
     if (this.bound) {
       this.baseStmt.clearBindings();
     }

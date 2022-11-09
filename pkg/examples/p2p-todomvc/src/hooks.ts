@@ -20,13 +20,11 @@ export function useQuery<T>(
   query: string,
   bindings?: []
 ): QueryData<T> {
-  console.log("useQuery");
   const [state, setState] = useState<QueryData<T>>({
     data: [],
     loading: true,
   });
   useEffect(() => {
-    console.log("useQuery useEffect");
     let isMounted = true;
     const runQuery = (changedTbls: Set<string> | null) => {
       if (!isMounted) {
@@ -39,7 +37,6 @@ export function useQuery<T>(
         }
       }
 
-      console.log("runQuery " + query);
       ctx.sqlite.execO(ctx.dbid, query).then(
         (r) => {
           setState({

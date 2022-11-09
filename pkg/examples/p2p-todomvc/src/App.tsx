@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Ctx, useQuery } from "./hooks";
 import { useState, useCallback, memo } from "react";
+import { nanoid } from "nanoid";
 
 type Todo = {
   id: string;
@@ -12,10 +13,9 @@ type Filter = "all" | "active" | "completed";
 type TodoList = {
   filter: Filter;
   editing: string | null;
-  todos: Todo[];
 };
 
-function Header({ todoList }: { todoList: TodoList }) {
+function Header({ todoList, ctx }: { todoList: TodoList; ctx: Ctx }) {
   const [newText, setNewText] = React.useState<string>("");
   return (
     <header className="header">
@@ -30,7 +30,11 @@ function Header({ todoList }: { todoList: TodoList }) {
         onKeyUp={(e) => {
           const target = e.target as HTMLInputElement;
           if (e.key === "Enter" && target.value.trim() !== "") {
-            // insert the todo with some nanoid
+            ctx.sqlite.exec(ctx.dbid, "INSERT INTO todo VALUES (?, ?, ?)", [
+              nanoid(),
+              target.value,
+              false,
+            ]);
             setNewText("");
           }
         }}
@@ -39,78 +43,84 @@ function Header({ todoList }: { todoList: TodoList }) {
   );
 }
 
-const TodoView = memo(
-  ({
-    todo,
-    editing,
-    startEditing,
-    saveTodo,
-  }: {
-    key?: any;
-    todo: Todo;
-    editing: boolean;
-    startEditing: (t: Todo) => void;
-    saveTodo: (todo: Todo, text: string) => void;
-  }) => {
-    let body;
+const TodoView = ({
+  todo,
+  editing,
+  startEditing,
+  saveTodo,
+  ctx,
+}: {
+  key?: any;
+  todo: Todo;
+  editing: boolean;
+  startEditing: (t: Todo) => void;
+  saveTodo: (todo: Todo, text: string) => void;
+  ctx: Ctx;
+}) => {
+  let body;
 
-    const [text, setText] = useState(todo.text);
-    // useBind(todo, ["text", "completed"]);
-    const deleteTodo = () => {
-      /*todo.delete().save();*/
-    };
-    const toggleTodo = () => {
-      /*todo.update({ completed: !todo.completed }).save();*/
-    };
+  const [text, setText] = useState(todo.text);
+  const deleteTodo = () => {
+    ctx.sqlite.exec(ctx.dbid, `DELETE FROM todo WHERE id = ?`, [todo.id]);
+  };
+  const toggleTodo = () => {
+    ctx.sqlite.exec(ctx.dbid, `UPDATE todo SET completed = ? WHERE id = ?`, [
+      !todo.completed,
+      todo.id,
+    ]);
+  };
 
-    if (editing) {
-      body = (
+  if (editing) {
+    body = (
+      <input
+        type="text"
+        className="edit"
+        autoFocus
+        value={text}
+        onBlur={() => saveTodo(todo, text)}
+        onKeyUp={(e) => e.key === "Enter" && saveTodo(todo, text)}
+        onChange={(e) => setText(e.target.value)}
+      />
+    );
+  } else {
+    body = (
+      <div className="view">
         <input
-          type="text"
-          className="edit"
-          autoFocus
-          value={text}
-          onBlur={() => saveTodo(todo, text)}
-          onKeyUp={(e) => e.key === "Enter" && saveTodo(todo, text)}
-          onChange={(e) => setText(e.target.value)}
+          type="checkbox"
+          className="toggle"
+          checked={todo.completed}
+          onChange={toggleTodo}
         />
-      );
-    } else {
-      body = (
-        <div className="view">
-          <input
-            type="checkbox"
-            className="toggle"
-            checked={todo.completed}
-            onChange={toggleTodo}
-          />
-          <label onDoubleClick={() => startEditing(todo)}>{todo.text}</label>
-          <button className="destroy" onClick={deleteTodo} />
-        </div>
-      );
-    }
-    return (
-      <li
-        className={
-          (todo.completed ? "completed " : "") + (editing ? "editing" : "")
-        }
-      >
-        {body}
-      </li>
+        <label onDoubleClick={() => startEditing(todo)}>{todo.text}</label>
+        <button className="destroy" onClick={deleteTodo} />
+      </div>
     );
   }
-);
+  return (
+    <li
+      className={
+        (todo.completed ? "completed " : "") + (editing ? "editing" : "")
+      }
+    >
+      {body}
+    </li>
+  );
+};
 
 function Footer({
   remaining,
   todos,
   clearCompleted,
   todoList,
+  ctx,
+  setFilter,
 }: {
   remaining: number;
   todos: Todo[];
   clearCompleted: () => void;
   todoList: TodoList;
+  ctx: Ctx;
+  setFilter: (f: Filter) => void;
 }) {
   let clearCompletedButton;
   if (remaining !== todos.length) {
@@ -122,7 +132,7 @@ function Footer({
   }
 
   const updateFilter = (filter: Filter) => {
-    /*todoList.update({ filter }).save();*/
+    setFilter(filter);
   };
 
   return (
@@ -164,60 +174,55 @@ function Footer({
 }
 
 export default function App({ ctx }: { ctx: Ctx }) {
-  const list: TodoList = {
+  const [list, setList] = useState<TodoList>({
     editing: null,
     filter: "all",
-    todos: [],
-  };
+  });
   const clearCompleted = () => {
-    // commit(
-    //   list.ctx,
-    //   completeTodos.map((t) => t.delete())
-    // );
+    ctx.sqlite.exec(ctx.dbid, `DELETE FROM todo WHERE completed = true`);
   };
   const startEditing = useCallback(
     (todo: Todo) => {
-      /*list.update({ editing: todo.id }).save(), */
+      setList((old) => ({
+        ...old,
+        editing: todo.id,
+      }));
     },
     [list]
   );
   const saveTodo = useCallback(
     (todo: Todo, text: string) => {
-      // commit(
-      //   list.ctx,
-      //   todo.update({ text: text }),
-      //   list.update({ editing: null })
-      // );
+      ctx.sqlite.exec(ctx.dbid, `UPDATE todo SET text = ? WHERE id = ?`, [
+        text,
+        todo.id,
+      ]);
     },
     [list]
   );
   const toggleAll = () => {
     if (remaining === 0) {
       // uncomplete all
-      // commit(
-      //   list.ctx,
-      //   completeTodos.map((t) => t.update({ completed: false }))
-      // );
+      ctx.sqlite.exec(
+        ctx.dbid,
+        `UPDATE todo SET completed = false WHERE completed = true`
+      );
     } else {
       // complete all
-      // commit(
-      //   list.ctx,
-      //   activeTodos.map((t) => t.update({ completed: true }))
-      // );
+      ctx.sqlite.exec(
+        ctx.dbid,
+        `UPDATE todo SET completed = true WHERE completed = false`
+      );
     }
   };
   let toggleAllCheck;
 
-  // useBind(list, ["filter", "editing"]);
-  const activeTodos: Todo[] = /*useQuery(() =>
-    list.queryTodos().whereCompleted(P.equals(false))
-  ).data;*/ [];
-  const completeTodos: Todo[] = /*useQuery(() =>
-    list.queryTodos().whereCompleted(P.equals(true))
-  ).data;*/ [];
-  const allTodos: Todo[] = /*useQuery(() => list.queryTodos(), [], {
-    on: UpdateType.CREATE_OR_DELETE,
-  }).data;*/ [];
+  const allTodos: Todo[] = useQuery<Todo>(
+    ctx,
+    ["todo"],
+    "SELECT * FROM todo"
+  ).data;
+  const completeTodos = allTodos.filter((t) => t.completed);
+  const activeTodos = allTodos.filter((t) => !t.completed);
 
   const remaining = activeTodos.length;
   let todos =
@@ -244,7 +249,7 @@ export default function App({ ctx }: { ctx: Ctx }) {
 
   return (
     <div className="todoapp">
-      <Header todoList={list} />
+      <Header ctx={ctx} todoList={list} />
       <section
         className="main"
         style={allTodos.length > 0 ? {} : { display: "none" }}
@@ -253,6 +258,7 @@ export default function App({ ctx }: { ctx: Ctx }) {
         <ul className="todo-list">
           {todos.map((t) => (
             <TodoView
+              ctx={ctx}
               key={t.id}
               todo={t}
               editing={list.editing === t.id}
@@ -262,10 +268,17 @@ export default function App({ ctx }: { ctx: Ctx }) {
           ))}
         </ul>
         <Footer
+          ctx={ctx}
           remaining={remaining}
           todos={allTodos}
           todoList={list}
           clearCompleted={clearCompleted}
+          setFilter={(f: Filter) => {
+            setList((l) => ({
+              ...l,
+              filter: f,
+            }));
+          }}
         />
       </section>
     </div>

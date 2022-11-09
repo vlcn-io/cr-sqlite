@@ -221,6 +221,19 @@ importers:
     devDependencies:
       vite: 3.2.2
 
+  wasm-esm/wa-crsqlite:
+    specifiers:
+      '@vlcn.io/xplat-api': workspace:*
+      comlink: ^4.3.1
+      typescript: ^4.8.4
+      wa-sqlite: github:vlcn-io/wa-sqlite#buildless
+    dependencies:
+      '@vlcn.io/xplat-api': link:../../xplat-api
+      comlink: 4.3.1
+      wa-sqlite: github.com/vlcn-io/wa-sqlite/88de61aca72a15a8bc3fd9e894a060fd17985ee8
+    devDependencies:
+      typescript: 4.8.4
+
   xplat-api:
     specifiers:
       comlink: ^4.3.1
@@ -6051,3 +6064,9 @@ packages:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
     dev: true
+
+  github.com/vlcn-io/wa-sqlite/88de61aca72a15a8bc3fd9e894a060fd17985ee8:
+    resolution: {tarball: https://codeload.github.com/vlcn-io/wa-sqlite/tar.gz/88de61aca72a15a8bc3fd9e894a060fd17985ee8}
+    name: wa-sqlite
+    version: 0.8.3
+    dev: false

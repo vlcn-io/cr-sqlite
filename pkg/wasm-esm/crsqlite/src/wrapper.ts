@@ -92,6 +92,7 @@ export class DB implements IDB {
 
   close() {
     this.#closeListeners.forEach((l) => l());
+    this.#closeListeners = new Set();
     this.baseDb.exec("select crsql_finalize();");
     this.baseDb.close();
   }

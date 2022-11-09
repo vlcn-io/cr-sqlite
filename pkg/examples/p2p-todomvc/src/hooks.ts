@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 export type Ctx = {
   dbid: number;
   sqlite: Comlink.Remote<ComlinkableAPI>;
+  siteid: string;
 };
 
 type QueryData<T> = {

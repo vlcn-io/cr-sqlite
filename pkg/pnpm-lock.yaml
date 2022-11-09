@@ -26,6 +26,7 @@ importers:
       nanoid: ^4.0.0
       react: ^18.2.0
       react-dom: ^18.2.0
+      uuid: ^9.0.0
       vite: ^3.2.2
     dependencies:
       '@vlcn.io/crsqlite-wasm': link:../../wasm-esm/crsqlite
@@ -35,6 +36,7 @@ importers:
       nanoid: 4.0.0
       react: 18.2.0
       react-dom: 18.2.0_react@18.2.0
+      uuid: 9.0.0
     devDependencies:
       '@types/react': 18.0.25
       '@types/react-dom': 18.0.8

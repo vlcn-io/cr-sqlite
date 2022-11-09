@@ -377,3 +377,22 @@ html .clear-completed:active {
     bottom: 10px;
   }
 }
+
+.peers {
+  position: absolute;
+  right: 0px;
+  top: -100px;
+  width: 150px;
+  height: 100px;
+  text-align: right;
+  z-index: 100;
+}
+
+.siteid {
+  position: absolute;
+  top: -100px;
+  left: 0px;
+  z-index: 100;
+  width: 150px;
+  cursor: pointer;
+}

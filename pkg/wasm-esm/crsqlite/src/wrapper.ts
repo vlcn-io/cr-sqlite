@@ -21,7 +21,8 @@ export class SQLite3 {
     if (filename == null || filename === ":memory:") {
       return new DB(new this.baseSqlite3.oo1.DB());
     } else {
-      return new DB(new this.baseSqlite3.opfs.OpfsDb(filename, mode));
+      return new DB(new this.baseSqlite3.oo1.DB(filename));
+      // return new DB(new this.baseSqlite3.opfs.OpfsDb(filename, mode));
     }
   }
 }

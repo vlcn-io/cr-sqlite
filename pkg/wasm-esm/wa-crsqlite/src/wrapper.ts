@@ -4,7 +4,7 @@ import * as SQLite from "wa-sqlite";
 import { IDBBatchAtomicVFS } from "wa-sqlite/src/examples/IDBBatchAtomicVFS.js";
 import { DB as IDB, Stmt as IStmt } from "@vlcn.io/xplat-api";
 
-let api: SQLiteAPI | null = null;
+let api: SQLite3 | null = null;
 
 export class SQLite3 {
   constructor(private base: SQLiteAPI) {}
@@ -45,24 +45,21 @@ export class DB {
   // transaction(cb: () => void): void {}
 }
 
-export default async function initWasm(): Promise<SQLiteAPI> {
+export default async function initWasm(): Promise<SQLite3> {
   if (api != null) {
     return api;
   }
 
-  console.log("loc");
   const module = await SQLiteAsyncESMFactory({
     locateFile(file: string) {
       return new URL(file, import.meta.url).href;
     },
   });
-  console.log("fac");
   const sqlite3 = SQLite.Factory(module);
-  console.log("reg");
   sqlite3.vfs_register(
     new IDBBatchAtomicVFS("idb-batch-atomic", { durability: "relaxed" })
   );
-  console.log("registered");
 
-  return sqlite3;
+  api = new SQLite3(sqlite3);
+  return api;
 }

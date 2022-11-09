@@ -21,10 +21,10 @@ file:local?vfs=kvvs
 async function main() {
   const sqlite = await sqliteWasm();
 
-  const dirname = sqlite.baseSqlite3.sqlite3_wasmfs_opfs_dir();
+  const dirname = sqlite.baseSqlite3.capi.sqlite3_wasmfs_opfs_dir();
   let db: DB = dirname
     ? sqlite.open(dirname + "/p2p-todomvc-wdb.db")
-    : sqlite.open("file:local?vfs=kvvs");
+    : sqlite.open("file:local?vfs=kvvfs");
 
   db.exec("CREATE TABLE IF NOT EXISTS todo (id, text, completed)");
   const siteid = uuidStringify(db.execA("SELECT crsql_siteid()")[0][0]);
@@ -49,3 +49,5 @@ function startApp(ctx: Ctx) {
   const root = createRoot(document.getElementById("container")!);
   root.render(<App ctx={ctx} />);
 }
+
+main();

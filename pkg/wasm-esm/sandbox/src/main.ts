@@ -8,4 +8,8 @@ window.db = db;
 
 window.onbeforeunload = () => {
   db.close();
-}
+};
+
+// import sqliteWasm from "@vlcn.io/wa-crsqlite";
+
+// const sqlite = await sqliteWasm();

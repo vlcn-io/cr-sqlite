@@ -1,4 +1,4 @@
-import SQLiteAsyncESMFactory from "wa-sqlite/dist/wa-sqlite-async.mjs";
+import SQLiteAsyncESMFactory from "./wa-sqlite-async.js";
 import * as SQLite from "wa-sqlite";
 // @ts-ignore
 import { IDBBatchAtomicVFS } from "wa-sqlite/src/examples/IDBBatchAtomicVFS.js";
@@ -24,7 +24,7 @@ export class SQLite3 {
 
 export class DB {
   //implements IDB {
-  constructor(private api: SQLiteAPI, private db: number) {}
+  constructor(public api: SQLiteAPI, public db: number) {}
 
   // execMany(sql: string[]): void {
   //   await this.api.exec(this.db, sql.join(""));
@@ -50,15 +50,19 @@ export default async function initWasm(): Promise<SQLiteAPI> {
     return api;
   }
 
+  console.log("loc");
   const module = await SQLiteAsyncESMFactory({
     locateFile(file: string) {
       return new URL(file, import.meta.url).href;
     },
   });
+  console.log("fac");
   const sqlite3 = SQLite.Factory(module);
+  console.log("reg");
   sqlite3.vfs_register(
     new IDBBatchAtomicVFS("idb-batch-atomic", { durability: "relaxed" })
   );
+  console.log("registered");
 
   return sqlite3;
 }

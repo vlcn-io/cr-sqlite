@@ -11,14 +11,30 @@ export interface DB {
   transaction(cb: () => void): void;
 }
 
+export type DBAsync = {
+  [K in keyof Omit<DB, "prepare">]: (
+    ...args: Parameters<DB[K]>
+  ) => Promise<ReturnType<DB[K]>>;
+} & {
+  prepare(sql: string): Promise<StmtAsync>;
+};
+
 export interface Stmt {
   run(...bindArgs: any[]): void;
   get(...bindArgs: any[]): any;
   all(...bindArgs: any[]): any[];
-  iterate(...bindArgs: any[]): Generator<any>;
+  iterate<T>(...bindArgs: any[]): Generator<T>;
   raw(isRaw?: boolean): this;
   bind(args: any[] | { [key: string]: any }): this;
   finalize(): void;
 }
+
+export type StmtAsync = {
+  [K in keyof Omit<Stmt, "iterate">]: (
+    ...args: Parameters<Stmt[K]>
+  ) => Promise<ReturnType<Stmt[K]>>;
+} & {
+  iterate<T>(...bindArgs: any[]): AsyncGenerator<T>;
+};
 
 export const version = 1;

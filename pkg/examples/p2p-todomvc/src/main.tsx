@@ -8,10 +8,11 @@ import { ComlinkableAPI } from "@vlcn.io/crsqlite-wasm/dist/comlinkable";
 import "./dbapi-ext.js";
 import App from "./App";
 
-const sqlite = Comlink.wrap<ComlinkableAPI>(new DBWorker());
+const w = new DBWorker();
+const sqlite = Comlink.wrap<ComlinkableAPI>(w);
 
 async function onReady() {
-  const dbid = await sqlite.open(/* optional file name */);
+  const dbid = await sqlite.open("p2pwdb-todo-example");
   await sqlite.exec(
     dbid,
     "CREATE TABLE IF NOT EXISTS todo (id, text, completed)"
@@ -22,6 +23,10 @@ async function onReady() {
     dbid,
     sqlite,
   });
+
+  window.onbeforeunload = () => {
+    return sqlite.close(dbid);
+  };
 }
 
 function startApp(ctx: {

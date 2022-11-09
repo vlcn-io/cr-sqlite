@@ -15,7 +15,7 @@ type TodoList = {
   editing: string | null;
 };
 
-function Header({ todoList, ctx }: { todoList: TodoList; ctx: Ctx }) {
+function Header({ ctx }: { ctx: Ctx }) {
   const [newText, setNewText] = React.useState<string>("");
   return (
     <header className="header">
@@ -249,7 +249,7 @@ export default function App({ ctx }: { ctx: Ctx }) {
 
   return (
     <div className="todoapp">
-      <Header ctx={ctx} todoList={list} />
+      <Header ctx={ctx} />
       <section
         className="main"
         style={allTodos.length > 0 ? {} : { display: "none" }}
@@ -284,9 +284,3 @@ export default function App({ ctx }: { ctx: Ctx }) {
     </div>
   );
 }
-
-// export default function App({ ctx }: { ctx: Ctx }) {
-//   const data = useQuery<Todo>(ctx, ["todo"], "SELECT * FROM todo");
-//   console.log(data);
-//   return <div></div>;
-// }

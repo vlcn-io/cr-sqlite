@@ -112,8 +112,6 @@ export class WholeDbReplicator {
         )
       );
     });
-
-    this.network.dispose();
   }
 
   schemaChanged() {

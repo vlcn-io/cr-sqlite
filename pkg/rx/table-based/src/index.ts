@@ -12,16 +12,19 @@
 
 // exist (select 1 from pragma_function_list where name = 'crsql_tbl_rx')
 
-import { DB } from "@vlcn.io/xplat-api";
+import { DB, DBAsync } from "@vlcn.io/xplat-api";
 
 const DOES_EXTENSION_EXIST =
   "SELECT 1 FROM pragma_function_list WHERE name = 'crsql_tblrx'";
 
-export default function tblrx(db: DB, ignoreTables: string[] = []) {
+export default async function tblrx(
+  db: DB | DBAsync,
+  ignoreTables: string[] = []
+) {
   // TODO: should listeners not just be weak refs?
   const listeners = new Set<(tbls: Set<string>) => void>();
 
-  const exists = db.execA(DOES_EXTENSION_EXIST);
+  const exists = await db.execA(DOES_EXTENSION_EXIST);
   if (exists.length == 0) {
     db.createFunction("crsql_tblrx", (tbl: string) => {
       preNotify(tbl);
@@ -54,42 +57,51 @@ export default function tblrx(db: DB, ignoreTables: string[] = []) {
 
   let watching: string[] = [];
   const ret = {
-    schemaChanged() {
+    async schemaChanged() {
       // reinstall
-      const toWatch = db.execA<string[]>(
+      const toWatch = await db.execA<string[]>(
         `SELECT name FROM sqlite_master WHERE name NOT LIKE '%__crsql%' AND type = 'table' AND name NOT IN (${ignoreTables
           .map((t) => `'${t}'`)
           .join("\n")})`
       );
 
-      watching = toWatch.map((row) => {
-        const tblName = row[0];
-        ["INSERT", "UPDATE", "DELETE"].map((verb) => {
-          db.exec(
-            `CREATE TRIGGER IF NOT EXISTS "${tblName}__crsql_tblrx_${verb.toLowerCase()}" AFTER ${verb} ON "${tblName}"
+      watching = await Promise.all(
+        toWatch.map(async (row) => {
+          const tblName = row[0];
+          await Promise.all(
+            ["INSERT", "UPDATE", "DELETE"].map(async (verb) => {
+              return await db.exec(
+                `CREATE TRIGGER IF NOT EXISTS "${tblName}__crsql_tblrx_${verb.toLowerCase()}" AFTER ${verb} ON "${tblName}"
             BEGIN
               SELECT crsql_tblrx('${tblName}') WHERE EXISTS (${DOES_EXTENSION_EXIST});
             END;
           `
+              );
+            })
           );
-        });
 
-        return tblName;
-      });
+          return tblName;
+        })
+      );
     },
 
     get watching(): readonly string[] {
       return watching;
     },
 
-    dispose() {
-      watching.forEach((tbl) => {
-        ["INSERT", "UPDATE", "DELETE"].forEach((verb) =>
-          db.exec(
-            `DROP TRIGGER IF EXISTS "${tbl}__crsql_tblrx_${verb.toLowerCase()}";`
-          )
-        );
-      });
+    async dispose() {
+      await Promise.all(
+        watching.map(async (tbl) => {
+          await Promise.all(
+            ["INSERT", "UPDATE", "DELETE"].map(
+              async (verb) =>
+                await db.exec(
+                  `DROP TRIGGER IF EXISTS "${tbl}__crsql_tblrx_${verb.toLowerCase()}";`
+                )
+            )
+          );
+        })
+      );
     },
 
     on(cb: (tbls: Set<string>) => void) {
@@ -104,7 +116,7 @@ export default function tblrx(db: DB, ignoreTables: string[] = []) {
     },
   } as const;
 
-  ret.schemaChanged();
+  await ret.schemaChanged();
 
   return ret;
 }

@@ -35,7 +35,7 @@ export class WholeDbRtc implements PokeProtocol {
   private readonly site: Peer;
   private establishedConnections: Map<SiteIDWire, DataConnection> = new Map();
   private pendingConnections: Map<SiteIDWire, DataConnection> = new Map();
-  private replicator: WholeDbReplicator;
+  private replicator?: WholeDbReplicator;
 
   public onConnectionsChanged:
     | ((
@@ -56,14 +56,20 @@ export class WholeDbRtc implements PokeProtocol {
     | null = null;
 
   constructor(public readonly siteId: SiteIDLocal, private db: DB | DBAsync) {
-    this.site = new Peer(uuidStringify(siteId));
+    this.site = new Peer(uuidStringify(siteId), {
+      host: "localhost",
+      port: 9000,
+      path: "/examples",
+    });
     this.site.on("connection", this._newConnection);
+  }
 
-    this.replicator = WDB.install(siteId, db, this);
+  async _init() {
+    this.replicator = await WDB.install(this.siteId, this.db, this);
   }
 
   schemaChanged() {
-    this.replicator.schemaChanged();
+    this.replicator!.schemaChanged();
   }
 
   connectTo(other: SiteIDWire) {
@@ -81,9 +87,10 @@ export class WholeDbRtc implements PokeProtocol {
   }
 
   poke(poker: SiteIDWire, pokerVersion: bigint): void {
+    console.log("poking", poker, pokerVersion);
     const msg: PokeMsg = {
       tag: "poke",
-      version: poker.toString(),
+      version: pokerVersion.toString(),
     };
     Object.values(this.establishedConnections).forEach((conn) => {
       conn.send(msg);
@@ -91,23 +98,27 @@ export class WholeDbRtc implements PokeProtocol {
   }
 
   pushChanges(to: SiteIDWire, changesets: readonly Changeset[]): void {
+    console.log("pushing changes", to, changesets);
     const msg: ChangesMsg = {
       tag: "apply-changes",
       changes: changesets,
     };
-    Object.values(this.establishedConnections).forEach((conn) => {
+    const conn = this.establishedConnections.get(to);
+    if (conn) {
       conn.send(msg);
-    });
+    }
   }
 
   requestChanges(from: SiteIDWire, since: bigint): void {
+    console.log("requesting changes");
     const msg: RequestChangesMsg = {
       tag: "request-changes",
       since: since.toString(),
     };
-    Object.values(this.establishedConnections).forEach((conn) => {
+    const conn = this.establishedConnections.get(from);
+    if (conn) {
       conn.send(msg);
-    });
+    }
   }
 
   onPoked(cb: (pokedBy: SiteIDWire, pokerVersion: bigint) => void): void {
@@ -129,7 +140,7 @@ export class WholeDbRtc implements PokeProtocol {
   }
 
   dispose(): void {
-    this.replicator.dispose();
+    this.replicator!.dispose();
     this.site.destroy();
   }
 
@@ -210,10 +221,10 @@ class WholeDbRtcPublic {
     this.wdbrtc.schemaChanged();
   }
 
-  private _connectionsChanged(
+  private _connectionsChanged = (
     pending: Map<SiteIDWire, DataConnection>,
     established: Map<SiteIDWire, DataConnection>
-  ): void {
+  ): void => {
     // notify listeners
     for (const l of this.listeners) {
       try {
@@ -222,7 +233,7 @@ class WholeDbRtcPublic {
         console.error(e);
       }
     }
-  }
+  };
 
   dispose(): void {
     this.wdbrtc.dispose();
@@ -233,5 +244,7 @@ export default async function wholeDbRtc(
   db: DB | DBAsync
 ): Promise<WholeDbRtcPublic> {
   const siteId = (await db.execA<[Uint8Array]>("SELECT crsql_siteid();"))[0][0];
-  return new WholeDbRtcPublic(new WholeDbRtc(siteId, db));
+  const internal = new WholeDbRtc(siteId, db);
+  await internal._init();
+  return new WholeDbRtcPublic(internal);
 }

@@ -396,3 +396,13 @@ html .clear-completed:active {
   width: 150px;
   cursor: pointer;
 }
+
+.pending {
+  color: #af5f13;
+  list-style: none;
+}
+
+.established {
+  color: green;
+  list-style: none;
+}

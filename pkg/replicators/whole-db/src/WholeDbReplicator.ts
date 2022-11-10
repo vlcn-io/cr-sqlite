@@ -193,6 +193,7 @@ export class WholeDbReplicator {
   }
 
   private poked = async (pokedBy: SiteIDWire, pokerVersion: bigint) => {
+    console.log("poked", this.siteIdWire, pokerVersion);
     const rows = await this.db.execA(
       "SELECT version FROM __crsql_wdbreplicator_peers WHERE site_id = ?",
       [uuidParse(pokedBy)]
@@ -210,6 +211,7 @@ export class WholeDbReplicator {
     }
 
     // ask the poker for changes since our version
+    console.log("requesting changes");
     this.network.requestChanges(this.siteIdWire, ourVersionForPoker);
   };
 
@@ -225,6 +227,7 @@ export class WholeDbReplicator {
     fromSiteId: SiteIDWire,
     changesets: readonly Changeset[]
   ) => {
+    console.log("changes received", fromSiteId, changesets);
     await this.db.transaction(async () => {
       let maxVersion = 0n;
       const stmt = await this.db.prepare(

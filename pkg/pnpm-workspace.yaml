@@ -14,3 +14,4 @@ packages:
   - "xplat-api"
   - "tsbuild-all"
   - "examples/p2p-todomvc"
+  - "examples/peer-server"

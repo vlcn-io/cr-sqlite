@@ -1,0 +1,13 @@
+{
+  "name": "@vlcn.io/examples-peer-server",
+  "private": true,
+  "type": "module",
+  "version": "0.0.1",
+  "sideEffects": false,
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "devDependencies": {
+    "peer": "^0.6.1"
+  }
+}

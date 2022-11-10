@@ -12,13 +12,15 @@ export interface DB {
 }
 
 export type DBAsync = {
-  [K in keyof Omit<DB, "prepare" | "transaction" | "savepoint">]: (
-    ...args: Parameters<DB[K]>
-  ) => Promise<ReturnType<DB[K]>>;
+  [K in keyof Omit<
+    DB,
+    "prepare" | "transaction" | "savepoint" | "createFunction"
+  >]: (...args: Parameters<DB[K]>) => Promise<ReturnType<DB[K]>>;
 } & {
   prepare(sql: string): Promise<StmtAsync>;
   transaction(cb: () => Promise<void>): Promise<void>;
   savepoint(cb: () => Promise<void>): Promise<void>;
+  createFunction(name: string, fn: (...args: any) => unknown, opts?: {}): void;
 };
 
 export interface Stmt {

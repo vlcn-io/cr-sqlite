@@ -3,6 +3,7 @@ import * as SQLite from "wa-sqlite";
 // @ts-ignore
 import { IDBBatchAtomicVFS } from "wa-sqlite/src/examples/IDBBatchAtomicVFS.js";
 import { DBAsync, StmtAsync } from "@vlcn.io/xplat-api";
+import { SQLITE_UTF8 } from "wa-sqlite";
 
 let api: SQLite3 | null = null;
 
@@ -56,11 +57,24 @@ export class DB implements DBAsync {
     return this.api.close(this.db);
   }
 
-  createFunction(
-    name: string,
-    fn: (...args: any) => unknown,
-    opts?: {}
-  ): void {}
+  createFunction(name: string, fn: (...args: any) => unknown, opts?: {}): void {
+    this.api.create_function(
+      this.db,
+      name,
+      fn.arguments.length,
+      SQLITE_UTF8,
+      0,
+      (context: number, values: Uint32Array) => {
+        const args: any[] = [];
+        for (let i = 0; i < fn.arguments.length; ++i) {
+          args.push(this.api.value(values[i]));
+        }
+
+        const r = fn(...args);
+        this.api.result(context, r as SQLiteCompatibleType);
+      }
+    );
+  }
 
   async savepoint(cb: () => Promise<void>): Promise<void> {
     await this.exec("SAVPOINT");

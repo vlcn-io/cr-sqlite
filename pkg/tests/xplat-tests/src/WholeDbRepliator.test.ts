@@ -9,6 +9,11 @@ function createSimpleSchema(db: DB) {
     "CREATE TABLE foo (a primary key, b);",
     "SELECT crsql_as_crr('foo');",
   ]);
+  return db.execA<[Uint8Array]>("SELECT crsql_siteid()")[0][0];
+}
+
+function getSite(db: DB) {
+  return db.execA<[Uint8Array]>("SELECT crsql_siteid()")[0][0];
 }
 
 const dummyPoke: PokeProtocol = {
@@ -36,13 +41,12 @@ const dummyPoke: PokeProtocol = {
  * Hence the assertion provider.
  */
 export const tests = {
-  "triggers installed": (
+  "triggers installed": async (
     dbProvider: () => DB,
     assert: (p: boolean) => void
   ) => {
     const db = dbProvider();
-    createSimpleSchema(db);
-    wdbr.install(db, dummyPoke);
+    await wdbr.install(createSimpleSchema(db), db, dummyPoke);
 
     assert(
       db.execA<number[]>(
@@ -51,12 +55,12 @@ export const tests = {
     );
   },
 
-  "peer tracking table": (
+  "peer tracking table": async (
     dbProvider: () => DB,
     assert: (p: boolean) => void
   ) => {
     const db = dbProvider();
-    wdbr.install(db, dummyPoke);
+    await wdbr.install(createSimpleSchema(db), db, dummyPoke);
 
     assert(
       db.execA(
@@ -76,8 +80,7 @@ export const tests = {
     };
 
     const db = dbProvider();
-    createSimpleSchema(db);
-    wdbr.install(db, protocol);
+    await wdbr.install(createSimpleSchema(db), db, protocol);
 
     assert(sentPoke == false);
     db.exec("INSERT INTO foo VALUES (1,2)");
@@ -109,8 +112,7 @@ export const tests = {
       sentPokeCnt += 1;
     };
     const db = dbProvider();
-    createSimpleSchema(db);
-    const r = wdbr.install(db, protocol);
+    const r = await wdbr.install(createSimpleSchema(db), db, protocol);
 
     db.exec("INSERT INTO foo VALUES (1,2)");
     db.exec("INSERT INTO foo VALUES (2,2)");
@@ -124,17 +126,16 @@ export const tests = {
     db.close();
   },
 
-  "install trigger on added tables on schema change": (
+  "install trigger on added tables on schema change": async (
     dbProvider: () => DB,
     assert: (p: boolean) => void
   ) => {
     const db = dbProvider();
-    createSimpleSchema(db);
-    const r = wdbr.install(db, dummyPoke);
+    const r = await wdbr.install(createSimpleSchema(db), db, dummyPoke);
 
     db.exec("CREATE TABLE bar (a primary key, b)");
     db.exec("SELECT crsql_as_crr('bar');");
-    r.schemaChanged();
+    await r.schemaChanged();
     assert(
       db.execA<number[]>(
         "SELECT count(*) FROM sqlite_master WHERE type = 'trigger' AND name LIKE 'bar__crsql_wdbreplicator_%'"
@@ -145,13 +146,13 @@ export const tests = {
     db.close();
   },
 
-  "triggers are not added for non-crrs": (
+  "triggers are not added for non-crrs": async (
     dbProvider: () => DB,
     assert: (p: boolean) => void
   ) => {
     const db = dbProvider();
     db.exec("CREATE TABLE bar (a primary key, b)");
-    const r = wdbr.install(db, dummyPoke);
+    const r = await wdbr.install(getSite(db), db, dummyPoke);
 
     assert(
       db.execA<number[]>(
@@ -163,12 +164,14 @@ export const tests = {
     db.close();
   },
 
-  "receiving poke results in request changes": (
+  "receiving poke results in request changes": async (
     dbProvider: () => DB,
     assert: (p: boolean) => void
   ) => {
     const protocol = { ...dummyPoke };
-    let onPoked: ((poker: string, pokerVersion: bigint) => void) | null = null;
+    let onPoked:
+      | ((poker: string, pokerVersion: bigint) => Promise<void>)
+      | null = null;
     protocol.onPoked = (cb) => {
       onPoked = cb;
     };
@@ -180,21 +183,22 @@ export const tests = {
     };
 
     const db = dbProvider();
-    createSimpleSchema(db);
-    const r = wdbr.install(db, protocol);
+    await wdbr.install(createSimpleSchema(db), db, protocol);
 
-    onPoked!(uuidv4(), 10n);
+    await onPoked!(uuidv4(), 10n);
 
     // @ts-ignore
     assert(changesRequested == true);
   },
 
-  "receiving an old poke does not result in request changes": (
+  "receiving an old poke does not result in request changes": async (
     dbProvider: () => DB,
     assert: (p: boolean) => void
   ) => {
     const protocol = { ...dummyPoke };
-    let onPoked: ((poker: string, pokerVersion: bigint) => void) | null = null;
+    let onPoked:
+      | ((poker: string, pokerVersion: bigint) => Promise<void>)
+      | null = null;
     protocol.onPoked = (cb) => {
       onPoked = cb;
     };
@@ -204,31 +208,31 @@ export const tests = {
     };
 
     const db = dbProvider();
-    createSimpleSchema(db);
-    const r = wdbr.install(db, protocol);
+    const r = await wdbr.install(createSimpleSchema(db), db, protocol);
 
-    onPoked!(uuidv4(), 0n);
+    await onPoked!(uuidv4(), 0n);
 
     // @ts-ignore
     assert(changesRequested == false);
+    r.dispose();
+    db.close();
   },
 
-  "receiving changes applies changes": (
+  "receiving changes applies changes": async (
     dbProvider: () => DB,
     assert: (p: boolean) => void
   ) => {
     const protocol = { ...dummyPoke };
     let changesReceived:
       | null
-      | ((sender: string, cs: readonly Changeset[]) => void) = null;
+      | ((sender: string, cs: readonly Changeset[]) => Promise<void>) = null;
     const changeSender = uuidv4();
     protocol.onChangesReceived = (cb) => {
       changesReceived = cb;
     };
 
     const db = dbProvider();
-    createSimpleSchema(db);
-    const r = wdbr.install(db, protocol);
+    const r = await wdbr.install(createSimpleSchema(db), db, protocol);
 
     // TODO: check when version exceeds max and gets flipped to a string -- must be stored as int.
     // pk got encoded as decimal? wtf?
@@ -236,7 +240,7 @@ export const tests = {
       ["foo", 1, 1, "'foobar'", 1, uuidv4()],
     ];
 
-    changesReceived!(changeSender, changeset);
+    await changesReceived!(changeSender, changeset);
 
     const row = db.execA<any>("select * from foo")[0];
     assert(row[0] == 1);
@@ -260,7 +264,7 @@ export const tests = {
     const changeSender = uuidv4();
     let changesReceived:
       | null
-      | ((siteId: string, cs: readonly Changeset[]) => void) = null;
+      | ((siteId: string, cs: readonly Changeset[]) => Promise<void>) = null;
     protocol.onChangesReceived = (cb) => {
       changesReceived = cb;
     };
@@ -270,8 +274,7 @@ export const tests = {
     };
 
     const db = dbProvider();
-    createSimpleSchema(db);
-    const r = wdbr.install(db, protocol);
+    const r = await wdbr.install(createSimpleSchema(db), db, protocol);
 
     // TODO: check when version exceeds max and gets flipped to a string -- must be stored as int.
     // pk got encoded as decimal? wtf?
@@ -279,7 +282,7 @@ export const tests = {
       ["foo", 1, 1, "'foobar'", 1, uuidv4()],
     ];
 
-    changesReceived!(changeSender, changeset);
+    await changesReceived!(changeSender, changeset);
 
     await new Promise((resolve) => setTimeout(resolve, 0));
     // @ts-ignore -- typescript being dumb thinks sentPoke cannot be true
@@ -289,38 +292,35 @@ export const tests = {
     db.close();
   },
 
-  "applying changes from a remote updates _our version for that remote_": (
-    dbProvider: () => DB,
-    assert: (p: boolean) => void
-  ) => {
-    const protocol = { ...dummyPoke };
-    let changesReceived:
-      | null
-      | ((sender: string, cs: readonly Changeset[]) => void) = null;
-    const changeSender = uuidv4();
-    protocol.onChangesReceived = (cb) => {
-      changesReceived = cb;
-    };
+  "applying changes from a remote updates _our version for that remote_":
+    async (dbProvider: () => DB, assert: (p: boolean) => void) => {
+      const protocol = { ...dummyPoke };
+      let changesReceived:
+        | null
+        | ((sender: string, cs: readonly Changeset[]) => Promise<void>) = null;
+      const changeSender = uuidv4();
+      protocol.onChangesReceived = (cb) => {
+        changesReceived = cb;
+      };
 
-    const db = dbProvider();
-    createSimpleSchema(db);
-    const r = wdbr.install(db, protocol);
+      const db = dbProvider();
+      const r = await wdbr.install(createSimpleSchema(db), db, protocol);
 
-    const changeset: readonly Changeset[] = [
-      ["foo", 1, 1, "'foobar'", 1, uuidv4()],
-    ];
+      const changeset: readonly Changeset[] = [
+        ["foo", 1, 1, "'foobar'", 1, uuidv4()],
+      ];
 
-    changesReceived!(changeSender, changeset);
+      await changesReceived!(changeSender, changeset);
 
-    const row = db.execA<any>(
-      "select site_id, version from __crsql_wdbreplicator_peers"
-    )[0];
-    assert(uuidStringify(row[0]) == changeSender);
-    assert(row[1] == 1);
+      const row = db.execA<any>(
+        "select site_id, version from __crsql_wdbreplicator_peers"
+      )[0];
+      assert(uuidStringify(row[0]) == changeSender);
+      assert(row[1] == 1);
 
-    r.dispose();
-    db.close();
-  },
+      r.dispose();
+      db.close();
+    },
 
   "tear down removes triggers": (
     dbProvider: () => DB,

@@ -5,7 +5,7 @@ import WDB, {
   SiteIDWire,
   WholeDbReplicator,
 } from "@vlcn.io/replicator-wholedb";
-import { DB } from "@vlcn.io/xplat-api";
+import { DB, DBAsync } from "@vlcn.io/xplat-api";
 import Peer, { DataConnection } from "peerjs";
 // @ts-ignore
 import { parse as uuidParse, stringify as uuidStringify } from "uuid";
@@ -55,11 +55,11 @@ export class WholeDbRtc implements PokeProtocol {
     | ((fromSiteId: SiteIDWire, changesets: readonly Changeset[]) => void)
     | null = null;
 
-  constructor(public readonly siteId: SiteIDLocal, private db: DB) {
+  constructor(public readonly siteId: SiteIDLocal, private db: DB | DBAsync) {
     this.site = new Peer(uuidStringify(siteId));
     this.site.on("connection", this._newConnection);
 
-    this.replicator = WDB.install(db, this);
+    this.replicator = WDB.install(siteId, db, this);
   }
 
   schemaChanged() {
@@ -229,7 +229,9 @@ class WholeDbRtcPublic {
   }
 }
 
-export default function wholeDbRtc(db: DB): WholeDbRtcPublic {
-  const siteId = db.execA<[Uint8Array]>("SELECT crsql_siteid();")[0][0];
+export default async function wholeDbRtc(
+  db: DB | DBAsync
+): Promise<WholeDbRtcPublic> {
+  const siteId = (await db.execA<[Uint8Array]>("SELECT crsql_siteid();"))[0][0];
   return new WholeDbRtcPublic(new WholeDbRtc(siteId, db));
 }

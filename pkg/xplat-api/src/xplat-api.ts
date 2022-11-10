@@ -3,24 +3,25 @@ export interface DB {
   exec(sql: string, bind?: unknown[]): void;
   execO<T extends {}>(sql: string, bind?: unknown[]): T[];
   execA<T extends any[]>(sql: string, bind?: unknown[]): T[];
+  close(): void;
 
   prepare(sql: string): Stmt;
-  close(): void;
   createFunction(name: string, fn: (...args: any) => unknown, opts?: {}): void;
   savepoint(cb: () => void): void;
   transaction(cb: () => void): void;
 }
 
 export type DBAsync = {
-  [K in keyof Omit<
-    DB,
-    "prepare" | "transaction" | "savepoint" | "createFunction"
-  >]: (...args: Parameters<DB[K]>) => Promise<ReturnType<DB[K]>>;
-} & {
+  execMany(sql: string[]): Promise<void>;
+  exec(sql: string, bind?: unknown[]): Promise<void>;
+  execO<T extends {}>(sql: string, bind?: unknown[]): Promise<T[]>;
+  execA<T extends any[]>(sql: string, bind?: unknown[]): Promise<T[]>;
+  close(): void;
+
   prepare(sql: string): Promise<StmtAsync>;
-  transaction(cb: () => Promise<void>): Promise<void>;
-  savepoint(cb: () => Promise<void>): Promise<void>;
   createFunction(name: string, fn: (...args: any) => unknown, opts?: {}): void;
+  savepoint(cb: () => Promise<void>): Promise<void>;
+  transaction(cb: () => Promise<void>): Promise<void>;
 };
 
 export interface Stmt {

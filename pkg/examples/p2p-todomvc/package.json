@@ -12,7 +12,7 @@
     "test:unit": "vitest"
   },
   "dependencies": {
-    "@vlcn.io/crsqlite-wasm": "workspace:*",
+    "@vlcn.io/wa-crsqlite": "workspace:*",
     "@vlcn.io/network-webrtc": "workspace:*",
     "@vlcn.io/rx-tbl": "workspace:*",
     "comlink": "^4.3.1",

@@ -12,3 +12,15 @@ Object.entries(wdbTests).forEach((x) => {
     );
   });
 });
+
+import { tblrxTests } from "@vlcn.io/xplat-tests";
+
+Object.entries(tblrxTests).forEach((x) => {
+  test(x[0], () => {
+    const tc = x[1];
+    tc(
+      () => crsqlite.open(),
+      (p: boolean) => expect(p).toBe(true)
+    );
+  });
+});

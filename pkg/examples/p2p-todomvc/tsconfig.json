@@ -9,7 +9,8 @@
     "rootDir": "./",
     "allowJs": true,
     "jsx": "react",
-    "strict": true
+    "strict": true,
+    "skipLibCheck": true
   },
   "include": ["./src/"]
 }

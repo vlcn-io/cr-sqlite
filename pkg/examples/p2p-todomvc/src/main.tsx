@@ -1,5 +1,6 @@
 import * as React from "react";
 import { createRoot } from "react-dom/client";
+// @ts-ignore
 import { stringify as uuidStringify } from "uuid";
 
 import App from "./App";
@@ -8,16 +9,6 @@ import { Ctx } from "./hooks";
 import sqliteWasm from "@vlcn.io/wa-crsqlite";
 import tblrx from "@vlcn.io/rx-tbl";
 import wdbRtc from "@vlcn.io/network-webrtc";
-
-/*
-try dis:
-const dirName = sqlite3.capi.sqlite3_wasmfs_opfs_dir()
-if( dirName ) { ... OPFS is active ... }
-else { ... OPFS is not available ... }
-
-then dis:
-file:local?vfs=kvvs
-*/
 
 async function main() {
   const sqlite = await sqliteWasm();

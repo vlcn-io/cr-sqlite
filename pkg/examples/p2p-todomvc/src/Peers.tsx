@@ -14,7 +14,7 @@ export default function Peers({ ctx }: { ctx: Ctx }) {
       <a
         href="#"
         onClick={() => {
-          ctx.sqlite.connectTo(ctx.dbid, peerId);
+          ctx.rtc.connectTo(peerId);
         }}
       >
         Connect

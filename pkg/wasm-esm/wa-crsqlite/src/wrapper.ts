@@ -6,6 +6,23 @@ import { DBAsync, StmtAsync } from "@vlcn.io/xplat-api";
 import { SQLITE_UTF8 } from "wa-sqlite";
 
 let api: SQLite3 | null = null;
+type SQLiteAPI = ReturnType<typeof SQLite.Factory>;
+
+let queue: Promise<any> = Promise.resolve();
+
+/**
+ * Although wa-sqlite exposes an async interface, hitting
+ * it concurrently deadlocks it.
+ *
+ * It is only to be used sequentially.
+ *
+ * Serialize enforces that, nomatter what the callers of us do.
+ */
+function serialize(cb: () => any) {
+  const res = queue.then(() => cb());
+  queue = res.catch(() => {});
+  return res;
+}
 
 export class SQLite3 {
   constructor(private base: SQLiteAPI) {}
@@ -27,34 +44,36 @@ export class DB implements DBAsync {
   constructor(public api: SQLiteAPI, public db: number) {}
 
   execMany(sql: string[]): Promise<any> {
-    return this.api.exec(this.db, sql.join(""));
+    return serialize(() => this.api.exec(this.db, sql.join("")));
   }
 
   exec(sql: string, bind?: unknown[]): Promise<void> {
-    return this.statements(sql, false, bind);
+    return serialize(() => this.statements(sql, false, bind));
   }
 
   execO<T extends {}>(sql: string, bind?: unknown[]): Promise<T[]> {
-    return this.statements(sql, true, bind);
+    return serialize(() => this.statements(sql, true, bind));
   }
 
   execA<T extends any[]>(sql: string, bind?: unknown[]): Promise<T[]> {
-    return this.statements(sql, false, bind);
+    return serialize(() => this.statements(sql, false, bind));
   }
 
-  async prepare(sql: string): Promise<StmtAsync> {
-    const str = this.api.str_new(this.db, sql);
-    const prepared = await this.api.prepare_v2(this.db, str);
-    if (prepared == null) {
-      this.api.str_finish(str);
-      throw new Error(`Could not prepare ${sql}`);
-    }
+  prepare(sql: string): Promise<StmtAsync> {
+    return serialize(async () => {
+      const str = this.api.str_new(this.db, sql);
+      const prepared = await this.api.prepare_v2(this.db, str);
+      if (prepared == null) {
+        this.api.str_finish(str);
+        throw new Error(`Could not prepare ${sql}`);
+      }
 
-    return new Stmt(this.api, prepared.stmt, str);
+      return new Stmt(this.api, prepared.stmt, str);
+    });
   }
 
   close(): Promise<any> {
-    return this.api.close(this.db);
+    return serialize(() => this.api.close(this.db));
   }
 
   createFunction(name: string, fn: (...args: any) => unknown, opts?: {}): void {
@@ -159,29 +178,35 @@ class Stmt implements StmtAsync {
   ) {}
 
   run(...bindArgs: any[]): Promise<any> {
-    this.bind(bindArgs);
+    return serialize(() => {
+      this.bind(bindArgs);
 
-    return this.api.step(this.base).then(() => this.api.reset(this.base));
+      return this.api.step(this.base).then(() => this.api.reset(this.base));
+    });
   }
 
-  async get(...bindArgs: any[]): Promise<any> {
-    this.bind(bindArgs);
-    let ret: any = null;
-    if ((await this.api.step(this.base)) == SQLite.SQLITE_ROW) {
-      ret = this.api.row(this.base);
-    }
-    await this.api.reset(this.base);
-    return ret;
+  get(...bindArgs: any[]): Promise<any> {
+    return serialize(async () => {
+      this.bind(bindArgs);
+      let ret: any = null;
+      if ((await this.api.step(this.base)) == SQLite.SQLITE_ROW) {
+        ret = this.api.row(this.base);
+      }
+      await this.api.reset(this.base);
+      return ret;
+    });
   }
 
-  async all(...bindArgs: any[]): Promise<any[]> {
-    this.bind(bindArgs);
-    const ret: any[] = [];
-    while ((await this.api.step(this.base)) == SQLite.SQLITE_ROW) {
-      ret.push(this.api.row(this.base));
-    }
-    await this.api.reset(this.base);
-    return ret;
+  all(...bindArgs: any[]): Promise<any[]> {
+    return serialize(async () => {
+      this.bind(bindArgs);
+      const ret: any[] = [];
+      while ((await this.api.step(this.base)) == SQLite.SQLITE_ROW) {
+        ret.push(this.api.row(this.base));
+      }
+      await this.api.reset(this.base);
+      return ret;
+    });
   }
 
   async *iterate<T>(...bindArgs: any[]): AsyncIterator<T> {

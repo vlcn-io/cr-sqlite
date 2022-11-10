@@ -44,6 +44,7 @@ char *crsql_changesUnionQuery(
   char *unionsStr = 0;
   int i = 0;
 
+  // TODO: what if there are no table infos?
   for (i = 0; i < tableInfosLen; ++i)
   {
     unionsArr[i] = crsql_changesQueryForTable(tableInfos[i]);

@@ -80,12 +80,12 @@ export class DB implements DBAsync {
     this.api.create_function(
       this.db,
       name,
-      fn.arguments.length,
+      fn.length,
       SQLITE_UTF8,
       0,
       (context: number, values: Uint32Array) => {
         const args: any[] = [];
-        for (let i = 0; i < fn.arguments.length; ++i) {
+        for (let i = 0; i < fn.length; ++i) {
           args.push(this.api.value(values[i]));
         }
 

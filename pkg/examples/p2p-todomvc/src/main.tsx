@@ -16,7 +16,9 @@ async function main() {
   const db = await sqlite.open("p2p-wdb-todomvc");
 
   await db.exec("CREATE TABLE IF NOT EXISTS todo (id, text, completed)");
+  // TODO wa-sqlite is retruning us the wrong array type!
   const r = await db.execA("SELECT crsql_siteid()");
+  console.log(r);
   const siteid = uuidStringify(r[0][0]);
 
   const rx = await tblrx(db);

@@ -1,4 +1,4 @@
-import SQLiteAsyncESMFactory from "./wa-sqlite-async.js";
+import SQLiteAsyncESMFactory from "wa-sqlite/dist/wa-sqlite-async.mjs";
 import * as SQLite from "wa-sqlite";
 // @ts-ignore
 import { IDBBatchAtomicVFS } from "wa-sqlite/src/examples/IDBBatchAtomicVFS.js";

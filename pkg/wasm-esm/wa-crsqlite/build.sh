@@ -15,5 +15,5 @@ source ./emsdk_env.sh
 cd ../wa-sqlite
 make
 
-cp dist/wa-sqlite-async.wasm ../../pkg/wasm-esm/wa-crsqlite/dist
-cp dist/wa-sqlite-async.mjs  ../../pkg/wasm-esm/wa-crsqlite/src/wa-sqlite-async.js
+# cp dist/wa-sqlite-async.wasm ../../pkg/wasm-esm/wa-crsqlite/dist
+# cp dist/wa-sqlite-async.mjs  ../../pkg/wasm-esm/wa-crsqlite/src/wa-sqlite-async.js

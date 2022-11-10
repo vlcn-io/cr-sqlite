@@ -26,6 +26,6 @@
   "dependencies": {
     "comlink": "^4.3.1",
     "@vlcn.io/xplat-api": "workspace:*",
-    "wa-sqlite": "github:vlcn-io/wa-sqlite#buildless"
+    "wa-sqlite": "link:../../../deps/wa-sqlite"
   }
 }

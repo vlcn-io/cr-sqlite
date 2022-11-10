@@ -176,6 +176,7 @@ export class WholeDbReplicator {
   }
 
   private crrChanged() {
+    console.log("crr changed");
     if (this.pendingNotification) {
       return;
     }
@@ -212,10 +213,14 @@ export class WholeDbReplicator {
 
     // ask the poker for changes since our version
     console.log("requesting changes");
-    this.network.requestChanges(this.siteIdWire, ourVersionForPoker);
+    this.network.requestChanges(pokedBy, ourVersionForPoker);
   };
 
   private newConnection = (siteId: SiteIDWire) => {
+    this.db.exec(
+      "INSERT OR IGNORE INTO __crsql_wdbreplicator_peers VALUES (?, ?)",
+      [uuidParse(siteId), 0]
+    );
     // treat it as a crr change so we can kick off sync
     this.crrChanged();
   };

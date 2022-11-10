@@ -22,16 +22,14 @@ file:local?vfs=kvvs
 async function main() {
   const sqlite = await sqliteWasm();
 
-  const dirname = sqlite.baseSqlite3.capi.sqlite3_wasmfs_opfs_dir();
-  let db: DB = dirname
-    ? sqlite.open(dirname + "/p2p-todomvc-wdb.db")
-    : sqlite.open("file:local?vfs=kvvfs");
+  const db = await sqlite.open("p2p-wdb-todomvc");
 
-  db.exec("CREATE TABLE IF NOT EXISTS todo (id, text, completed)");
-  const siteid = uuidStringify(db.execA("SELECT crsql_siteid()")[0][0]);
+  await db.exec("CREATE TABLE IF NOT EXISTS todo (id, text, completed)");
+  const r = await db.execA("SELECT crsql_siteid()");
+  const siteid = uuidStringify(r[0][0]);
 
-  const rx = tblrx(db);
-  const rtc = wdbRtc(db);
+  const rx = await tblrx(db);
+  const rtc = await wdbRtc(db);
 
   window.onbeforeunload = () => {
     return db.close();

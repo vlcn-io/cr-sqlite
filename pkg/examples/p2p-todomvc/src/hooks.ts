@@ -1,14 +1,13 @@
-import "./worker/dbapi-ext.js";
 import { useEffect, useState } from "react";
-import { DB } from "@vlcn.io/crsqlite-wasm";
 import wdbRtc from "@vlcn.io/network-webrtc";
+import { DB } from "@vlcn.io/wa-crsqlite";
 import tblrx from "@vlcn.io/rx-tbl";
 
 export type Ctx = {
   db: DB;
   siteid: string;
-  rtc: ReturnType<typeof wdbRtc>;
-  rx: ReturnType<typeof tblrx>;
+  rtc: Awaited<ReturnType<typeof wdbRtc>>;
+  rx: Awaited<ReturnType<typeof tblrx>>;
 };
 
 type QueryData<T> = {
@@ -40,9 +39,14 @@ export function useQuery<T extends {}>(
         }
       }
 
-      setState({
-        data: ctx.db.execO<T>(query),
-        loading: false,
+      ctx.db.execO<T>(query).then((data) => {
+        if (!isMounted) {
+          return;
+        }
+        setState({
+          data,
+          loading: false,
+        });
       });
     };
 

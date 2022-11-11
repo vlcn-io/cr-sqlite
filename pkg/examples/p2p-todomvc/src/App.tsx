@@ -211,7 +211,7 @@ export default function App({ ctx }: { ctx: Ctx }) {
   const allTodos: Todo[] = useQuery<Todo>(
     ctx,
     ["todo"],
-    "SELECT * FROM todo"
+    "SELECT * FROM todo ORDER BY id DESC"
   ).data;
   const completeTodos = allTodos.filter((t) => t.completed);
   const activeTodos = allTodos.filter((t) => !t.completed);

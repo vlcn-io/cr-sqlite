@@ -170,3 +170,7 @@ repro finalization problem with prepared statement in pExtData and extension des
 node-gyp build --debug
 node-gyp rebuild --debug
 node-gyp configure --debug
+
+create table foo (a primary key, b);
+select crsql_as_crr('foo');
+insert into crsql_changes values ('foo', 1, 1, 1, 1, NULL);

@@ -19,8 +19,12 @@ let queue: Promise<any> = Promise.resolve();
  * Serialize enforces that, nomatter what the callers of us do.
  */
 function serialize(cb: () => any) {
-  const res = queue.then(() => cb());
-  queue = res.catch(() => {});
+  const res = queue.then(
+    () => cb(),
+    () => {}
+  );
+  queue = res;
+  // queue = res.catch(() => {});
   return res;
 }
 
@@ -62,12 +66,20 @@ export class DB implements DBAsync {
   prepare(sql: string): Promise<StmtAsync> {
     return serialize(async () => {
       const str = this.api.str_new(this.db, sql);
-      const prepared = await this.api.prepare_v2(this.db, str);
+      console.log("allocated str");
+      console.log(sql);
+      const prepared = await this.api.prepare_v2(
+        this.db,
+        this.api.str_value(str)
+      );
+      console.log("prepared stmt");
       if (prepared == null) {
+        console.log("finish");
         this.api.str_finish(str);
         throw new Error(`Could not prepare ${sql}`);
       }
 
+      console.log("ret new stmt");
       return new Stmt(this.api, prepared.stmt, str);
     });
   }
@@ -90,7 +102,9 @@ export class DB implements DBAsync {
         }
 
         const r = fn(...args);
-        this.api.result(context, r as SQLiteCompatibleType);
+        if (r !== undefined) {
+          this.api.result(context, r as SQLiteCompatibleType);
+        }
       }
     );
   }
@@ -229,7 +243,7 @@ class Stmt implements StmtAsync {
 
   bind(args: any[]): this {
     for (let i = 0; i < args.length; ++i) {
-      this.api.bind(this.base, i, args[i]);
+      this.api.bind(this.base, i + 1, args[i]);
     }
     return this;
   }

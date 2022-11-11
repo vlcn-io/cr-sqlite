@@ -202,7 +202,7 @@ export class WholeDbReplicator {
     let ourVersionForPoker: bigint = 0n;
     if (rows != null && rows.length > 0) {
       // ensure it is a bigint. sqlite will return number if in js int range and bigint if out of range.
-      ourVersionForPoker = BigInt(rows[0][0]);
+      ourVersionForPoker = BigInt(rows[0][0] || 0);
     }
 
     // the poker version can be less than our version for poker if a set of
@@ -246,16 +246,29 @@ export class WholeDbReplicator {
         for (const cs of changesets) {
           const v = BigInt(cs[4]);
           maxVersion = v > maxVersion ? v : maxVersion;
+          console.log("running stmt");
           // cannot use same statement in parallel
-          await stmt.run(cs[0], cs[1], cs[2], cs[3], cs[4], uuidParse(cs[5]));
+          await stmt.run(
+            cs[0],
+            cs[1],
+            cs[2],
+            cs[3],
+            cs[4],
+            cs[5] ? uuidParse(cs[5]) : 0
+          );
+          console.log("ran stmt");
         }
+      } catch (e) {
+        console.error(e);
+        throw e;
       } finally {
         stmt.finalize();
       }
 
+      console.log("updating peers");
       await this.db.exec(
         `INSERT OR REPLACE INTO __crsql_wdbreplicator_peers (site_id, version) VALUES (?, ?)`,
-        [uuidParse(fromSiteId), maxVersion]
+        [uuidParse(fromSiteId), maxVersion.toString()]
       );
     });
   };

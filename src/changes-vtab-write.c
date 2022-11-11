@@ -131,7 +131,7 @@ int crsql_setWinnerClock(
   int rc = SQLITE_OK;
   char *zSql = sqlite3_mprintf(
       "INSERT OR REPLACE INTO \"%s__crsql_clock\" \
-      (%s, __crsql_col_num, __crsql_version, __crsql_site_id)\
+      (%s, \"__crsql_col_num\", \"__crsql_version\", \"__crsql_site_id\")\
       VALUES (\
         %s,\
         %d,\
@@ -154,7 +154,12 @@ int crsql_setWinnerClock(
     return rc;
   }
 
-  sqlite3_bind_blob(pStmt, 1, insertSiteId, insertSiteIdLen, SQLITE_TRANSIENT);
+  if (insertSiteId == 0) {
+    sqlite3_bind_null(pStmt, 1);
+  } else {
+    sqlite3_bind_blob(pStmt, 1, insertSiteId, insertSiteIdLen, SQLITE_TRANSIENT);
+  }
+  
   rc = sqlite3_step(pStmt);
   sqlite3_finalize(pStmt);
 
@@ -339,6 +344,7 @@ int crsql_mergeInsert(
   if (pkValsStr == 0)
   {
     sqlite3_free(pkWhereList);
+    *errmsg = sqlite3_mprintf("Failed sanitizing pk values");
     return SQLITE_ERROR;
   }
 
@@ -384,6 +390,9 @@ int crsql_mergeInsert(
     sqlite3_free(pkValsStr);
     sqlite3_free(pkIdentifierList);
     // doesCidWin == 0? compared against our clocks, nothing wins. OK and Done.
+    if (doesCidWin == -1) {
+      *errmsg = sqlite3_mprintf("Failed computing cid win");
+    }
     return doesCidWin == 0 ? SQLITE_OK : SQLITE_ERROR;
   }
 
@@ -393,6 +402,7 @@ int crsql_mergeInsert(
   {
     sqlite3_free(pkValsStr);
     sqlite3_free(pkIdentifierList);
+    *errmsg = sqlite3_mprintf("Failed sanitizing value for changeset");
     return SQLITE_ERROR;
   }
 
@@ -419,6 +429,7 @@ int crsql_mergeInsert(
     sqlite3_free(pkValsStr);
     sqlite3_free(pkIdentifierList);
     sqlite3_exec(db, CLEAR_SYNC_BIT, 0, 0, 0);
+    *errmsg = sqlite3_mprintf("Failed setting sync bit");
     return rc;
   }
 
@@ -430,6 +441,7 @@ int crsql_mergeInsert(
   {
     sqlite3_free(pkValsStr);
     sqlite3_free(pkIdentifierList);
+    *errmsg = sqlite3_mprintf("Failed inserting changeset");
     return rc;
   }
 
@@ -444,6 +456,10 @@ int crsql_mergeInsert(
       insertSiteIdLen);
   sqlite3_free(pkIdentifierList);
   sqlite3_free(pkValsStr);
+
+  if (rc != SQLITE_OK) {
+    *errmsg = sqlite3_mprintf("Failed updating winner clock");
+  }
 
   // TODO: ... this isn't really guaranteed to be unique across
   // the table.

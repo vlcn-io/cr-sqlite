@@ -277,7 +277,7 @@ export class WholeDbReplicator {
     const fromAsBlob = uuidParse(from);
     const changes: Changeset[] = await this.db.execA<Changeset>(
       "SELECT * FROM crsql_changes WHERE site_id != ? AND version > ?",
-      [fromAsBlob, since]
+      [fromAsBlob, since.toString()]
     );
 
     if (changes.length == 0) {

@@ -1,5 +1,15 @@
 # @vlcn.io/crsqlite-p2p-todomvc
 
+## 0.1.1
+
+### Patch Changes
+
+- remove `link:../` references so we actually correctly resolve packages
+- Updated dependencies
+  - @vlcn.io/network-webrtc@0.1.1
+  - @vlcn.io/rx-tbl@0.1.1
+  - @vlcn.io/wa-crsqlite@0.1.1
+
 ## 0.1.0
 
 ### Minor Changes

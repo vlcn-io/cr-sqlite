@@ -6,11 +6,8 @@ To script this:
 npm run build-release
 npm publish --access=public --otp=...
 
-cd deps/wa-sqlite
-make
-npm publish --access=public --otp=...
-
-cd ../pkg
+cd pkg
+# update references to @vlcn.io/crsqlite :(
 pnpm changeset
 pnpm changeset version
 pnpm publish -r --access=public --otp=

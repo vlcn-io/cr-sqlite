@@ -176,16 +176,20 @@ export const tests = {
       onPoked = cb;
     };
     let changesRequested = false;
+    const pokerSiteId = uuidv4();
     protocol.requestChanges = (siteId, theirVersionForPoker) => {
       assert(theirVersionForPoker == 0n);
-      assert(siteId == uuidStringify(db.execA("select crsql_siteid()")[0][0]));
+      // should not be requesting changes from ourself
+      assert(siteId != uuidStringify(db.execA("select crsql_siteid()")[0][0]));
+      // we request from he who poked us
+      assert(siteId == pokerSiteId);
       changesRequested = true;
     };
 
     const db = dbProvider();
     await wdbr.install(createSimpleSchema(db), db, protocol);
 
-    await onPoked!(uuidv4(), 10n);
+    await onPoked!(pokerSiteId, 10n);
 
     // @ts-ignore
     assert(changesRequested == true);

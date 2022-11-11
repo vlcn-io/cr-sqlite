@@ -104,7 +104,7 @@ Note -- these are pre-release. Please look at [the open bugs](https://github.com
 
 # Building
 
-## Non-WASM Library
+## [Run Time Loadable Extension](https://www.sqlite.org/loadext.htmla)
 
 Instructions on building a native library that can be loaded into SQLite in non-wasm environments.
 
@@ -121,7 +121,7 @@ This will create a shared library at `dist/crsqlite.[lib extension]`
 - Darwin / OS X: `.dylib`
 - Windows: `.dll`
 
-## Non-WASM CLI
+## CLI
 
 Instructions on building a `sqlite3` CLI that has `cr-sqlite` statically linked and pre-loaded.
 
@@ -148,7 +148,7 @@ pytest
 
 And eventually browser tests.
 
-## SQLite WASM
+## WASM
 
 Instructions on building a new SQLite WASM distribution that statically links `crsqlite`.
 

@@ -196,18 +196,22 @@ int crsql_createClockTable(
   // copy the data to a temp table, re-create this table, copy it back.
   // of course if columns were re-ordered versions are pinned to the wrong columns.
   // TODO: incorporate schema name!
-  zSql = sqlite3_mprintf("DROP TABLE IF EXISTS \"%s__crsql_clock\"", tableInfo->tblName);
-  rc = sqlite3_exec(db, zSql, 0, 0, err);
-  sqlite3_free(zSql);
-  if (rc != SQLITE_OK)
-  {
-    return rc;
-  }
+  // TODO: allow re-running `as_crr` against a table to incorporate schema changes
+  // only schema changes to concern ourselves with:
+  // - dropped columns
+  // - new primary key columns
+  // zSql = sqlite3_mprintf("DROP TABLE IF EXISTS \"%s__crsql_clock\"", tableInfo->tblName);
+  // rc = sqlite3_exec(db, zSql, 0, 0, err);
+  // sqlite3_free(zSql);
+  // if (rc != SQLITE_OK)
+  // {
+  //   return rc;
+  // }
 
   // TODO: just forbid tables w/o primary keys?
   if (tableInfo->pksLen == 0)
   {
-    zSql = sqlite3_mprintf("CREATE TABLE \"%s__crsql_clock\" (\
+    zSql = sqlite3_mprintf("CREATE TABLE IF NOT EXSISTS \"%s__crsql_clock\" (\
       \"rowid\" NOT NULL,\
       \"__crsql_col_num\" NOT NULL,\
       \"__crsql_version\" NOT NULL,\
@@ -222,7 +226,7 @@ int crsql_createClockTable(
         tableInfo->pks,
         tableInfo->pksLen,
         0);
-    zSql = sqlite3_mprintf("CREATE TABLE \"%s__crsql_clock\" (\
+    zSql = sqlite3_mprintf("CREATE TABLE IF NOT EXISTS \"%s__crsql_clock\" (\
       %s,\
       \"__crsql_col_num\" NOT NULL,\
       \"__crsql_version\" NOT NULL,\
@@ -241,7 +245,7 @@ int crsql_createClockTable(
   }
 
   zSql = sqlite3_mprintf(
-      "CREATE INDEX \"%s__crsql_clock_v_idx\" ON \"%s__crsql_clock\" (__crsql_version)",
+      "CREATE INDEX IF NOT EXISTS \"%s__crsql_clock_v_idx\" ON \"%s__crsql_clock\" (__crsql_version)",
       tableInfo->tblName,
       tableInfo->tblName);
   sqlite3_exec(db, zSql, 0, 0, err);

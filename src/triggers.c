@@ -90,7 +90,7 @@ int crsql_createInsertTrigger(
     sqlite3_free(subTriggers[0]);
   }
 
-  zSql = sqlite3_mprintf("CREATE TRIGGER \"%s__crsql_itrig\"\
+  zSql = sqlite3_mprintf("CREATE TRIGGER IF NOT EXISTS \"%s__crsql_itrig\"\
       AFTER INSERT ON \"%s\"\
     BEGIN\
       %s\
@@ -164,7 +164,7 @@ int crsql_createUpdateTrigger(sqlite3 *db,
     sqlite3_free(subTriggers[i]);
   }
 
-  zSql = sqlite3_mprintf("CREATE TRIGGER \"%s__crsql_utrig\"\
+  zSql = sqlite3_mprintf("CREATE TRIGGER IF NOT EXISTS \"%s__crsql_utrig\"\
       AFTER UPDATE ON \"%s\"\
     BEGIN\
       %s\
@@ -205,7 +205,7 @@ char *crsql_deleteTriggerQuery(crsql_TableInfo *tableInfo)
   }
 
   zSql = sqlite3_mprintf(
-      "CREATE TRIGGER \"%s__crsql_dtrig\"\
+      "CREATE TRIGGER IF NOT EXISTS \"%s__crsql_dtrig\"\
       AFTER DELETE ON \"%s\"\
     BEGIN\
       INSERT OR REPLACE INTO \"%s__crsql_clock\" (\

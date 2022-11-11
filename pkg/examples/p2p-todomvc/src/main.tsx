@@ -19,7 +19,7 @@ async function main() {
   await db.exec(
     "CREATE TABLE IF NOT EXISTS todo (id primary key, text, completed)"
   );
-  // await db.exec("SELECT crsql_as_crr('todo')");
+  await db.exec("SELECT crsql_as_crr('todo')");
   // TODO wa-sqlite is retruning us the wrong array type!
   const r = await db.execA("SELECT crsql_siteid()");
   console.log(r);

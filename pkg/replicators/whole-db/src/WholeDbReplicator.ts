@@ -176,7 +176,6 @@ export class WholeDbReplicator {
   }
 
   private crrChanged() {
-    console.log("crr changed");
     if (this.pendingNotification) {
       return;
     }
@@ -194,7 +193,6 @@ export class WholeDbReplicator {
   }
 
   private poked = async (pokedBy: SiteIDWire, pokerVersion: bigint) => {
-    console.log("poked", this.siteIdWire, pokerVersion);
     const rows = await this.db.execA(
       "SELECT version FROM __crsql_wdbreplicator_peers WHERE site_id = ?",
       [uuidParse(pokedBy)]
@@ -212,7 +210,6 @@ export class WholeDbReplicator {
     }
 
     // ask the poker for changes since our version
-    console.log("requesting changes");
     this.network.requestChanges(pokedBy, ourVersionForPoker);
   };
 
@@ -232,7 +229,6 @@ export class WholeDbReplicator {
     fromSiteId: SiteIDWire,
     changesets: readonly Changeset[]
   ) => {
-    console.log("changes received", fromSiteId, changesets);
     await this.db.transaction(async () => {
       let maxVersion = 0n;
       const stmt = await this.db.prepare(
@@ -246,7 +242,6 @@ export class WholeDbReplicator {
         for (const cs of changesets) {
           const v = BigInt(cs[4]);
           maxVersion = v > maxVersion ? v : maxVersion;
-          console.log("running stmt");
           // cannot use same statement in parallel
           await stmt.run(
             cs[0],
@@ -256,7 +251,6 @@ export class WholeDbReplicator {
             cs[4],
             cs[5] ? uuidParse(cs[5]) : 0
           );
-          console.log("ran stmt");
         }
       } catch (e) {
         console.error(e);
@@ -265,7 +259,6 @@ export class WholeDbReplicator {
         stmt.finalize();
       }
 
-      console.log("updating peers");
       await this.db.exec(
         `INSERT OR REPLACE INTO __crsql_wdbreplicator_peers (site_id, version) VALUES (?, ?)`,
         [uuidParse(fromSiteId), maxVersion.toString()]

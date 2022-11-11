@@ -75,7 +75,6 @@ export class WholeDbRtc implements PokeProtocol {
   }
 
   connectTo(other: SiteIDWire) {
-    console.log("connect to");
     if (this.pendingConnections.has(other)) {
       const c = this.pendingConnections.get(other);
       c?.close();
@@ -85,13 +84,11 @@ export class WholeDbRtc implements PokeProtocol {
     this.pendingConnections.set(other, conn);
     this._connectionsChanged();
     conn.on("open", () => {
-      console.log("OPENED!!!");
       this._newConnection(conn);
     });
   }
 
   poke(poker: SiteIDWire, pokerVersion: bigint): void {
-    console.log("poking", poker, pokerVersion);
     const msg: PokeMsg = {
       tag: "poke",
       version: pokerVersion.toString(),
@@ -102,7 +99,6 @@ export class WholeDbRtc implements PokeProtocol {
   }
 
   pushChanges(to: SiteIDWire, changesets: readonly Changeset[]): void {
-    console.log("pushing changes", to, changesets);
     const msg: ChangesMsg = {
       tag: "apply-changes",
       changes: changesets,
@@ -114,7 +110,6 @@ export class WholeDbRtc implements PokeProtocol {
   }
 
   requestChanges(from: SiteIDWire, since: bigint): void {
-    console.log("requesting changes");
     const msg: RequestChangesMsg = {
       tag: "request-changes",
       since: since.toString(),
@@ -164,14 +159,12 @@ export class WholeDbRtc implements PokeProtocol {
       this._connectionsChanged();
     });
 
-    console.log("established");
     this.establishedConnections.set(conn.peer, conn);
     this._connectionsChanged();
     this._onNewConnection && this._onNewConnection(conn.peer);
   };
 
   private _dataReceived(from: SiteIDWire, data: Msg) {
-    console.log(data);
     switch (data.tag) {
       case "poke":
         this._onPoked && this._onPoked(from, BigInt(data.version));

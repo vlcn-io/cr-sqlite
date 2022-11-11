@@ -4,10 +4,10 @@ set -e
 
 mkdir -p dist
 
-cd ../../../deps/wa-sqlite
-yarn install
+cd ../wa-sqlite
+pnpm install
 
-cd ../emsdk
+cd ../../../depsemsdk
 ./emsdk install latest
 ./emsdk activate latest
 source ./emsdk_env.sh
@@ -15,5 +15,5 @@ source ./emsdk_env.sh
 cd ../wa-sqlite
 make
 
-cp dist/wa-sqlite-async.wasm ../../pkg/wasm-esm/wa-crsqlite/dist
+cp dist/wa-sqlite-async.wasm ../wa-crsqlite/dist
 # cp dist/wa-sqlite-async.mjs  ../../pkg/wasm-esm/wa-crsqlite/src/wa-sqlite-async.js

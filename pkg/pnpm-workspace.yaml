@@ -3,6 +3,7 @@ packages:
   - "wasm-esm/examples"
   - "wasm-esm/sandbox"
   - "wasm-esm/wa-crsqlite"
+  - "wasm-esm/wa-sqlite"
   - "network/webrtc"
   - "replicators/whole-db"
   - "tests/xplat-tests"

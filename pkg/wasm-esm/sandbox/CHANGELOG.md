@@ -1,5 +1,12 @@
 # @vlcn.io/crsqlite-sandbox
 
+## 0.1.2
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/wa-crsqlite@0.1.2
+
 ## 0.1.1
 
 ### Patch Changes

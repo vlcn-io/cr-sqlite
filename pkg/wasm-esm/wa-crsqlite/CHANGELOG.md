@@ -1,5 +1,11 @@
 # @vlcn.io/wa-crsqlite
 
+## 0.1.2
+
+### Patch Changes
+
+- allow callers to specify path to wasm
+
 ## 0.1.1
 
 ### Patch Changes

@@ -316,13 +316,18 @@ class Stmt implements StmtAsync {
   }
 }
 
-export default async function initWasm(): Promise<SQLite3> {
+export default async function initWasm(
+  locateWasm?: (file: string) => string
+): Promise<SQLite3> {
   if (api != null) {
     return api;
   }
 
   const module = await SQLiteAsyncESMFactory({
     locateFile(file: string) {
+      if (locateWasm) {
+        return locateWasm(file);
+      }
       return new URL(file, import.meta.url).href;
     },
   });

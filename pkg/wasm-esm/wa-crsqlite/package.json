@@ -6,7 +6,8 @@
     "dist"
   ],
   "exports": {
-    ".": "./dist/wrapper.js"
+    ".": "./dist/wrapper.js",
+    "./wa-sqlite-async.wasm": "./dist/wa-sqlite-async.wasm"
   },
   "module": "dist/wrapper.js",
   "types": "dist/wrapper.d.ts",

@@ -17,14 +17,35 @@ let queue: Promise<any> = Promise.resolve();
  * It is only to be used sequentially.
  *
  * Serialize enforces that, nomatter what the callers of us do.
+ *
+ * null clears cache. Use for writes.
+ * string gets from cache.
+ * undefined has no impact on cache and does not check cache.
  */
-function serialize(cb: () => any) {
+const cache = new Map<string, Promise<any>>();
+function serialize(key: string | null | undefined, cb: () => any) {
+  // if is write, drop cache and don't use cache
+  // TODO: test me. Useful for Strut where all slides query against deck and such things.
+  // TODO: when we no longer have to serialize calls we should use `graphql/DataLoader` infra
+  if (key === null) {
+    cache.clear();
+  } else if (key !== undefined) {
+    const existing = cache.get(key);
+    if (existing) {
+      return existing;
+    }
+  }
+
   const res = queue.then(
     () => cb(),
     () => {}
   );
   queue = res;
-  // queue = res.catch(() => {});
+
+  if (key) {
+    cache.set(key, res);
+  }
+
   return res;
 }
 
@@ -44,48 +65,81 @@ export class SQLite3 {
   }
 }
 
+const re = /insert\s|update\s|delete\s/;
+function computeCacheKey(
+  sql: string,
+  mode: "o" | "a",
+  bind?: SQLiteCompatibleType[]
+) {
+  const lower = sql.toLowerCase();
+
+  // is it a write?
+  if (re.exec(lower) != null) {
+    return null;
+  }
+
+  if (bind != null) {
+    return (
+      lower +
+      "|" +
+      mode +
+      "|" +
+      bind.map((b) => (b != null ? b.toString() : "null")).join("|")
+    );
+  }
+  return lower;
+}
+
 export class DB implements DBAsync {
   constructor(public api: SQLiteAPI, public db: number) {}
 
   execMany(sql: string[]): Promise<any> {
-    return serialize(() => this.api.exec(this.db, sql.join("")));
+    return serialize(null, () => this.api.exec(this.db, sql.join("")));
   }
 
-  exec(sql: string, bind?: unknown[]): Promise<void> {
-    return serialize(() => this.statements(sql, false, bind));
+  exec(sql: string, bind?: SQLiteCompatibleType[]): Promise<void> {
+    // TODO: either? since not returning?
+    return serialize(computeCacheKey(sql, "a", bind), () =>
+      this.statements(sql, false, bind)
+    );
   }
 
-  execO<T extends {}>(sql: string, bind?: unknown[]): Promise<T[]> {
-    return serialize(() => this.statements(sql, true, bind));
+  execO<T extends {}>(
+    sql: string,
+    bind?: SQLiteCompatibleType[]
+  ): Promise<T[]> {
+    return serialize(computeCacheKey(sql, "o", bind), () =>
+      this.statements(sql, true, bind)
+    );
   }
 
-  execA<T extends any[]>(sql: string, bind?: unknown[]): Promise<T[]> {
-    return serialize(() => this.statements(sql, false, bind));
+  execA<T extends any[]>(
+    sql: string,
+    bind?: SQLiteCompatibleType[]
+  ): Promise<T[]> {
+    return serialize(computeCacheKey(sql, "a", bind), () =>
+      this.statements(sql, false, bind)
+    );
   }
 
   prepare(sql: string): Promise<StmtAsync> {
-    return serialize(async () => {
+    return serialize(undefined, async () => {
       const str = this.api.str_new(this.db, sql);
-      console.log("allocated str");
-      console.log(sql);
       const prepared = await this.api.prepare_v2(
         this.db,
         this.api.str_value(str)
       );
-      console.log("prepared stmt");
       if (prepared == null) {
-        console.log("finish");
         this.api.str_finish(str);
         throw new Error(`Could not prepare ${sql}`);
       }
 
-      console.log("ret new stmt");
-      return new Stmt(this.api, prepared.stmt, str);
+      return new Stmt(this.api, prepared.stmt, str, sql);
     });
   }
 
   close(): Promise<any> {
-    return serialize(() => this.api.close(this.db));
+    return serialize(undefined, () => this.api.close(this.db));
   }
 
   createFunction(name: string, fn: (...args: any) => unknown, opts?: {}): void {
@@ -184,15 +238,17 @@ export class DB implements DBAsync {
 
 // TOOD: maybe lazily reset only if stmt is reused
 class Stmt implements StmtAsync {
-  private mode: "col" | "obj" = "obj";
+  // TOOD: use mode in get/all!
+  private mode: "a" | "o" = "o";
   constructor(
     private api: SQLiteAPI,
     private base: number,
-    private str: number
+    private str: number,
+    private sql: string
   ) {}
 
   run(...bindArgs: any[]): Promise<any> {
-    return serialize(() => {
+    return serialize(computeCacheKey(this.sql, this.mode, bindArgs), () => {
       this.bind(bindArgs);
 
       return this.api.step(this.base).then(() => this.api.reset(this.base));
@@ -200,27 +256,33 @@ class Stmt implements StmtAsync {
   }
 
   get(...bindArgs: any[]): Promise<any> {
-    return serialize(async () => {
-      this.bind(bindArgs);
-      let ret: any = null;
-      if ((await this.api.step(this.base)) == SQLite.SQLITE_ROW) {
-        ret = this.api.row(this.base);
+    return serialize(
+      computeCacheKey(this.sql, this.mode, bindArgs),
+      async () => {
+        this.bind(bindArgs);
+        let ret: any = null;
+        if ((await this.api.step(this.base)) == SQLite.SQLITE_ROW) {
+          ret = this.api.row(this.base);
+        }
+        await this.api.reset(this.base);
+        return ret;
       }
-      await this.api.reset(this.base);
-      return ret;
-    });
+    );
   }
 
   all(...bindArgs: any[]): Promise<any[]> {
-    return serialize(async () => {
-      this.bind(bindArgs);
-      const ret: any[] = [];
-      while ((await this.api.step(this.base)) == SQLite.SQLITE_ROW) {
-        ret.push(this.api.row(this.base));
+    return serialize(
+      computeCacheKey(this.sql, this.mode, bindArgs),
+      async () => {
+        this.bind(bindArgs);
+        const ret: any[] = [];
+        while ((await this.api.step(this.base)) == SQLite.SQLITE_ROW) {
+          ret.push(this.api.row(this.base));
+        }
+        await this.api.reset(this.base);
+        return ret;
       }
-      await this.api.reset(this.base);
-      return ret;
-    });
+    );
   }
 
   async *iterate<T>(...bindArgs: any[]): AsyncIterator<T> {
@@ -233,9 +295,9 @@ class Stmt implements StmtAsync {
 
   raw(isRaw?: boolean): this {
     if (isRaw) {
-      this.mode = "col";
+      this.mode = "a";
     } else {
-      this.mode = "obj";
+      this.mode = "o";
     }
 
     return this;

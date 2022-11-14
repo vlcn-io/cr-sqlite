@@ -10,6 +10,13 @@ type SQLiteAPI = ReturnType<typeof SQLite.Factory>;
 
 let queue: Promise<any> = Promise.resolve();
 
+const isDebug = (window as any).__vlcn_wa_crsqlite_dbg;
+function log(...data: any[]) {
+  if (isDebug) {
+    console.log("wa-crsqlite: ", ...data);
+  }
+}
+
 /**
  * Although wa-sqlite exposes an async interface, hitting
  * it concurrently deadlocks it.
@@ -28,17 +35,22 @@ function serialize(key: string | null | undefined, cb: () => any) {
   // TODO: test me. Useful for Strut where all slides query against deck and such things.
   // TODO: when we no longer have to serialize calls we should use `graphql/DataLoader` infra
   if (key === null) {
+    log("Cache clear");
     cache.clear();
   } else if (key !== undefined) {
     const existing = cache.get(key);
     if (existing) {
+      log("Cache hit", key);
       return existing;
     }
   }
 
+  log("Enqueueing query ", key);
   const res = queue.then(
     () => cb(),
-    () => {}
+    (e) => {
+      console.error(e);
+    }
   );
   queue = res;
 
@@ -75,6 +87,7 @@ function computeCacheKey(
 
   // is it a write?
   if (re.exec(lower) != null) {
+    log("received write");
     return null;
   }
 

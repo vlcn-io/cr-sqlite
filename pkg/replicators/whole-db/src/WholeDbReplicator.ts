@@ -11,6 +11,13 @@ type TODO = any;
 const DOES_EXTENSION_EXIST =
   "SELECT 1 FROM pragma_function_list WHERE name = 'crsql_wdbreplicator'";
 
+const isDebug = (window as any).__vlcn_whole_db_dbg;
+function log(...data: any[]) {
+  if (isDebug) {
+    console.log("whole-db: ", ...data);
+  }
+}
+
 /**
  * The `poke` protocol is the simplest option in terms of
  * - causal delivery of messages
@@ -188,11 +195,13 @@ export class WholeDbReplicator {
       const dbv = r[0][0];
       this.pendingNotification = false;
       // TODO: maybe wait for network before setting pending to false
+      log("poking across the network");
       this.network.poke(this.siteIdWire, BigInt(dbv));
     });
   }
 
   private poked = async (pokedBy: SiteIDWire, pokerVersion: bigint) => {
+    log("received a poke from ", pokedBy);
     const rows = await this.db.execA(
       "SELECT version FROM __crsql_wdbreplicator_peers WHERE site_id = ?",
       [uuidParse(pokedBy)]
@@ -210,6 +219,7 @@ export class WholeDbReplicator {
     }
 
     // ask the poker for changes since our version
+    log("requesting changes from ", pokedBy);
     this.network.requestChanges(pokedBy, ourVersionForPoker);
   };
 
@@ -231,6 +241,7 @@ export class WholeDbReplicator {
   ) => {
     await this.db.transaction(async () => {
       let maxVersion = 0n;
+      log("inserting changesets in tx", changesets);
       const stmt = await this.db.prepare(
         'INSERT INTO crsql_changes ("table", "pk", "cid", "val", "version", "site_id") VALUES (?, ?, ?, ?, ?, ?)'
       );
@@ -261,7 +272,9 @@ export class WholeDbReplicator {
 
       await this.db.exec(
         `INSERT OR REPLACE INTO __crsql_wdbreplicator_peers (site_id, version) VALUES (?, ?)`,
-        [uuidParse(fromSiteId), maxVersion.toString()]
+        // TODO: needs to be int64. Fix WA-SQLITE to allow bigints.
+        // TODO!!!! WRONG! current placeholder given WA-SQLITE fails on BIGINTS
+        [uuidParse(fromSiteId), Number(maxVersion)]
       );
     });
   };
@@ -270,12 +283,14 @@ export class WholeDbReplicator {
     const fromAsBlob = uuidParse(from);
     const changes: Changeset[] = await this.db.execA<Changeset>(
       "SELECT * FROM crsql_changes WHERE site_id != ? AND version > ?",
-      [fromAsBlob, since.toString()]
+      // TODO!!! WRONG!! current placeholder given WA-SQLITE fails on BIGINTS
+      [fromAsBlob, Number(since)]
     );
 
     if (changes.length == 0) {
       return;
     }
+    log("pushing changesets across the network", changes);
     this.network.pushChanges(from, changes);
   };
 }

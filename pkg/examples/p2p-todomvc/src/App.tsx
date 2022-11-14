@@ -1,3 +1,5 @@
+(window as any).__vlcn_whole_db_dbg = true;
+
 import * as React from "react";
 import { Ctx, useQuery } from "./hooks";
 import { useState, useCallback, memo } from "react";

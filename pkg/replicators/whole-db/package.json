@@ -3,7 +3,8 @@
   "type": "module",
   "version": "0.1.2",
   "files": [
-    "dist"
+    "dist",
+    "src"
   ],
   "module": "dist/index.js",
   "main": "dist/index.js",

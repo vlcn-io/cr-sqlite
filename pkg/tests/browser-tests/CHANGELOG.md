@@ -1,5 +1,11 @@
 # @vlcn.io/browser-tests
 
+## 0.1.2
+
+### Patch Changes
+
+- @vlcn.io/xplat-tests@0.1.2
+
 ## 0.1.1
 
 ### Patch Changes

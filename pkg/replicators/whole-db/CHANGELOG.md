@@ -1,5 +1,11 @@
 # @vlcn.io/replicator-wholedb
 
+## 0.1.2
+
+### Patch Changes
+
+- debug logging, fatal on bad binds
+
 ## 0.1.1
 
 ### Patch Changes

@@ -1,5 +1,13 @@
 # @vlcn.io/wa-crsqlite
 
+## 0.1.3
+
+### Patch Changes
+
+- debug logging, fatal on bad binds
+- Updated dependencies
+  - @vlcn.io/wa-sqlite@0.8.5
+
 ## 0.1.2
 
 ### Patch Changes

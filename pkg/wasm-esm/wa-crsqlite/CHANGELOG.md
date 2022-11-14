@@ -1,5 +1,11 @@
 # @vlcn.io/wa-crsqlite
 
+## 0.1.4
+
+### Patch Changes
+
+- include sources in npm packages
+
 ## 0.1.3
 
 ### Patch Changes

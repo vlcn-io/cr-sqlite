@@ -1,5 +1,13 @@
 # @vlcn.io/network-webrtc
 
+## 0.1.3
+
+### Patch Changes
+
+- include sources in npm packages
+- Updated dependencies
+  - @vlcn.io/replicator-wholedb@0.1.3
+
 ## 0.1.2
 
 ### Patch Changes

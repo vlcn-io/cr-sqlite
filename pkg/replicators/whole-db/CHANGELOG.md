@@ -1,5 +1,11 @@
 # @vlcn.io/replicator-wholedb
 
+## 0.1.3
+
+### Patch Changes
+
+- include sources in npm packages
+
 ## 0.1.2
 
 ### Patch Changes

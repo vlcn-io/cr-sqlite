@@ -1,5 +1,13 @@
 # @vlcn.io/crsqlite-p2p-todomvc
 
+## 0.1.4
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/network-webrtc@0.1.3
+  - @vlcn.io/wa-crsqlite@0.1.4
+
 ## 0.1.3
 
 ### Patch Changes

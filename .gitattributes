@@ -1,5 +1,3 @@
-sqlite/* linguist-vendored
-wasm/* linguist-vendored
-analyze/* linguist-documentation
+src/sqlite/* linguist-vendored
 perf/* linguist-documentation
 

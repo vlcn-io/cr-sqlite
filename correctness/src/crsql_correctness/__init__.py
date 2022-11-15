@@ -7,4 +7,8 @@ def connect(db_file):
   c.load_extension(extension)
   return c
 
+def close(c):
+  c.exec("select crsql_finalize()")
+  c.close()
+
 min_db_v = 0

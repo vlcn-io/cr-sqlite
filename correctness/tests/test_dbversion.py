@@ -1,5 +1,5 @@
 import pathlib
-from crsql_correctness import connect, min_db_v
+from crsql_correctness import connect, close, min_db_v
 
 # c1
 def test_min_on_init():
@@ -21,6 +21,7 @@ def test_increments_on_midification():
   c.execute("delete from foo where id = 1")
   c.execute("commit")
   assert c.execute("SELECT crsql_dbversion()").fetchone()[0] == min_db_v + 3
+  close(c)
 
 # c3
 def test_db_version_restored_from_disk():
@@ -44,11 +45,16 @@ def test_db_version_restored_from_disk():
   assert c.execute("SELECT crsql_dbversion()").fetchone()[0] == min_db_v + 1
 
   # Close and reopen to check that version was persisted and re-initialized correctly
-  c.close()
+  close(c)
   c = connect(dbfile)
   print(c.execute("select * from foo").fetchall())
   assert c.execute("SELECT crsql_dbversion()").fetchone()[0] == min_db_v + 1
+  close(c)
 
 # c4
 def test_each_tx_gets_a_version():
-  return 1
+  c = connect(":memory:")
+
+  c.execute("create table foo (id primary key, a)")
+
+  close(c)

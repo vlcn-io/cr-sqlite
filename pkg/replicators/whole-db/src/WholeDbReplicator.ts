@@ -8,9 +8,6 @@ type TableName = string;
 type Version = number | string;
 type TODO = any;
 
-const DOES_EXTENSION_EXIST =
-  "SELECT 1 FROM pragma_function_list WHERE name = 'crsql_wdbreplicator'";
-
 const isDebug = (window as any).__vlcn_whole_db_dbg;
 function log(...data: any[]) {
   if (isDebug) {
@@ -163,9 +160,9 @@ export class WholeDbReplicator {
       );
       ["INSERT", "UPDATE", "DELETE"].map((verb) => {
         this.db.exec(
-          `CREATE TRIGGER IF NOT EXISTS "${baseTblName}__crsql_wdbreplicator_${verb.toLowerCase()}" AFTER ${verb} ON "${baseTblName}"
+          `CREATE TEMP TRIGGER IF NOT EXISTS "${baseTblName}__crsql_wdbreplicator_${verb.toLowerCase()}" AFTER ${verb} ON "${baseTblName}"
           BEGIN
-            select crsql_wdbreplicator() WHERE crsql_internal_sync_bit() = 0 AND EXISTS (${DOES_EXTENSION_EXIST});
+            select crsql_wdbreplicator() WHERE crsql_internal_sync_bit() = 0;
           END;
         `
         );

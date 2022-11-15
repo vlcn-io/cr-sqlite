@@ -71,9 +71,9 @@ export default async function tblrx(
           await Promise.all(
             ["INSERT", "UPDATE", "DELETE"].map(async (verb) => {
               return await db.exec(
-                `CREATE TRIGGER IF NOT EXISTS "${tblName}__crsql_tblrx_${verb.toLowerCase()}" AFTER ${verb} ON "${tblName}"
+                `CREATE TEMP TRIGGER IF NOT EXISTS "${tblName}__crsql_tblrx_${verb.toLowerCase()}" AFTER ${verb} ON "${tblName}"
             BEGIN
-              SELECT crsql_tblrx('${tblName}') WHERE EXISTS (${DOES_EXTENSION_EXIST});
+              SELECT crsql_tblrx('${tblName}');
             END;
           `
               );

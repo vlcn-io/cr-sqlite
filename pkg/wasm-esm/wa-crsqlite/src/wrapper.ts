@@ -9,6 +9,7 @@ let api: SQLite3 | null = null;
 type SQLiteAPI = ReturnType<typeof SQLite.Factory>;
 
 let queue: Promise<any> = Promise.resolve();
+let txQueue: Promise<any> = Promise.resolve();
 
 const isDebug = (window as any).__vlcn_wa_crsqlite_dbg;
 function log(...data: any[]) {
@@ -57,6 +58,18 @@ function serialize(key: string | null | undefined, cb: () => any) {
   if (key) {
     cache.set(key, res);
   }
+
+  return res;
+}
+
+function serializeTx(cb: () => any) {
+  const res = txQueue.then(
+    () => cb(),
+    (e) => {
+      console.error(e);
+    }
+  );
+  txQueue = res;
 
   return res;
 }
@@ -181,16 +194,17 @@ export class DB implements DBAsync {
     await cb();
   }
 
-  async transaction(cb: () => Promise<void>): Promise<void> {
-    // TODO: track if in tx. . . but this is async so . . you know . . .
-    await this.exec("BEGIN");
-    try {
-      await cb();
-    } catch (e) {
-      await this.exec("ROLLBACK");
-      return;
-    }
-    await this.exec("COMMIT");
+  transaction(cb: () => Promise<void>): Promise<void> {
+    return serializeTx(async () => {
+      await this.exec("BEGIN");
+      try {
+        await cb();
+      } catch (e) {
+        await this.exec("ROLLBACK");
+        return;
+      }
+      await this.exec("COMMIT");
+    });
   }
 
   private async statements(

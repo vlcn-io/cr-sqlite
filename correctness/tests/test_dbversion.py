@@ -1,11 +1,13 @@
 import pathlib
 from crsql_correctness import connect, min_db_v
 
-def test_c1_min_on_init():
+# c1
+def test_min_on_init():
   c = connect(":memory:")
   assert c.execute("SELECT crsql_dbversion()").fetchone()[0] == min_db_v
 
-def test_c2_increments():
+# c2
+def test_increments_on_midification():
   c = connect(":memory:")
   c.execute("create table foo (id primary key, a)")
   c.execute("select crsql_as_crr('foo')")
@@ -20,7 +22,8 @@ def test_c2_increments():
   c.execute("commit")
   assert c.execute("SELECT crsql_dbversion()").fetchone()[0] == min_db_v + 3
 
-def test_c3_restored():
+# c3
+def test_db_version_restored_from_disk():
   dbfile = "./dbversion_c3.db"
   pathlib.Path(dbfile).unlink(missing_ok=True)
   c = connect(dbfile)
@@ -46,5 +49,6 @@ def test_c3_restored():
   print(c.execute("select * from foo").fetchall())
   assert c.execute("SELECT crsql_dbversion()").fetchone()[0] == min_db_v + 1
 
-  # # C4 -- untested
-  # c.close()
+# c4
+def test_each_tx_gets_a_version():
+  return 1

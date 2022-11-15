@@ -8,7 +8,7 @@ def connect(db_file):
   return c
 
 def close(c):
-  c.exec("select crsql_finalize()")
+  c.execute("select crsql_finalize()")
   c.close()
 
 min_db_v = 0

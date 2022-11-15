@@ -211,7 +211,7 @@ int crsql_createClockTable(
   // TODO: just forbid tables w/o primary keys?
   if (tableInfo->pksLen == 0)
   {
-    zSql = sqlite3_mprintf("CREATE TABLE IF NOT EXSISTS \"%s__crsql_clock\" (\
+    zSql = sqlite3_mprintf("CREATE TABLE IF NOT EXISTS \"%s__crsql_clock\" (\
       \"rowid\" NOT NULL,\
       \"__crsql_col_num\" NOT NULL,\
       \"__crsql_version\" NOT NULL,\

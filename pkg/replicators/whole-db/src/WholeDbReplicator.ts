@@ -8,7 +8,7 @@ type TableName = string;
 type Version = number | string;
 type TODO = any;
 
-const isDebug = (window as any).__vlcn_whole_db_dbg;
+const isDebug = (globalThis as any).__vlcn_whole_db_dbg;
 function log(...data: any[]) {
   if (isDebug) {
     console.log("whole-db: ", ...data);

@@ -50,7 +50,7 @@ export const tests = {
 
     assert(
       db.execA<number[]>(
-        "SELECT count(*) FROM sqlite_master WHERE type = 'trigger' AND name LIKE 'foo__crsql_wdbreplicator_%'"
+        "SELECT count(*) FROM temp.sqlite_master WHERE type = 'trigger' AND name LIKE 'foo__crsql_wdbreplicator_%'"
       )[0][0] == 3
     );
   },
@@ -138,7 +138,7 @@ export const tests = {
     await r.schemaChanged();
     assert(
       db.execA<number[]>(
-        "SELECT count(*) FROM sqlite_master WHERE type = 'trigger' AND name LIKE 'bar__crsql_wdbreplicator_%'"
+        "SELECT count(*) FROM temp.sqlite_master WHERE type = 'trigger' AND name LIKE 'bar__crsql_wdbreplicator_%'"
       )[0][0] == 3
     );
 
@@ -156,7 +156,7 @@ export const tests = {
 
     assert(
       db.execA<number[]>(
-        "SELECT count(*) FROM sqlite_master WHERE type = 'trigger' AND name LIKE 'bar__crsql_wdbreplicator_%'"
+        "SELECT count(*) FROM temp.sqlite_master WHERE type = 'trigger' AND name LIKE 'bar__crsql_wdbreplicator_%'"
       )[0][0] == 0
     );
 

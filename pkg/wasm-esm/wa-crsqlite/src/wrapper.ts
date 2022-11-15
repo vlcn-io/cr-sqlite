@@ -11,7 +11,7 @@ type SQLiteAPI = ReturnType<typeof SQLite.Factory>;
 let queue: Promise<any> = Promise.resolve();
 let txQueue: Promise<any> = Promise.resolve();
 
-const isDebug = (window as any).__vlcn_wa_crsqlite_dbg;
+const isDebug = (globalThis as any).__vlcn_wa_crsqlite_dbg;
 function log(...data: any[]) {
   if (isDebug) {
     console.log("wa-crsqlite: ", ...data);

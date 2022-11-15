@@ -94,6 +94,9 @@
 4. [ ] if versions match for a column, the greater value is taken
 5. [ ] physical deletion is final
 
+## Sync Bit
+1. [ ] no replication on changes from sync
+
 ## Computing deltas against remote clock
 
 ## Concurrency

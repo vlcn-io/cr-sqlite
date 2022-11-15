@@ -19,7 +19,7 @@ export const tests = {
 
     assert(
       db.execA<number[]>(
-        "SELECT count(*) FROM sqlite_master WHERE type = 'trigger' AND name LIKE 'foo__crsql_tblrx_%'"
+        "SELECT count(*) FROM temp.sqlite_master WHERE type = 'trigger' AND name LIKE 'foo__crsql_tblrx_%'"
       )[0][0] == 3
     );
 

@@ -1,5 +1,11 @@
 # @vlcn.io/rx-tbl
 
+## 0.1.2
+
+### Patch Changes
+
+- use `globalThis` not window
+
 ## 0.1.1
 
 ### Patch Changes

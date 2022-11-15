@@ -1,5 +1,11 @@
 # @vlcn.io/wa-crsqlite
 
+## 0.1.6
+
+### Patch Changes
+
+- use `globalThis` not window
+
 ## 0.1.5
 
 ### Patch Changes

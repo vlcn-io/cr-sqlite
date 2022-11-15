@@ -1,5 +1,11 @@
 # @vlcn.io/replicator-wholedb
 
+## 0.1.4
+
+### Patch Changes
+
+- use `globalThis` not window
+
 ## 0.1.3
 
 ### Patch Changes

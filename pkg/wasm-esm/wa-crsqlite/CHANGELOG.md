@@ -1,5 +1,11 @@
 # @vlcn.io/wa-crsqlite
 
+## 0.1.5
+
+### Patch Changes
+
+- tx queue to prevent tx within tx
+
 ## 0.1.4
 
 ### Patch Changes

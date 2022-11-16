@@ -5,7 +5,7 @@
 1. [x] Min int on first db creation
 2. [x] Increments with every modification to a crr datum
 3. [x] Restored from disk on db load
-4. [] Unique for each transaction
+4. [x] Unique for each transaction
 
 ## Site id
 
@@ -100,3 +100,6 @@
 ## Computing deltas against remote clock
 
 ## Concurrency
+
+
+## Primary key only tables

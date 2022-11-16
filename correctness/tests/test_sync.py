@@ -1,4 +1,4 @@
-from crsql_correctness import connect, min_db_v
+from crsql_correctness import connect, close, min_db_v
 import pprint
 
 # Using this to prototype sync rather than test it.
@@ -44,6 +44,10 @@ def update_data(c):
   c.execute("UPDATE deck SET title = 'Presto' WHERE id = 1")
   c.execute("COMMIT")
 
+def delete_data(c):
+  c.execute("DELETE FROM component WHERE id = 1")
+  c.execute("COMMIT")
+
 def get_changes_since(c, version, requestor):
   return c.execute(
     "SELECT * FROM crsql_changes WHERE version > {v} AND site_id != {r}".format(v=version, r=requestor)
@@ -82,7 +86,51 @@ def test_changes_since():
 
   assert(rows == [('deck', '1', 2, "'Presto'", 2, None), ('user', '1', 1, "'Maestro'", 2, None)]);
 
-  # test delete
+def test_delete():
+  db = connect(":memory:")
+  create_schema(db)
+  insert_data(db)
+
+  delete_data(db)
+
+  rows = get_changes_since(db, 1, -1)
+  # Deletes are marked with a sentinel id
+  assert(rows == [('component', '1', -1, None, 0, None)]);
+
+  db.execute("DELETE FROM component")
+  db.execute("DELETE FROM deck")
+  db.execute("DELETE FROM slide")
+  db.execute("COMMIT")
+
+  rows = get_changes_since(db, 0, -1)
+  # TODO: we should have the network layer collapse these events or do it ourselves.
+  # given we have past events that we're missing data for, they're now marked off as deletes
+  # TODO: should deletes not get a proper version? Would be better for ordering and chunking replications
+  assert(rows == [('component', '1', -1, None, 0, None),
+ ('component', '1', -1, None, 0, None),
+ ('component', '1', -1, None, 0, None),
+ ('component', '2', -1, None, 0, None),
+ ('component', '2', -1, None, 0, None),
+ ('component', '2', -1, None, 0, None),
+ ('component', '3', -1, None, 0, None),
+ ('component', '3', -1, None, 0, None),
+ ('component', '3', -1, None, 0, None),
+ ('deck', '1', -1, None, 0, None),
+ ('deck', '1', -1, None, 0, None),
+ ('slide', '1', -1, None, 0, None),
+ ('slide', '1', -1, None, 0, None),
+ ('slide', '2', -1, None, 0, None),
+ ('slide', '2', -1, None, 0, None),
+ ('slide', '3', -1, None, 0, None),
+ ('slide', '3', -1, None, 0, None),
+ ('user', '1', 1, "'Javi'", 1, None),
+ ('component', '1', -1, None, 1, None),
+ ('component', '2', -1, None, 1, None),
+ ('component', '3', -1, None, 1, None),
+ ('deck', '1', -1, None, 1, None),
+ ('slide', '1', -1, None, 1, None),
+ ('slide', '2', -1, None, 1, None),
+ ('slide', '3', -1, None, 1, None)]);
 
   # test insert
 
@@ -91,11 +139,23 @@ def test_changes_since():
   # test no change insert (settings values to what they were before)
 
   # test new table after a call to get_changes_since
+  close(db)
 
-def test_patch():
+def test_merge():
+  dbs = init()
+
+  dbs[0].execute("UPDATE deck SET title = 'a' WHERE id = 1")
+  dbs[1].execute("UPDATE deck SET title = 'b' WHERE id = 1")
+  dbs[2].execute("UPDATE deck SET title = 'c' WHERE id = 1")
+
+  
+
+
+  for c in dbs:
+    close(c)
+
+
   # test delete
   # test pk only
   # test create
   # test update
-
-  return 1

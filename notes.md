@@ -1,8 +1,7 @@
 todo:
 
-- test ntwrk trigger callback gets invoked even from other connections...
-  - or will those fail b/c the extension doesn't exist in that connection?
-  - should we then just register commit hooks for the replicator connection?
+- site id must be proxied thru given comparison against it as a tie breaker
+- delete doesn't record version? tech. ok given delete wins but it is information loss.
 - relay / daisy chain data from peers via poke after receive.
   - poke could contain more info like:
     - peer poking for (if sync event)
@@ -34,15 +33,10 @@ todo:
   - ensure schemas are at same or compatible versions...
 - pk validation
 - replace binding where not needed? %Q?
-- delete support
-  sentinel col vers?
-  -1 col?
-  ...
 - go through an ensure proper documentation on each function
 - check proper utf8 handling via unsigned char everywhere
 - finish multithreading test case
 - validate tbl infos prior to replication as well as when converting to `as_crr`
-- support for table with only pks
 - throw if pk is not defined -- don't use rowid. See:
   - https://www.sqlabs.com/blog/2010/12/sqlite-and-unique-rowid-something-you-really-need-to-know/
 - invariant on incompatible index types

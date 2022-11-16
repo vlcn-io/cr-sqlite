@@ -56,5 +56,15 @@ def test_each_tx_gets_a_version():
   c = connect(":memory:")
 
   c.execute("create table foo (id primary key, a)")
+  c.execute("select crsql_as_crr('foo')")
+  c.execute("insert into foo values (1, 2)")
+  c.execute("insert into foo values (2, 2)")
+  c.commit()
+  c.execute("SELECT crsql_dbversion()").fetchone()[0] == min_db_v + 1
+
+  c.execute("insert into foo values (3, 2)")
+  c.execute("insert into foo values (4, 2)")
+  c.commit()
+  c.execute("SELECT crsql_dbversion()").fetchone()[0] == min_db_v + 2
 
   close(c)

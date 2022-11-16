@@ -18,11 +18,13 @@
     "@vlcn.io/crsqlite": "^0.1.3",
     "@vlcn.io/xplat-api": "workspace:*",
     "better-sqlite3": "^7.6.2",
-    "import-meta-resolve": "^2.1.0"
+    "import-meta-resolve": "^2.1.0",
+    "nanoid": "^4.0.0"
   },
   "scripts": {
     "build": "tsc --build",
-    "watch": "tsc --build -w"
+    "watch": "tsc --build -w",
+    "test": "vitest --run"
   },
   "license": "MIT",
   "keywords": [
@@ -32,6 +34,8 @@
     "crdt"
   ],
   "devDependencies": {
-    "typescript": "^4.8.4"
+    "@types/jest": "^29.2.2",
+    "typescript": "^4.8.4",
+    "vitest": "^0.25.0"
   }
 }

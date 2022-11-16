@@ -120,14 +120,21 @@ int crsql_recreateDbVersionStmt(sqlite3 *db, crsql_ExtData *pExtData)
   return rc;
 }
 
-int crsql_fetchDbVersionFromStorage(sqlite3 *db, crsql_ExtData *pExtData) {
+int crsql_fetchDbVersionFromStorage(sqlite3 *db, crsql_ExtData *pExtData, char **errmsg) {
   int rc = SQLITE_OK;
+  int bSchemaChanged = 0;
 
   // version was not cached
   // check if the schema changed and rebuild version stmt if so
-  int bSchemaChanged = crsql_fetchPragmaSchemaVersion(db, pExtData, DB_VERSION_SCHEMA_VERSION);
+  if (pExtData->pDbVersionStmt == 0) {
+    bSchemaChanged = 1;
+  } else {
+    bSchemaChanged = crsql_fetchPragmaSchemaVersion(db, pExtData, DB_VERSION_SCHEMA_VERSION);
+  }
+  
   if (bSchemaChanged < 0)
   {
+    *errmsg = sqlite3_mprintf("failed to fetch the pragma schema version");
     return SQLITE_ERROR;
   }
 
@@ -141,6 +148,7 @@ int crsql_fetchDbVersionFromStorage(sqlite3 *db, crsql_ExtData *pExtData) {
     }
     if (rc != SQLITE_OK)
     {
+      *errmsg = sqlite3_mprintf("failed to create the db version statement");
       return rc;
     }
   }
@@ -150,11 +158,15 @@ int crsql_fetchDbVersionFromStorage(sqlite3 *db, crsql_ExtData *pExtData) {
   if (rc == SQLITE_DONE) {
     rc = sqlite3_reset(pExtData->pDbVersionStmt);
     pExtData->dbVersion = MIN_POSSIBLE_DB_VERSION;
+    if (rc != SQLITE_OK) {
+      *errmsg = sqlite3_mprintf("failed to reset the version statement");
+    }
     return rc;
   }
 
   if (rc != SQLITE_ROW) {
     sqlite3_reset(pExtData->pDbVersionStmt);
+    *errmsg = sqlite3_mprintf("errors when stepping version statement");
     return SQLITE_ERROR;
   }
 
@@ -163,6 +175,9 @@ int crsql_fetchDbVersionFromStorage(sqlite3 *db, crsql_ExtData *pExtData) {
     // No rows? We're at min version
     rc = sqlite3_reset(pExtData->pDbVersionStmt);
     pExtData->dbVersion = MIN_POSSIBLE_DB_VERSION;
+    if (rc != SQLITE_OK) {
+      *errmsg = sqlite3_mprintf("failed to reset the version statement(2)");
+    }
     return rc;
   }
 
@@ -178,7 +193,7 @@ int crsql_fetchDbVersionFromStorage(sqlite3 *db, crsql_ExtData *pExtData) {
  * 
  * `pExtData->dbVersion` is cleared on every tx commit or rollback.
  */
-int crsql_getDbVersion(sqlite3 *db, crsql_ExtData *pExtData)
+int crsql_getDbVersion(sqlite3 *db, crsql_ExtData *pExtData, char **errmsg)
 {
   int rc = SQLITE_OK;
 
@@ -192,7 +207,7 @@ int crsql_getDbVersion(sqlite3 *db, crsql_ExtData *pExtData)
     return SQLITE_OK;
   }
 
-  rc = crsql_fetchDbVersionFromStorage(db, pExtData);
+  rc = crsql_fetchDbVersionFromStorage(db, pExtData, errmsg);
   return rc;
 }
 

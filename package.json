@@ -1,6 +1,6 @@
 {
   "name": "@vlcn.io/crsqlite",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "CR-SQLite loadable extension",
   "homepage": "https://vlcn.io",
   "repository": {
@@ -23,8 +23,8 @@
     "install": "prebuild-install || node-gyp rebuild --release",
     "build-release": "node-gyp rebuild --release",
     "build-debug": "node-gyp rebuild --debug",
-    "rebuild-release": "npm run lzz && npm run build-release",
-    "rebuild-debug": "npm run lzz && npm run build-debug"
+    "rebuild-release": "npm run build-release",
+    "rebuild-debug": "npm run build-debug"
   },
   "license": "MIT",
   "keywords": [

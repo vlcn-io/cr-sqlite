@@ -138,11 +138,13 @@ static void siteIdFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
  */
 static void dbVersionFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
+  char *errmsg = 0;
   crsql_ExtData *pExtData = (crsql_ExtData *)sqlite3_user_data(context);
   sqlite3 *db = sqlite3_context_db_handle(context);
-  int rc = crsql_getDbVersion(db, pExtData);
+  int rc = crsql_getDbVersion(db, pExtData, &errmsg);
   if (rc != SQLITE_OK) {
-    sqlite3_result_error(context, "failed to load the database version", -1);
+    sqlite3_result_error(context, errmsg, -1);
+    sqlite3_free(errmsg);
     return;
   }
 
@@ -156,11 +158,13 @@ static void dbVersionFunc(sqlite3_context *context, int argc, sqlite3_value **ar
  */
 static void nextDbVersionFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
+  char *errmsg = 0;
   crsql_ExtData *pExtData = (crsql_ExtData *)sqlite3_user_data(context);
   sqlite3 *db = sqlite3_context_db_handle(context);
-  int rc = crsql_getDbVersion(db, pExtData);
+  int rc = crsql_getDbVersion(db, pExtData, &errmsg);
   if (rc != SQLITE_OK) {
-    sqlite3_result_error(context, "failed to load the database version", -1);
+    sqlite3_result_error(context, errmsg, -1);
+    sqlite3_free(errmsg);
     return;
   }
   

@@ -1,5 +1,16 @@
 # @vlcn.io/nodeno-tests
 
+## 0.1.5
+
+### Patch Changes
+
+- update sqlite binaries
+- Updated dependencies
+  - @vlcn.io/crsqlite-allinone@0.1.2
+  - @vlcn.io/rx-tbl@0.1.3
+  - @vlcn.io/xplat-tests@0.1.5
+  - @vlcn.io/xplat-api@0.1.2
+
 ## 0.1.4
 
 ### Patch Changes

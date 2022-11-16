@@ -1,5 +1,13 @@
 # @vlcn.io/crsqlite-wasm
 
+## 0.1.2
+
+### Patch Changes
+
+- update sqlite binaries
+- Updated dependencies
+  - @vlcn.io/xplat-api@0.1.2
+
 ## 0.1.1
 
 ### Patch Changes

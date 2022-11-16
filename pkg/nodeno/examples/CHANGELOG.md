@@ -1,5 +1,11 @@
 # @vlcn.io/node-tests
 
+## 0.1.2
+
+### Patch Changes
+
+- update sqlite binaries
+
 ## 0.1.1
 
 ### Patch Changes

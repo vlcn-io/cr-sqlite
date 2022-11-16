@@ -7,12 +7,12 @@ mkdir -p dist
 cd ../wa-sqlite
 pnpm install
 
-cd ../../../depsemsdk
+cd ../../../deps/emsdk
 ./emsdk install latest
 ./emsdk activate latest
 source ./emsdk_env.sh
 
-cd ../wa-sqlite
+cd ../../pkg/wasm-esm/wa-sqlite
 make
 
 cp dist/wa-sqlite-async.wasm ../wa-crsqlite/dist

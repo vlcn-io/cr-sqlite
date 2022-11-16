@@ -1,5 +1,14 @@
 # @vlcn.io/browser-tests
 
+## 0.1.5
+
+### Patch Changes
+
+- update sqlite binaries
+- Updated dependencies
+  - @vlcn.io/xplat-tests@0.1.5
+  - @vlcn.io/crsqlite-wasm@0.1.2
+
 ## 0.1.4
 
 ### Patch Changes

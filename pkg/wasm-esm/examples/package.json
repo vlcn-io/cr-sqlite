@@ -2,7 +2,7 @@
   "name": "@vlcn.io/crsqlite-examples",
   "private": true,
   "type": "module",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "sideEffects": false,
   "scripts": {
     "start": "vite",

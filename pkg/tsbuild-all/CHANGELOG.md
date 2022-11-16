@@ -1,5 +1,11 @@
 # @vlcn.io/tsbuild-all
 
+## 0.1.3
+
+### Patch Changes
+
+- fix statement preparation error in cases where there are multiple concurrent db connections
+
 ## 0.1.2
 
 ### Patch Changes

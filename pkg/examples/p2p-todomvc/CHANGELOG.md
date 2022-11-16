@@ -1,5 +1,15 @@
 # @vlcn.io/crsqlite-p2p-todomvc
 
+## 0.1.8
+
+### Patch Changes
+
+- fix statement preparation error in cases where there are multiple concurrent db connections
+- Updated dependencies
+  - @vlcn.io/network-webrtc@0.1.6
+  - @vlcn.io/rx-tbl@0.1.4
+  - @vlcn.io/wa-crsqlite@0.1.8
+
 ## 0.1.7
 
 ### Patch Changes

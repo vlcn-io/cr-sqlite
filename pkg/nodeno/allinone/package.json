@@ -1,6 +1,6 @@
 {
   "name": "@vlcn.io/crsqlite-allinone",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "CR-SQLite loadable extension",
   "homepage": "https://vlcn.io",
   "type": "module",
@@ -15,7 +15,7 @@
     "dist/**"
   ],
   "dependencies": {
-    "@vlcn.io/crsqlite": "link:../../..",
+    "@vlcn.io/crsqlite": "^0.1.5",
     "@vlcn.io/xplat-api": "workspace:*",
     "better-sqlite3": "^7.6.2",
     "import-meta-resolve": "^2.1.0",

@@ -1,5 +1,13 @@
 # @vlcn.io/crsqlite-allinone
 
+## 0.1.3
+
+### Patch Changes
+
+- fix statement preparation error in cases where there are multiple concurrent db connections
+- Updated dependencies
+  - @vlcn.io/xplat-api@0.1.3
+
 ## 0.1.2
 
 ### Patch Changes

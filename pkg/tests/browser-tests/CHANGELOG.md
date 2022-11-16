@@ -1,5 +1,14 @@
 # @vlcn.io/browser-tests
 
+## 0.1.6
+
+### Patch Changes
+
+- fix statement preparation error in cases where there are multiple concurrent db connections
+- Updated dependencies
+  - @vlcn.io/xplat-tests@0.1.6
+  - @vlcn.io/crsqlite-wasm@0.1.3
+
 ## 0.1.5
 
 ### Patch Changes

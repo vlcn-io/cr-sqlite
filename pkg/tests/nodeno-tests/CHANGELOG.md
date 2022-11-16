@@ -1,5 +1,16 @@
 # @vlcn.io/nodeno-tests
 
+## 0.1.6
+
+### Patch Changes
+
+- fix statement preparation error in cases where there are multiple concurrent db connections
+- Updated dependencies
+  - @vlcn.io/crsqlite-allinone@0.1.3
+  - @vlcn.io/rx-tbl@0.1.4
+  - @vlcn.io/xplat-tests@0.1.6
+  - @vlcn.io/xplat-api@0.1.3
+
 ## 0.1.5
 
 ### Patch Changes

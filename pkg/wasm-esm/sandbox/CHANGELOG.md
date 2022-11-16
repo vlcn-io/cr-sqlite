@@ -1,5 +1,14 @@
 # @vlcn.io/crsqlite-sandbox
 
+## 0.1.8
+
+### Patch Changes
+
+- fix statement preparation error in cases where there are multiple concurrent db connections
+- Updated dependencies
+  - @vlcn.io/crsqlite-wasm@0.1.3
+  - @vlcn.io/wa-crsqlite@0.1.8
+
 ## 0.1.7
 
 ### Patch Changes

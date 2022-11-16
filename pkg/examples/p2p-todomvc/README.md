@@ -1,5 +1,20 @@
 # P2P TODO MVC
 
-A TODO MVC App that uses p2p whole database replication to keep it in sync with your other devices.
+Usage:
 
-This uses SQL directly rather than using our ORM layer.
+Start the "peer server"
+```
+cd ../peer-server
+pnpm install
+pnpm start
+```
+
+Start the app:
+```
+pnpm install
+pnpm start
+```
+
+Open instances _in different browsers_ (i.e., safari, firefox, chrome) and connect between them.
+
+Cross-tab reactivity is in the works via running `cr-sqlite` in a `SharedWorker` rather than in the main thread. The shared worker will be shared by all tabs.

@@ -170,12 +170,9 @@ cd js/tests
 
 ## WASM
 
-Instructions on building a new SQLite WASM distribution that statically links `crsqlite`.
+Run `pnpm build` from the root directory.
 
-1. clone this repo + all submodules
-2. `cd js/wasm-esm/crsqlite`
-3. `./build.sh`
-4. artifacts will be in `js/wasm-esm/crsqlite/dist`
+> [pnpm](https://pnpm.io/), not npm.
 
 # Prior Art
 

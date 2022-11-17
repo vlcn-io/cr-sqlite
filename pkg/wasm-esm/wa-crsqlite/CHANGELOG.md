@@ -1,5 +1,11 @@
 # @vlcn.io/wa-crsqlite
 
+## 0.1.9
+
+### Patch Changes
+
+- cache per connection
+
 ## 0.1.8
 
 ### Patch Changes

@@ -2,7 +2,7 @@
   "name": "@vlcn.io/crsqlite-p2p-todomvc",
   "private": true,
   "type": "module",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "sideEffects": false,
   "scripts": {
     "start": "vite",

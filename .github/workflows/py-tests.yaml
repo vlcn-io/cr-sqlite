@@ -24,7 +24,6 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: "3.10"
-          cache: "pip"
 
       - name: Pip Deps
         run: cd py/correctness && pip install -e .

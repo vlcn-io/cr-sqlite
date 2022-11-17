@@ -126,17 +126,92 @@ static void testFetchPragmaSchemaVersion() {
 }
 
 static void testRecreateDbVersionStmt() {
-  
+  printf("RecreateDbVersionStmt\n");
+  sqlite3 *db;
+  int rc;
+  rc = sqlite3_open(":memory:", &db);
+  crsql_ExtData* pExtData = crsql_newExtData(db);
+
+  rc = crsql_recreateDbVersionStmt(db, pExtData);
+
+  // there are no clock tables yet. nothing to create.
+  assert(rc == -1);
+  assert(pExtData->pDbVersionStmt == 0);
+
+  sqlite3_exec(db, "CREATE TABLE foo (a primary key, b);", 0, 0, 0);
+  sqlite3_exec(db, "SELECT crsql_as_crr('foo')", 0, 0, 0);
+
+  rc = crsql_recreateDbVersionStmt(db, pExtData);
+  assert(rc == 0);
+  assert(pExtData->pDbVersionStmt != 0);
+
+  // recreating while a created statement exists isn't an error
+  rc = crsql_recreateDbVersionStmt(db, pExtData);
+  assert(rc == 0);
+  assert(pExtData->pDbVersionStmt != 0);
+
+  crsql_finalize(pExtData);
+  assert(pExtData->pDbVersionStmt == 0);
+  sqlite3_close(db);
+  printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
 static void fetchDbVersionFromStorage() {
+  printf("FetchDBVersionFromStorage\n");
+  sqlite3 *db;
+  int rc;
+  char *errmsg;
+  rc = sqlite3_open(":memory:", &db);
+  crsql_ExtData* pExtData = crsql_newExtData(db);
 
+  rc = crsql_fetchDbVersionFromStorage(db, pExtData, &errmsg);
+  // no clock tables, no version.
+  assert(pExtData->dbVersion == 0);
+  assert(rc == SQLITE_OK);
+
+  // this was a bug where calling twice on a fresh db would fail the second time.
+  rc = crsql_fetchDbVersionFromStorage(db, pExtData, &errmsg);
+  // should still return same data on a subsequent call with no schema changes
+  assert(pExtData->dbVersion == 0);
+  assert(rc == SQLITE_OK);
+
+  // create some schemas
+  sqlite3_exec(db, "CREATE TABLE foo (a primary key, b);", 0, 0, 0);
+  sqlite3_exec(db, "SELECT crsql_as_crr('foo')", 0, 0, 0);
+  // still v0 since no rows are inserted
+  rc = crsql_fetchDbVersionFromStorage(db, pExtData, &errmsg);
+  assert(pExtData->dbVersion == 0);
+  assert(rc == SQLITE_OK);
+
+  // version is bumped due to insert
+  sqlite3_exec(db, "INSERT INTO foo VALUES (1, 2)", 0, 0, 0);
+  rc = crsql_fetchDbVersionFromStorage(db, pExtData, &errmsg);
+  assert(pExtData->dbVersion == 1);
+  assert(rc == SQLITE_OK);
+
+  sqlite3_exec(db, "CREATE TABLE bar (a primary key, b);", 0, 0, 0);
+  sqlite3_exec(db, "SELECT crsql_as_crr('bar')", 0, 0, 0);
+  sqlite3_exec(db, "INSERT INTO bar VALUES (1, 2)", 0, 0, 0);
+  // we catch the schema change and get a version from the new table
+  rc = crsql_fetchDbVersionFromStorage(db, pExtData, &errmsg);
+  assert(pExtData->dbVersion == 2);
+  assert(rc == SQLITE_OK);
+
+  rc = crsql_fetchDbVersionFromStorage(db, pExtData, &errmsg);
+  assert(pExtData->dbVersion == 2);
+  assert(rc == SQLITE_OK);
+
+  crsql_finalize(pExtData);
+  sqlite3_close(db);
+  printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
+// getDbVersion hits a cache before storage.
+// cache shouldn't change behavior.
 static void getDbVersion() {
-
+  // this is tested in python integration tests due to the fact that it relies on a commit hook
+  // being installed.
 }
-
 
 void crsqlExtDataTestSuite()
 {
@@ -145,4 +220,7 @@ void crsqlExtDataTestSuite()
   testFreeExtData();
   testFinalize();
   testFetchPragmaSchemaVersion();
+  testRecreateDbVersionStmt();
+  fetchDbVersionFromStorage();
+  getDbVersion();
 }

@@ -4,9 +4,6 @@ set -e
 
 mkdir -p dist
 
-cd ../wa-sqlite
-pnpm install
-
 cd ../../../deps/emsdk
 ./emsdk install latest
 ./emsdk activate latest

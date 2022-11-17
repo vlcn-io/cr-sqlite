@@ -11,7 +11,9 @@
     "turbo": "^1.4.3",
     "typescript": "^4.8.2"
   },
-  "scripts": {},
+  "scripts": {
+    "build": "./build-all.sh"
+  },
   "dependencies": {
     "detect-circular-deps": "^3.0.0"
   }

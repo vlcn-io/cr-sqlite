@@ -47,7 +47,7 @@ $(prefix):
 	mkdir -p $(prefix)
 
 clean:
-	rm -rf dist/*
+	rm -rf ../dist/*
 
 FORCE: ;
 
@@ -64,7 +64,7 @@ test: $(TARGET_TEST)
 correctness: $(TARGET_LOADABLE) FORCE
 	cd ./correctness && pytest
 
-$(TARGET_LOADABLE): $(ext_files)
+$(TARGET_LOADABLE): $(prefix) $(ext_files)
 	gcc -I./ -I./sqlite \
 	$(LOADABLE_CFLAGS) \
 	$(DEFINE_SQLITE_PATH) \

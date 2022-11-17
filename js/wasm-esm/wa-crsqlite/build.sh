@@ -1,7 +1,5 @@
 #! /bin/bash
 
-set -e
-
 mkdir -p dist
 
 cd ../../../deps/emsdk

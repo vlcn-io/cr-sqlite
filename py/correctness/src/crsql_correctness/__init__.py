@@ -1,6 +1,6 @@
 import sqlite3
 
-extension = '../../dist/crsqlite'
+extension = '../../native/dist/crsqlite'
 def connect(db_file):
   c = sqlite3.connect(db_file)
   c.enable_load_extension(True)

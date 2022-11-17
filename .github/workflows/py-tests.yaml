@@ -1,33 +1,33 @@
-# on: push
-# name: "py-tests"
-# jobs:
-#   build:
-#     name: Testing on ${{ matrix.os }}
-#     runs-on: ${{ matrix.os }}
-#     strategy:
-#       matrix:
-#         include:
-#           - os: ubuntu-latest
-#           - os: windows-2022
-#           - os: macos-latest
-#     steps:
-#       - uses: actions/checkout@v3
-#         with:
-#           submodules: true
+on: push
+name: "py-tests"
+jobs:
+  build:
+    name: Testing on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+          - os: windows-2022
+          - os: macos-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
 
-#       - name: Make loadable
-#         run: |
-#           cd native/src
-#           make loadable
+      - name: Make loadable
+        run: |
+          cd native/src
+          make loadable
 
-#       - name: Install Python
-#         uses: actions/setup-python@v4
-#         with:
-#           python-version: "3.10"
-#           cache: "pip"
+      - name: Install Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+          cache: "pip"
 
-#       - name: Pip Deps
-#         run: cd py/correctness && pip install -e .
+      - name: Pip Deps
+        run: cd py/correctness && pip install -e .
 
-#       - name: Test
-#         run: cd py/correctness && pytest
+      - name: Test
+        run: cd py/correctness && pytest

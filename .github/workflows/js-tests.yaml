@@ -1,33 +1,33 @@
-# on: push
-# name: "js-tests"
-# jobs:
-#   build:
-#     name: Testing on ${{ matrix.os }}
-#     runs-on: ${{ matrix.os }}
-#     strategy:
-#       matrix:
-#         include:
-#           - os: ubuntu-latest
-#           - os: windows-2022
-#           - os: macos-latest
-#     steps:
-#       - uses: actions/checkout@v3
-#         with:
-#           submodules: true
+on: push
+name: "js-tests"
+jobs:
+  build:
+    name: Testing on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+          - os: windows-2022
+          - os: macos-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
 
-#       - name: Install pnpm
-#         uses: pnpm/action-setup@v2
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
 
-#       - name: Setup Node
-#         uses: actions/setup-node@v3
-#         with:
-#           node-version: 18.x
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18.x
 
-#       - name: Install
-#         run: pnpm i
+      - name: Install
+        run: pnpm i
 
-#       - name: Build
-#         run: pnpm run build
+      - name: Build
+        run: pnpm run build
 
-#       - name: Build + Test
-#         run: pnpm run test --scope='!@vlcn.io/py-correctness'
+      - name: Build + Test
+        run: pnpm run test --scope='!@vlcn.io/py-correctness'

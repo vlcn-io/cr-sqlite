@@ -83,8 +83,8 @@ select crsql_finalize();
 
 Note -- these are pre-release. Please look at [the open bugs](https://github.com/vlcn-io/cr-sqlite/issues?q=is%3Aissue+is%3Aopen+label%3Abug) if you're planning on taking them for a spin.
 
-- Browser - [@vlcn.io/crsqlite-wasm](https://github.com/vlcn-io/cr-sqlite/tree/main/pkg/wasm-esm/crsqlite)
-  - [usage](https://github.com/vlcn-io/cr-sqlite/tree/main/pkg/wasm-esm/crsqlite)
+- Browser - [@vlcn.io/crsqlite-wasm](https://github.com/vlcn-io/cr-sqlite/tree/main/js/wasm-esm/crsqlite)
+  - [usage](https://github.com/vlcn-io/cr-sqlite/tree/main/js/wasm-esm/crsqlite)
 - NodeJS - [@vlcn.io/crsqlite](https://www.npmjs.com/package/@vlcn.io/crsqlite)
 
   - Usage:
@@ -110,7 +110,7 @@ Note -- these are pre-release. Please look at [the open bugs](https://github.com
 
 Examples apps that use `cr-sqlite` and have a networking layer (albeit a dumb one at the moment) are being developed:
 
-- [Working TODO MVC](https://github.com/vlcn-io/cr-sqlite/tree/main/pkg/examples/p2p-todomvc)
+- [Working TODO MVC](https://github.com/vlcn-io/cr-sqlite/tree/main/js/examples/p2p-todomvc)
 - [WIP Local-First Presentation Editor](https://github.com/tantaman/strut)
 - [Observable Notebook](https://observablehq.com/@tantaman/cr-sqlite-basic-setup)
 
@@ -173,9 +173,9 @@ cd js/tests
 Instructions on building a new SQLite WASM distribution that statically links `crsqlite`.
 
 1. clone this repo + all submodules
-2. `cd pkg/wasm-esm/crsqlite`
+2. `cd js/wasm-esm/crsqlite`
 3. `./build.sh`
-4. artifacts will be in `pkg/wasm-esm/crsqlite/dist`
+4. artifacts will be in `js/wasm-esm/crsqlite/dist`
 
 # Prior Art
 

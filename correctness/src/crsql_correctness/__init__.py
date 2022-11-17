@@ -11,4 +11,5 @@ def close(c):
   c.execute("select crsql_finalize()")
   c.close()
 
+
 min_db_v = 0

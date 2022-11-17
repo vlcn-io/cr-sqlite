@@ -60,31 +60,33 @@ def test_changes_since():
   dbs = init()
 
   rows = get_changes_since(dbs[0], 0, -1)
+  siteid = dbs[0].execute("select crsql_siteid()").fetchone()[0]
+  expected = [('component', '1', 1, "'text'", 1, siteid),
+ ('component', '1', 2, '1', 1, siteid),
+ ('component', '1', 3, "'wootwoot'", 1, siteid),
+ ('component', '2', 1, "'text'", 1, siteid),
+ ('component', '2', 2, '1', 1, siteid),
+ ('component', '2', 3, "'toottoot'", 1, siteid),
+ ('component', '3', 1, "'text'", 1, siteid),
+ ('component', '3', 2, '1', 1, siteid),
+ ('component', '3', 3, "'footfoot'", 1, siteid),
+ ('deck', '1', 1, '1', 1, siteid),
+ ('deck', '1', 2, "'Preso'", 1, siteid),
+ ('slide', '1', 1, '1', 1, siteid),
+ ('slide', '1', 2, '0', 1, siteid),
+ ('slide', '2', 1, '1', 1, siteid),
+ ('slide', '2', 2, '1', 1, siteid),
+ ('slide', '3', 1, '1', 1, siteid),
+ ('slide', '3', 2, '2', 1, siteid),
+ ('user', '1', 1, "'Javi'", 1, siteid)]
 
-  assert(rows == [('component', '1', 1, "'text'", 1, None),
- ('component', '1', 2, '1', 1, None),
- ('component', '1', 3, "'wootwoot'", 1, None),
- ('component', '2', 1, "'text'", 1, None),
- ('component', '2', 2, '1', 1, None),
- ('component', '2', 3, "'toottoot'", 1, None),
- ('component', '3', 1, "'text'", 1, None),
- ('component', '3', 2, '1', 1, None),
- ('component', '3', 3, "'footfoot'", 1, None),
- ('deck', '1', 1, '1', 1, None),
- ('deck', '1', 2, "'Preso'", 1, None),
- ('slide', '1', 1, '1', 1, None),
- ('slide', '1', 2, '0', 1, None),
- ('slide', '2', 1, '1', 1, None),
- ('slide', '2', 2, '1', 1, None),
- ('slide', '3', 1, '1', 1, None),
- ('slide', '3', 2, '2', 1, None),
- ('user', '1', 1, "'Javi'", 1, None)])
+  assert(rows == expected)
 
   update_data(dbs[0])
 
   rows = get_changes_since(dbs[0], 1, -1)
 
-  assert(rows == [('deck', '1', 2, "'Presto'", 2, None), ('user', '1', 1, "'Maestro'", 2, None)]);
+  assert(rows == [('deck', '1', 2, "'Presto'", 2, siteid), ('user', '1', 1, "'Maestro'", 2, siteid)]);
 
 def test_delete():
   db = connect(":memory:")
@@ -94,8 +96,9 @@ def test_delete():
   delete_data(db)
 
   rows = get_changes_since(db, 1, -1)
+  siteid = db.execute("select crsql_siteid()").fetchone()[0]
   # Deletes are marked with a sentinel id
-  assert(rows == [('component', '1', -1, None, 0, None)]);
+  assert(rows == [('component', '1', -1, None, 0, siteid)]);
 
   db.execute("DELETE FROM component")
   db.execute("DELETE FROM deck")
@@ -106,31 +109,31 @@ def test_delete():
   # TODO: we should have the network layer collapse these events or do it ourselves.
   # given we have past events that we're missing data for, they're now marked off as deletes
   # TODO: should deletes not get a proper version? Would be better for ordering and chunking replications
-  assert(rows == [('component', '1', -1, None, 0, None),
- ('component', '1', -1, None, 0, None),
- ('component', '1', -1, None, 0, None),
- ('component', '2', -1, None, 0, None),
- ('component', '2', -1, None, 0, None),
- ('component', '2', -1, None, 0, None),
- ('component', '3', -1, None, 0, None),
- ('component', '3', -1, None, 0, None),
- ('component', '3', -1, None, 0, None),
- ('deck', '1', -1, None, 0, None),
- ('deck', '1', -1, None, 0, None),
- ('slide', '1', -1, None, 0, None),
- ('slide', '1', -1, None, 0, None),
- ('slide', '2', -1, None, 0, None),
- ('slide', '2', -1, None, 0, None),
- ('slide', '3', -1, None, 0, None),
- ('slide', '3', -1, None, 0, None),
- ('user', '1', 1, "'Javi'", 1, None),
- ('component', '1', -1, None, 1, None),
- ('component', '2', -1, None, 1, None),
- ('component', '3', -1, None, 1, None),
- ('deck', '1', -1, None, 1, None),
- ('slide', '1', -1, None, 1, None),
- ('slide', '2', -1, None, 1, None),
- ('slide', '3', -1, None, 1, None)]);
+  assert(rows == [('component', '1', -1, None, 0, siteid),
+ ('component', '1', -1, None, 0, siteid),
+ ('component', '1', -1, None, 0, siteid),
+ ('component', '2', -1, None, 0, siteid),
+ ('component', '2', -1, None, 0, siteid),
+ ('component', '2', -1, None, 0, siteid),
+ ('component', '3', -1, None, 0, siteid),
+ ('component', '3', -1, None, 0, siteid),
+ ('component', '3', -1, None, 0, siteid),
+ ('deck', '1', -1, None, 0, siteid),
+ ('deck', '1', -1, None, 0, siteid),
+ ('slide', '1', -1, None, 0, siteid),
+ ('slide', '1', -1, None, 0, siteid),
+ ('slide', '2', -1, None, 0, siteid),
+ ('slide', '2', -1, None, 0, siteid),
+ ('slide', '3', -1, None, 0, siteid),
+ ('slide', '3', -1, None, 0, siteid),
+ ('user', '1', 1, "'Javi'", 1, siteid),
+ ('component', '1', -1, None, 1, siteid),
+ ('component', '2', -1, None, 1, siteid),
+ ('component', '3', -1, None, 1, siteid),
+ ('deck', '1', -1, None, 1, siteid),
+ ('slide', '1', -1, None, 1, siteid),
+ ('slide', '2', -1, None, 1, siteid),
+ ('slide', '3', -1, None, 1, siteid)]);
 
   # test insert
 

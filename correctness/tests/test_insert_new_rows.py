@@ -13,7 +13,7 @@ def test_c1_c2_c3_c4_c6_c7_crr_values():
   assert row[0] == 1
   assert row[1] == 1
   assert row[2] == init_version + 1
-  assert row[3] == 0
+  assert row[3] == None
   new_version = c.execute("SELECT crsql_dbversion()").fetchone()[0]
 
   assert new_version == init_version + 1

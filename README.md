@@ -19,8 +19,8 @@ This project implements [CRDTs](https://crdt.tech/) and [CRRs](https://hal.inria
 - A function extension (`crsql_as_crr`) to upgrade existing tables to "crrs" or "conflict free replicated relations"
   - `select crsql_as_crr('table_name')`
 - And a virtual table (`crsql_changes`) to ask the database for changesets or to apply changesets from another database
-  -  `select * from crsql_changes where version > x`
-  -  `insert into crsql_changes values ([patches receied from select on another peer])`
+  - `select * from crsql_changes where version > x`
+  - `insert into crsql_changes values ([patches receied from select on another peer])`
 
 Application code would use the function extension to enable crr support on tables.
 Networking code would use the `crsql_changes` virtual table to fetch and apply changes.
@@ -86,19 +86,23 @@ Note -- these are pre-release. Please look at [the open bugs](https://github.com
 - Browser - [@vlcn.io/crsqlite-wasm](https://github.com/vlcn-io/cr-sqlite/tree/main/pkg/wasm-esm/crsqlite)
   - [usage](https://github.com/vlcn-io/cr-sqlite/tree/main/pkg/wasm-esm/crsqlite)
 - NodeJS - [@vlcn.io/crsqlite](https://www.npmjs.com/package/@vlcn.io/crsqlite)
-  - Usage: 
+
+  - Usage:
+
   ```js
-  const sqlite = require('better-sqlite3');
+  const sqlite = require("better-sqlite3");
   const db = sqlite("filename.db");
-  db.loadExtension(require.resolve('@vlcn.io/crsqlite'));
+  db.loadExtension(require.resolve("@vlcn.io/crsqlite"));
   ```
+
   or, es6:
+
   ```js
-  import {resolve} from 'import-meta-resolve';
-  import Database from 'better-sqlite3';
+  import { resolve } from "import-meta-resolve";
+  import Database from "better-sqlite3";
 
   const db = new Database(":memory");
-  const modulePath = await resolve('@vlcn.io/crsqlite', import.meta.url);
+  const modulePath = await resolve("@vlcn.io/crsqlite", import.meta.url);
   db.loadExtension(new URL(modulePath).pathname);
   ```
 
@@ -116,7 +120,7 @@ Examples apps that use `cr-sqlite` and have a networking layer (albeit a dumb on
 
 Instructions on building a native library that can be loaded into SQLite in non-wasm environments.
 
-In the src directory of the project, run:
+In the `native/src` directory of the project, run:
 
 ```bash
 make loadable
@@ -125,6 +129,7 @@ make loadable
 This will create a shared library at `dist/crsqlite.[lib extension]`
 
 [lib extension]:
+
 - Linux: `.so`
 - Darwin / OS X: `.dylib`
 - Windows: `.dll`
@@ -133,7 +138,7 @@ This will create a shared library at `dist/crsqlite.[lib extension]`
 
 Instructions on building a `sqlite3` CLI that has `cr-sqlite` statically linked and pre-loaded.
 
-In the src directory of the project, run:
+In the `native/src` directory of the project, run:
 
 ```bash
 make sqlite3
@@ -143,18 +148,25 @@ This will create a `sqlite3` binary at `dist/sqlite3`
 
 ## Tests
 
+todo: single command to test all.
+
 ```bash
+cd native/src
 make test
 ```
 
 There is also a collection of python integration tests:
 
 ```bash
-cd correctness
+cd py/correctness
 pytest
 ```
 
-And eventually browser tests.
+And browser and node tests in development --
+
+```bash
+cd js/tests
+```
 
 ## WASM
 

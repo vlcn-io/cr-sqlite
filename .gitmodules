@@ -5,5 +5,5 @@
 	path = deps/emsdk
 	url = git@github.com:emscripten-core/emsdk.git
 [submodule "deps/wa-sqlite"]
-	path = pkg/wasm-esm/wa-sqlite
+	path = js/wasm-esm/wa-sqlite
 	url = git@github.com:vlcn-io/wa-sqlite.git

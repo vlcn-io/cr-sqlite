@@ -1,36 +1,18 @@
 {
-  "name": "@vlcn.io/crsqlite",
-  "version": "0.1.6",
-  "description": "CR-SQLite loadable extension",
-  "homepage": "https://vlcn.io",
-  "repository": {
-    "type": "git",
-    "url": "git://github.com/vlcn-io/cr-sqlite"
-  },
-  "main": "build/Release/crsqlite.node",
-  "files": [
-    "binding.gyp",
-    "src/**"
-  ],
-  "dependencies": {
-    "bindings": "^1.5.0",
-    "prebuild-install": "^7.1.0"
+  "private": true,
+  "version": "0.0.0",
+  "packageManager": "pnpm@7.9.0",
+  "engines": {
+    "node": ">=18",
+    "pnpm": ">=7"
   },
   "devDependencies": {
-    "prebuild": "^7.2.2"
+    "@changesets/cli": "^2.25.2",
+    "turbo": "^1.4.3",
+    "typescript": "^4.8.2"
   },
-  "scripts": {
-    "install": "prebuild-install || node-gyp rebuild --release",
-    "build-release": "node-gyp rebuild --release",
-    "build-debug": "node-gyp rebuild --debug",
-    "rebuild-release": "npm run build-release",
-    "rebuild-debug": "npm run build-debug"
-  },
-  "license": "MIT",
-  "keywords": [
-    "sql",
-    "sqlite",
-    "sqlite3",
-    "crdt"
-  ]
+  "scripts": {},
+  "dependencies": {
+    "detect-circular-deps": "^3.0.0"
+  }
 }

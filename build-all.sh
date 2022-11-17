@@ -9,11 +9,11 @@ git submodule update --recursive
 npm install
 
 # make the standard loadable extension
-cd src
+cd native/src
 make loadable
 
 # make npm packages
-cd ../pkg
+cd ../js
 pnpm install
 
 cd wasm-esm/wa-crsqlite

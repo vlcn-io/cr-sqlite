@@ -12,7 +12,7 @@ cd ../../../deps/emsdk
 ./emsdk activate latest
 source ./emsdk_env.sh
 
-cd ../../pkg/wasm-esm/wa-sqlite
+cd ../../js/wasm-esm/wa-sqlite
 make
 
 cp dist/wa-sqlite-async.wasm ../wa-crsqlite/dist

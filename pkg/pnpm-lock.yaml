@@ -66,7 +66,7 @@ importers:
   nodeno/allinone:
     specifiers:
       '@types/jest': ^29.2.2
-      '@vlcn.io/crsqlite': ^0.1.5
+      '@vlcn.io/crsqlite': link:../../../
       '@vlcn.io/xplat-api': workspace:*
       better-sqlite3: ^7.6.2
       import-meta-resolve: ^2.1.0
@@ -74,7 +74,7 @@ importers:
       typescript: ^4.8.4
       vitest: ^0.25.0
     dependencies:
-      '@vlcn.io/crsqlite': 0.1.5
+      '@vlcn.io/crsqlite': link:../../..
       '@vlcn.io/xplat-api': link:../../xplat-api
       better-sqlite3: 7.6.2
       import-meta-resolve: 2.1.0
@@ -1588,14 +1588,6 @@ packages:
 
   /@vlcn.io/crsqlite/0.1.3:
     resolution: {integrity: sha512-NHUiogfOH6+qMQxaMO08bOLi1PL3tse/4SRqp+h9xpxcHHC5M0JgfxJZNbWey0D8+glNmSfqomukrikX3zkV5w==}
-    requiresBuild: true
-    dependencies:
-      bindings: 1.5.0
-      prebuild-install: 7.1.1
-    dev: false
-
-  /@vlcn.io/crsqlite/0.1.5:
-    resolution: {integrity: sha512-od8oyrhwZkSrORAdc9NtS5k86nyIMGjEjAHxyHr4iCzrYEziV3PDER1HZoWEfpI5JVpU0VmxeimaQHfbW9HWWA==}
     requiresBuild: true
     dependencies:
       bindings: 1.5.0

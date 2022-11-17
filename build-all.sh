@@ -8,9 +8,11 @@ git submodule update --recursive
 # Update x-plat build for native lib
 npm install
 
+# make the standard loadable extension
 cd src
 make loadable
 
+# make npm packages
 cd ../pkg
 pnpm install
 

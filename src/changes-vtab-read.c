@@ -22,7 +22,7 @@ char *crsql_changesQueryForTable(crsql_TableInfo *tableInfo)
       __crsql_site_id as site_id\
     FROM \"%s__crsql_clock\"\
     WHERE\
-      site_id != ?\
+      site_id IS NOT ?\
     AND\
       vrsn > ?",
       tableInfo->tblName,

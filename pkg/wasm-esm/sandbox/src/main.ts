@@ -73,7 +73,7 @@ console.log(work);
 let changesets = await db1.execA(
   "SELECT * FROM crsql_changes where version > -1"
 );
-console.log(changesets);
+console.log("changesets", changesets);
 
 const db2 = await sqlite.open(":memory:");
 await db2.execMany([

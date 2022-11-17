@@ -14,7 +14,29 @@ jobs:
       - uses: actions/checkout@v3
         with:
           submodules: true
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18.x
+
+      - name: Install
+        run: pnpm i
+
+      - name: Build
+        run: pnpm run build
+
+      - name: Install Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+          cache: "pip"
+
+      - name: Pip Deps
+        run: cd py/correctness && pip install -e .
+
       - name: Build + Test
-        run: |
-          cd native/src
-          make test
+        run: pnpm run test

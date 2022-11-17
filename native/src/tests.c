@@ -11,6 +11,7 @@ void crsqlChangesVtabReadTestSuite();
 void crsqlChangesVtabTestSuite();
 void crsqlChangesVtabWriteTestSuite();
 void crsqlChangesVtabCommonTestSuite();
+void crsqlExtDataTestSuite();
 
 int main(int argc, char *argv[])
 {
@@ -27,4 +28,5 @@ int main(int argc, char *argv[])
   SUITE("vtabread") crsqlChangesVtabReadTestSuite();
   SUITE("vtabwrite") crsqlChangesVtabWriteTestSuite();
   SUITE("vtabcommon") crsqlChangesVtabCommonTestSuite();
+  SUITE("extdata") crsqlExtDataTestSuite();
 }

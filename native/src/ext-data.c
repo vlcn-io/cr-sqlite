@@ -37,6 +37,7 @@ void crsql_freeExtData(crsql_ExtData *pExtData)
 // for some reason finalization in extension unload methods doesn't
 // work as expected
 // see https://sqlite.org/forum/forumpost/c94f943821
+// `freeExtData` is called after finalization when the extension unloads
 void crsql_finalize(crsql_ExtData *pExtData) {
   sqlite3_finalize(pExtData->pDbVersionStmt);
   sqlite3_finalize(pExtData->pPragmaSchemaVersionStmt);
@@ -63,7 +64,7 @@ int crsql_fetchPragmaSchemaVersion(sqlite3 *db, crsql_ExtData *pExtData, int whi
     } else {
       if (version > pExtData->pragmaSchemaVersionForTableInfos)
       {
-        pExtData->pragmaSchemaVersion = version;
+        pExtData->pragmaSchemaVersionForTableInfos = version;
         return 1;
       }
     }

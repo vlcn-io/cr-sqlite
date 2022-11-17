@@ -62,7 +62,6 @@ static void testQuoteConcatedValuesAsList() {
   sqlite3_free(l);
 
   l = crsql_quoteConcatedValuesAsList("'h'|1|X'aa'", 3);
-  printf("l: %s!\n\n", l);
   assert(strcmp(l, "'h',1,X'aa'") == 0);
   sqlite3_free(l);
 
@@ -76,8 +75,8 @@ static void testQuotedValuesAsList() {
 
 void crsqlChangesVtabCommonTestSuite()
 {
+  printf("\e[47m\e[1;30mSuite: crsql_changesVtabCommon\e[0m\n");
   testExtractWhereList();
   testQuoteConcatedValuesAsList();
   testQuotedValuesAsList();
-  printf("\e[47m\e[1;30mSuite: crsql_changesVtabCommon\e[0m\n");
 }

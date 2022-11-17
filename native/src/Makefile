@@ -104,5 +104,5 @@ $(TARGET_TEST): $(prefix) $(TARGET_SQLITE3_EXTRA_C) tests.c *.test.c $(ext_files
 	-o $@
 
 .PHONY: all clean format \
-	test test-watch test-format \
-	loadable test-loadable test-loadable-watch
+	test \
+	loadable

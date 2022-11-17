@@ -28,8 +28,6 @@ module.exports = async ({ github, context }) => {
     uploadReleaseAsset("path0.so", "path0-linux-amd64/path0.so"),
     uploadReleaseAsset("path0.dylib", "path0-darwin-amd64/path0.dylib"),
     uploadReleaseAsset("path0.dll", "path0-windows-amd64/path0.dll"),
-    uploadReleaseAsset("path0-sqljs.wasm", "path0-sqljs/sqljs.wasm"),
-    uploadReleaseAsset("path0-sqljs.js", "path0-sqljs/sqljs.js"),
   ]);
 
   return;

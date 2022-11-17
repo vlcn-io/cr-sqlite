@@ -1,7 +1,4 @@
-on:
-  push:
-    tags:
-      - "*"
+on: push
 name: "test"
 jobs:
   build:
@@ -19,6 +16,5 @@ jobs:
           submodules: true
       - name: Build + Test
         run: |
-          mkdir -p dist/
-          make loadable
-          make test-loadable
+          cd native/src
+          make test

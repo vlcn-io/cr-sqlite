@@ -17,8 +17,8 @@ jobs:
         env:
           ENV: CI
         run: |
-          mkdir -p dist/
-          make test-loadable
+          cd native/src
+          make loadable
       - name: Upload dist as artifact
         uses: actions/upload-artifact@v2
         with:
@@ -35,8 +35,8 @@ jobs:
         env:
           ENV: CI
         run: |
-          mkdir -p dist/
-          make test-loadable
+          cd native/src
+          make loadable
       - name: Upload dist as artifact
         uses: actions/upload-artifact@v2
         with:
@@ -53,42 +53,17 @@ jobs:
         env:
           ENV: CI
         run: |
-          mkdir -p dist/
-          make test-loadable
+          cd native/src
+          make loadable
       - name: Upload dist as artifact
         uses: actions/upload-artifact@v2
         with:
           name: path0-windows-amd64
           path: dist
-  build-sqljs:
-    name: Build for SQL.JS/WASM
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: true
-      - name: Setup emsdk
-        uses: mymindstorm/setup-emsdk@v11
-        with:
-          version: 3.1.5
-          actions-cache-folder: "emsdk-cache"
-      - name: Verify
-        run: emcc -v
-      - run: |
-          mkdir -p dist/
-          make sqljs
-      - uses: actions/upload-artifact@v2
-        with:
-          name: path0-sqljs
-          path: dist/sqljs.js
-      - uses: actions/upload-artifact@v2
-        with:
-          name: path0-sqljs
-          path: dist/sqljs.wasm
   release:
     name: "releases"
     if: ${{ github.event_name == 'release' }}
-    needs: [build-macos, build-linux, build-windows, build-sqljs]
+    needs: [build-macos, build-linux, build-windows]
     permissions:
       contents: write
     runs-on: ubuntu-latest

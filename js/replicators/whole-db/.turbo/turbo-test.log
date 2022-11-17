@@ -1,0 +1,20 @@
+
+> @vlcn.io/replicator-wholedb@0.1.7 test /Users/tantaman/workspace/cr-sqlite/js/replicators/whole-db
+> node --experimental-vm-modules ./node_modules/jest/bin/jest.js
+
+watchman warning:  Recrawled this watch 27 times, most recently because:
+MustScanSubDirs UserDroppedTo resolve, please review the information on
+https://facebook.github.io/watchman/docs/troubleshooting.html#recrawl
+To clear this warning, run:
+`watchman watch-del '/Users/tantaman/workspace/cr-sqlite' ; watchman watch-project '/Users/tantaman/workspace/cr-sqlite'`
+
+(node:98944) ExperimentalWarning: VM Modules is an experimental feature. This feature could change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS dist/__tests__/WholeDbReplicator.test.js
+  ✓ tests in js/xplat-tests (1 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       1 passed, 1 total
+Snapshots:   0 total
+Time:        0.253 s, estimated 1 s
+Ran all test suites.

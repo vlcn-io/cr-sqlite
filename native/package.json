@@ -24,7 +24,8 @@
     "build-release": "node-gyp rebuild --release",
     "build-debug": "node-gyp rebuild --debug",
     "rebuild-release": "npm run build-release",
-    "rebuild-debug": "npm run build-debug"
+    "rebuild-debug": "npm run build-debug",
+    "test": "cd src && make test"
   },
   "license": "MIT",
   "keywords": [

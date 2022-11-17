@@ -20,7 +20,7 @@
   "repository": {
     "type": "git",
     "url": "git@github.com:vlcn-io/cr-sqlite.git",
-    "directory": "https://github.com/vlcn-io/cr-sqlite/tree/main/pkg/replicators/nodeno-tests"
+    "directory": "https://github.com/vlcn-io/cr-sqlite/tree/main/js/replicators/nodeno-tests"
   },
   "dependencies": {
     "@vlcn.io/crsqlite-allinone": "workspace:*",

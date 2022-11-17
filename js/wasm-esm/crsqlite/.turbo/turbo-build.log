@@ -1,0 +1,4 @@
+
+> @vlcn.io/crsqlite-wasm@0.1.4 build /Users/tantaman/workspace/cr-sqlite/js/wasm-esm/crsqlite
+> tsc --build
+

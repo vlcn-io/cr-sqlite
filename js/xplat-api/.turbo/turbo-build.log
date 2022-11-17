@@ -1,0 +1,4 @@
+
+> @vlcn.io/xplat-api@0.1.4 build /Users/tantaman/workspace/cr-sqlite/js/xplat-api
+> tsc --build
+

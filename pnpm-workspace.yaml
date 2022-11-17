@@ -17,3 +17,4 @@ packages:
   - "js/examples/p2p-todomvc"
   - "js/examples/peer-server"
   - "native"
+  - "py/correctness"

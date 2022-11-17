@@ -1,0 +1,15 @@
+
+> @vlcn.io/crsqlite-p2p-todomvc@0.1.10 build /Users/tantaman/workspace/cr-sqlite/js/examples/p2p-todomvc
+> vite build
+
+vite v3.2.4 building for production...
+
+base.css doesn't exist at build time, it will remain unchanged to be resolved at runtime
+
+style.css doesn't exist at build time, it will remain unchanged to be resolved at runtime
+transforming...
+✓ 82 modules transformed.
+rendering chunks...
+dist/assets/wa-sqlite-async.d18b2e7d.wasm   1112.23 KiB
+dist/index.html                             0.61 KiB
+dist/assets/index.891d93e6.js               0.69 KiB / gzip: 0.39 KiB

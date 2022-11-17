@@ -19,7 +19,7 @@
   "repository": {
     "type": "git",
     "url": "git@github.com:vlcn-io/cr-sqlite.git",
-    "directory": "https://github.com/vlcn-io/cr-sqlite/tree/main/pkg/network/webrtc"
+    "directory": "https://github.com/vlcn-io/cr-sqlite/tree/main/js/network/webrtc"
   },
   "dependencies": {
     "@vlcn.io/replicator-wholedb": "workspace:*",

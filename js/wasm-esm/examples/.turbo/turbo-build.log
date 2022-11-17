@@ -1,0 +1,20 @@
+
+> @vlcn.io/crsqlite-examples@0.1.4 build /Users/tantaman/workspace/cr-sqlite/js/wasm-esm/examples
+> vite build
+
+vite v3.2.4 building for production...
+transforming...
+transforming...
+✓ 7 modules transformed.
+✓ 8 modules transformed.
+rendering chunks...
+✓ 28 modules transformed.
+Generated an empty chunk: "index"
+rendering chunks...
+dist/assets/worker.4f46d529.js                   142.99 KiB
+dist/assets/comlinked.c7b33805.js                147.12 KiB
+dist/index.html                                  0.19 KiB
+dist/comlink.html                                0.42 KiB
+dist/on-worker.html                              0.42 KiB
+dist/main-thread.html                            0.42 KiB
+dist/assets/modulepreload-polyfill.c7c6310f.js   0.69 KiB / gzip: 0.39 KiB

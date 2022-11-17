@@ -1,0 +1,14 @@
+
+> @vlcn.io/crsqlite-allinone@0.1.4 test /Users/tantaman/workspace/cr-sqlite/js/nodeno/allinone
+> vitest --run
+
+
+ RUN  v0.25.2 /Users/tantaman/workspace/cr-sqlite/js/nodeno/allinone
+
+ ✓ src/__tests__/index.test.ts  (1 test) 11ms
+
+ Test Files  1 passed (1)
+      Tests  1 passed (1)
+   Start at  10:26:17
+   Duration  742ms (transform 270ms, setup 0ms, collect 44ms, tests 11ms)
+

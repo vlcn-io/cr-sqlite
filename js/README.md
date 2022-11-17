@@ -1,4 +1,4 @@
-# pkg
+# crsql/js
 
 Packages for the Node, Deno and Browser ecosystems.
 

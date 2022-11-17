@@ -1,0 +1,19 @@
+
+> @vlcn.io/node-tests@0.1.4 test /Users/tantaman/workspace/cr-sqlite/js/nodeno/examples
+> node --experimental-vm-modules ./node_modules/jest/bin/jest.js
+
+watchman warning:  Recrawled this watch 27 times, most recently because:
+MustScanSubDirs UserDroppedTo resolve, please review the information on
+https://facebook.github.io/watchman/docs/troubleshooting.html#recrawl
+To clear this warning, run:
+`watchman watch-del '/Users/tantaman/workspace/cr-sqlite' ; watchman watch-project '/Users/tantaman/workspace/cr-sqlite'`
+
+No tests found, exiting with code 1
+Run with `--passWithNoTests` to exit with code 0
+In /Users/tantaman/workspace/cr-sqlite/js/nodeno/examples
+  11 files checked.
+  testMatch: **/__tests__/**/*.test.js - 0 matches
+  testPathIgnorePatterns: /node_modules/ - 11 matches
+  testRegex:  - 0 matches
+Pattern:  - 0 matches
+ ELIFECYCLE  Test failed. See above for more details.

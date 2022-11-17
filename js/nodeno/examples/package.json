@@ -1,5 +1,5 @@
 {
-  "name": "@vlcn.io/node-tests",
+  "name": "@vlcn.io/node-examples",
   "type": "module",
   "version": "0.1.4",
   "files": [
@@ -15,13 +15,12 @@
   },
   "scripts": {
     "build": "tsc --build",
-    "watch": "tsc --build -w",
-    "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js"
+    "watch": "tsc --build -w"
   },
   "repository": {
     "type": "git",
     "url": "git@github.com:vlcn-io/cr-sqlite.git",
-    "directory": "https://github.com/vlcn-io/cr-sqlite/tree/main/pkg/replicators/whole-db"
+    "directory": "https://github.com/vlcn-io/cr-sqlite/tree/main/js/replicators/whole-db"
   },
   "dependencies": {
     "@vlcn.io/crsqlite": "workspace:*",

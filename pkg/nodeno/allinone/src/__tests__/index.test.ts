@@ -28,24 +28,17 @@ let list = [
 db1.exec(`INSERT OR IGNORE INTO todo_list VALUES ('groceries', ?)`, [
   Date.now(),
 ]);
-Promise.all(
-  list.map((item) =>
-    db1.exec(`INSERT INTO todo VALUES (?, 'groceries', ?, 0)`, [
-      nanoid.nanoid(),
-      item,
-    ])
-  )
+list.forEach((item) =>
+  db1.exec(`INSERT INTO todo VALUES (?, 'groceries', ?, 0)`, [
+    nanoid.nanoid(),
+    item,
+  ])
 );
 
 list = ["test", "document", "explain", "onboard", "hire"];
 db1.exec(`INSERT OR IGNORE INTO todo_list VALUES ('work', ?)`, [Date.now()]);
-Promise.all(
-  list.map((item) =>
-    db1.exec(`INSERT INTO todo VALUES (?, 'work', ?, 0)`, [
-      nanoid.nanoid(),
-      item,
-    ])
-  )
+list.forEach((item) =>
+  db1.exec(`INSERT INTO todo VALUES (?, 'work', ?, 0)`, [nanoid.nanoid(), item])
 );
 
 let groceries = db1.execO(
@@ -98,4 +91,46 @@ console.log(db2version);
 
 db1.exec(`INSERT OR IGNORE INTO todo_list VALUES (?, ?)`, ["home", Date.now()]);
 db2.exec(`INSERT OR IGNORE INTO todo_list VALUES (?, ?)`, ["home", Date.now()]);
-// });
+db1.exec(`INSERT INTO todo VALUES (?, ?, ?, ?)`, [
+  nanoid.nanoid(),
+  "home",
+  "paint",
+  0,
+]);
+db2.exec(`INSERT INTO todo VALUES (?, ?, ?, ?)`, [
+  nanoid.nanoid(),
+  "home",
+  "mow",
+  0,
+]);
+db1.exec(`INSERT INTO todo VALUES (?, ?, ?, ?)`, [
+  nanoid.nanoid(),
+  "home",
+  "water",
+  0,
+]);
+// given each item is a nanoid for primary key, `weed` will show up twice
+db2.exec(`INSERT INTO todo VALUES (?, ?, ?, ?)`, [
+  nanoid.nanoid(),
+  "home",
+  "weed",
+  0,
+]);
+db1.exec(`INSERT INTO todo VALUES (?, ?, ?, ?)`, [
+  nanoid.nanoid(),
+  "home",
+  "weed",
+  0,
+]);
+// and complete things on other lists
+db1.exec(`UPDATE todo SET complete = 1 WHERE list = 'groceries'`);
+
+let changesets1 = db1.execA("SELECT * FROM crsql_changes where version > ?", [
+  db1version,
+]);
+let changesets2 = db2.execA("SELECT * FROM crsql_changes where version > ?", [
+  db2version,
+]);
+
+console.log(changesets1);
+console.log(changesets2);

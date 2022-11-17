@@ -15,7 +15,6 @@ import * as nanoid from "nanoid";
 import sqliteWasm from "@vlcn.io/wa-crsqlite";
 
 const sqlite = await sqliteWasm();
-
 const db1 = await sqlite.open(":memory:");
 
 await db1.execMany([
@@ -83,6 +82,10 @@ await db2.execMany([
   `SELECT crsql_as_crr('todo_list');`,
   `SELECT crsql_as_crr('todo');`,
 ]);
+let changesets2 = await db2.execA(
+  "SELECT * FROM crsql_changes where version > -1"
+);
+console.log(changesets);
 
 const siteid = (await db1.execA(`SELECT crsql_siteid()`))[0][0];
 await db2.transaction(async () => {
@@ -124,6 +127,51 @@ await db2.exec(`INSERT OR IGNORE INTO todo_list VALUES (?, ?)`, [
   "home",
   Date.now(),
 ]);
+// both dbs add some stuff to that list
+await db1.exec(`INSERT INTO todo VALUES (?, ?, ?, ?)`, [
+  nanoid.nanoid(),
+  "home",
+  "paint",
+  0,
+]);
+await db2.exec(`INSERT INTO todo VALUES (?, ?, ?, ?)`, [
+  nanoid.nanoid(),
+  "home",
+  "mow",
+  0,
+]);
+await db1.exec(`INSERT INTO todo VALUES (?, ?, ?, ?)`, [
+  nanoid.nanoid(),
+  "home",
+  "water",
+  0,
+]);
+// given each item is a nanoid for primary key, `weed` will show up twice
+await db2.exec(`INSERT INTO todo VALUES (?, ?, ?, ?)`, [
+  nanoid.nanoid(),
+  "home",
+  "weed",
+  0,
+]);
+await db1.exec(`INSERT INTO todo VALUES (?, ?, ?, ?)`, [
+  nanoid.nanoid(),
+  "home",
+  "weed",
+  0,
+]);
+// and complete things on other lists
+await db1.exec(`UPDATE todo SET complete = 1 WHERE list = 'groceries'`);
+
+let changesets1 = await db1.execA(
+  "SELECT * FROM crsql_changes where version > ?",
+  [db1version]
+);
+changesets2 = await db2.execA("SELECT * FROM crsql_changes where version > ?", [
+  db2version,
+]);
+
+console.log(changesets1);
+console.log(changesets2);
 
 // sqlite.base.exec(db.db, "SELECT crsql_siteid()", (r) => {
 //   console.log(r);

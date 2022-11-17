@@ -30,8 +30,11 @@ function log(...data: any[]) {
  * string gets from cache.
  * undefined has no impact on cache and does not check cache.
  */
-const cache = new Map<string, Promise<any>>();
-function serialize(key: string | null | undefined, cb: () => any) {
+function serialize(
+  cache: Map<string, Promise<any>>,
+  key: string | null | undefined,
+  cb: () => any
+) {
   // if is write, drop cache and don't use cache
   // TODO: test me. Useful for Strut where all slides query against deck and such things.
   // TODO: when we no longer have to serialize calls we should use `graphql/DataLoader` infra
@@ -117,15 +120,18 @@ function computeCacheKey(
 }
 
 export class DB implements DBAsync {
+  private cache = new Map<string, Promise<any>>();
   constructor(public api: SQLiteAPI, public db: number) {}
 
   execMany(sql: string[]): Promise<any> {
-    return serialize(null, () => this.api.exec(this.db, sql.join("")));
+    return serialize(this.cache, null, () =>
+      this.api.exec(this.db, sql.join(""))
+    );
   }
 
   exec(sql: string, bind?: SQLiteCompatibleType[]): Promise<void> {
     // TODO: either? since not returning?
-    return serialize(computeCacheKey(sql, "a", bind), () =>
+    return serialize(this.cache, computeCacheKey(sql, "a", bind), () =>
       this.statements(sql, false, bind)
     );
   }
@@ -134,7 +140,7 @@ export class DB implements DBAsync {
     sql: string,
     bind?: SQLiteCompatibleType[]
   ): Promise<T[]> {
-    return serialize(computeCacheKey(sql, "o", bind), () =>
+    return serialize(this.cache, computeCacheKey(sql, "o", bind), () =>
       this.statements(sql, true, bind)
     );
   }
@@ -143,13 +149,13 @@ export class DB implements DBAsync {
     sql: string,
     bind?: SQLiteCompatibleType[]
   ): Promise<T[]> {
-    return serialize(computeCacheKey(sql, "a", bind), () =>
+    return serialize(this.cache, computeCacheKey(sql, "a", bind), () =>
       this.statements(sql, false, bind)
     );
   }
 
   prepare(sql: string): Promise<StmtAsync> {
-    return serialize(undefined, async () => {
+    return serialize(this.cache, undefined, async () => {
       const str = this.api.str_new(this.db, sql);
       const prepared = await this.api.prepare_v2(
         this.db,
@@ -160,12 +166,14 @@ export class DB implements DBAsync {
         throw new Error(`Could not prepare ${sql}`);
       }
 
-      return new Stmt(this.api, prepared.stmt, str, sql);
+      return new Stmt(this.cache, this.api, prepared.stmt, str, sql);
     });
   }
 
   close(): Promise<any> {
-    return serialize(undefined, () => this.api.close(this.db));
+    return this.exec("SELECT crsql_finalize()").then(() => {
+      return serialize(this.cache, undefined, () => this.api.close(this.db));
+    });
   }
 
   createFunction(name: string, fn: (...args: any) => unknown, opts?: {}): void {
@@ -268,6 +276,7 @@ class Stmt implements StmtAsync {
   // TOOD: use mode in get/all!
   private mode: "a" | "o" = "o";
   constructor(
+    private cache: Map<string, Promise<any>>,
     private api: SQLiteAPI,
     private base: number,
     private str: number,
@@ -275,15 +284,20 @@ class Stmt implements StmtAsync {
   ) {}
 
   run(...bindArgs: any[]): Promise<any> {
-    return serialize(computeCacheKey(this.sql, this.mode, bindArgs), () => {
-      this.bind(bindArgs);
+    return serialize(
+      this.cache,
+      computeCacheKey(this.sql, this.mode, bindArgs),
+      () => {
+        this.bind(bindArgs);
 
-      return this.api.step(this.base).then(() => this.api.reset(this.base));
-    });
+        return this.api.step(this.base).then(() => this.api.reset(this.base));
+      }
+    );
   }
 
   get(...bindArgs: any[]): Promise<any> {
     return serialize(
+      this.cache,
       computeCacheKey(this.sql, this.mode, bindArgs),
       async () => {
         this.bind(bindArgs);
@@ -299,6 +313,7 @@ class Stmt implements StmtAsync {
 
   all(...bindArgs: any[]): Promise<any[]> {
     return serialize(
+      this.cache,
       computeCacheKey(this.sql, this.mode, bindArgs),
       async () => {
         this.bind(bindArgs);

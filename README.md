@@ -146,25 +146,13 @@ This will create a `sqlite3` binary at `dist/sqlite3`
 
 ## Tests
 
-todo: single command to test all.
+Ensure you've installed depenencies via `pnpm isntall` in the root director then run:
 
 ```bash
-cd native/src
-make test
+pnpm test
 ```
 
-There is also a collection of python integration tests:
-
-```bash
-cd py/correctness
-pytest
-```
-
-And browser and node tests in development --
-
-```bash
-cd js/tests
-```
+This will run all tests across native, js & python packages.
 
 ## WASM
 

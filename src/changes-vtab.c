@@ -343,11 +343,15 @@ static int changesColumn(
     // when proxying changes thru others
     if (pCur->pRowStmt == 0)
     {
-      sqlite3_result_null(ctx);
+      sqlite3_result_blob(ctx, pCur->pTab->pExtData->siteId, SITE_ID_LEN, SQLITE_STATIC);
     }
     else
     {
-      sqlite3_result_value(ctx, sqlite3_column_value(pCur->pRowStmt, SITE_ID));
+      if (sqlite3_column_type(pCur->pRowStmt, SITE_ID) == SQLITE_NULL) {
+        sqlite3_result_blob(ctx, pCur->pTab->pExtData->siteId, SITE_ID_LEN, SQLITE_STATIC);
+      } else {
+        sqlite3_result_value(ctx, sqlite3_column_value(pCur->pRowStmt, SITE_ID));
+      }
     }
     break;
   default:

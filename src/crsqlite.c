@@ -219,7 +219,7 @@ int crsql_createClockTable(
       \"rowid\" NOT NULL,\
       \"__crsql_col_num\" NOT NULL,\
       \"__crsql_version\" NOT NULL,\
-      \"__crsql_site_id\" NOT NULL,\
+      \"__crsql_site_id\",\
       PRIMARY KEY (\"rowid\", \"__crsql_col_num\")\
     )",
                            tableInfo->tblName);
@@ -234,7 +234,7 @@ int crsql_createClockTable(
       %s,\
       \"__crsql_col_num\" NOT NULL,\
       \"__crsql_version\" NOT NULL,\
-      \"__crsql_site_id\" NOT NULL,\
+      \"__crsql_site_id\",\
       PRIMARY KEY (%s, __crsql_col_num)\
     )",
                            tableInfo->tblName, pkList, pkList);

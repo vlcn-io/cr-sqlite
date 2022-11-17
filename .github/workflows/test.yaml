@@ -2,6 +2,7 @@ on: push
 name: "test"
 jobs:
   build:
+    timeout-minutes: 15
     name: Testing on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:

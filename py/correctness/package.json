@@ -1,0 +1,14 @@
+{
+  "name": "@vlcn.io/py-correctness",
+  "version": "0.0.0",
+  "private": true,
+  "description": "CR-SQLite loadable extension",
+  "homepage": "https://vlcn.io",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/vlcn-io/cr-sqlite"
+  },
+  "scripts": {
+    "test": "pytest"
+  }
+}

@@ -3,7 +3,7 @@ import sqliteWasm from "@vlcn.io/crsqlite-wasm";
 sqliteWasm().then((sqlite3) => {
   const db = sqlite3.open("example-db", "c");
 
-  db.exec([
+  db.execMany([
     "CREATE TABLE IF NOT EXISTS baz (a, b);",
     "INSERT INTO baz VALUES (1, 2);",
   ]);

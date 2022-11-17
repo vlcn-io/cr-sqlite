@@ -1,5 +1,5 @@
 on: push
-name: "test"
+name: "c-tests"
 jobs:
   build:
     name: Testing on ${{ matrix.os }}

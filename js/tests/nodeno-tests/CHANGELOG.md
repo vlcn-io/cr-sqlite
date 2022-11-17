@@ -1,5 +1,16 @@
 # @vlcn.io/nodeno-tests
 
+## 0.1.7
+
+### Patch Changes
+
+- fixes site id not being passed during replication
+- Updated dependencies
+  - @vlcn.io/crsqlite-allinone@0.1.4
+  - @vlcn.io/rx-tbl@0.1.5
+  - @vlcn.io/xplat-tests@0.1.7
+  - @vlcn.io/xplat-api@0.1.4
+
 ## 0.1.6
 
 ### Patch Changes

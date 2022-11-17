@@ -1,5 +1,14 @@
 # @vlcn.io/network-webrtc
 
+## 0.1.7
+
+### Patch Changes
+
+- fixes site id not being passed during replication
+- Updated dependencies
+  - @vlcn.io/replicator-wholedb@0.1.7
+  - @vlcn.io/xplat-api@0.1.4
+
 ## 0.1.6
 
 ### Patch Changes

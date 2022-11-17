@@ -1,5 +1,14 @@
 # @vlcn.io/crsqlite-sandbox
 
+## 0.1.10
+
+### Patch Changes
+
+- fixes site id not being passed during replication
+- Updated dependencies
+  - @vlcn.io/crsqlite-wasm@0.1.4
+  - @vlcn.io/wa-crsqlite@0.1.10
+
 ## 0.1.9
 
 ### Patch Changes

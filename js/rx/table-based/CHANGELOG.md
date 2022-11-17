@@ -1,5 +1,13 @@
 # @vlcn.io/rx-tbl
 
+## 0.1.5
+
+### Patch Changes
+
+- fixes site id not being passed during replication
+- Updated dependencies
+  - @vlcn.io/xplat-api@0.1.4
+
 ## 0.1.4
 
 ### Patch Changes

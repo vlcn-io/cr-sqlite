@@ -1,5 +1,11 @@
 # @vlcn.io/xplat-api
 
+## 0.1.4
+
+### Patch Changes
+
+- fixes site id not being passed during replication
+
 ## 0.1.3
 
 ### Patch Changes

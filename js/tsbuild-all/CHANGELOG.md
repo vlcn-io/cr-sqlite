@@ -1,5 +1,11 @@
 # @vlcn.io/tsbuild-all
 
+## 0.1.4
+
+### Patch Changes
+
+- fixes site id not being passed during replication
+
 ## 0.1.3
 
 ### Patch Changes

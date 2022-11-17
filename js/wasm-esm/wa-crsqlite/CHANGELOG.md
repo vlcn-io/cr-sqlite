@@ -1,5 +1,14 @@
 # @vlcn.io/wa-crsqlite
 
+## 0.1.10
+
+### Patch Changes
+
+- fixes site id not being passed during replication
+- Updated dependencies
+  - @vlcn.io/wa-sqlite@0.8.8
+  - @vlcn.io/xplat-api@0.1.4
+
 ## 0.1.9
 
 ### Patch Changes

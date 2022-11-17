@@ -1,7 +1,7 @@
 {
   "name": "@vlcn.io/wa-crsqlite",
   "type": "module",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "files": [
     "dist",
     "src"

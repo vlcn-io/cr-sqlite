@@ -1,5 +1,14 @@
 # @vlcn.io/browser-tests
 
+## 0.1.7
+
+### Patch Changes
+
+- fixes site id not being passed during replication
+- Updated dependencies
+  - @vlcn.io/xplat-tests@0.1.7
+  - @vlcn.io/crsqlite-wasm@0.1.4
+
 ## 0.1.6
 
 ### Patch Changes

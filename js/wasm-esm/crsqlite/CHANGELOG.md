@@ -1,5 +1,13 @@
 # @vlcn.io/crsqlite-wasm
 
+## 0.1.4
+
+### Patch Changes
+
+- fixes site id not being passed during replication
+- Updated dependencies
+  - @vlcn.io/xplat-api@0.1.4
+
 ## 0.1.3
 
 ### Patch Changes

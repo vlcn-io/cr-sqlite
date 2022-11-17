@@ -1,5 +1,13 @@
 # @vlcn.io/node-tests
 
+## 0.1.4
+
+### Patch Changes
+
+- fixes site id not being passed during replication
+- Updated dependencies
+  - @vlcn.io/crsqlite@0.1.7
+
 ## 0.1.3
 
 ### Patch Changes

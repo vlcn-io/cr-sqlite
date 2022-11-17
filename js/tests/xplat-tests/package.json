@@ -2,7 +2,7 @@
   "name": "@vlcn.io/xplat-tests",
   "private": true,
   "type": "module",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "files": [
     "dist"
   ],

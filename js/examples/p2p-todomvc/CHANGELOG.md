@@ -1,5 +1,15 @@
 # @vlcn.io/crsqlite-p2p-todomvc
 
+## 0.1.10
+
+### Patch Changes
+
+- fixes site id not being passed during replication
+- Updated dependencies
+  - @vlcn.io/network-webrtc@0.1.7
+  - @vlcn.io/rx-tbl@0.1.5
+  - @vlcn.io/wa-crsqlite@0.1.10
+
 ## 0.1.9
 
 ### Patch Changes

@@ -17,5 +17,5 @@ jobs:
 
       - name: Test
         run: |
-          cd native/src
+          cd native
           make test

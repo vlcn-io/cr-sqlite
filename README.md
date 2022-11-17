@@ -108,6 +108,7 @@ Examples apps that use `cr-sqlite` and have a networking layer (albeit a dumb on
 
 - [Working TODO MVC](https://github.com/vlcn-io/cr-sqlite/tree/main/pkg/examples/p2p-todomvc)
 - [WIP Local-First Presentation Editor](https://github.com/tantaman/strut)
+- [Observable Notebook](https://observablehq.com/@tantaman/cr-sqlite-basic-setup)
 
 # Building
 

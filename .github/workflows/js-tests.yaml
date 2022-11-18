@@ -23,6 +23,10 @@ jobs:
         with:
           node-version: 18.x
 
+      - name: Windows build tools
+        if: runner.os == Windows
+        run: npm install --global windows-build-tools
+
       - name: Install
         run: pnpm i
 

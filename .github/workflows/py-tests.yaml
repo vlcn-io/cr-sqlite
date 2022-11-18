@@ -28,7 +28,7 @@ jobs:
           auto-update-conda: true
           auto-activate-base: true
           activate-environment: anaconda-client-env
-          python-version: 3.10
+          python-version: "3.10"
 
       - name: Install SQLite
         run: conda install sqlite

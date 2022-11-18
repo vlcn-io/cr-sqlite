@@ -35,9 +35,6 @@ TARGET_LOADABLE=$(prefix)/crsqlite.$(LOADABLE_EXTENSION)
 TARGET_SQLITE3_EXTRA_C=$(prefix)/sqlite3-extra.c
 TARGET_SQLITE3=$(prefix)/sqlite3
 TARGET_SQLITE3_VANILLA=$(prefix)/vanilla-sqlite3
-TARGET_SQLJS_JS=$(prefix)/sqljs.js
-TARGET_SQLJS_WASM=$(prefix)/sqljs.wasm
-TARGET_SQLJS=$(TARGET_SQLJS_JS) $(TARGET_SQLJS_WASM)
 TARGET_TEST=$(prefix)/test
 
 ext_files=src/crsqlite.c \
@@ -75,11 +72,12 @@ format: $(FORMAT_FILES)
 loadable: $(TARGET_LOADABLE)
 sqlite3: $(TARGET_SQLITE3)
 vanilla: $(TARGET_SQLITE3_VANILLA)
-sqljs: $(TARGET_SQLJS)
 test: $(TARGET_TEST)
 	$(prefix)/test
 correctness: $(TARGET_LOADABLE) FORCE
 	cd ../py/correctness && pytest
+valgrind: $(TARGET_TEST)
+	valgrind $(prefix)/test
 
 $(TARGET_LOADABLE): $(prefix) $(ext_files)
 	gcc -I./src/ -I./src/sqlite \
@@ -122,4 +120,7 @@ $(TARGET_TEST): $(prefix) $(TARGET_SQLITE3_EXTRA_C) src/tests.c src/*.test.c $(e
 
 .PHONY: all clean format \
 	test \
-	loadable
+	loadable \
+	sqlite3 \
+	correctness \
+	valgrind

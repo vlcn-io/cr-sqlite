@@ -1,0 +1,29 @@
+on: push
+name: "c-tests"
+jobs:
+  build:
+    name: Testing on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+          #- os: windows-2022
+          #- os: macos-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: false
+
+      - name: Build Tests
+        run: |
+          cd native
+          make dist/test
+
+      # there's always 16 bytes left allocated yet to be tracked down.
+      # this number never goes up no matter how many tests and operations we run
+      # in the process which is the good news.
+      - name: Run Valgrind
+        run: |
+          cd native
+          valgrind dist/test 2>&1 >/dev/null | grep "in use at exit:" | awk -F" " '{print $6}' | xargs -I {} test {} = 16

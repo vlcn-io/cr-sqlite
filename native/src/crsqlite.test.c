@@ -55,6 +55,11 @@ static void testCreateClockTable()
   rc = crsql_createClockTable(db, tc4, &err);
   CHECK_OK
 
+  crsql_freeTableInfo(tc1);
+  crsql_freeTableInfo(tc2);
+  crsql_freeTableInfo(tc3);
+  crsql_freeTableInfo(tc4);
+
   // TODO: check that the tables have the expected schema
 
   printf("\t\e[0;32mSuccess\e[0m\n");

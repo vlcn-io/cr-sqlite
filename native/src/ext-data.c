@@ -30,6 +30,7 @@ void crsql_freeExtData(crsql_ExtData *pExtData)
   sqlite3_free(pExtData->siteId);
   sqlite3_finalize(pExtData->pDbVersionStmt);
   sqlite3_finalize(pExtData->pPragmaSchemaVersionStmt);
+  crsql_freeAllTableInfos(pExtData->zpTableInfos, pExtData->tableInfosLen);
   sqlite3_free(pExtData);
 }
 

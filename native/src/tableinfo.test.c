@@ -150,6 +150,8 @@ static void testGetIndexList() {
     assert(indexInfos[i].unique == 1);
   }
 
+  crsql_freeIndexInfos(indexInfos, indexInfosLen);
+
   crsql_close(db);
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
@@ -169,7 +171,7 @@ static void testFindTableInfo() {
   assert(crsql_findTableInfo(tblInfos, 3, "3") == 0);
 
   for (int i = 0; i < 3; ++i) {
-    sqlite3_free(tblInfos[i]);
+    crsql_freeColumnInfoContents(tblInfos[i]);
   }
   sqlite3_free(tblInfos);
 

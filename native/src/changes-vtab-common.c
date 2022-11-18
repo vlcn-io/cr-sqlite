@@ -12,7 +12,7 @@ char *crsql_extractWhereList(
   if (columnInfosLen == 1)
   {
     zzParts = sqlite3_malloc(1 * sizeof(char *));
-    zzParts[0] = strdup(quoteConcatedVals);
+    zzParts[0] = crsql_strdup(quoteConcatedVals);
   }
   else
   {

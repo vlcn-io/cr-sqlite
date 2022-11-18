@@ -7,15 +7,15 @@
 #include <stdlib.h>
 #include <assert.h>
 
-size_t strnlen(const char *s, size_t n)
+size_t crsql_strnlen(const char *s, size_t n)
 {
 	const char *p = memchr(s, 0, n);
 	return p ? p-s : n;
 }
 
-char *strndup(const char *s, size_t n)
+char *crsql_strndup(const char *s, size_t n)
 {
-	size_t l = strnlen(s, n);
+	size_t l = crsql_strnlen(s, n);
 	char *d = sqlite3_malloc(l+1);
 	if (!d) return NULL;
 	memcpy(d, s, l);
@@ -23,7 +23,7 @@ char *strndup(const char *s, size_t n)
 	return d;
 }
 
-char *strdup(const char *s)
+char *crsql_strdup(const char *s)
 {
 	size_t l = strlen(s);
 	char *d = sqlite3_malloc(l+1);
@@ -142,7 +142,7 @@ char **crsql_split(const char *in, char *delim, int partsLen)
   int i = 0;
   while (ptr != 0 && i < partsLen)
   {
-    ret[i] = strndup(in, ptr - in);
+    ret[i] = crsql_strndup(in, ptr - in);
     // move past found delimiter
     ptr += delimLen;
     in = ptr;
@@ -152,7 +152,7 @@ char **crsql_split(const char *in, char *delim, int partsLen)
 
   if (i < partsLen && *in != '\0')
   {
-    ret[i] = strdup(in);
+    ret[i] = crsql_strdup(in);
     ++i;
   }
 
@@ -503,7 +503,7 @@ int crsql_getIndexedCols(
   {
     assert(j < numCols);
 
-    indexedCols[j] = strdup((const char *)sqlite3_column_text(pStmt, 0));
+    indexedCols[j] = crsql_strdup((const char *)sqlite3_column_text(pStmt, 0));
 
     rc = sqlite3_step(pStmt);
     ++j;

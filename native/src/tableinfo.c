@@ -255,7 +255,7 @@ static crsql_TableInfo *crsql_tableInfo(
   ret->baseCols = colInfos;
   ret->baseColsLen = colInfosLen;
 
-  ret->tblName = strdup(tblName);
+  ret->tblName = crsql_strdup(tblName);
 
   ret->nonPks = crsql_nonPks(ret->baseCols, ret->baseColsLen, &(ret->nonPksLen));
   ret->pks = crsql_pks(ret->baseCols, ret->baseColsLen, &(ret->pksLen));
@@ -322,9 +322,9 @@ int crsql_getIndexList(
   {
     assert(i < numIndices);
     indexInfos[i].seq = sqlite3_column_int(pStmt, 0);
-    indexInfos[i].name = strdup((const char *)sqlite3_column_text(pStmt, 1));
+    indexInfos[i].name = crsql_strdup((const char *)sqlite3_column_text(pStmt, 1));
     indexInfos[i].unique = sqlite3_column_int(pStmt, 2);
-    indexInfos[i].origin = strdup((const char *)sqlite3_column_text(pStmt, 3));
+    indexInfos[i].origin = crsql_strdup((const char *)sqlite3_column_text(pStmt, 3));
     indexInfos[i].partial = sqlite3_column_int(pStmt, 4);
 
     ++i;
@@ -429,8 +429,8 @@ int crsql_getTableInfo(
 
     columnInfos[i].cid = sqlite3_column_int(pStmt, 0);
 
-    columnInfos[i].name = strdup((const char *)sqlite3_column_text(pStmt, 1));
-    columnInfos[i].type = strdup((const char *)sqlite3_column_text(pStmt, 2));
+    columnInfos[i].name = crsql_strdup((const char *)sqlite3_column_text(pStmt, 1));
+    columnInfos[i].type = crsql_strdup((const char *)sqlite3_column_text(pStmt, 2));
 
     columnInfos[i].notnull = sqlite3_column_int(pStmt, 3);
     columnInfos[i].pk = sqlite3_column_int(pStmt, 4);
@@ -558,7 +558,7 @@ int crsql_pullAllTableInfos(
   {
     // +1 since tableNames includes a row for column headers
     // Strip __crsql_clock suffix.
-    char *baseTableName = strndup(zzClockTableNames[i + 1], strlen(zzClockTableNames[i + 1]) - __CRSQL_CLOCK_LEN);
+    char *baseTableName = crsql_strndup(zzClockTableNames[i + 1], strlen(zzClockTableNames[i + 1]) - __CRSQL_CLOCK_LEN);
     rc = crsql_getTableInfo(db, baseTableName, &tableInfos[i], errmsg);
     sqlite3_free(baseTableName);
 

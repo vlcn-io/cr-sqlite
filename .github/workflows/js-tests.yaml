@@ -19,9 +19,16 @@ jobs:
         uses: pnpm/action-setup@v2
 
       - name: Setup Node
+        if: runner.os != 'Windows'
         uses: actions/setup-node@v3
         with:
           node-version: 18.x
+
+      - name: Setup Node Windows
+        if: runner.os == 'Windows'
+        uses: actions/setup-node@v3
+        with:
+          node-version: 17.9.1
 
       - name: Windows build tools
         if: runner.os == 'Windows'

@@ -52,7 +52,7 @@ crsql_ColumnInfo *crsql_extractBaseCols(
     int *pBaseColsLen);
 
 void crsql_freeColumnInfoContents(crsql_ColumnInfo *columnInfo);
-
+void crsql_freeIndexInfos(crsql_IndexInfo *indexInfos, int indexInfosLen);
 void crsql_freeTableInfo(crsql_TableInfo *tableInfo);
 
 int crsql_getTableInfo(

@@ -171,7 +171,8 @@ static void testFindTableInfo() {
   assert(crsql_findTableInfo(tblInfos, 3, "3") == 0);
 
   for (int i = 0; i < 3; ++i) {
-    crsql_freeColumnInfoContents(tblInfos[i]);
+    sqlite3_free(tblInfos[i]->tblName);
+    sqlite3_free(tblInfos[i]);
   }
   sqlite3_free(tblInfos);
 

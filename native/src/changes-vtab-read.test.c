@@ -14,6 +14,8 @@
   }
 #endif
 
+void crsql_close(sqlite3* db);
+
 static void testChangesQueryForTable()
 {
   printf("ChangeQueryForTable\n");
@@ -43,7 +45,7 @@ static void testChangesQueryForTable()
 fail:
   sqlite3_free(err);
   crsql_freeTableInfo(tblInfo);
-  sqlite3_close(db);
+  crsql_close(db);
   assert(rc == SQLITE_OK);
 }
 
@@ -75,7 +77,7 @@ static void testChangesUnionQuery()
   fail:
   sqlite3_free(err);
   crsql_freeAllTableInfos(tblInfos, 2);
-  sqlite3_close(db);
+  crsql_close(db);
   assert(rc == SQLITE_OK);
 }
 
@@ -108,7 +110,7 @@ static void testRowPatchDataQuery()
   fail:
   sqlite3_free(err);
   crsql_freeTableInfo(tblInfo);
-  sqlite3_close(db);
+  crsql_close(db);
   assert(rc == SQLITE_OK);
 }
 

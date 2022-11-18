@@ -1,7 +1,14 @@
 #include <stdio.h>
 #include <string.h>
+#include "sqlite3ext.h"
+SQLITE_EXTENSION_INIT3
 
 #define SUITE(N) if (strcmp(suite, "all") == 0 || strcmp(suite, N) == 0)
+
+void crsql_close(sqlite3* db) {
+  sqlite3_exec(db, "SELECT crsql_finalize()", 0, 0, 0);
+  sqlite3_close(db);
+}
 
 void crsqlUtilTestSuite();
 void crsqlTableInfoTestSuite();

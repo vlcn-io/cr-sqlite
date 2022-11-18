@@ -6,13 +6,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#ifndef CHECK_OK
-#define CHECK_OK       \
-  if (rc != SQLITE_OK) \
-  {                    \
-    goto fail;         \
-  }
-#endif
+void crsql_close(sqlite3* db);
 
 static void testManyPkTable()
 {
@@ -40,7 +34,7 @@ static void testManyPkTable()
   }
 
   sqlite3_finalize(pStmt);
-  sqlite3_close(db);
+  crsql_close(db);
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 

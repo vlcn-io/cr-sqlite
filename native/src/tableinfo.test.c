@@ -7,6 +7,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+void crsql_close(sqlite3* db);
+
 static void testGetTableInfo()
 {
   printf("GetTableInfo\n");
@@ -24,6 +26,7 @@ static void testGetTableInfo()
   {
     printf("err: %s %d\n", errMsg, rc);
     sqlite3_free(errMsg);
+    crsql_close(db);
     assert(0);
     return;
   }
@@ -53,6 +56,7 @@ static void testGetTableInfo()
   {
     printf("err: %s %d\n", errMsg, rc);
     sqlite3_free(errMsg);
+    crsql_close(db);
     assert(0);
     return;
   }
@@ -73,6 +77,7 @@ static void testGetTableInfo()
   crsql_freeTableInfo(tableInfo);
 
   printf("\t\e[0;32mSuccess\e[0m\n");
+  crsql_close(db);
 }
 
 static void testExtractBaseCols()
@@ -204,6 +209,7 @@ static void testGetIndexList() {
     assert(indexInfos[i].unique == 1);
   }
 
+  crsql_close(db);
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 

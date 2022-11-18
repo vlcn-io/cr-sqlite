@@ -6,13 +6,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#ifndef CHECK_OK
-#define CHECK_OK       \
-  if (rc != SQLITE_OK) \
-  {                    \
-    goto fail;         \
-  }
-#endif
+void crsql_close(sqlite3* db);
 
 static void memTestMergeInsert()
 {
@@ -51,7 +45,7 @@ static void testDidCidWin()
   printf("\t\e[0;32mSuccess\e[0m\n");
 fail:
   sqlite3_free(err);
-  sqlite3_close(db);
+  crsql_close(db);
   assert(rc == SQLITE_OK);
 }
 

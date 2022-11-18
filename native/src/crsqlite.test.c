@@ -17,6 +17,8 @@ SQLITE_EXTENSION_INIT1
   }
 #endif
 
+void crsql_close(sqlite3* db);
+
 static void testCreateClockTable()
 {
   printf("CreateClockTable\n");
@@ -56,13 +58,13 @@ static void testCreateClockTable()
   // TODO: check that the tables have the expected schema
 
   printf("\t\e[0;32mSuccess\e[0m\n");
-  sqlite3_close(db);
+  crsql_close(db);
   return;
 
 fail:
   printf("err: %s %d\n", err, rc);
   sqlite3_free(err);
-  sqlite3_close(db);
+  crsql_close(db);
   assert(rc == SQLITE_OK);
 }
 
@@ -89,6 +91,7 @@ static void teste2e()
 
   // TODO: create other connections to other dbs. apply patches between connections.
 
+  crsql_close(db);
   printf("\t\e[0;32mSuccess\e[0m\n");
   return;
 
@@ -104,7 +107,7 @@ void testModifySinglePK() {
 }
 
 void testModifyCompoundPK() {
-  
+
 }
 
 void crsqlTestSuite()

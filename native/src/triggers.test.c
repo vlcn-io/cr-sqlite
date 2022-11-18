@@ -8,6 +8,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+void crsql_close(sqlite3* db);
+
 // This would be more testable if we could test
 // query construction rather than actual table creation.
 // testing actual table creation requires views and base crr to
@@ -46,14 +48,14 @@ static void testCreateTriggers()
   crsql_freeTableInfo(tableInfo);
   if (rc != SQLITE_OK)
   {
-    sqlite3_close(db);
+    crsql_close(db);
     printf("err: %s | rc: %d\n", errMsg, rc);
     sqlite3_free(errMsg);
     assert(0);
   }
 
   sqlite3_free(errMsg);
-  sqlite3_close(db);
+  crsql_close(db);
 
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
@@ -83,7 +85,7 @@ static void testDeleteTriggerQuery()
   char *query = crsql_deleteTriggerQuery(tableInfo);
   assert(strcmp("CREATE TRIGGER IF NOT EXISTS \"foo__crsql_dtrig\"      AFTER DELETE ON \"foo\"    BEGIN      INSERT OR REPLACE INTO \"foo__crsql_clock\" (        \"a\",        __crsql_col_num,        __crsql_version,        __crsql_site_id      ) SELECT         OLD.\"a\",        -1,        crsql_nextdbversion(),        NULL      WHERE crsql_internal_sync_bit() = 0;    END;", query) == 0);
 
-  sqlite3_close(db);
+  crsql_close(db);
   sqlite3_free(query);
   assert(rc == SQLITE_OK);
 

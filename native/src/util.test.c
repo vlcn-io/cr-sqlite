@@ -16,6 +16,8 @@
   }
 #endif
 
+void crsql_close(sqlite3* db);
+
 static void testGetVersionUnionQuery()
 {
   int numRows_tc1 = 1;
@@ -57,7 +59,7 @@ static void testDoesTableExist()
   if (rc)
   {
     fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
-    sqlite3_close(db);
+    crsql_close(db);
     return;
   }
 
@@ -65,7 +67,7 @@ static void testDoesTableExist()
   sqlite3_exec(db, "CREATE TABLE foo (a, b)", 0, 0, 0);
   assert(crsql_doesTableExist(db, "foo") == 1);
 
-  sqlite3_close(db);
+  crsql_close(db);
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
@@ -84,7 +86,7 @@ static void testGetCount()
   rc = crsql_getCount(db, "SELECT count(*) FROM foo");
   assert(rc == 2);
 
-  sqlite3_close(db);
+  crsql_close(db);
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 

@@ -7,6 +7,7 @@
 
 #define __CRSQL_CLOCK_LEN 13
 #define QC_DELIM '|'
+#define QC_DELIM_STR "|"
 
 #define DELETE_CID_SENTINEL -1
 #define PKS_ONLY_CID_SENTINEL -2

@@ -14,6 +14,25 @@
   }
 #endif
 
+void testManyPkTable() {
+
+}
+
+void testSinglePkTable() {
+
+}
+
+void testOnlyPkTable() {
+
+}
+
+void testSciNotation() {
+
+}
+
+void testHex() {
+
+}
 
 void crsqlChangesVtabTestSuite()
 {

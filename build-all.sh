@@ -12,10 +12,10 @@ make loadable
 
 # make npm packages
 cd ../js/wasm-esm/wa-crsqlite
-./build.sh
+bash ./build.sh
 
 cd ../crsqlite
-./build.sh
+bash ./build.sh
 
 cd ../../tsbuild-all
 pnpm build

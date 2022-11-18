@@ -1,5 +1,5 @@
 on: push
-name: "c-tests"
+name: "c-valgrind"
 jobs:
   build:
     name: Testing on ${{ matrix.os }}
@@ -26,4 +26,4 @@ jobs:
       - name: Run Valgrind
         run: |
           cd native
-          valgrind dist/test 2>&1 >/dev/null | grep "in use at exit:" | awk -F" " '{print $6}' | xargs -I {} test {} = 16
+          valgrind dist/test 2>&1 >/dev/null | grep "in use at exit:" | awk -F" " '{print $6}' | xargs -I {} test {} = 0

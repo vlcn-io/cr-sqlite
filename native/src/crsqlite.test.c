@@ -99,6 +99,14 @@ fail:
   assert(rc == SQLITE_OK);
 }
 
+void testModifySinglePK() {
+
+}
+
+void testModifyCompoundPK() {
+  
+}
+
 void crsqlTestSuite()
 {
   printf("\e[47m\e[1;30mSuite: crsql\e[0m\n");

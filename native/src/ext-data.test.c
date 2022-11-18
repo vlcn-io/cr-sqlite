@@ -14,11 +14,12 @@
   }
 #endif
 
-static void textNewExtData() {
+static void textNewExtData()
+{
   sqlite3 *db;
   int rc;
   rc = sqlite3_open(":memory:", &db);
-  crsql_ExtData* pExtData = crsql_newExtData(db);
+  crsql_ExtData *pExtData = crsql_newExtData(db);
 
   assert(pExtData->dbVersion == -1);
   // statement used to determine schema version
@@ -39,24 +40,26 @@ static void textNewExtData() {
   sqlite3_close(db);
 }
 
-static void testFreeExtData() {
+static void testFreeExtData()
+{
   printf("FreeExtData\n");
   sqlite3 *db;
   int rc;
   rc = sqlite3_open(":memory:", &db);
-  crsql_ExtData* pExtData = crsql_newExtData(db);
+  crsql_ExtData *pExtData = crsql_newExtData(db);
   // ext data is freed on db close.
   crsql_finalize(pExtData);
   sqlite3_close(db);
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
-static void testFinalize() {
+static void testFinalize()
+{
   printf("FinalizeExtData\n");
   sqlite3 *db;
   int rc;
   rc = sqlite3_open(":memory:", &db);
-  crsql_ExtData* pExtData = crsql_newExtData(db);
+  crsql_ExtData *pExtData = crsql_newExtData(db);
 
   crsql_finalize(pExtData);
   assert(pExtData->pDbVersionStmt == 0);
@@ -68,13 +71,14 @@ static void testFinalize() {
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
-static void testFetchPragmaSchemaVersion() {
+static void testFetchPragmaSchemaVersion()
+{
   printf("FetchPragmaSchemaVersion\n");
   sqlite3 *db;
   int rc;
   int didChange = 0;
   rc = sqlite3_open(":memory:", &db);
-  crsql_ExtData* pExtData = crsql_newExtData(db);
+  crsql_ExtData *pExtData = crsql_newExtData(db);
 
   // fetch the schema info for db version update
   didChange = crsql_fetchPragmaSchemaVersion(db, pExtData, 0);
@@ -125,12 +129,13 @@ static void testFetchPragmaSchemaVersion() {
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
-static void testRecreateDbVersionStmt() {
+static void testRecreateDbVersionStmt()
+{
   printf("RecreateDbVersionStmt\n");
   sqlite3 *db;
   int rc;
   rc = sqlite3_open(":memory:", &db);
-  crsql_ExtData* pExtData = crsql_newExtData(db);
+  crsql_ExtData *pExtData = crsql_newExtData(db);
 
   rc = crsql_recreateDbVersionStmt(db, pExtData);
 
@@ -156,13 +161,14 @@ static void testRecreateDbVersionStmt() {
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
-static void fetchDbVersionFromStorage() {
+static void fetchDbVersionFromStorage()
+{
   printf("FetchDBVersionFromStorage\n");
   sqlite3 *db;
   int rc;
   char *errmsg;
   rc = sqlite3_open(":memory:", &db);
-  crsql_ExtData* pExtData = crsql_newExtData(db);
+  crsql_ExtData *pExtData = crsql_newExtData(db);
 
   rc = crsql_fetchDbVersionFromStorage(db, pExtData, &errmsg);
   // no clock tables, no version.
@@ -208,7 +214,8 @@ static void fetchDbVersionFromStorage() {
 
 // getDbVersion hits a cache before storage.
 // cache shouldn't change behavior.
-static void getDbVersion() {
+static void getDbVersion()
+{
   // this is tested in python integration tests due to the fact that it relies on a commit hook
   // being installed.
 }

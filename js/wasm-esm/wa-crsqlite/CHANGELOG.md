@@ -1,5 +1,14 @@
 # @vlcn.io/wa-crsqlite
 
+## 0.1.11
+
+### Patch Changes
+
+- fix linking issues on linux distros
+- Updated dependencies
+  - @vlcn.io/wa-sqlite@0.8.9
+  - @vlcn.io/xplat-api@0.1.5
+
 ## 0.1.10
 
 ### Patch Changes

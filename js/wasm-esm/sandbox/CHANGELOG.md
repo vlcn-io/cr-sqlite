@@ -1,5 +1,14 @@
 # @vlcn.io/crsqlite-sandbox
 
+## 0.1.11
+
+### Patch Changes
+
+- fix linking issues on linux distros
+- Updated dependencies
+  - @vlcn.io/crsqlite-wasm@0.1.5
+  - @vlcn.io/wa-crsqlite@0.1.11
+
 ## 0.1.10
 
 ### Patch Changes

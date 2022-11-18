@@ -1,5 +1,11 @@
 # @vlcn.io/examples-peer-server
 
+## 0.1.5
+
+### Patch Changes
+
+- fix linking issues on linux distros
+
 ## 0.1.4
 
 ### Patch Changes

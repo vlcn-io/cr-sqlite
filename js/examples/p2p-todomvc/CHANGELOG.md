@@ -1,5 +1,15 @@
 # @vlcn.io/crsqlite-p2p-todomvc
 
+## 0.1.11
+
+### Patch Changes
+
+- fix linking issues on linux distros
+- Updated dependencies
+  - @vlcn.io/network-webrtc@0.1.8
+  - @vlcn.io/rx-tbl@0.1.6
+  - @vlcn.io/wa-crsqlite@0.1.11
+
 ## 0.1.10
 
 ### Patch Changes

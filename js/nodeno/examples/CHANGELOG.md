@@ -1,5 +1,13 @@
 # @vlcn.io/node-tests
 
+## 0.1.5
+
+### Patch Changes
+
+- fix linking issues on linux distros
+- Updated dependencies
+  - @vlcn.io/crsqlite@0.1.8
+
 ## 0.1.4
 
 ### Patch Changes

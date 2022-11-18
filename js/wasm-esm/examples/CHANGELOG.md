@@ -1,5 +1,13 @@
 # @vlcn.io/crsqlite-examples
 
+## 0.1.5
+
+### Patch Changes
+
+- fix linking issues on linux distros
+- Updated dependencies
+  - @vlcn.io/crsqlite-wasm@0.1.5
+
 ## 0.1.4
 
 ### Patch Changes

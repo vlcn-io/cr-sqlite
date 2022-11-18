@@ -1,5 +1,13 @@
 # @vlcn.io/rx-tbl
 
+## 0.1.6
+
+### Patch Changes
+
+- fix linking issues on linux distros
+- Updated dependencies
+  - @vlcn.io/xplat-api@0.1.5
+
 ## 0.1.5
 
 ### Patch Changes

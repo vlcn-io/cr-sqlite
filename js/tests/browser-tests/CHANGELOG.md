@@ -1,5 +1,14 @@
 # @vlcn.io/browser-tests
 
+## 0.1.8
+
+### Patch Changes
+
+- fix linking issues on linux distros
+- Updated dependencies
+  - @vlcn.io/xplat-tests@0.1.8
+  - @vlcn.io/crsqlite-wasm@0.1.5
+
 ## 0.1.7
 
 ### Patch Changes

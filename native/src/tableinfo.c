@@ -101,7 +101,7 @@ char *crsql_quoteConcat(crsql_ColumnInfo * cols, int len) {
     names[i] = cols[i].name;
   }
 
-  return crsql_join2(&quote, names, len, QC_DELIM_STR);
+  return crsql_join2(&quote, names, len, " || '|' || ");
 }
 
 static void crsql_freeColumnInfos(crsql_ColumnInfo *columnInfos, int len)

@@ -241,7 +241,7 @@ static void testQuoteConcat() {
 
   char *quoted = crsql_quoteConcat(colInfos, len);
 
-  assert(strcmp(quoted, "quote(\"a\") || '~''~' || quote(\"b\") || '~''~' || quote(\"c\")") == 0);
+  assert(strcmp(quoted, "quote(\"a\") || '|' || quote(\"b\") || '|' || quote(\"c\")") == 0);
 
   sqlite3_free(quoted);
   printf("\t\e[0;32mSuccess\e[0m\n");

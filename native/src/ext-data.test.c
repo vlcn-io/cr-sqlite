@@ -32,7 +32,8 @@ static void textNewExtData()
   assert(pExtData->zpTableInfos == 0);
   assert(pExtData->tableInfosLen == 0);
 
-  // ext data is freed on db close.
+  crsql_finalize(pExtData);
+  crsql_freeExtData(pExtData);
   crsql_close(db);
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
@@ -44,8 +45,9 @@ static void testFreeExtData()
   int rc;
   rc = sqlite3_open(":memory:", &db);
   crsql_ExtData *pExtData = crsql_newExtData(db);
-  // ext data is freed on db close.
+  
   crsql_finalize(pExtData);
+  crsql_freeExtData(pExtData);
   sqlite3_close(db);
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
@@ -64,6 +66,7 @@ static void testFinalize()
 
   // finalizing twice should be a no-op
   crsql_finalize(pExtData);
+  crsql_freeExtData(pExtData);
   crsql_close(db);
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
@@ -122,6 +125,7 @@ static void testFetchPragmaSchemaVersion()
   assert(didChange == 0);
 
   crsql_finalize(pExtData);
+  crsql_freeExtData(pExtData);
   crsql_close(db);
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
@@ -154,6 +158,7 @@ static void testRecreateDbVersionStmt()
 
   crsql_finalize(pExtData);
   assert(pExtData->pDbVersionStmt == 0);
+  crsql_freeExtData(pExtData);
   crsql_close(db);
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
@@ -205,6 +210,7 @@ static void fetchDbVersionFromStorage()
   assert(rc == SQLITE_OK);
 
   crsql_finalize(pExtData);
+  crsql_freeExtData(pExtData);
   crsql_close(db);
   printf("\t\e[0;32mSuccess\e[0m\n");
 }

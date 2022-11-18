@@ -48,7 +48,7 @@ static void testFreeExtData()
   
   crsql_finalize(pExtData);
   crsql_freeExtData(pExtData);
-  sqlite3_close(db);
+  crsql_close(db);
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 

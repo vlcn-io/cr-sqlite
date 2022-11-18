@@ -20,10 +20,18 @@ jobs:
           cd native
           make loadable
 
-      - name: Install Python
-        uses: actions/setup-python@v4
+      - uses: conda-incubator/setup-miniconda@v2
         with:
-          python-version: "3.10"
+          auto-activate-base: true
+          activate-environment: ""
+
+      - name: Install SQLite
+        run: conda install sqlite
+
+      # - name: Install Python
+      #   uses: actions/setup-python@v4
+      #   with:
+      #     python-version: "3.10"
 
       - name: Install pytest
         run: |

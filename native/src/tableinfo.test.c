@@ -80,65 +80,6 @@ static void testGetTableInfo()
   crsql_close(db);
 }
 
-static void testExtractBaseCols()
-{
-  int numInfos = 4;
-  crsql_ColumnInfo colInfos[numInfos];
-  crsql_ColumnInfo *extracted;
-  int i = 0;
-  int extractedLen = 0;
-  printf("ExtractBaseCols\n");
-
-  // no columns are version columns
-  for (i = 0; i < numInfos; ++i)
-  {
-    colInfos[i].cid = i;
-    colInfos[i].name = sqlite3_mprintf("c_%d", i);
-    colInfos[i].type = sqlite3_mprintf("");
-    colInfos[i].notnull = 0;
-    colInfos[i].pk = 0;
-    colInfos[i].versionOf = 0;
-  }
-
-  extracted = crsql_extractBaseCols(colInfos, numInfos, &extractedLen);
-  assert(extractedLen == 4);
-
-  for (i = 0; i < numInfos; ++i)
-  {
-    crsql_freeColumnInfoContents(&colInfos[i]);
-  }
-  sqlite3_free(extracted);
-
-  // every other column is a version column
-  for (i = 0; i < numInfos; ++i)
-  {
-    colInfos[i].cid = i;
-    colInfos[i].name = sqlite3_mprintf("c_%d", i);
-    colInfos[i].type = sqlite3_mprintf("");
-    colInfos[i].notnull = 0;
-    colInfos[i].pk = 0;
-    if (i % 2 == 1)
-    {
-      colInfos[i].versionOf = colInfos[i - 1].name;
-    }
-    else
-    {
-      colInfos[i].versionOf = 0;
-    }
-  }
-
-  extracted = crsql_extractBaseCols(colInfos, numInfos, &extractedLen);
-  assert(extractedLen == 2);
-
-  for (i = 0; i < numInfos; ++i)
-  {
-    crsql_freeColumnInfoContents(&colInfos[i]);
-  }
-  sqlite3_free(extracted);
-
-  printf("\t\e[0;32mSuccess\e[0m\n");
-}
-
 static void testAsIdentifierList()
 {
   printf("AsIdentifierList\n");
@@ -257,7 +198,6 @@ void crsqlTableInfoTestSuite() {
   printf("\e[47m\e[1;30mSuite: crsql_tableInfo\e[0m\n");
 
   testAsIdentifierList();
-  testExtractBaseCols();
   testGetTableInfo();
   testGetIndexList();
   testFindTableInfo();

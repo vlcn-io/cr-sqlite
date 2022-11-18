@@ -50,16 +50,7 @@ char *crsql_asIdentifierList(crsql_ColumnInfo *in, size_t inlen, char *prefix)
 void crsql_freeColumnInfoContents(crsql_ColumnInfo *columnInfo)
 {
   sqlite3_free(columnInfo->name);
-  if (columnInfo->versionOf == 0)
-  {
-    // if versionOf is set then type points to a literal
-    sqlite3_free(columnInfo->type);
-  }
-
-  // we do not free versionOf since versionOf points to a name
-  // of another column which will have been freed when
-  // that column is freed.
-  // sqlite3_free(columnInfo->versionOf);
+  sqlite3_free(columnInfo->type);
 }
 
 void crsql_freeIndexInfoContents(crsql_IndexInfo *indexInfo)
@@ -118,40 +109,6 @@ static void crsql_freeColumnInfos(crsql_ColumnInfo *columnInfos, int len)
   }
 
   sqlite3_free(columnInfos);
-}
-
-crsql_ColumnInfo *crsql_extractBaseCols(
-    crsql_ColumnInfo *colInfos,
-    int colInfosLen,
-    int *pBaseColsLen)
-{
-  int i = 0;
-  int j = 0;
-  int numBaseCols = 0;
-  crsql_ColumnInfo *ret = 0;
-
-  for (i = 0; i < colInfosLen; ++i)
-  {
-    if (colInfos[i].versionOf == 0)
-    {
-      ++numBaseCols;
-    }
-  }
-
-  *pBaseColsLen = numBaseCols;
-  ret = sqlite3_malloc(numBaseCols * sizeof *ret);
-
-  for (i = 0; i < colInfosLen; ++i)
-  {
-    if (colInfos[i].versionOf == 0)
-    {
-      assert(j < numBaseCols);
-      ret[j] = colInfos[i];
-      ++j;
-    }
-  }
-
-  return ret;
 }
 
 int crsql_numPks(
@@ -434,8 +391,6 @@ int crsql_getTableInfo(
 
     columnInfos[i].notnull = sqlite3_column_int(pStmt, 3);
     columnInfos[i].pk = sqlite3_column_int(pStmt, 4);
-
-    columnInfos[i].versionOf = 0;
 
     ++i;
     rc = sqlite3_step(pStmt);

@@ -15,7 +15,6 @@ struct crsql_ColumnInfo
   char *type;
   int notnull;
   int pk;
-  char *versionOf;
 };
 
 typedef struct crsql_IndexInfo crsql_IndexInfo;

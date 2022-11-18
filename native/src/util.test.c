@@ -144,10 +144,12 @@ static void testGetIndexedCols()
   sqlite3_free(indexedCols[0]);
   sqlite3_free(indexedCols);
 
+  crsql_close(db);
   printf("\t\e[0;32mSuccess\e[0m\n");
   return;
 
 fail:
+  crsql_close(db);
   sqlite3_free(pErrMsg);
   printf("bad return code: %d\n", rc);
 }

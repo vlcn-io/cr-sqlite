@@ -85,6 +85,7 @@ static void testDeleteTriggerQuery()
   char *query = crsql_deleteTriggerQuery(tableInfo);
   assert(strcmp("CREATE TRIGGER IF NOT EXISTS \"foo__crsql_dtrig\"      AFTER DELETE ON \"foo\"    BEGIN      INSERT OR REPLACE INTO \"foo__crsql_clock\" (        \"a\",        __crsql_col_num,        __crsql_version,        __crsql_site_id      ) SELECT         OLD.\"a\",        -1,        crsql_nextdbversion(),        NULL      WHERE crsql_internal_sync_bit() = 0;    END;", query) == 0);
 
+  crsql_freeTableInfo(tableInfo);
   crsql_close(db);
   sqlite3_free(query);
   assert(rc == SQLITE_OK);

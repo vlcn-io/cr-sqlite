@@ -68,5 +68,11 @@ char *crsql_quoteConcatedValuesAsList(
     return 0;
   }
 
-  return crsql_quotedValuesAsList(parts, len);
+  char *ret = crsql_quotedValuesAsList(parts, len);
+  for (int i = 0; i < len; ++i) {
+    sqlite3_free(parts[i]);
+  }
+  sqlite3_free(parts);
+
+  return ret;
 }

@@ -124,54 +124,6 @@ char *crsql_join2(char *(*map)(const char *), char **in, size_t len, char *delim
 }
 
 /**
- * Caller must free all entries in the returned array
- * as well as the returned array.
- *
- * if `in` cannot be split into `partsLen` parts, null is returned.
- * if `in` contains more parts than `partsLen` -- only the first `partsLen` parts
- * will be returned.
- *
- * Should never be used on quote concated input.
- * See `crsql_splitQuoteConcat`
- */
-char **crsql_split(const char *in, char *delim, int partsLen)
-{
-  char *ptr = strstr(in, delim);
-  int delimLen = strlen(delim);
-  char **ret = sqlite3_malloc(partsLen * sizeof(char *));
-  int i = 0;
-  while (ptr != 0 && i < partsLen)
-  {
-    ret[i] = crsql_strndup(in, ptr - in);
-    // move past found delimiter
-    ptr += delimLen;
-    in = ptr;
-    ptr = strstr(in, delim);
-    ++i;
-  }
-
-  if (i < partsLen && *in != '\0')
-  {
-    ret[i] = crsql_strdup(in);
-    ++i;
-  }
-
-  if (i != partsLen)
-  {
-    // unexpected number of parts
-    // free it all and return null
-    for (int j = 0; j < i; ++j)
-    {
-      sqlite3_free(ret[j]);
-    }
-    sqlite3_free(ret);
-    ret = 0;
-  }
-
-  return ret;
-}
-
-/**
  * Given a pointer to the inside of a string literal,
  * scan until we get to the end of the literal.
  *

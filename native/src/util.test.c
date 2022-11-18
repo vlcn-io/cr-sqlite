@@ -204,48 +204,6 @@ static void testJoin2() {
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
-static void testSplit() {
-  printf("Split\n");
-
-  char *tc0 = "one, two, three";
-  char *tc1 = "one|two|three";
-  char *tc2 = "one|two";
-
-  char ** result;
-  result = crsql_split(tc0, ",", 3);
-  assert(strcmp(result[0], "one") == 0);
-  assert(strcmp(result[1], " two") == 0);
-  assert(strcmp(result[2], " three") == 0);
-
-  result = crsql_split(tc0, ", ", 3);
-  assert(strcmp(result[0], "one") == 0);
-  assert(strcmp(result[1], "two") == 0);
-  assert(strcmp(result[2], "three") == 0);
-
-  result = crsql_split(tc1, "|", 3);
-  assert(strcmp(result[0], "one") == 0);
-  assert(strcmp(result[1], "two") == 0);
-  assert(strcmp(result[2], "three") == 0);
-
-  result = crsql_split(tc2, "|", 2);
-  assert(strcmp(result[0], "one") == 0);
-  assert(strcmp(result[1], "two") == 0);
-
-  result = crsql_split(tc2, "|", 3);
-  assert(result == 0);
-
-  result = crsql_split(tc2, "|", 1);
-  assert(strcmp(result[0], "one") == 0);
-
-  result = crsql_split(tc2, "!", 1);
-  assert(strcmp(result[0], "one|two") == 0);
-
-  result = crsql_split(tc2, "!", 2);
-  assert(result == 0);
-
-  printf("\t\e[0;32mSuccess\e[0m\n");
-}
-
 void testSiteIdCmp() {
   printf("SiteIdCmp\n");
 
@@ -409,7 +367,6 @@ void crsqlUtilTestSuite()
   testGetIndexedCols();
   testAsIdentifierListStr();
   testJoin2();
-  testSplit();
   testSiteIdCmp();
   testSplitQuoteConcat();
 

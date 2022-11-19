@@ -1,8 +1,14 @@
 import sqliteWasm from "@vlcn.io/crsqlite-wasm";
 import { stringify as uuidStringify } from "uuid";
 
+import wasmUrl from "@vlcn.io/crsqlite-wasm/dist/sqlite3.wasm?url";
+import proxyUrl from "@vlcn.io/crsqlite-wasm/dist/sqlite3-opfs-async-proxy.js?url";
+
 async function run() {
-  const sqlite = await sqliteWasm();
+  const sqlite = await sqliteWasm({
+    locateWasm: (f: string) => wasmUrl,
+    locateProxy: (f: string) => proxyUrl,
+  });
 
   const db = sqlite.open(":memory:");
 

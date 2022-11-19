@@ -214,8 +214,11 @@ export class Stmt implements IStmt {
   }
 }
 
-export default function initWasm(): Promise<SQLite3> {
-  return sqlite3InitModule().then((baseSqlite3: any) => {
+export default function initWasm(locators: {
+  locateWasm: (f: string) => string;
+  locateProxy: (f: string) => string;
+}): Promise<SQLite3> {
+  return sqlite3InitModule(locators).then((baseSqlite3: any) => {
     return new SQLite3(baseSqlite3);
   });
 }

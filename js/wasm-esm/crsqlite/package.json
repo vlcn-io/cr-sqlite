@@ -8,6 +8,8 @@
   "exports": {
     "./dist/comlinked": "./dist/comlinked.js",
     "./dist/comlinkable": "./dist/comlinkable.js",
+    "./dist/sqlite3.wasm": "./dist/sqlite3.wasm",
+    "./dist/sqlite3-opfs-async-proxy.js": "./dist/sqlite3-opfs-async-proxy.js",
     ".": "./dist/wrapper.js"
   },
   "module": "dist/wrapper.js",

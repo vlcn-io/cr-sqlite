@@ -3,6 +3,9 @@ import * as Comlink from "comlink";
 import DBWorker from "@vlcn.io/crsqlite-wasm/dist/comlinked?worker";
 import { API } from "@vlcn.io/crsqlite-wasm/dist/comlinkable";
 
+import wasmUrl from "@vlcn.io/crsqlite-wasm/dist/sqlite3.wasm?url";
+import proxyUrl from "@vlcn.io/crsqlite-wasm/dist/sqlite3-opfs-async-proxy.js?url";
+
 const sqlite = Comlink.wrap<API>(new DBWorker());
 
 async function onReady() {
@@ -25,4 +28,11 @@ function onError(e: any) {
   console.error(e);
 }
 
-sqlite.onReady(Comlink.proxy(onReady), Comlink.proxy(onError));
+sqlite.onReady(
+  {
+    wasmUrl: wasmUrl,
+    proxyUrl: proxyUrl,
+  },
+  Comlink.proxy(onReady),
+  Comlink.proxy(onError)
+);

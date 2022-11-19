@@ -1,6 +1,12 @@
 import sqliteWasm from "@vlcn.io/crsqlite-wasm";
 
-sqliteWasm().then((sqlite3) => {
+import wasmUrl from "@vlcn.io/crsqlite-wasm/dist/sqlite3.wasm?url";
+import proxyUrl from "@vlcn.io/crsqlite-wasm/dist/sqlite3-opfs-async-proxy.js?url";
+
+sqliteWasm({
+  locateWasm: () => wasmUrl,
+  locateProxy: () => proxyUrl,
+}).then((sqlite3) => {
   const db = sqlite3.open("example-db", "c");
 
   db.execMany([

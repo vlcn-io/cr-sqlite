@@ -11,7 +11,14 @@ const extensions = new Set<(dbid: DBID, db: DB) => () => void>();
 const extensionTearDowns = new Map<DBID, (() => void)[]>();
 
 export interface ComlinkableAPI {
-  onReady(cb: () => void, err: (e: any) => void): void;
+  onReady(
+    urls: {
+      wasmUrl: string;
+      proxyUrl: string;
+    },
+    cb: () => void,
+    err: (e: any) => void
+  ): void;
 
   open(file?: string, mode?: string): DBID;
 
@@ -39,9 +46,19 @@ export interface ComlinkableAPI {
 }
 
 const api = {
-  onReady(cb: () => void, err: (e: any) => void) {
+  onReady(
+    urls: {
+      wasmUrl: string;
+      proxyUrl: string;
+    },
+    cb: () => void,
+    err: (e: any) => void
+  ) {
     if (promise == null) {
-      promise = sqliteWasm().then((s) => (sqlite3 = s));
+      promise = sqliteWasm({
+        locateWasm: () => urls.wasmUrl,
+        locateProxy: () => urls.proxyUrl,
+      }).then((s) => (sqlite3 = s));
     }
     promise.then(
       () => cb(),

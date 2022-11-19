@@ -1,5 +1,11 @@
 # @vlcn.io/crsqlite-wasm
 
+## 0.2.0
+
+### Minor Changes
+
+- require explicit file locators
+
 ## 0.1.5
 
 ### Patch Changes

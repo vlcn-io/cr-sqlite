@@ -2,7 +2,7 @@
   "name": "@vlcn.io/crsqlite-sandbox",
   "private": true,
   "type": "module",
-  "version": "0.1.11",
+  "version": "0.1.12",
   "sideEffects": false,
   "scripts": {
     "start": "vite",

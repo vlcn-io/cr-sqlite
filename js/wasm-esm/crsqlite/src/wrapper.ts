@@ -1,4 +1,4 @@
-import sqlite3InitModule from "./sqlite3.js";
+import "./sqlite3.js";
 
 import { DB as IDB, Stmt as IStmt } from "@vlcn.io/xplat-api";
 
@@ -218,6 +218,7 @@ export default function initWasm(locators: {
   locateWasm: (f: string) => string;
   locateProxy: (f: string) => string;
 }): Promise<SQLite3> {
+  // @ts-ignore
   return sqlite3InitModule(locators).then((baseSqlite3: any) => {
     return new SQLite3(baseSqlite3);
   });

@@ -4,6 +4,7 @@
     "outDir": "./dist/",
     "rootDir": "./src"
   },
+  "files": ["./src/global.d.ts"],
   "include": ["./src/"],
   "references": [{ "path": "../../xplat-api" }]
 }

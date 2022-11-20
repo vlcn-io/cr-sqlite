@@ -113,6 +113,15 @@ int crsql_createInsertTrigger(
   return rc;
 }
 
+// TODO (#50): we need to handle the case where someone _changes_ a primary key column's value
+// we should:
+// 1. detect this
+// 2. treat _every_ column as updated
+// 3. write a delete sentinel against the _old_ pk combination
+//
+// 1 is moot.
+// 2 is done via changing trigger conditions to: `WHERE sync_bit = 0 AND (NEW.c != OLD.c OR NEW.pk_c1 != OLD.pk_c1 OR NEW.pk_c2 != ...)
+// 3 is done with a new trigger based on only pks
 int crsql_createUpdateTrigger(sqlite3 *db,
                               crsql_TableInfo *tableInfo,
                               char **err)

@@ -126,6 +126,8 @@ static void teste2e()
 
     didCompare = 1;
   }
+  sqlite3_finalize(pStmt1);
+  sqlite3_finalize(pStmt2);
 
   assert(didCompare == 1);
 

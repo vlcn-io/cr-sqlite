@@ -23,7 +23,6 @@ static void testCreateTriggers()
   char *errMsg = 0;
   int rc = sqlite3_open(":memory:", &db);
 
-  // TODO enumerate various table types
   rc = sqlite3_exec(
       db,
       "CREATE TABLE \"foo\" (\"a\" PRIMARY KEY, \"b\", \"c\")",

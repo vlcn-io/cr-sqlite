@@ -27,7 +27,6 @@ static int changesConnect(
   crsql_Changes_vtab *pNew;
   int rc;
 
-  // TODO: future improvement to include txid
   rc = sqlite3_declare_vtab(
       db,
       // If we go without rowid we need to concat `table || !'! pk` to be the primary key
@@ -159,14 +158,6 @@ static int changesEof(sqlite3_vtab_cursor *cur)
 
 /**
  * Advances our Changes_cursor to its next row of output.
- *
- * 1. steps pChangesStmt
- * 2. creates a pRowStmt for the latest row
- * 3. saves off `versionCols` to prevent a `sqlite3_column_text` followed by
- * `sqlite3_column_value` (in the changeColumn method) which seems to have
- * undefined behavior / potentially result in freeing.
- * ^ TODO: is this a true problem? Or can we pass thru version cols
- * as we do with other cols?
  */
 static int changesNext(sqlite3_vtab_cursor *cur)
 {
@@ -227,11 +218,6 @@ static int changesNext(sqlite3_vtab_cursor *cur)
     return SQLITE_ERROR;
   }
 
-  // TODO: handle delete patch case
-  // There'll be a -1 colVrsn col.
-  // And no need for pRowStmt.
-  // Ret -1 for delete case for below?
-  // Set a marker on the cursor that it represents a deleted row?
   char *zSql = crsql_rowPatchDataQuery(pCur->pTab->db, tblInfo, cid, pks);
   if (zSql == 0)
   {
@@ -336,11 +322,6 @@ static int changesColumn(
     sqlite3_result_int64(ctx, pCur->version);
     break;
   case CHANGES_SINCE_VTAB_SITE_ID:
-    // TODO: why do we not have site id available to us?
-    // do we even need to return it since we've done pre-filtering on it anyhow?
-    // maybe for curious network layer authors.
-    // no  -- we need it to forward the responsible site so sites can exclude themselves
-    // when proxying changes thru others
     if (pCur->pRowStmt == 0)
     {
       sqlite3_result_blob(ctx, pCur->pTab->pExtData->siteId, SITE_ID_LEN, SQLITE_STATIC);

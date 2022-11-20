@@ -41,8 +41,6 @@ int crsql_createInsertTrigger(
   // on every column?
   // Keep some event data for create that represents the initial state of the row?
   // Future improvement.
-  // TODO: bump once for the row rather than once per column
-  // and do grouping on same v # & table-pk combo?
   if (tableInfo->nonPksLen == 0) {
     subTriggers[0] = sqlite3_mprintf(
         "INSERT OR REPLACE INTO \"%s__crsql_clock\" (\

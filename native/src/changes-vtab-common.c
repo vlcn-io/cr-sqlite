@@ -17,7 +17,6 @@ char *crsql_extractWhereList(
   else
   {
     // zzParts will not be greater or less than columnInfosLen.
-    // TODO: we need something other than `crsql_split` here. `crsql_quoteConcatSplit`
     zzParts = crsql_splitQuoteConcat(quoteConcatedVals, columnInfosLen);
   }
 
@@ -30,9 +29,6 @@ char *crsql_extractWhereList(
   {
     // this is safe since pks are extracted as `quote` in the prior queries
     // %z will de-allocate pksArr[i] so we can re-allocate it in the assignment
-    // TODO: we currently invoke this in a non safe case
-    // where pksArr is receive from a network socket rather than the
-    // local db. In the apply patches path.
     zzParts[i] = sqlite3_mprintf("\"%s\" = %z", zColumnInfos[i].name, zzParts[i]);
   }
 

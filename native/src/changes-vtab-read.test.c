@@ -121,7 +121,3 @@ void crsqlChangesVtabReadTestSuite()
   testChangesUnionQuery();
   testRowPatchDataQuery();
 }
-
-
-// TODO: mem debugging
-// https://stackoverflow.com/questions/2980917/c-is-it-possible-to-implement-memory-leak-testing-in-a-unit-test

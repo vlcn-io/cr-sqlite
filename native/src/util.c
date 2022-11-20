@@ -231,7 +231,6 @@ char **crsql_splitQuoteConcat(const char *in, int partsLen)
     else
     {
       // scan till we hit the delimiter, consuming the digits
-      // TODO: this should only allow digits.
       curr = crsql_consumeDigitsToDelimiter(curr, QC_DELIM);
     }
 

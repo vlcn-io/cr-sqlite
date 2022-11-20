@@ -212,7 +212,7 @@ int crsql_createClockTable(
   //   return rc;
   // }
 
-  // TODO: just forbid tables w/o primary keys?
+  // TODO: just forbid tables w/o primary keys
   if (tableInfo->pksLen == 0)
   {
     zSql = sqlite3_mprintf("CREATE TABLE IF NOT EXISTS \"%s__crsql_clock\" (\
@@ -340,7 +340,8 @@ static void crsqlMakeCrrFunc(sqlite3_context *context, int argc, sqlite3_value *
     tblName = (const char *)sqlite3_value_text(argv[0]);
   }
 
-  // TODO: likely need this to be a sub-transaction
+  // TODO: need this to be a sub-transaction / savepoint
+  // given the end user will want to do `crsql_as_crr` in their on tx
   rc = sqlite3_exec(db, "BEGIN", 0, 0, &errmsg);
   if (rc != SQLITE_OK)
   {
@@ -477,13 +478,6 @@ __declspec(dllexport)
     sqlite3_commit_hook(db, commitHook, pExtData);
     sqlite3_rollback_hook(db, rollbackHook, pExtData);
   }
-
-
-  // TODO: we need rollback and commit hooks to reset db version in user data struct
-  // such that the next tx will pull the latest v
-  // we no longer cache v in our process given we need to coordinate with other processes
-  // outside of ours that may be attached to the db.
-  // this is rather likely in the browser case with many tabs open to the same app.
 
   return rc;
 }

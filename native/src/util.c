@@ -176,6 +176,10 @@ const char *crsql_safelyAdvanceThroughString(const char *in, int len)
 /**
  * Looks for the provided delimiter and returns a pointer to the character
  * after that delim.
+ * 
+ * The technically allows many `e` and `.` characters in a number.
+ * We can improve this to only allow them where they should occur but
+ * this is good enough for our purposes of ensuring safe input.
  *
  * If no delim is found, returns a pointer to the end of the string.
  */
@@ -184,7 +188,7 @@ const char *crsql_consumeDigitsToDelimiter(const char *in, char delim)
   while (*in != '\0' && *in != delim)
   {
     if (*in < 48 || *in > 57) {
-      if (*in != '.') {
+      if (*in != '.' && *in != 'e') {
         return 0;
       }
     }

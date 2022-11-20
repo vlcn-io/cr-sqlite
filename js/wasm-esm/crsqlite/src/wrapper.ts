@@ -1,3 +1,8 @@
+/**
+ * Wraps the official SQLite API in a more sensible API
+ * that better-sqlite & wa-sqlite and others can also conform to.
+ */
+
 import "./sqlite3.js";
 
 import { DB as IDB, Stmt as IStmt } from "@vlcn.io/xplat-api";

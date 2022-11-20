@@ -1,12 +1,15 @@
-import sqliteWasm, { SQLite3, DB } from "./wrapper.js";
+import sqliteWasm, { SQLite3, DB, Stmt } from "./wrapper.js";
 
 let promise: Promise<SQLite3> | null = null;
 let sqlite3: SQLite3 | null = null;
 let dbid = 0;
+let stmtid = 0;
 
 export type DBID = number;
+export type StmtID = number;
 
 const dbs = new Map<DBID, DB>();
+const stmts = new Map<StmtID, Stmt>();
 const extensions = new Set<(dbid: DBID, db: DB) => () => void>();
 const extensionTearDowns = new Map<DBID, (() => void)[]>();
 
@@ -43,6 +46,8 @@ export interface ComlinkableAPI {
   transaction(dbid: DBID, cb: () => void): void;
 
   close(dbid: DBID): void;
+
+  prepare(dbid: DBID, sql: string): StmtID;
 }
 
 const api = {
@@ -95,6 +100,8 @@ const api = {
     db!.execMany(sql);
   },
 
+  // TODO: do not expose since we should not do conversions on this
+  // side of the worker boundary
   execO(dbid: DBID, sql: string, bind?: unknown[]) {
     const db = dbs.get(dbid);
     return db!.execO(sql, bind);
@@ -133,6 +140,14 @@ const api = {
   transaction(dbid: DBID, cb: () => void) {
     const db = dbs.get(dbid);
     db!.transaction(cb);
+  },
+
+  prepare(dbid: DBID, sql: string) {
+    const db = dbs.get(dbid);
+    const stmt = db!.prepare(sql);
+    let id = ++stmtid;
+    stmts.set(id, stmt);
+    return id;
   },
 
   close(dbid: DBID) {

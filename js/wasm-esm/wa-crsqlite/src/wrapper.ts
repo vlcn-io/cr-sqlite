@@ -60,6 +60,7 @@ function serialize(
 
   if (key) {
     cache.set(key, res);
+    res.finally(() => cache.delete(key));
   }
 
   return res;

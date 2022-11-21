@@ -21,6 +21,10 @@ export default async function tblrx(
   db: DB | DBAsync,
   ignoreTables: string[] = []
 ) {
+  const bc = new BroadcastChannel("@vlcn.io/rx-tbl");
+  bc.onmessage = (msg) => {
+    notifyListeners(msg.data);
+  };
   // TODO: should listeners not just be weak refs?
   const listeners = new Set<(tbls: Set<string>) => void>();
 
@@ -43,16 +47,21 @@ export default async function tblrx(
     queueMicrotask(() => {
       const tbls = pendingNotification!;
       pendingNotification = null;
-      for (const l of listeners) {
-        try {
-          // one listener shouldn't kill all others.
-          // e.g., like one thread death doesn't kill all other threads.
-          l(tbls);
-        } catch (e) {
-          console.error(e);
-        }
-      }
+      notifyListeners(tbls);
+      bc.postMessage(tbls);
     });
+  }
+
+  function notifyListeners(tbls: Set<string>) {
+    for (const l of listeners) {
+      try {
+        // one listener shouldn't kill all others.
+        // e.g., like one thread death doesn't kill all other threads.
+        l(tbls);
+      } catch (e) {
+        console.error(e);
+      }
+    }
   }
 
   let watching: string[] = [];
@@ -102,6 +111,8 @@ export default async function tblrx(
           );
         })
       );
+      listeners.clear();
+      bc.close();
     },
 
     on(cb: (tbls: Set<string>) => void) {

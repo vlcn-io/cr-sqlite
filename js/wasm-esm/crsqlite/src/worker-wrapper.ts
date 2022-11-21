@@ -9,7 +9,7 @@ import * as Comlink from "comlink";
 import { DBAsync, StmtAsync } from "@vlcn.io/xplat-api";
 import { Remote } from "comlink";
 import { API } from "./comlinkable";
-import "./transfer-handlers";
+// import "./transfer-handlers";
 
 export class SQLite3 {
   public readonly worker: Remote<API>;
@@ -20,13 +20,13 @@ export class SQLite3 {
       proxyUrl: string;
     },
     worker: Worker
-  ): Promise<SQLite3> {
+  ): Promise<{ sqlite: SQLite3; comlink: Remote<API> }> {
     const comlinked = Comlink.wrap<API>(worker);
     return new Promise((resolve, reject) => {
       comlinked.onReady(
         urls,
         Comlink.proxy(() => {
-          resolve(new SQLite3(worker));
+          resolve({ sqlite: new SQLite3(worker), comlink: comlinked });
         }),
         Comlink.proxy(reject)
       );
@@ -45,7 +45,7 @@ export class SQLite3 {
 }
 
 export class DB implements DBAsync {
-  constructor(private worker: Remote<API>, private dbid: number) {}
+  constructor(private worker: Remote<API>, public readonly dbid: number) {}
 
   execMany(sql: string[]): Promise<void> {
     return this.worker.execMany(this.dbid, sql);
@@ -131,12 +131,13 @@ class Stmt implements StmtAsync {
   }
 
   iterate<T>(...bindArgs: any[]): AsyncIterator<T, any, undefined> {
-    if (this.bound != null && bindArgs.length === 0) {
-      bindArgs = this.bound;
-    }
-    this.bound = null;
+    throw new Error("not yet implemented");
+    //   if (this.bound != null && bindArgs.length === 0) {
+    //     bindArgs = this.bound;
+    //   }
+    //   this.bound = null;
 
-    return this.worker.stmtIterate(this.stmtid, this.mode, bindArgs) as any;
+    //   return this.worker.stmtIterate(this.stmtid, this.mode, bindArgs) as any;
   }
 
   raw(isRaw?: boolean | undefined): this {

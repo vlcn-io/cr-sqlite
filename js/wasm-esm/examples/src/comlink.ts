@@ -1,12 +1,11 @@
 // @ts-ignore -- todo
 import DBWorker from "@vlcn.io/crsqlite-wasm/dist/comlinked?worker";
-import { API } from "@vlcn.io/crsqlite-wasm/dist/comlinkable";
 
 import wasmUrl from "@vlcn.io/crsqlite-wasm/dist/sqlite3.wasm?url";
 import proxyUrl from "@vlcn.io/crsqlite-wasm/dist/sqlite3-opfs-async-proxy.js?url";
 import { SQLite3 } from "@vlcn.io/crsqlite-wasm/dist/worker-wrapper";
 
-async function onReady(sqlite: SQLite3) {
+async function onReady({ sqlite }: { sqlite: SQLite3 }) {
   console.log("ready");
   const db = await sqlite.open(/* optional file name */);
 

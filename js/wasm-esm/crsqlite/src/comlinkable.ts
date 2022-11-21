@@ -1,5 +1,5 @@
 import sqliteWasm, { SQLite3, DB, Stmt } from "./wrapper.js";
-import "./transfer-handlers";
+// import "./transfer-handlers";
 
 let promise: Promise<SQLite3> | null = null;
 let sqlite3: SQLite3 | null = null;
@@ -57,7 +57,7 @@ export interface ComlinkableAPI {
   stmtAll(stmtid: StmtID, mode: "o" | "a", bind: any[]): [string[], any[][]];
 
   // https://blog.scottlogic.com/2020/04/22/Async-Iterators-Across-Execution-Contexts.html
-  stmtIterate<T>(stmtid: StmtID, mode: "o" | "a", bind: any[]): Iterator<T>;
+  // stmtIterate<T>(stmtid: StmtID, mode: "o" | "a", bind: any[]): Iterator<T>;
 
   stmtRaw(isRaw?: boolean | undefined): void;
 
@@ -194,13 +194,13 @@ const api: ComlinkableAPI = {
     return stmt!.all(bind);
   },
 
-  stmtIterate<T>(stmtid: StmtID, mode: "o" | "a", bind: any[]): Iterator<T> {
-    const stmt = stmts.get(stmtid);
-    if (mode === "a") {
-      stmt?.raw(true);
-    }
-    return stmt!.iterate(bind);
-  },
+  // stmtIterate<T>(stmtid: StmtID, mode: "o" | "a", bind: any[]): Iterator<T> {
+  //   const stmt = stmts.get(stmtid);
+  //   if (mode === "a") {
+  //     stmt?.raw(true);
+  //   }
+  //   return stmt!.iterate(bind);
+  // },
 
   stmtRaw(isRaw?: boolean | undefined): void {},
 

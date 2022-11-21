@@ -390,7 +390,7 @@ int crsql_mergeInsert(
     sqlite3_free(pkValsStr);
     sqlite3_free(pkIdentifierList);
     // doesCidWin == 0? compared against our clocks, nothing wins. OK and Done.
-    if (doesCidWin == -1) {
+    if (doesCidWin == -1 && *errmsg == 0) {
       *errmsg = sqlite3_mprintf("Failed computing cid win");
     }
     return doesCidWin == 0 ? SQLITE_OK : SQLITE_ERROR;

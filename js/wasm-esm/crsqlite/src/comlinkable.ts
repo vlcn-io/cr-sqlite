@@ -1,4 +1,5 @@
 import sqliteWasm, { SQLite3, DB, Stmt } from "./wrapper.js";
+import "./transfer-handlers";
 
 let promise: Promise<SQLite3> | null = null;
 let sqlite3: SQLite3 | null = null;
@@ -48,9 +49,22 @@ export interface ComlinkableAPI {
   close(dbid: DBID): void;
 
   prepare(dbid: DBID, sql: string): StmtID;
+
+  stmtRun(stmtid: StmtID, bind: any[]): void;
+
+  stmtGet(stmtid: StmtID, mode: "o" | "a", bind: any[]): [string[], any[]];
+
+  stmtAll(stmtid: StmtID, mode: "o" | "a", bind: any[]): [string[], any[][]];
+
+  // https://blog.scottlogic.com/2020/04/22/Async-Iterators-Across-Execution-Contexts.html
+  stmtIterate<T>(stmtid: StmtID, mode: "o" | "a", bind: any[]): Iterator<T>;
+
+  stmtRaw(isRaw?: boolean | undefined): void;
+
+  stmtFinalize(stmtid: StmtID): void;
 }
 
-const api = {
+const api: ComlinkableAPI = {
   onReady(
     urls: {
       wasmUrl: string;
@@ -159,8 +173,44 @@ const api = {
     db!.close();
   },
 
+  stmtRun(stmtid: StmtID, bind: any[]): void {
+    const stmt = stmts.get(stmtid);
+    stmt!.run(bind);
+  },
+
+  stmtGet(stmtid: StmtID, mode: "o" | "a", bind: any[]): any {
+    const stmt = stmts.get(stmtid);
+    if (mode === "a") {
+      stmt?.raw(true);
+    }
+    return stmt!.get(bind);
+  },
+
+  stmtAll(stmtid: StmtID, mode: "o" | "a", bind: any[]): any {
+    const stmt = stmts.get(stmtid);
+    if (mode === "a") {
+      stmt?.raw(true);
+    }
+    return stmt!.all(bind);
+  },
+
+  stmtIterate<T>(stmtid: StmtID, mode: "o" | "a", bind: any[]): Iterator<T> {
+    const stmt = stmts.get(stmtid);
+    if (mode === "a") {
+      stmt?.raw(true);
+    }
+    return stmt!.iterate(bind);
+  },
+
+  stmtRaw(isRaw?: boolean | undefined): void {},
+
+  stmtFinalize(stmtid: StmtID): void {
+    const stmt = stmts.get(stmtid);
+    stmt!.finalize();
+  },
+
   // TODO: we can provide a prepared statement API too
-} as ComlinkableAPI;
+};
 
 export type API = ComlinkableAPI;
 export default api;

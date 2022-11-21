@@ -467,9 +467,9 @@ static int changesBestIndex(
       idxNum |= 2;
       break;
     case CHANGES_SINCE_VTAB_SITE_ID:
-      if (pConstraint->op != SQLITE_INDEX_CONSTRAINT_NE)
+      if (pConstraint->op != SQLITE_INDEX_CONSTRAINT_NE && pConstraint->op != SQLITE_INDEX_CONSTRAINT_ISNOT)
       {
-        tab->zErrMsg = sqlite3_mprintf("crsql_changes.site_id only supportes the not equal operator. E.g., site_id != x");
+        tab->zErrMsg = sqlite3_mprintf("crsql_changes.site_id only supportes the `!=` and `IS NOT` operators. E.g., site_id != x");
         return SQLITE_CONSTRAINT;
       }
       requestorIdx = i;

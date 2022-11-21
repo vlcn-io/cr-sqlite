@@ -1,4 +1,5 @@
 import sqliteWasm from "@vlcn.io/crsqlite-wasm";
+// @ts-ignore
 import { stringify as uuidStringify } from "uuid";
 
 import wasmUrl from "@vlcn.io/crsqlite-wasm/dist/sqlite3.wasm?url";

@@ -41,7 +41,7 @@ export interface StmtAsync {
   iterate<T>(...bindArgs: any[]): AsyncIterator<T>;
   raw(isRaw?: boolean): this;
   bind(args: any[]): this;
-  finalize(): void;
+  finalize(): Promise<number>;
 }
 
 export const version = 1;

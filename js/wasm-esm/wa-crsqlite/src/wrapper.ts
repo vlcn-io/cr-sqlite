@@ -352,9 +352,9 @@ class Stmt implements StmtAsync {
     return this;
   }
 
-  finalize(): void {
+  finalize(): Promise<number> {
     this.api.str_finish(this.str);
-    this.api.finalize(this.base);
+    return this.api.finalize(this.base);
   }
 }
 

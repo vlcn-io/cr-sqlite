@@ -92,12 +92,39 @@ static void testDeleteTriggerQuery()
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
+static void testInsertTriggerQuery()
+{
+  printf("InsertTriggerQuery\n");
+  sqlite3 *db = 0;
+  crsql_TableInfo *tableInfo;
+  char *errMsg = 0;
+  int rc = sqlite3_open(":memory:", &db);
+
+  rc = sqlite3_exec(
+    db,
+    "CREATE TABLE \"foo\" (\"a\", \"b\", \"c\", PRIMARY KEY (\"a\", \"b\"))",
+    0,
+    0,
+    &errMsg);
+  rc = crsql_getTableInfo(db, "foo", &tableInfo, &errMsg);
+
+  char *query = crsql_insertTriggerQuery(tableInfo, "a, b", "NEW.a, NEW.b");
+
+  char *expected = "INSERT OR REPLACE INTO \"foo__crsql_clock\" (        a, b,        __crsql_col_num,        __crsql_version,        __crsql_site_id      ) SELECT         NEW.a, NEW.b,        2,        crsql_nextdbversion(),        NULL      WHERE crsql_internal_sync_bit() = 0;\n";
+
+  assert(strcmp(expected, query) == 0);
+
+  crsql_freeTableInfo(tableInfo);
+  crsql_close(db);
+  sqlite3_free(query);
+}
+
 void crsqlTriggersTestSuite()
 {
   printf("\e[47m\e[1;30mSuite: crsqlTriggers\e[0m\n");
 
   testDeleteTriggerQuery();
   testCreateTriggers();
-  // testInsertTriggers();
+  testInsertTriggerQuery();
   // testTriggerSyncBitInteraction();
 }

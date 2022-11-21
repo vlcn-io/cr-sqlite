@@ -16,7 +16,6 @@ int crsql_createInsertTrigger(
   char *pkList = 0;
   char *pkNewList = 0;
   int rc = SQLITE_OK;
-  char *subTriggers[tableInfo->nonPksLen == 0 ? 1 : tableInfo->nonPksLen];
   char *joinedSubTriggers;
 
   // TODO: we should track a sentinel create for this case
@@ -35,6 +34,36 @@ int crsql_createInsertTrigger(
     pkList = crsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, 0);
     pkNewList = crsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, "NEW.");
   }
+
+  joinedSubTriggers = crsql_insertTriggerQuery(tableInfo, pkList, pkNewList);
+
+  zSql = sqlite3_mprintf("CREATE TRIGGER IF NOT EXISTS \"%s__crsql_itrig\"\
+      AFTER INSERT ON \"%s\"\
+    BEGIN\
+      %s\
+    END;",
+                         tableInfo->tblName,
+                         tableInfo->tblName,
+                         joinedSubTriggers);
+
+  sqlite3_free(joinedSubTriggers);
+
+  rc = sqlite3_exec(db, zSql, 0, 0, err);
+  sqlite3_free(zSql);
+
+  if (tableInfo->pksLen != 0)
+  {
+    sqlite3_free(pkList);
+    sqlite3_free(pkNewList);
+  }
+
+  return rc;
+}
+
+char *crsql_insertTriggerQuery(crsql_TableInfo *tableInfo, char *pkList, char *pkNewList)
+{
+  char *subTriggers[tableInfo->nonPksLen == 0 ? 1 : tableInfo->nonPksLen];
+  char *joinedSubTriggers;
 
   // We need a CREATE_SENTINEL to stand in for the create event so we can replicate PKs
   // If we have a create sentinel how will we insert the created rows without a requirement of nullability
@@ -78,6 +107,7 @@ int crsql_createInsertTrigger(
         pkNewList,
         tableInfo->nonPks[i].cid);
   }
+
   joinedSubTriggers = crsql_join(subTriggers, tableInfo->nonPksLen);
 
   for (int i = 0; i < tableInfo->nonPksLen; ++i)
@@ -88,27 +118,7 @@ int crsql_createInsertTrigger(
     sqlite3_free(subTriggers[0]);
   }
 
-  zSql = sqlite3_mprintf("CREATE TRIGGER IF NOT EXISTS \"%s__crsql_itrig\"\
-      AFTER INSERT ON \"%s\"\
-    BEGIN\
-      %s\
-    END;",
-                         tableInfo->tblName,
-                         tableInfo->tblName,
-                         joinedSubTriggers);
-
-  sqlite3_free(joinedSubTriggers);
-
-  rc = sqlite3_exec(db, zSql, 0, 0, err);
-  sqlite3_free(zSql);
-
-  if (tableInfo->pksLen != 0)
-  {
-    sqlite3_free(pkList);
-    sqlite3_free(pkNewList);
-  }
-
-  return rc;
+  return joinedSubTriggers;
 }
 
 // TODO (#50): we need to handle the case where someone _changes_ a primary key column's value

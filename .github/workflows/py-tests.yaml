@@ -1,6 +1,6 @@
 on:
-  - push
-  - pull_request:
+  push:
+  pull_request:
     types: [opened, edited]
 name: "py-tests"
 jobs:

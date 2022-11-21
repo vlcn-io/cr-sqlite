@@ -10,6 +10,7 @@
     "./dist/comlinkable": "./dist/comlinkable.js",
     "./dist/sqlite3.wasm": "./dist/sqlite3.wasm",
     "./dist/sqlite3-opfs-async-proxy.js": "./dist/sqlite3-opfs-async-proxy.js",
+    "./dist/worker-wrapper": "./dist/worker-wrapper.js",
     ".": "./dist/wrapper.js"
   },
   "module": "dist/wrapper.js",

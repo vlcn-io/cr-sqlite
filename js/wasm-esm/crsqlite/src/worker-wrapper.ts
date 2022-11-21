@@ -4,19 +4,38 @@
  * thread as the caller.
  *
  */
+import * as Comlink from "comlink";
 
-import {
-  DB as IDB,
-  DBAsync,
-  Stmt as IStmt,
-  StmtAsync,
-} from "@vlcn.io/xplat-api";
+import { DBAsync, StmtAsync } from "@vlcn.io/xplat-api";
 import { Remote } from "comlink";
 import { API } from "./comlinkable";
 import "./transfer-handlers";
 
 export class SQLite3 {
-  constructor(public readonly worker: Remote<API>) {}
+  public readonly worker: Remote<API>;
+
+  static async create(
+    urls: {
+      wasmUrl: string;
+      proxyUrl: string;
+    },
+    worker: Worker
+  ): Promise<SQLite3> {
+    const comlinked = Comlink.wrap<API>(worker);
+    return new Promise((resolve, reject) => {
+      comlinked.onReady(
+        urls,
+        Comlink.proxy(() => {
+          resolve(new SQLite3(worker));
+        }),
+        Comlink.proxy(reject)
+      );
+    });
+  }
+
+  private constructor(worker: Worker) {
+    this.worker = Comlink.wrap<API>(worker);
+  }
 
   open(filename?: string, mode: string = "c"): Promise<DB> {
     return this.worker
@@ -37,8 +56,6 @@ export class DB implements DBAsync {
   }
 
   execO<T extends {}>(sql: string, bind?: unknown[] | undefined): Promise<T[]> {
-    // TODO: run `execA` and then conver to json objects in main thread.
-    // don't convert to json objects in the worker.
     return this.worker.execO(this.dbid, sql, bind) as any;
   }
 
@@ -56,7 +73,7 @@ export class DB implements DBAsync {
   prepare(sql: string): Promise<StmtAsync> {
     return this.worker
       .prepare(this.dbid, sql)
-      .then((stmtid) => new Stmt(this.worker, this.dbid, stmtid));
+      .then((stmtid) => new Stmt(this.worker, stmtid));
   }
 
   createFunction(
@@ -84,11 +101,7 @@ class Stmt implements StmtAsync {
   private bound: any[] | null = null;
   private mode: "o" | "a" = "o";
 
-  constructor(
-    private worker: Remote<API>,
-    private dbid: number,
-    private stmtid: number
-  ) {}
+  constructor(private worker: Remote<API>, private stmtid: number) {}
 
   run(...bindArgs: any[]): Promise<void> {
     if (this.bound != null && bindArgs.length === 0) {
@@ -123,7 +136,7 @@ class Stmt implements StmtAsync {
     }
     this.bound = null;
 
-    this.worker.stmtIterate(this.stmtid, this.mode, bindArgs);
+    return this.worker.stmtIterate(this.stmtid, this.mode, bindArgs) as any;
   }
 
   raw(isRaw?: boolean | undefined): this {
@@ -137,10 +150,11 @@ class Stmt implements StmtAsync {
   }
 
   bind(args: any[]): this {
+    this.bound = args;
     return this;
   }
 
-  finalize(): Promise<void> {
-    return this.worker.stmtFinalize(this.stmtid);
+  finalize(): Promise<number> {
+    return this.worker.stmtFinalize(this.stmtid) as Promise<any>;
   }
 }

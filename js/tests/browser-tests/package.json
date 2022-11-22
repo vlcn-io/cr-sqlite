@@ -8,7 +8,7 @@
   },
   "dependencies": {
     "@vlcn.io/xplat-tests": "workspace:*",
-    "@vlcn.io/crsqlite-wasm": "workspace:*"
+    "@vlcn.io/wa-crsqlite": "workspace:*"
   },
   "devDependencies": {
     "@types/chai": "^4.3.3",

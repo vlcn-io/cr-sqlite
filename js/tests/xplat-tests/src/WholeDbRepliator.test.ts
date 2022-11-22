@@ -120,12 +120,16 @@ export const tests = {
     const db = await dbProvider();
     const r = await wdbr.install(await createSimpleSchema(db), db, protocol);
 
-    await db.exec("INSERT INTO foo VALUES (1,2)");
-    await db.exec("INSERT INTO foo VALUES (2,2)");
-    await db.exec("UPDATE foo SET b = 3 WHERE a = 1");
-    await db.exec("DELETE FROM foo WHERE a = 2");
+    db.exec("INSERT INTO foo VALUES (1,2)");
+    db.exec("INSERT INTO foo VALUES (2,2)");
+    db.exec("UPDATE foo SET b = 3 WHERE a = 1");
+    const last = db.exec("DELETE FROM foo WHERE a = 2");
 
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    if (last && "then" in last) {
+      await last;
+    } else {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
     assert(sentPokeCnt == 1);
 
     r.dispose();

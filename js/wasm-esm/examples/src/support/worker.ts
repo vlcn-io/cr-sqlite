@@ -1,6 +1,4 @@
-import sqliteWasm from "@vlcn.io/wa-crsqlite;
-
-// @ts-ignore
+import sqliteWasm from "@vlcn.io/wa-crsqlite";
 import wasmUrl from "@vlcn.io/wa-crsqlite/wa-sqlite-async.wasm?url";
 
 sqliteWasm((file) => wasmUrl).then(async (sqlite3) => {

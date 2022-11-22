@@ -30,6 +30,7 @@ export const tests = {
     assert(rx.watching[0] == "foo");
   },
 
+  // TODO: untestable in async db mode
   "collects all notifications till the next micro task": async (
     dbProvider: () => Promise<DB>,
     assert: (p: boolean) => void
@@ -43,13 +44,17 @@ export const tests = {
       notified = true;
     });
 
-    await db.exec("INSERT INTO foo VALUES (1,2)");
-    await db.exec("INSERT INTO foo VALUES (2,3)");
-    await db.exec("DELETE FROM foo WHERE a = 1");
+    db.exec("INSERT INTO foo VALUES (1,2)");
+    db.exec("INSERT INTO foo VALUES (2,3)");
+    const last = db.exec("DELETE FROM foo WHERE a = 1");
 
     assert(notified == false);
 
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    if (last && "then" in last) {
+      await last;
+    } else {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
 
     // @ts-ignore
     assert(notified == true);
@@ -110,14 +115,18 @@ export const tests = {
       notified = true;
     });
 
-    await db.exec("INSERT INTO foo VALUES (1,2)");
-    await db.exec("INSERT INTO foo VALUES (2,3)");
-    await db.exec("DELETE FROM foo WHERE a = 1");
+    db.exec("INSERT INTO foo VALUES (1,2)");
+    db.exec("INSERT INTO foo VALUES (2,3)");
+    const last = db.exec("DELETE FROM foo WHERE a = 1");
 
     assert(notified == false);
     disposer();
 
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    if (last && "then" in last) {
+      await last;
+    } else {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
 
     assert(notified == false);
   },

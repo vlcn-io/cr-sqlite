@@ -256,7 +256,7 @@ export class WholeDbReplicator {
             cs[1],
             cs[2],
             cs[3],
-            cs[4],
+            cs[4].toString(),
             cs[5] ? uuidParse(cs[5]) : 0
           );
         }
@@ -269,7 +269,7 @@ export class WholeDbReplicator {
 
       await this.db.exec(
         `INSERT OR REPLACE INTO __crsql_wdbreplicator_peers (site_id, version) VALUES (?, CAST(? as INTEGER))`,
-        [uuidParse(fromSiteId), maxVersion]
+        [uuidParse(fromSiteId), maxVersion.toString()]
       );
     });
   };
@@ -278,8 +278,8 @@ export class WholeDbReplicator {
     const fromAsBlob = uuidParse(from);
     // The casting is due to bigint support problems in various wasm builds of sqlite
     const changes: Changeset[] = await this.db.execA<Changeset>(
-      `SELECT "table", "pk", "cid", "val", CAST("version" as TEXT), "site_id" FROM crsql_changes WHERE site_id != ? AND version > ?`,
-      [fromAsBlob, since]
+      `SELECT "table", "pk", "cid", "val", CAST("version" as TEXT), "site_id" FROM crsql_changes WHERE site_id != ? AND version > CAST(? as INTEGER)`,
+      [fromAsBlob, since.toString()]
     );
 
     // TODO: temporary. better to `quote` out of db and `unquote` (to implement) into db
@@ -288,7 +288,6 @@ export class WholeDbReplicator {
     if (changes.length == 0) {
       return;
     }
-    console.log(changes);
     log("pushing changesets across the network", changes);
     this.network.pushChanges(from, changes);
   };

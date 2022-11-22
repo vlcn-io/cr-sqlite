@@ -1,4 +1,7 @@
-on: push
+on:
+  push:
+  pull_request:
+    types: [opened, edited]
 name: "js-tests"
 jobs:
   build:

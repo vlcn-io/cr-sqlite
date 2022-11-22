@@ -11,6 +11,7 @@ export default defineConfig({
         mainThread: resolve(__dirname, "main-thread.html"),
         onWorker: resolve(__dirname, "on-worker.html"),
         comlink: resolve(__dirname, "comlink.html"),
+        sharedWorker: resolve(__dirname, "shared-worker.html"),
       },
     },
   },

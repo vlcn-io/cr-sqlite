@@ -1,5 +1,10 @@
 # [wip] crsql - Convergent, Replicated, SQLite
 
+[![c-tests](https://github.com/vlcn-io/cr-sqlite/actions/workflows/c-tests.yaml/badge.svg)](https://github.com/vlcn-io/cr-sqlite/actions/workflows/c-tests.yaml)
+[![c-valgrind](https://github.com/vlcn-io/cr-sqlite/actions/workflows/c-valgrind.yaml/badge.svg)](https://github.com/vlcn-io/cr-sqlite/actions/workflows/c-valgrind.yaml)
+[![js-tests](https://github.com/vlcn-io/cr-sqlite/actions/workflows/js-tests.yaml/badge.svg)](https://github.com/vlcn-io/cr-sqlite/actions/workflows/js-tests.yaml)
+[![py-tests](https://github.com/vlcn-io/cr-sqlite/actions/workflows/py-tests.yaml/badge.svg)](https://github.com/vlcn-io/cr-sqlite/actions/workflows/py-tests.yaml)
+
 A standalone component of the [vlcn](https://vlcn.io) project | [discord](https://discord.gg/AtdVY6zDW3).
 
 `crsql` is a [run time loadable extension](https://www.sqlite.org/loadext.html) for SQLite that adds CRDT and sync support.

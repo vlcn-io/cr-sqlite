@@ -269,9 +269,7 @@ export class WholeDbReplicator {
 
       await this.db.exec(
         `INSERT OR REPLACE INTO __crsql_wdbreplicator_peers (site_id, version) VALUES (?, ?)`,
-        // TODO: needs to be int64. Fix WA-SQLITE to allow bigints.
-        // TODO!!!! WRONG! current placeholder given WA-SQLITE fails on BIGINTS
-        [uuidParse(fromSiteId), Number(maxVersion)]
+        [uuidParse(fromSiteId), maxVersion]
       );
     });
   };
@@ -280,8 +278,7 @@ export class WholeDbReplicator {
     const fromAsBlob = uuidParse(from);
     const changes: Changeset[] = await this.db.execA<Changeset>(
       "SELECT * FROM crsql_changes WHERE site_id != ? AND version > ?",
-      // TODO!!! WRONG!! current placeholder given WA-SQLITE fails on BIGINTS
-      [fromAsBlob, Number(since)]
+      [fromAsBlob, since]
     );
 
     if (changes.length == 0) {

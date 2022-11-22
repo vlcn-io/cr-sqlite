@@ -1,8 +1,9 @@
-import { DB } from "@vlcn.io/xplat-api";
+import { DBAsync, DB as DBSync } from "@vlcn.io/xplat-api";
+type DB = DBAsync | DBSync;
 import tblrx from "@vlcn.io/rx-tbl";
 
 function createSimpleSchema(db: DB) {
-  db.execMany([
+  return db.execMany([
     "CREATE TABLE foo (a primary key, b);",
     "SELECT crsql_as_crr('foo');",
   ]);
@@ -10,16 +11,18 @@ function createSimpleSchema(db: DB) {
 
 export const tests = {
   "watches all non clock tables": async (
-    dbProvider: () => DB,
+    dbProvider: () => Promise<DB>,
     assert: (p: boolean) => void
   ) => {
-    const db = dbProvider();
-    createSimpleSchema(db);
+    const db = await dbProvider();
+    await createSimpleSchema(db);
     const rx = await tblrx(db);
 
     assert(
-      db.execA<number[]>(
-        "SELECT count(*) FROM temp.sqlite_master WHERE type = 'trigger' AND name LIKE 'foo__crsql_tblrx_%'"
+      (
+        await db.execA<number[]>(
+          "SELECT count(*) FROM temp.sqlite_master WHERE type = 'trigger' AND name LIKE 'foo__crsql_tblrx_%'"
+        )
       )[0][0] == 3
     );
 
@@ -28,11 +31,11 @@ export const tests = {
   },
 
   "collects all notifications till the next micro task": async (
-    dbProvider: () => DB,
+    dbProvider: () => Promise<DB>,
     assert: (p: boolean) => void
   ) => {
-    const db = dbProvider();
-    createSimpleSchema(db);
+    const db = await dbProvider();
+    await createSimpleSchema(db);
     const rx = await tblrx(db);
 
     let notified = false;
@@ -40,9 +43,9 @@ export const tests = {
       notified = true;
     });
 
-    db.exec("INSERT INTO foo VALUES (1,2)");
-    db.exec("INSERT INTO foo VALUES (2,3)");
-    db.exec("DELETE FROM foo WHERE a = 1");
+    await db.exec("INSERT INTO foo VALUES (1,2)");
+    await db.exec("INSERT INTO foo VALUES (2,3)");
+    await db.exec("DELETE FROM foo WHERE a = 1");
 
     assert(notified == false);
 
@@ -53,11 +56,11 @@ export const tests = {
   },
 
   "de-dupes tables": async (
-    dbProvider: () => DB,
+    dbProvider: () => Promise<DB>,
     assert: (p: boolean) => void
   ) => {
-    const db = dbProvider();
-    createSimpleSchema(db);
+    const db = await dbProvider();
+    await createSimpleSchema(db);
     const rx = await tblrx(db);
 
     let notified = false;
@@ -68,11 +71,11 @@ export const tests = {
   },
 
   "can be re-installed on schema change": async (
-    dbProvider: () => DB,
+    dbProvider: () => Promise<DB>,
     assert: (p: boolean) => void
   ) => {
-    const db = dbProvider();
-    createSimpleSchema(db);
+    const db = await dbProvider();
+    await createSimpleSchema(db);
     const rx = await tblrx(db);
 
     db.exec("CREATE TABLE bar (a, b)");
@@ -85,21 +88,21 @@ export const tests = {
   },
 
   "does not fatal for connections that have not loaded the rx extension": (
-    dbProvider: (filename: string) => DB,
+    dbProvider: () => Promise<DB>,
     assert: (p: boolean) => void
   ) => {},
 
   "can exclude tables from rx": (
-    dbProvider: () => DB,
+    dbProvider: () => Promise<DB>,
     assert: (p: boolean) => void
   ) => {},
 
   "disposes of listeners when asked": async (
-    dbProvider: () => DB,
+    dbProvider: () => Promise<DB>,
     assert: (p: boolean) => void
   ) => {
-    const db = dbProvider();
-    createSimpleSchema(db);
+    const db = await dbProvider();
+    await createSimpleSchema(db);
     const rx = await tblrx(db);
 
     let notified = false;
@@ -107,9 +110,9 @@ export const tests = {
       notified = true;
     });
 
-    db.exec("INSERT INTO foo VALUES (1,2)");
-    db.exec("INSERT INTO foo VALUES (2,3)");
-    db.exec("DELETE FROM foo WHERE a = 1");
+    await db.exec("INSERT INTO foo VALUES (1,2)");
+    await db.exec("INSERT INTO foo VALUES (2,3)");
+    await db.exec("DELETE FROM foo WHERE a = 1");
 
     assert(notified == false);
     disposer();
@@ -118,4 +121,4 @@ export const tests = {
 
     assert(notified == false);
   },
-};
+} as const;

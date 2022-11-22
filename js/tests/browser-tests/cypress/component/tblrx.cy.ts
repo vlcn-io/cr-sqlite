@@ -1,15 +1,10 @@
 import { tblrxTests } from "@vlcn.io/xplat-tests";
-import sqliteWasm from "@vlcn.io/crsqlite-wasm";
+import sqliteWasm from "@vlcn.io/wa-crsqlite";
 
 // @ts-ignore
-import wasmUrl from "@vlcn.io/crsqlite-wasm/dist/sqlite3.wasm?url";
-// @ts-ignore
-import proxyUrl from "@vlcn.io/crsqlite-wasm/dist/sqlite3-opfs-async-proxy.js?url";
+import wasmUrl from "@vlcn.io/wa-crsqlite/wa-sqlite-async.wasm?url";
 
-const crsqlite = await sqliteWasm({
-  locateWasm: () => wasmUrl,
-  locateProxy: () => proxyUrl,
-});
+const crsqlite = await sqliteWasm(() => wasmUrl);
 
 describe("WholeDbReplicator.cy.ts", () => {
   Object.entries(tblrxTests).forEach((x) => {

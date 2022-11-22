@@ -1,34 +1,10 @@
 {
   "name": "@vlcn.io/crsqlite-wasm",
   "type": "module",
-  "version": "0.2.0",
-  "files": [
-    "dist"
-  ],
-  "exports": {
-    "./dist/comlinked": "./dist/comlinked.js",
-    "./dist/comlinkable": "./dist/comlinkable.js",
-    "./dist/sqlite3.wasm": "./dist/sqlite3.wasm",
-    "./dist/sqlite3-opfs-async-proxy.js": "./dist/sqlite3-opfs-async-proxy.js",
-    ".": "./dist/wrapper.js"
-  },
-  "module": "dist/wrapper.js",
-  "types": "dist/wrapper.d.ts",
-  "sideEffects": false,
-  "devDependencies": {
-    "typescript": "^4.8.4"
-  },
-  "scripts": {
-    "build": "tsc --build",
-    "watch": "tsc --build --watch"
-  },
+  "version": "0.3.0",
   "repository": {
     "type": "git",
     "url": "git@github.com:vlcn-io/cr-sqlite.git",
     "directory": "https://github.com/vlcn-io/cr-sqlite/tree/main/js/wasm-esm/crsqlite"
-  },
-  "dependencies": {
-    "comlink": "^4.3.1",
-    "@vlcn.io/xplat-api": "workspace:*"
   }
 }

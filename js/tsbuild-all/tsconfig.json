@@ -12,7 +12,6 @@
     { "path": "../replicators/whole-db" },
     { "path": "../tests/xplat-tests" },
     { "path": "../tests/nodeno-tests" },
-    { "path": "../wasm-esm/crsqlite" },
     { "path": "../wasm-esm/wa-crsqlite" },
     { "path": "../rx/table-based" }
   ]

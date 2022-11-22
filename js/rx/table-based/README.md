@@ -12,7 +12,7 @@ Future `rx` packages will improve this to bring ractivity to the query level. I.
 import tblrx from "@vlcn.io/rx-tbl";
 
 // db is a handle to the database. Implements `@vlcn.io/xplat-api`
-// E.g., `@vlcn.io/crsqlite-wasm` or `@vlcn.io/crsqlite-allinone`.
+// E.g., `@vlcn.io/wa-crsqlite` or `@vlcn.io/crsqlite-allinone`.
 const rx = tblrx(db);
 
 const disposer = rx.on((modifiedTables: Set<string>) => {

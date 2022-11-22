@@ -1,100 +1,26 @@
-Until docs exist, see `src/wrapper.ts` and `../examples`
+This package is deprecated.
 
-**NB:** This package has only been tested with [Vite](https://vitejs.dev/)
+Use `@vlcn.io/wa-crsqlite`
 
-# Install
+Why?
 
-```
-npm i @vlcn.io/crsqlite-wasm
-```
+The official WASM build of SQLite is quite janky --
 
-# Example Usage
+- Contortious API
+- Bad file locking -- can't use the db from two different tabs or workers
+- Requires COOP headers
+- Can't be used in a shared worker
+- Its build is currently broken on Ubuntu
 
-## Create a DB in the main thread
+Given that, `cr-sqlite` is using the `wa-sqlite` WASM build which:
 
-```js
-import sqliteWasm from "@vlcn.io/crsqlite-wasm";
-import { Uuid } from "uuid-tool";
+- Exposes the standard SQLite C API
+- Can be used in shared workers
+- Can be used from many concurrent tabs
+- Can be used with or without COOP/COEP headers
 
-const sqlite = await sqliteWasm();
+**When the official SQLite WASM build is stable we'll return to that.**
 
-const db = sqlite.open(":memory:");
-let rows = [];
+Not that `wa-crsqlite` is the only component of `crsqlite` that is AGPL licensed. This is the case due to `wa-sqlite` project being AGPL.
 
-db.exec("CREATE TABLE foo (a primary key, b);");
-db.exec("SELECT crsql_as_crr('foo');");
-db.exec("INSERT INTO foo VALUES (1, 2);");
-rows = db.execA("select crsql_dbversion();");
-console.log("DB Version: ", rows[0][0]);
-rows = db.execA("select crsql_siteid();");
-console.log("Site ID: ", new Uuid(rows[0][0]).toString());
-
-rows = db.execA("select * from crsql_changes();");
-console.log("Changes: ", rows);
-
-rows = db.execA("SELECT * FROM foo");
-console.log(rows[0]);
-
-db.close();
-```
-
-## Create a DB in a worker, query it from the main thread
-
-See `examples/src/comlink.ts`
-
-```js
-import * as Comlink from "comlink";
-// @ts-ignore -- todo
-import DBWorker from '@vlcn.io/crsqlite-wasm/dist/comlinked?worker';
-import {API} from '@vlcn.io/crsqlite-wasm/dist/comlinked';
-
-const db = Comlink.wrap(new DBWorker()) as API;
-
-async function onReady() {
-  console.log('ready');
-
-  await db.open(/* optional file name */);
-
-  await db.exec([
-    "CREATE TABLE foo (a, b);",
-    "INSERT INTO foo VALUES (1, 2), (3, 4);"
-  ]);
-
-  const rows = await db.execO("SELECT * FROM foo");
-  console.log(rows);
-}
-
-function onError(e: any) {
-  console.error(e);
-}
-
-db.onReady(Comlink.proxy(onReady), Comlink.proxy(onError));
-```
-
-## Bare Worker + Persistence:
-
-main.js:
-```js
-new Worker(new URL("./worker.js", import.meta.url), {
-  type: "module",
-});
-```
-
-worker.js
-```js
-import sqliteWasm from "@vlcn.io/crsqlite-wasm";
-
-sqliteWasm().then((sqlite3) => {
-  const db = sqlite3.open("example-db", "c");
-
-  db.exec([
-    "CREATE TABLE IF NOT EXISTS baz (a, b);",
-    "INSERT INTO baz VALUES (1, 2);",
-  ]);
-
-  const rows = db.execA("SELECT * FROM baz");
-  console.log(rows);
-
-  db.close();
-});
-```
+Whether or not works that call `wa-sqlite` need to be `AGPL` is a bit unknown given it is two separate processes (wa-sqlite and derived app) interacting.

@@ -17,7 +17,8 @@
   "scripts": {
     "build": "tsc --build",
     "watch": "tsc --build --watch",
-    "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js"
+    "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js",
+    "deep-clean": "rm -rf ./dist || true && rm tsconfig.tsbuildinfo || true"
   },
   "repository": {
     "type": "git",

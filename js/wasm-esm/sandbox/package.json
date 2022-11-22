@@ -9,10 +9,10 @@
     "build": "vite build",
     "tsc": "tsc --noEmit",
     "preview": "vite preview",
-    "test:unit": "vitest"
+    "test:unit": "vitest",
+    "deep-clean": "rm -rf ./dist || true && rm tsconfig.tsbuildinfo || true"
   },
   "dependencies": {
-    "@vlcn.io/crsqlite-wasm": "workspace:*",
     "@vlcn.io/wa-crsqlite": "workspace:*",
     "comlink": "^4.3.1",
     "nanoid": "^4.0.0",

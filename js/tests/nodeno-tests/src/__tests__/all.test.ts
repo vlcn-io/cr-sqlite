@@ -7,7 +7,7 @@ Object.entries(wdbTests).forEach((x) => {
   test(x[0], () => {
     const tc = x[1];
     tc(
-      () => crsqlite.open(),
+      async () => crsqlite.open(),
       (p: boolean) => expect(p).toBe(true)
     );
   });
@@ -19,7 +19,7 @@ Object.entries(tblrxTests).forEach((x) => {
   test(x[0], () => {
     const tc = x[1];
     tc(
-      () => crsqlite.open(),
+      async () => crsqlite.open(),
       (p: boolean) => expect(p).toBe(true)
     );
   });

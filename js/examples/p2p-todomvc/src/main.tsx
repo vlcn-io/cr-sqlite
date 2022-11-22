@@ -5,7 +5,6 @@ import { stringify as uuidStringify } from "uuid";
 
 import App from "./App";
 import { Ctx } from "./hooks";
-// import sqliteWasm, { DB, SQLite3 } from "@vlcn.io/crsqlite-wasm";
 import sqliteWasm from "@vlcn.io/wa-crsqlite";
 import tblrx from "@vlcn.io/rx-tbl";
 import wdbRtc from "@vlcn.io/network-webrtc";

@@ -1,5 +1,17 @@
 # @vlcn.io/wa-crsqlite
 
+## 0.2.0
+
+### Minor Changes
+
+- update to use `wa-sqlite`, fix site id forwarding, fix scientific notation replication, etc.
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/wa-sqlite@0.9.0
+  - @vlcn.io/xplat-api@0.2.0
+
 ## 0.1.11
 
 ### Patch Changes

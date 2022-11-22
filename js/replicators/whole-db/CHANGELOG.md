@@ -1,5 +1,16 @@
 # @vlcn.io/replicator-wholedb
 
+## 0.2.0
+
+### Minor Changes
+
+- update to use `wa-sqlite`, fix site id forwarding, fix scientific notation replication, etc.
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/xplat-api@0.2.0
+
 ## 0.1.8
 
 ### Patch Changes

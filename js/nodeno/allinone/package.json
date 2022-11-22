@@ -24,7 +24,8 @@
   "scripts": {
     "build": "tsc --build",
     "watch": "tsc --build -w",
-    "test": "vitest --run"
+    "test": "vitest --run",
+    "deep-clean": "rm -rf ./dist || true && rm tsconfig.tsbuildinfo || true"
   },
   "license": "MIT",
   "keywords": [

@@ -10,7 +10,7 @@
     "clean": "tsc --build --clean",
     "build": "tsc --build",
     "watch": "tsc --build -w",
-    "deep-clean": "rm -rf ./lib || true && rm tsconfig.tsbuildinfo || true"
+    "deep-clean": "rm -rf ./dist || true && rm tsconfig.tsbuildinfo || true"
   },
   "jest": {
     "testMatch": [

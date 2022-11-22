@@ -20,7 +20,8 @@
   },
   "scripts": {
     "build": "tsc --build",
-    "watch": "tsc --build --watch"
+    "watch": "tsc --build --watch",
+    "deep-clean": "rm -rf ./dist || true && rm tsconfig.tsbuildinfo || true"
   },
   "repository": {
     "type": "git",

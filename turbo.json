@@ -4,6 +4,9 @@
     "build": {
       "dependsOn": ["^build"]
     },
+    "deep-clean": {
+      "dependsOn": []
+    },
     "test": {
       "dependsOn": ["build"],
       "inputs": ["src/**", "tests/**"]

@@ -13,7 +13,8 @@
   },
   "scripts": {
     "tsc": "tsc",
-    "watch": "tsc --watch"
+    "watch": "tsc --watch",
+    "deep-clean": "rm -rf ./dist || true && rm tsconfig.tsbuildinfo || true"
   },
   "repository": {
     "type": "git",

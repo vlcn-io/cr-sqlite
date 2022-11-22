@@ -38,5 +38,5 @@ jobs:
       - name: Build
         run: pnpm run build
 
-      - name: Build + Test
+      - name: Test
         run: pnpm run test --scope='!@vlcn.io/py-correctness'

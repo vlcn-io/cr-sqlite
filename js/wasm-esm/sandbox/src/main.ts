@@ -90,17 +90,7 @@ console.log(changesets);
 const siteid = (await db1.execA(`SELECT crsql_siteid()`))[0][0];
 await db2.transaction(async () => {
   for (const cs of changesets) {
-    await db2.exec(`INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?)`, [
-      cs[0],
-      cs[1],
-      cs[2],
-      cs[3],
-      cs[4],
-      // TODO: the changesets need to always return a site id otherwise they cannot be applied.
-      // here we unroll the changeset and put in the site id that is missing due to the bug.
-      // https://github.com/vlcn-io/cr-sqlite/issues/39
-      siteid,
-    ]);
+    await db2.exec(`INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?)`, cs);
   }
 });
 

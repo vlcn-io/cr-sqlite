@@ -281,6 +281,9 @@ export class WholeDbReplicator {
       [fromAsBlob, since]
     );
 
+    // TODO: temporary. better to `quote` out of db and `unquote` (to implement) into db
+    changes.forEach((c) => (c[5] = uuidStringify(c[5] as any)));
+
     if (changes.length == 0) {
       return;
     }

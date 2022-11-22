@@ -51,7 +51,9 @@ function serialize(
 
   log("Enqueueing query ", key);
   const res = queue.then(
-    () => cb(),
+    () => {
+      return cb();
+    },
     (e) => {
       console.error(e);
     }

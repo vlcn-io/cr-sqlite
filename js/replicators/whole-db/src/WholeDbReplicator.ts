@@ -200,7 +200,7 @@ export class WholeDbReplicator {
   private poked = async (pokedBy: SiteIDWire, pokerVersion: bigint) => {
     log("received a poke from ", pokedBy);
     const rows = await this.db.execA(
-      "SELECT version FROM __crsql_wdbreplicator_peers WHERE site_id = ?",
+      "SELECT CAST(version as TEXT) FROM __crsql_wdbreplicator_peers WHERE site_id = ?",
       [uuidParse(pokedBy)]
     );
     let ourVersionForPoker: bigint = 0n;
@@ -240,7 +240,7 @@ export class WholeDbReplicator {
       let maxVersion = 0n;
       log("inserting changesets in tx", changesets);
       const stmt = await this.db.prepare(
-        'INSERT INTO crsql_changes ("table", "pk", "cid", "val", "version", "site_id") VALUES (?, ?, ?, ?, ?, ?)'
+        'INSERT INTO crsql_changes ("table", "pk", "cid", "val", "version", "site_id") VALUES (?, ?, ?, ?, CAST(? as INTEGER), ?)'
       );
       // TODO: may want to chunk
       try {
@@ -268,7 +268,7 @@ export class WholeDbReplicator {
       }
 
       await this.db.exec(
-        `INSERT OR REPLACE INTO __crsql_wdbreplicator_peers (site_id, version) VALUES (?, ?)`,
+        `INSERT OR REPLACE INTO __crsql_wdbreplicator_peers (site_id, version) VALUES (?, CAST(? as INTEGER))`,
         [uuidParse(fromSiteId), maxVersion]
       );
     });
@@ -276,8 +276,9 @@ export class WholeDbReplicator {
 
   private changesRequested = async (from: SiteIDWire, since: bigint) => {
     const fromAsBlob = uuidParse(from);
+    // The casting is due to bigint support problems in various wasm builds of sqlite
     const changes: Changeset[] = await this.db.execA<Changeset>(
-      "SELECT * FROM crsql_changes WHERE site_id != ? AND version > ?",
+      `SELECT "table", "pk", "cid", "val", CAST("version" as TEXT), "site_id" FROM crsql_changes WHERE site_id != ? AND version > ?`,
       [fromAsBlob, since]
     );
 
@@ -287,6 +288,7 @@ export class WholeDbReplicator {
     if (changes.length == 0) {
       return;
     }
+    console.log(changes);
     log("pushing changesets across the network", changes);
     this.network.pushChanges(from, changes);
   };

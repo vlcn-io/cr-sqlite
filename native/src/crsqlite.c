@@ -340,9 +340,7 @@ static void crsqlMakeCrrFunc(sqlite3_context *context, int argc, sqlite3_value *
     tblName = (const char *)sqlite3_value_text(argv[0]);
   }
 
-  // TODO: need this to be a sub-transaction / savepoint
-  // given the end user will want to do `crsql_as_crr` in their on tx
-  rc = sqlite3_exec(db, "BEGIN", 0, 0, &errmsg);
+  rc = sqlite3_exec(db, "SAVEPOINT as_crr", 0, 0, &errmsg);
   if (rc != SQLITE_OK)
   {
     sqlite3_result_error(context, errmsg, -1);
@@ -355,11 +353,11 @@ static void crsqlMakeCrrFunc(sqlite3_context *context, int argc, sqlite3_value *
   {
     sqlite3_result_error(context, errmsg, -1);
     sqlite3_free(errmsg);
-    sqlite3_exec(db, "ROLLBACK", 0, 0, 0);
+    sqlite3_exec(db, "ROLLBACK TO as_crr", 0, 0, 0);
     return;
   }
 
-  sqlite3_exec(db, "COMMIT", 0, 0, 0);
+  sqlite3_exec(db, "RELEASE as_crr", 0, 0, 0);
 }
 
 static void freeConnectionExtData(void * pUserData) {

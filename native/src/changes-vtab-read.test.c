@@ -98,7 +98,7 @@ static void testRowPatchDataQuery()
   CHECK_OK
 
   // TC1: single pk table, 1 col change
-  int cid = 1;
+  const char * cid = "b";
   sqlite3_int64 version = 1;
   char *pks = "1";
   char *q = crsql_rowPatchDataQuery(db, tblInfo, cid, pks);

@@ -32,7 +32,7 @@ static void testCreateClockTable()
   char *err = 0;
 
   rc = sqlite3_open(":memory:", &db);
-  sqlite3_exec(db, "CREATE TABLE foo (a)", 0, 0, 0);
+  sqlite3_exec(db, "CREATE TABLE foo (a, b, primary key (a, b))", 0, 0, 0);
   sqlite3_exec(db, "CREATE TABLE bar (a primary key)", 0, 0, 0);
   sqlite3_exec(db, "CREATE TABLE baz (a primary key, b)", 0, 0, 0);
   sqlite3_exec(db, "CREATE TABLE boo (a primary key, b, c)", 0, 0, 0);

@@ -1,6 +1,7 @@
 #include "changes-vtab-read.h"
 #include "consts.h"
 #include "util.h"
+#include <string.h>
 
 /**
  * Construct the query to grab the changes made against
@@ -17,7 +18,7 @@ char *crsql_changesQueryForTable(crsql_TableInfo *tableInfo)
       "SELECT\
       '%s' as tbl,\
       %z as pks,\
-      __crsql_col_num as cid,\
+      __crsql_col_name as cid,\
       __crsql_version as vrsn,\
       __crsql_site_id as site_id\
     FROM \"%s__crsql_clock\"\
@@ -99,10 +100,10 @@ char *crsql_changesUnionQuery(
 char *crsql_rowPatchDataQuery(
     sqlite3 *db,
     crsql_TableInfo *tblInfo,
-    int cid,
+    const char* colName,
     const char *pks)
 {
-  if (cid == DELETE_CID_SENTINEL) {
+  if (strcmp(DELETE_CID_SENTINEL, colName) == 0) {
     return sqlite3_mprintf("");
   }
 
@@ -110,9 +111,10 @@ char *crsql_rowPatchDataQuery(
   if (pkWhereList == 0) {
     return 0;
   }
+  // TODO: if the col doesn't exist in tblInfo, don't do anything
   char *zSql = sqlite3_mprintf(
-      "SELECT quote(\"%s\") FROM \"%s\" WHERE %z",
-      tblInfo->baseCols[cid].name,
+      "SELECT quote(\"%w\") FROM \"%w\" WHERE %z",
+      colName,
       tblInfo->tblName,
       pkWhereList);
 

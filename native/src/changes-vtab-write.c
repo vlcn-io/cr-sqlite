@@ -18,7 +18,7 @@ int crsql_didCidWin(
     const char *pkWhereList,
     const void *insertSiteId,
     int insertSiteIdLen,
-    int cid,
+    const char * colName,
     sqlite3_int64 version,
     char **errmsg)
 {
@@ -36,7 +36,7 @@ int crsql_didCidWin(
       "SELECT __crsql_version FROM \"%s__crsql_clock\" WHERE %s AND %Q = __crsql_col_name",
       insertTbl,
       pkWhereList,
-      cid);
+      colName);
 
   // run zSql
   sqlite3_stmt *pStmt = 0;
@@ -294,7 +294,7 @@ int crsql_mergeInsert(
   // `splitQuoteConcat` will validate these
   const unsigned char *insertPks = sqlite3_value_text(argv[2 + CHANGES_SINCE_VTAB_PK]);
   // TODO: check len doesn't exceed sane amount
-  const unsigned char *insertColName = sqlite3_value_text(argv[2 + CHANGES_SINCE_VTAB_CID]);
+  const char *insertColName = (const char *)sqlite3_value_text(argv[2 + CHANGES_SINCE_VTAB_CID]);
   // `splitQuoteConcat` will validate these -- even tho 1 val should do splitquoteconcat for the validation
   const unsigned char *insertVal = sqlite3_value_text(argv[2 + CHANGES_SINCE_VTAB_CVAL]);
   sqlite3_int64 insertVrsn = sqlite3_value_int64(argv[2 + CHANGES_SINCE_VTAB_VRSN]);

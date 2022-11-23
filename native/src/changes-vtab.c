@@ -194,7 +194,7 @@ static int changesNext(sqlite3_vtab_cursor *cur)
 
   const char *tbl = (const char *)sqlite3_column_text(pCur->pChangesStmt, TBL);
   const char *pks = (const char *)sqlite3_column_text(pCur->pChangesStmt, PKS);
-  int cid = sqlite3_column_int(pCur->pChangesStmt, CID);
+  const char *cid = (const char *)sqlite3_column_text(pCur->pChangesStmt, CID);
   sqlite3_int64 vrsn = sqlite3_column_int64(pCur->pChangesStmt, VRSN);
 
   crsql_TableInfo *tblInfo = crsql_findTableInfo(

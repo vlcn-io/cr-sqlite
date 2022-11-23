@@ -205,7 +205,7 @@ int crsql_createClockTable(
       \"__crsql_col_name\" NOT NULL,\
       \"__crsql_version\" NOT NULL,\
       \"__crsql_site_id\",\
-      PRIMARY KEY (%s, _\"_crsql_col_name\")\
+      PRIMARY KEY (%s, \"__crsql_col_name\")\
     )",
                          tableInfo->tblName, pkList, pkList);
   sqlite3_free(pkList);
@@ -218,7 +218,7 @@ int crsql_createClockTable(
   }
 
   zSql = sqlite3_mprintf(
-      "CREATE INDEX IF NOT EXISTS \"%s__crsql_clock_v_idx\" ON \"%s__crsql_clock\" (__crsql_version)",
+      "CREATE INDEX IF NOT EXISTS \"%s__crsql_clock_v_idx\" ON \"%s__crsql_clock\" (\"__crsql_version\")",
       tableInfo->tblName,
       tableInfo->tblName);
   sqlite3_exec(db, zSql, 0, 0, err);

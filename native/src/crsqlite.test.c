@@ -139,12 +139,59 @@ static void teste2e()
   return;
 }
 
-void testSelectChangesAfterChangeColumnName() {
+void testSelectChangesAfterChangingColumnName() {
+  printf("SelectAfterChangeingColumnName\n");
+  
+  int rc = SQLITE_OK;
+  char *err = 0;
+  sqlite3 *db;
+  rc = sqlite3_open(":memory:", &db);
 
+  rc += sqlite3_exec(db, "CREATE TABLE foo(a primary key, b);", 0, 0, 0);
+  rc += sqlite3_exec(db, "SELECT crsql_as_crr('foo')", 0, 0, 0);
+  assert(rc == SQLITE_OK);
+
+  // insert some rows so we have changes
+  rc += sqlite3_exec(db, "INSERT INTO foo VALUES (1, 2);", 0, 0, 0);
+  assert(rc == SQLITE_OK);
+
+  // this invalidates triggers... we'd need some crsql schema mod statement
+  // which:
+  // starts a savepoint
+  // drops triggers
+  // applies the schema change
+  // creates triggers
+  // releases the savepoint
+  rc += sqlite3_exec(db, "ALTER TABLE foo DROP COLUMN b", 0, 0, &err);
+  printf("E: %s\n", err);
+  assert(rc == SQLITE_OK);
+  rc += sqlite3_exec(db, "ALTER TABLE foo ADD COLUMN c", 0, 0, 0);
+  assert(rc == SQLITE_OK);
+  rc += sqlite3_exec(db, "SELECT crsql_as_crr('foo')", 0, 0, 0);
+  assert(rc == SQLITE_OK);
+
+  sqlite3_stmt *pStmt = 0;
+  rc += sqlite3_prepare_v2(db, "SELECT * FROM crsql_changes", -1, &pStmt, 0);
+  assert(rc == SQLITE_OK);
+  int numRows = 0;
+  while ((rc = sqlite3_step(pStmt)) == SQLITE_ROW) {
+    ++numRows;
+    // TODO: do we get the row? Or just ignore it?
+    // The column no longer exists -- we should likely ignore the row
+    // should we introduce a `compact` operation to remove data for:
+    // deletes, schema changes?
+  }
+
+  assert(numRows == 0);
+  assert(rc == SQLITE_DONE);
+
+  crsql_close(db);
+  printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
 void testInsertChangesWithUnkownColumnNames() {
-
+  printf("InsertChangesWithUnknownColumnName\n");
+  printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
 void testModifySinglePK() {
@@ -162,6 +209,8 @@ void crsqlTestSuite()
   testCreateClockTable();
   // testSyncBit();
   teste2e();
+  // testSelectChangesAfterChangingColumnName();
+  
   // testIdempotence();
   // testColumnAdds();
   // testColumnDrops();

@@ -331,7 +331,7 @@ static void crsqlMakeCrrFunc(sqlite3_context *context, int argc, sqlite3_value *
   {
     sqlite3_result_error(context, errmsg, -1);
     sqlite3_free(errmsg);
-    sqlite3_exec(db, "ROLLBACK TO as_crr", 0, 0, 0);
+    sqlite3_exec(db, "ROLLBACK", 0, 0, 0);
     return;
   }
 

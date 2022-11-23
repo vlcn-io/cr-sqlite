@@ -1,5 +1,11 @@
 # @vlcn.io/py-correctness
 
+## 0.2.0
+
+### Minor Changes
+
+- incorporate schema fitness checks
+
 ## 0.1.0
 
 ### Minor Changes

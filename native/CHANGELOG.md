@@ -1,5 +1,11 @@
 # @vlcn.io/crsqlite
 
+## 0.3.0
+
+### Minor Changes
+
+- incorporate schema fitness checks
+
 ## 0.2.0
 
 ### Minor Changes

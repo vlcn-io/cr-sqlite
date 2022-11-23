@@ -1,5 +1,16 @@
 # @vlcn.io/wa-crsqlite
 
+## 0.3.0
+
+### Minor Changes
+
+- incorporate schema fitness checks
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/wa-sqlite@0.10.0
+
 ## 0.2.0
 
 ### Minor Changes

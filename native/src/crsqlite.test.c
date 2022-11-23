@@ -145,6 +145,7 @@ void testSelectChangesAfterChangingColumnName() {
   int rc = SQLITE_OK;
   char *err = 0;
   sqlite3 *db;
+  sqlite3_stmt *pStmt = 0;
   rc = sqlite3_open(":memory:", &db);
 
   rc += sqlite3_exec(db, "CREATE TABLE foo(a primary key, b);", 0, 0, 0);
@@ -155,6 +156,23 @@ void testSelectChangesAfterChangingColumnName() {
   rc += sqlite3_exec(db, "INSERT INTO foo VALUES (1, 2);", 0, 0, 0);
   assert(rc == SQLITE_OK);
 
+  rc += sqlite3_prepare_v2(db, "SELECT * FROM crsql_changes", -1, &pStmt, 0);
+  assert(rc == SQLITE_OK);
+  while ((rc = sqlite3_step(pStmt)) == SQLITE_ROW) {
+    const unsigned char * tbl = sqlite3_column_text(pStmt, 0);
+    const unsigned char * pk = sqlite3_column_text(pStmt, 1);
+    const unsigned char * cid = sqlite3_column_text(pStmt, 2);
+    const unsigned char * val = sqlite3_column_text(pStmt, 3);
+    sqlite_int64 version = sqlite3_column_int64(pStmt, 4);
+
+    printf("t: %s, pk: %s, cid: %s, val: %s\n", tbl, pk, cid, val);
+    // TODO: do we get the row? Or just ignore it?
+    // The column no longer exists -- we should likely ignore the row
+    // should we introduce a `compact` operation to remove data for:
+    // deletes, schema changes?
+  }
+  sqlite3_finalize(pStmt);
+
   // this invalidates triggers... we'd need some crsql schema mod statement
   // which:
   // starts a savepoint
@@ -162,24 +180,35 @@ void testSelectChangesAfterChangingColumnName() {
   // applies the schema change
   // creates triggers
   // releases the savepoint
-  rc += sqlite3_exec(db, "SELECT crsql_begin_alter('foo')", 0, 0, 0);
+  rc = sqlite3_exec(db, "SELECT crsql_begin_alter('foo')", 0, 0, &err);
+  printf("e: %s\n", err);
+  assert(rc == SQLITE_OK);
   rc += sqlite3_exec(db, "ALTER TABLE foo DROP COLUMN b", 0, 0, 0);
+  assert(rc == SQLITE_OK);
   rc += sqlite3_exec(db, "ALTER TABLE foo ADD COLUMN c", 0, 0, 0);
+  assert(rc == SQLITE_OK);
   rc += sqlite3_exec(db, "SELECT crsql_commit_alter('foo')", 0, 0, 0);
   assert(rc == SQLITE_OK);
 
-  sqlite3_stmt *pStmt = 0;
   rc += sqlite3_prepare_v2(db, "SELECT * FROM crsql_changes", -1, &pStmt, 0);
   assert(rc == SQLITE_OK);
   int numRows = 0;
   while ((rc = sqlite3_step(pStmt)) == SQLITE_ROW) {
     ++numRows;
+    const unsigned char * tbl = sqlite3_column_text(pStmt, 0);
+    const unsigned char * pk = sqlite3_column_text(pStmt, 1);
+    const unsigned char * cid = sqlite3_column_text(pStmt, 2);
+    const unsigned char * val = sqlite3_column_text(pStmt, 3);
+    sqlite_int64 version = sqlite3_column_int64(pStmt, 4);
+
+    printf("t: %s, pk: %s, cid: %s, val: %s", tbl, pk, cid, val);
     // TODO: do we get the row? Or just ignore it?
     // The column no longer exists -- we should likely ignore the row
     // should we introduce a `compact` operation to remove data for:
     // deletes, schema changes?
   }
 
+  sqlite3_finalize(pStmt);
   // assert(numRows == 0);
   assert(rc == SQLITE_DONE);
 

@@ -148,6 +148,65 @@ static void testQuoteConcat() {
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
+static void testIsTableCompatible() {
+  printf("IsTableCompatible\n");
+  sqlite3 *db = 0;
+  char *errmsg = 0;
+  int rc = SQLITE_OK;
+
+  rc = sqlite3_open(":memory:", &db);
+  // no pks
+  rc += sqlite3_exec(db, "CREATE TABLE foo (a)", 0, 0, 0);
+  assert(rc == SQLITE_OK);
+  rc = crsql_isTableCompatible(db, "foo", &errmsg);
+  assert(rc == 0);
+  sqlite3_free(errmsg);
+
+  // pks
+  rc = sqlite3_exec(db, "CREATE TABLE bar (a primary key)", 0, 0, 0);
+  assert(rc == SQLITE_OK);
+  rc = crsql_isTableCompatible(db, "bar", &errmsg);
+  assert(rc == 1);
+  
+  // pks + other non unique indices
+  rc = sqlite3_exec(db, "CREATE TABLE baz (a primary key, b)", 0, 0, 0);
+  rc += sqlite3_exec(db, "CREATE INDEX bar_i ON baz (b)", 0, 0, 0);
+  assert(rc == SQLITE_OK);
+  rc = crsql_isTableCompatible(db, "bar", &errmsg);
+  assert(rc == 1);
+
+  // pks + other unique indices
+  rc = sqlite3_exec(db, "CREATE TABLE fuzz (a primary key, b)", 0, 0, 0);
+  rc += sqlite3_exec(db, "CREATE UNIQUE INDEX fuzz_i ON fuzz (b)", 0, 0, 0);
+  assert(rc == SQLITE_OK);
+  rc = crsql_isTableCompatible(db, "fuzz", &errmsg);
+  assert(rc == 0);
+  sqlite3_free(errmsg);
+
+  // not null and no dflt
+  rc = sqlite3_exec(db, "CREATE TABLE buzz (a primary key, b NOT NULL)", 0, 0, 0);
+  assert(rc == SQLITE_OK);
+  rc = crsql_isTableCompatible(db, "buzz", &errmsg);
+  assert(rc == 0);
+  sqlite3_free(errmsg);
+
+  // not null and dflt
+  rc = sqlite3_exec(db, "CREATE TABLE boom (a primary key, b NOT NULL DEFAULT 1)", 0, 0, 0);
+  assert(rc == SQLITE_OK);
+  rc = crsql_isTableCompatible(db, "boom", &errmsg);
+  assert(rc == 1);
+
+  // fk constraint
+  rc = sqlite3_exec(db, "CREATE TABLE zoom (a primary key, b, FOREIGN KEY(b) REFERENCES foo(a))", 0, 0, 0);
+  assert(rc == SQLITE_OK);
+  rc = crsql_isTableCompatible(db, "zoom", &errmsg);
+  assert(rc == 0);
+  sqlite3_free(errmsg);
+
+  printf("\t\e[0;32mSuccess\e[0m\n");
+  crsql_close(db);
+}
+
 void crsqlTableInfoTestSuite() {
   printf("\e[47m\e[1;30mSuite: crsql_tableInfo\e[0m\n");
 
@@ -155,5 +214,6 @@ void crsqlTableInfoTestSuite() {
   testGetTableInfo();
   testFindTableInfo();
   testQuoteConcat();
+  testIsTableCompatible();
   // testPullAllTableInfos();
 }

@@ -1,21 +1,19 @@
 from crsql_correctness import connect
+import pytest
 
 def test_c1_4_no_primary_keys():
   c = connect(":memory:")
   c.execute("create table foo (a)")
-  c.execute("select crsql_as_crr('foo')")
-
-  # Just expecting these not to throw
-  c.execute("SELECT rowid, a FROM foo").fetchall()
-  c.execute("SELECT rowid, __crsql_version, __crsql_col_num, __crsql_site_id FROM foo__crsql_clock").fetchall()
+  with pytest.raises(Exception) as e_info:
+    c.execute("select crsql_as_crr('foo')")
 
 def test_c1_3_quoted_identifiers():
   c = connect(":memory:")
-  c.execute("create table \"foo\" (a)")
+  c.execute("create table \"foo\" (a primary key)")
   c.execute("select crsql_as_crr('foo')")
-  c.execute("create table `bar` (a)")
+  c.execute("create table `bar` (a primary key)")
   c.execute("select crsql_as_crr('bar')")
-  c.execute("create table [baz] (a)")
+  c.execute("create table [baz] (a primary key)")
   c.execute("select crsql_as_crr('baz')")
 
   check_clock = lambda t : c.execute("SELECT rowid, __crsql_version, __crsql_col_num, __crsql_site_id FROM {t}__crsql_clock".format(t=t)).fetchall()

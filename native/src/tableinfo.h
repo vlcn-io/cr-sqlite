@@ -17,17 +17,6 @@ struct crsql_ColumnInfo
   int pk;
 };
 
-typedef struct crsql_IndexInfo crsql_IndexInfo;
-struct crsql_IndexInfo {
-  int seq;
-  char *name;
-  int unique;
-  char *origin;
-  int partial;
-  char **indexedCols;
-  int indexedColsLen;
-};
-
 typedef struct crsql_TableInfo crsql_TableInfo;
 struct crsql_TableInfo {
   // Name of the table. Owned by this struct.
@@ -41,9 +30,6 @@ struct crsql_TableInfo {
 
   crsql_ColumnInfo *nonPks;
   int nonPksLen;
-
-  crsql_IndexInfo *indexInfo;
-  int indexInfoLen;
 };
 
 crsql_ColumnInfo *crsql_extractBaseCols(
@@ -52,7 +38,6 @@ crsql_ColumnInfo *crsql_extractBaseCols(
     int *pBaseColsLen);
 
 void crsql_freeColumnInfoContents(crsql_ColumnInfo *columnInfo);
-void crsql_freeIndexInfos(crsql_IndexInfo *indexInfos, int indexInfosLen);
 void crsql_freeTableInfo(crsql_TableInfo *tableInfo);
 
 int crsql_getTableInfo(
@@ -63,13 +48,6 @@ int crsql_getTableInfo(
 
 char *crsql_asIdentifierList(crsql_ColumnInfo *in, size_t inlen, char *prefix);
 
-int crsql_getIndexList(
-    sqlite3 *db,
-    const char *tblName,
-    crsql_IndexInfo **pIndexInfos,
-    int *pIndexInfosLen,
-    char **pErrMsg);
-
 void crsql_freeAllTableInfos(crsql_TableInfo **tableInfos, int len);
 crsql_TableInfo *crsql_findTableInfo(crsql_TableInfo **tblInfos, int len, const char * tblName);
 char *crsql_quoteConcat(crsql_ColumnInfo * cols, int len);
@@ -78,5 +56,6 @@ int crsql_pullAllTableInfos(
     crsql_TableInfo ***pzpTableInfos,
     int *rTableInfosLen,
     char **errmsg);
+int crsql_isTableCompatible(sqlite3* db, const char *tblName, char **errmsg);
 
 #endif

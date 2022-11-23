@@ -287,7 +287,10 @@ static int createCrr(
   rc = crsql_createClockTable(db, tableInfo, err);
   if (rc == SQLITE_OK)
   {
-    rc = crsql_createCrrTriggers(db, tableInfo, err);
+    rc = crsql_removeCrrTriggersIfExist(db, tableInfo, err);
+    if (rc == SQLITE_OK) {
+      rc = crsql_createCrrTriggers(db, tableInfo, err);
+    }
   }
 
   crsql_freeTableInfo(tableInfo);

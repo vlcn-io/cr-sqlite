@@ -24,7 +24,7 @@ char *crsql_deleteTriggerQuery(crsql_TableInfo *tableInfo);
 char *crsql_insertTriggerQuery(crsql_TableInfo *tableInfo, char *pkList, char *pkNewList);
 int crsql_removeCrrTriggersIfExist(
     sqlite3 *db,
-    crsql_TableInfo *tableInfo,
+    const char *tblName,
     char **err);
 
 #endif

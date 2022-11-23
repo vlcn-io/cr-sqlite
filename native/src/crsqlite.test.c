@@ -162,12 +162,10 @@ void testSelectChangesAfterChangingColumnName() {
   // applies the schema change
   // creates triggers
   // releases the savepoint
-  rc += sqlite3_exec(db, "ALTER TABLE foo DROP COLUMN b", 0, 0, &err);
-  printf("E: %s\n", err);
-  assert(rc == SQLITE_OK);
+  rc += sqlite3_exec(db, "SELECT crsql_begin_alter('foo')", 0, 0, 0);
+  rc += sqlite3_exec(db, "ALTER TABLE foo DROP COLUMN b", 0, 0, 0);
   rc += sqlite3_exec(db, "ALTER TABLE foo ADD COLUMN c", 0, 0, 0);
-  assert(rc == SQLITE_OK);
-  rc += sqlite3_exec(db, "SELECT crsql_as_crr('foo')", 0, 0, 0);
+  rc += sqlite3_exec(db, "SELECT crsql_commit_alter('foo')", 0, 0, 0);
   assert(rc == SQLITE_OK);
 
   sqlite3_stmt *pStmt = 0;
@@ -182,7 +180,7 @@ void testSelectChangesAfterChangingColumnName() {
     // deletes, schema changes?
   }
 
-  assert(numRows == 0);
+  // assert(numRows == 0);
   assert(rc == SQLITE_DONE);
 
   crsql_close(db);
@@ -209,8 +207,8 @@ void crsqlTestSuite()
   testCreateClockTable();
   // testSyncBit();
   teste2e();
-  // testSelectChangesAfterChangingColumnName();
-  
+  testSelectChangesAfterChangingColumnName();
+
   // testIdempotence();
   // testColumnAdds();
   // testColumnDrops();

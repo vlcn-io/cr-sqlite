@@ -261,7 +261,7 @@ static int createCrr(
   rc = crsql_createClockTable(db, tableInfo, err);
   if (rc == SQLITE_OK)
   {
-    rc = crsql_removeCrrTriggersIfExist(db, tableInfo, err);
+    rc = crsql_removeCrrTriggersIfExist(db, tableInfo->tblName, err);
     if (rc == SQLITE_OK)
     {
       rc = crsql_createCrrTriggers(db, tableInfo, err);
@@ -336,6 +336,93 @@ static void crsqlMakeCrrFunc(sqlite3_context *context, int argc, sqlite3_value *
   }
 
   sqlite3_exec(db, "RELEASE as_crr", 0, 0, 0);
+}
+
+static void crsqlBeginAlterFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
+{
+  const char *tblName = 0;
+  const char *schemaName = 0;
+  int rc = SQLITE_OK;
+  sqlite3 *db = sqlite3_context_db_handle(context);
+  char *errmsg = 0;
+
+  if (argc == 0)
+  {
+    sqlite3_result_error(context, "Wrong number of args provided to crsql_as_crr. Provide the schema name and table name or just the table name.", -1);
+    return;
+  }
+
+  if (argc == 2)
+  {
+    schemaName = (const char *)sqlite3_value_text(argv[0]);
+    tblName = (const char *)sqlite3_value_text(argv[1]);
+  }
+  else
+  {
+    schemaName = "main";
+    tblName = (const char *)sqlite3_value_text(argv[0]);
+  }
+
+  rc = sqlite3_exec(db, "SAVEPOINT alter_crr", 0, 0, &errmsg);
+  if (rc != SQLITE_OK)
+  {
+    sqlite3_result_error(context, errmsg, -1);
+    sqlite3_free(errmsg);
+    return;
+  }
+
+  rc = crsql_removeCrrTriggersIfExist(db, tblName, &errmsg);
+  if (rc != SQLITE_OK)
+  {
+    sqlite3_result_error(context, errmsg, -1);
+    sqlite3_free(errmsg);
+    sqlite3_exec(db, "ROLLBACK", 0, 0, 0);
+    return;
+  }
+}
+
+static void crsqlCommitAlterFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
+{
+  const char *tblName = 0;
+  const char *schemaName = 0;
+  int rc = SQLITE_OK;
+  sqlite3 *db = sqlite3_context_db_handle(context);
+  char *errmsg = 0;
+
+  if (argc == 0)
+  {
+    sqlite3_result_error(context, "Wrong number of args provided to crsql_commit_alter. Provide the schema name and table name or just the table name.", -1);
+    return;
+  }
+
+  if (argc == 2)
+  {
+    schemaName = (const char *)sqlite3_value_text(argv[0]);
+    tblName = (const char *)sqlite3_value_text(argv[1]);
+  }
+  else
+  {
+    schemaName = "main";
+    tblName = (const char *)sqlite3_value_text(argv[0]);
+  }
+
+  rc = createCrr(context, db, schemaName, tblName, &errmsg);
+  if (rc != SQLITE_OK)
+  {
+    sqlite3_result_error(context, errmsg, -1);
+    sqlite3_free(errmsg);
+    sqlite3_exec(db, "ROLLBACK", 0, 0, 0);
+    return;
+  }
+
+  rc = sqlite3_exec(db, "RELEASE alter_crr", 0, 0, &errmsg);
+  if (rc != SQLITE_OK)
+  {
+    sqlite3_result_error(context, errmsg, -1);
+    sqlite3_free(errmsg);
+    sqlite3_exec(db, "ROLLBACK", 0, 0, 0);
+    return;
+  }
 }
 
 static void freeConnectionExtData(void *pUserData)
@@ -418,6 +505,20 @@ __declspec(dllexport)
                                  // existing database state. directonly.
                                  SQLITE_UTF8 | SQLITE_DIRECTONLY,
                                  0, crsqlMakeCrrFunc, 0, 0);
+  }
+
+  if (rc == SQLITE_OK)
+  {
+    rc = sqlite3_create_function(db, "crsql_begin_alter", -1,
+                                 SQLITE_UTF8 | SQLITE_DIRECTONLY,
+                                 0, crsqlBeginAlterFunc, 0, 0);
+  }
+
+  if (rc == SQLITE_OK)
+  {
+    rc = sqlite3_create_function(db, "crsql_commit_alter", -1,
+                                 SQLITE_UTF8 | SQLITE_DIRECTONLY,
+                                 0, crsqlCommitAlterFunc, 0, 0);
   }
 
   if (rc == SQLITE_OK)

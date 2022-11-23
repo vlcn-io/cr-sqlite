@@ -24,8 +24,13 @@ All components of `vlcn` are **Apache 2 License** with the exception of this pac
 
 The components of `vlcn` do not depend on this package explicitly but rather can be combined with it or not by the end user. I.e., vlcn can run with any SQLite build -- `better-sqlite3`, `official wasm`, `sqlite3`, etc.
 
-Once the official SQLite WASM build is stable and performant, we'll swap this build for that and relieve ourselves of any amibguity related to GPLv3. My current non-lawyer interpretation would be that users of this package do not need to GPL their code given the packge:
+Once the official SQLite WASM build is stable and performant, we'll allow users afraid of licensing amibguity to use that build. My current non-lawyer interpretation would be that users of this package do not need to GPL their code given the packge:
 
 1. isn't statically linked
 2. does not need to be bundled with the calling application (i.e., can be imported on the fly)
 3. talks over a generic and open SQL interface under which any sqlite build could suffice
+
+but who knows.
+
+https://opensource.stackexchange.com/questions/2157/is-it-allowed-to-dynamically-link-a-gpl-licensed-library-for-commercial-use
+https://tech.popdata.org/the-gpl-license-and-linking-still-unclear-after-30-years/

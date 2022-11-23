@@ -256,7 +256,7 @@ export const tests = {
     // TODO: check when version exceeds max and gets flipped to a string -- must be stored as int.
     // pk got encoded as decimal? wtf?
     const changeset: readonly Changeset[] = [
-      ["foo", 1, 1, "'foobar'", 1, uuidv4()],
+      ["foo", 1, "b", "'foobar'", 1, uuidv4()],
     ];
 
     await changesReceived!(changeSender, changeset);
@@ -298,7 +298,7 @@ export const tests = {
     // TODO: check when version exceeds max and gets flipped to a string -- must be stored as int.
     // pk got encoded as decimal? wtf?
     const changeset: readonly Changeset[] = [
-      ["foo", 1, 1, "'foobar'", 1, uuidv4()],
+      ["foo", 1, "b", "'foobar'", 1, uuidv4()],
     ];
 
     await changesReceived!(changeSender, changeset);
@@ -326,7 +326,7 @@ export const tests = {
       const r = await wdbr.install(await createSimpleSchema(db), db, protocol);
 
       const changeset: readonly Changeset[] = [
-        ["foo", 1, 1, "'foobar'", 1, uuidv4()],
+        ["foo", 1, "b", "'foobar'", 1, uuidv4()],
       ];
 
       await changesReceived!(changeSender, changeset);

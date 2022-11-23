@@ -139,6 +139,14 @@ static void teste2e()
   return;
 }
 
+void testSelectChangesAfterChangeColumnName() {
+
+}
+
+void testInsertChangesWithUnkownColumnNames() {
+
+}
+
 void testModifySinglePK() {
 
 }

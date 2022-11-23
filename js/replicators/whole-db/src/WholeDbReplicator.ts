@@ -2,7 +2,7 @@ import { DB, DBAsync } from "@vlcn.io/xplat-api";
 import { parse as uuidParse, stringify as uuidStringify } from "uuid";
 export type SiteIDWire = string;
 export type SiteIDLocal = Uint8Array;
-type CID = number;
+type CID = string;
 type QuoteConcatedPKs = string | number;
 type TableName = string;
 type Version = number | string;
@@ -256,7 +256,7 @@ export class WholeDbReplicator {
             cs[1],
             cs[2],
             cs[3],
-            cs[4].toString(),
+            v.toString(),
             cs[5] ? uuidParse(cs[5]) : 0
           );
         }

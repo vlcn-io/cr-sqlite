@@ -311,7 +311,11 @@ static int changesColumn(
     }
     break;
   case CHANGES_SINCE_VTAB_CID:
-    sqlite3_result_value(ctx, sqlite3_column_value(pCur->pChangesStmt, CID));
+    if (pCur->pRowStmt == 0) {
+      sqlite3_result_text(ctx, DELETE_CID_SENTINEL, -1, SQLITE_STATIC);
+    } else {
+      sqlite3_result_value(ctx, sqlite3_column_value(pCur->pChangesStmt, CID));
+    }
     break;
   case CHANGES_SINCE_VTAB_VRSN:
     sqlite3_result_int64(ctx, pCur->version);

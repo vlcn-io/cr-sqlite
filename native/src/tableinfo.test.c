@@ -71,9 +71,6 @@ static void testGetTableInfo()
   assert(tableInfo->pksLen == 1);
   assert(tableInfo->nonPksLen == 1);
 
-  assert(tableInfo->indexInfoLen == 1);
-  assert(strcmp(tableInfo->indexInfo[0].indexedCols[0], "a") == 0);
-
   crsql_freeTableInfo(tableInfo);
 
   printf("\t\e[0;32mSuccess\e[0m\n");
@@ -107,52 +104,6 @@ static void testAsIdentifierList()
   assert(strcmp(result, "\"one\"") == 0);
   sqlite3_free(result);
 
-  printf("\t\e[0;32mSuccess\e[0m\n");
-}
-
-static void testGetIndexList() {
-  printf("GetIndexList\n");
-  sqlite3 *db = 0;
-  crsql_IndexInfo *indexInfos;
-  int indexInfosLen;
-  int rc = sqlite3_open(":memory:", &db);
-
-  sqlite3_exec(db, "CREATE TABLE foo (a)", 0, 0, 0);
-
-  rc = crsql_getIndexList(
-    db,
-    "foo",
-    &indexInfos,
-    &indexInfosLen,
-    0
-  );
-
-  assert(rc == SQLITE_OK);
-  assert(indexInfos == 0);
-  assert(indexInfosLen == 0);
-
-  sqlite3_exec(db, "CREATE TABLE bar (a primary key)", 0, 0, 0);
-
-  rc = crsql_getIndexList(
-    db,
-    "bar",
-    &indexInfos,
-    &indexInfosLen,
-    0
-  );
-
-  assert(rc == SQLITE_OK);
-  assert(indexInfosLen == 1);
-  for (int i = 0; i < indexInfosLen; ++i) {
-    assert(indexInfos[i].indexedColsLen == 1);
-    assert(strcmp(indexInfos[i].indexedCols[0], "a") == 0);
-    assert(strcmp(indexInfos[i].origin, "pk") == 0);
-    assert(indexInfos[i].unique == 1);
-  }
-
-  crsql_freeIndexInfos(indexInfos, indexInfosLen);
-
-  crsql_close(db);
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
@@ -202,7 +153,6 @@ void crsqlTableInfoTestSuite() {
 
   testAsIdentifierList();
   testGetTableInfo();
-  testGetIndexList();
   testFindTableInfo();
   testQuoteConcat();
   // testPullAllTableInfos();

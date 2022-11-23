@@ -53,39 +53,13 @@ void crsql_freeColumnInfoContents(crsql_ColumnInfo *columnInfo)
   sqlite3_free(columnInfo->type);
 }
 
-void crsql_freeIndexInfoContents(crsql_IndexInfo *indexInfo)
-{
-  sqlite3_free(indexInfo->name);
-  sqlite3_free(indexInfo->origin);
-  for (int j = 0; j < indexInfo->indexedColsLen; ++j)
-  {
-    sqlite3_free(indexInfo->indexedCols[j]);
-  }
-  sqlite3_free(indexInfo->indexedCols);
-}
-
-void crsql_freeIndexInfos(crsql_IndexInfo *indexInfos, int indexInfosLen)
-{
-  if (indexInfos == 0)
-  {
-    return;
-  }
-
-  for (int i = 0; i < indexInfosLen; ++i)
-  {
-    crsql_freeIndexInfoContents(&indexInfos[i]);
-  }
-
-  sqlite3_free(indexInfos);
-}
-
-
 static char *quote(const char *in)
 {
   return sqlite3_mprintf("quote(\"%s\")", in);
 }
 
-char *crsql_quoteConcat(crsql_ColumnInfo * cols, int len) {
+char *crsql_quoteConcat(crsql_ColumnInfo *cols, int len)
+{
   char *names[len];
   for (int i = 0; i < len; ++i)
   {
@@ -203,9 +177,7 @@ crsql_ColumnInfo *crsql_nonPks(crsql_ColumnInfo *colInfos,
 static crsql_TableInfo *crsql_tableInfo(
     const char *tblName,
     crsql_ColumnInfo *colInfos,
-    int colInfosLen,
-    crsql_IndexInfo *indexInfos,
-    int indexInfosLen)
+    int colInfosLen)
 {
   crsql_TableInfo *ret = sqlite3_malloc(sizeof *ret);
 
@@ -216,112 +188,8 @@ static crsql_TableInfo *crsql_tableInfo(
 
   ret->nonPks = crsql_nonPks(ret->baseCols, ret->baseColsLen, &(ret->nonPksLen));
   ret->pks = crsql_pks(ret->baseCols, ret->baseColsLen, &(ret->pksLen));
-  ret->indexInfo = indexInfos;
-  ret->indexInfoLen = indexInfosLen;
 
   return ret;
-}
-
-/**
- * Given a table, return (into pIndexInfo) all the
- * indices for that table and the columns indexed.
- */
-int crsql_getIndexList(
-    sqlite3 *db,
-    const char *tblName,
-    crsql_IndexInfo **pIndexInfos,
-    int *pIndexInfosLen,
-    char **pErrMsg)
-{
-  // query the index_list pragma
-  // create index info structs
-  // query the index_info pragma for cols
-  int rc = SQLITE_OK;
-  int numIndices = 0;
-  char *zSql = 0;
-  sqlite3_stmt *pStmt = 0;
-  crsql_IndexInfo *indexInfos = 0;
-  int i = 0;
-
-  zSql = sqlite3_mprintf("select count(*) from pragma_index_list('%s')", tblName);
-  numIndices = crsql_getCount(db, zSql);
-  sqlite3_free(zSql);
-
-  if (numIndices == 0)
-  {
-    *pIndexInfos = 0;
-    *pIndexInfosLen = 0;
-    return SQLITE_OK;
-  }
-
-  zSql = sqlite3_mprintf(
-      "SELECT \"seq\", \"name\", \"unique\", \"origin\", \"partial\" FROM pragma_index_list('%s')",
-      tblName);
-  rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
-  sqlite3_free(zSql);
-
-  if (rc != SQLITE_OK)
-  {
-    *pErrMsg = sqlite3_mprintf("Failed to select from pragma_index_list");
-    sqlite3_finalize(pStmt);
-    return rc;
-  }
-
-  rc = sqlite3_step(pStmt);
-  if (rc != SQLITE_ROW)
-  {
-    sqlite3_finalize(pStmt);
-    return SQLITE_OK;
-  }
-
-  indexInfos = sqlite3_malloc(numIndices * sizeof *indexInfos);
-  while (rc == SQLITE_ROW)
-  {
-    assert(i < numIndices);
-    indexInfos[i].seq = sqlite3_column_int(pStmt, 0);
-    indexInfos[i].name = crsql_strdup((const char *)sqlite3_column_text(pStmt, 1));
-    indexInfos[i].unique = sqlite3_column_int(pStmt, 2);
-    indexInfos[i].origin = crsql_strdup((const char *)sqlite3_column_text(pStmt, 3));
-    indexInfos[i].partial = sqlite3_column_int(pStmt, 4);
-
-    ++i;
-    rc = sqlite3_step(pStmt);
-  }
-  sqlite3_finalize(pStmt);
-
-  if (rc != SQLITE_DONE)
-  {
-    *pErrMsg = sqlite3_mprintf("Failed fetching an index list row");
-    goto FAIL;
-  }
-
-  for (i = 0; i < numIndices; ++i)
-  {
-    rc = crsql_getIndexedCols(
-        db,
-        indexInfos[i].name,
-        &(indexInfos[i].indexedCols),
-        &(indexInfos[i].indexedColsLen),
-        pErrMsg);
-
-    if (rc != SQLITE_OK)
-    {
-      goto FAIL;
-    }
-  }
-
-  *pIndexInfos = indexInfos;
-  *pIndexInfosLen = numIndices;
-  return rc;
-
-FAIL:
-  *pIndexInfos = 0;
-  *pIndexInfosLen = 0;
-  for (i = 0; i < numIndices; ++i)
-  {
-    crsql_freeIndexInfoContents(&indexInfos[i]);
-  }
-  return rc;
 }
 
 /**
@@ -375,9 +243,11 @@ int crsql_getTableInfo(
   columnInfos = sqlite3_malloc(numColInfos * sizeof *columnInfos);
   while (rc == SQLITE_ROW)
   {
-    if (i >= numColInfos) {
+    if (i >= numColInfos)
+    {
       sqlite3_finalize(pStmt);
-      for (int j = 0; j < i; ++j) {
+      for (int j = 0; j < i; ++j)
+      {
         crsql_freeColumnInfoContents(&columnInfos[j]);
       }
       sqlite3_free(columnInfos);
@@ -397,8 +267,10 @@ int crsql_getTableInfo(
   }
   sqlite3_finalize(pStmt);
 
-  if (i < numColInfos) {
-    for (int j = 0; j < i; ++j) {
+  if (i < numColInfos)
+  {
+    for (int j = 0; j < i; ++j)
+    {
       crsql_freeColumnInfoContents(&columnInfos[j]);
     }
     sqlite3_free(columnInfos);
@@ -406,27 +278,7 @@ int crsql_getTableInfo(
     return SQLITE_ERROR;
   }
 
-  crsql_IndexInfo *indexInfos = 0;
-  int numIndexInfos = 0;
-
-  // TODO: validate indices are compatible with CRR properties
-  rc = crsql_getIndexList(
-      db,
-      tblName,
-      &indexInfos,
-      &numIndexInfos,
-      pErrMsg);
-
-  if (rc != SQLITE_OK)
-  {
-    for (int j = 0; j < i; ++j) {
-      crsql_freeColumnInfoContents(&columnInfos[j]);
-    }
-    sqlite3_free(columnInfos);
-    return rc;
-  }
-
-  *pTableInfo = crsql_tableInfo(tblName, columnInfos, numColInfos, indexInfos, numIndexInfos);
+  *pTableInfo = crsql_tableInfo(tblName, columnInfos, numColInfos);
 
   return SQLITE_OK;
 }
@@ -446,7 +298,6 @@ void crsql_freeTableInfo(crsql_TableInfo *tableInfo)
   sqlite3_free(tableInfo->pks);
   sqlite3_free(tableInfo->nonPks);
 
-  crsql_freeIndexInfos(tableInfo->indexInfo, tableInfo->indexInfoLen);
   sqlite3_free(tableInfo);
 }
 
@@ -459,9 +310,12 @@ void crsql_freeAllTableInfos(crsql_TableInfo **tableInfos, int len)
   sqlite3_free(tableInfos);
 }
 
-crsql_TableInfo *crsql_findTableInfo(crsql_TableInfo **tblInfos, int len, const char * tblName) {
-  for (int i = 0; i < len; ++i) {
-    if (strcmp(tblInfos[i]->tblName, tblName) == 0) {
+crsql_TableInfo *crsql_findTableInfo(crsql_TableInfo **tblInfos, int len, const char *tblName)
+{
+  for (int i = 0; i < len; ++i)
+  {
+    if (strcmp(tblInfos[i]->tblName, tblName) == 0)
+    {
       return tblInfos[i];
     }
   }
@@ -501,12 +355,12 @@ int crsql_pullAllTableInfos(
     return SQLITE_ERROR;
   }
 
-  if (rNumRows == 0) {
+  if (rNumRows == 0)
+  {
     crsql_free_table(zzClockTableNames);
     return SQLITE_OK;
   }
 
-  // TODO: validate index info
   crsql_TableInfo **tableInfos = sqlite3_malloc(rNumRows * sizeof(crsql_TableInfo *));
   memset(tableInfos, 0, rNumRows * sizeof(crsql_TableInfo *));
   for (int i = 0; i < rNumRows; ++i)
@@ -531,4 +385,79 @@ int crsql_pullAllTableInfos(
   *rTableInfosLen = rNumRows;
 
   return SQLITE_OK;
+}
+
+int crsql_isTableCompatible(sqlite3 *db, const char *tblName, char **errmsg)
+{
+  // No unique indices besides primary key
+  sqlite3_stmt *pStmt = 0;
+  char* zSql = sqlite3_mprintf("SELECT count(*) FROM pragma_index_list('%s') WHERE \"origin\" != 'pk' AND \"unique\" = 1", tblName);
+  int rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
+  sqlite3_free(zSql);
+
+  if (rc != SQLITE_OK) {
+    *errmsg = sqlite3_mprintf("Failed to analyze index information for %s", tblName);
+    return 0;
+  }
+
+  rc = sqlite3_step(pStmt);
+  if (rc == SQLITE_ROW) {
+    int count = sqlite3_column_int(pStmt, 0);
+    sqlite3_finalize(pStmt);
+    if (count != 0) {
+      *errmsg = sqlite3_mprintf("Table %s has unique indices besides the primary key. This is not allowed for CRRs", tblName);
+      return 0;
+    }
+  } else {
+    sqlite3_finalize(pStmt);
+    return 0;
+  }
+
+  // Must have a primary key
+  zSql = sqlite3_mprintf("SELECT count(*) FROM pragma_index_list('%s') WHERE \"origin\" = 'pk'", tblName);
+  rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
+  sqlite3_free(zSql);
+
+  if (rc != SQLITE_OK) {
+    *errmsg = sqlite3_mprintf("Failed to analyze primary key information for %s", tblName);
+    return 0;
+  }
+
+  rc = sqlite3_step(pStmt);
+  if (rc == SQLITE_ROW) {
+    int count = sqlite3_column_int(pStmt, 0);
+    sqlite3_finalize(pStmt);
+    if (count == 0) {
+      *errmsg = sqlite3_mprintf("Table %s has no primary key. CRRs must have a primary key", tblName);
+      return 0;
+    }
+  } else {
+    sqlite3_finalize(pStmt);
+    return 0;
+  }
+
+  // No foreign key constraints
+  zSql = sqlite3_mprintf("SELECT count(*) FROM pragma_foreign_key_list('%s')", tblName);
+  rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
+  sqlite3_free(zSql);
+
+  if (rc != SQLITE_OK) {
+    *errmsg = sqlite3_mprintf("Failed to analyze primary key information for %s", tblName);
+    return 0;
+  }
+
+  rc = sqlite3_step(pStmt);
+  if (rc == SQLITE_ROW) {
+    int count = sqlite3_column_int(pStmt, 0);
+    sqlite3_finalize(pStmt);
+    if (count != 0) {
+      *errmsg = sqlite3_mprintf("Table %s has foreign key constraints. CRRs must not have checked foreign key constraints as they can be violated by row level security or replication.", tblName);
+      return 0;
+    }
+  } else {
+    sqlite3_finalize(pStmt);
+    return 0;
+  }
+
+  return 1;
 }

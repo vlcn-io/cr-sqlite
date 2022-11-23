@@ -15,7 +15,6 @@ SQLITE_EXTENSION_INIT1
 #include <assert.h>
 #include <stdatomic.h>
 
-
 static void uuid(unsigned char *blob)
 {
   sqlite3_randomness(16, blob);
@@ -142,7 +141,8 @@ static void dbVersionFunc(sqlite3_context *context, int argc, sqlite3_value **ar
   crsql_ExtData *pExtData = (crsql_ExtData *)sqlite3_user_data(context);
   sqlite3 *db = sqlite3_context_db_handle(context);
   int rc = crsql_getDbVersion(db, pExtData, &errmsg);
-  if (rc != SQLITE_OK) {
+  if (rc != SQLITE_OK)
+  {
     sqlite3_result_error(context, errmsg, -1);
     sqlite3_free(errmsg);
     return;
@@ -162,12 +162,13 @@ static void nextDbVersionFunc(sqlite3_context *context, int argc, sqlite3_value 
   crsql_ExtData *pExtData = (crsql_ExtData *)sqlite3_user_data(context);
   sqlite3 *db = sqlite3_context_db_handle(context);
   int rc = crsql_getDbVersion(db, pExtData, &errmsg);
-  if (rc != SQLITE_OK) {
+  if (rc != SQLITE_OK)
+  {
     sqlite3_result_error(context, errmsg, -1);
     sqlite3_free(errmsg);
     return;
   }
-  
+
   sqlite3_result_int64(context, pExtData->dbVersion + 1);
 }
 
@@ -272,6 +273,11 @@ static int createCrr(
   int rc = SQLITE_OK;
   crsql_TableInfo *tableInfo = 0;
 
+  if (!crsql_isTableCompatible(db, tblName, err))
+  {
+    return SQLITE_ERROR;
+  }
+
   rc = crsql_getTableInfo(
       db,
       tblName,
@@ -288,7 +294,8 @@ static int createCrr(
   if (rc == SQLITE_OK)
   {
     rc = crsql_removeCrrTriggersIfExist(db, tableInfo, err);
-    if (rc == SQLITE_OK) {
+    if (rc == SQLITE_OK)
+    {
       rc = crsql_createCrrTriggers(db, tableInfo, err);
     }
   }
@@ -363,25 +370,29 @@ static void crsqlMakeCrrFunc(sqlite3_context *context, int argc, sqlite3_value *
   sqlite3_exec(db, "RELEASE as_crr", 0, 0, 0);
 }
 
-static void freeConnectionExtData(void * pUserData) {
-  crsql_ExtData *pExtData = (crsql_ExtData*)pUserData;
+static void freeConnectionExtData(void *pUserData)
+{
+  crsql_ExtData *pExtData = (crsql_ExtData *)pUserData;
 
   crsql_freeExtData(pExtData);
 }
 
-static void crsqlFinalize(sqlite3_context *context, int argc, sqlite3_value **argv) {
+static void crsqlFinalize(sqlite3_context *context, int argc, sqlite3_value **argv)
+{
   crsql_ExtData *pExtData = (crsql_ExtData *)sqlite3_user_data(context);
   crsql_finalize(pExtData);
 }
 
-static int commitHook(void *pUserData) {
+static int commitHook(void *pUserData)
+{
   crsql_ExtData *pExtData = (crsql_ExtData *)pUserData;
 
   pExtData->dbVersion = -1;
   return SQLITE_OK;
 }
 
-static void rollbackHook(void *pUserData) {
+static void rollbackHook(void *pUserData)
+{
   crsql_ExtData *pExtData = (crsql_ExtData *)pUserData;
 
   pExtData->dbVersion = -1;
@@ -398,7 +409,8 @@ __declspec(dllexport)
   SQLITE_EXTENSION_INIT2(pApi);
 
   crsql_ExtData *pExtData = crsql_newExtData(db);
-  if (pExtData == 0) {
+  if (pExtData == 0)
+  {
     return SQLITE_ERROR;
   }
 
@@ -415,9 +427,9 @@ __declspec(dllexport)
   if (rc == SQLITE_OK)
   {
     rc = sqlite3_create_function_v2(db, "crsql_dbversion", 0,
-                                 // dbversion can change on each invocation.
-                                 SQLITE_UTF8 | SQLITE_INNOCUOUS,
-                                 pExtData, dbVersionFunc, 0, 0, freeConnectionExtData);
+                                    // dbversion can change on each invocation.
+                                    SQLITE_UTF8 | SQLITE_INNOCUOUS,
+                                    pExtData, dbVersionFunc, 0, 0, freeConnectionExtData);
   }
   if (rc == SQLITE_OK)
   {
@@ -440,7 +452,8 @@ __declspec(dllexport)
                                  0, crsqlMakeCrrFunc, 0, 0);
   }
 
-  if (rc == SQLITE_OK) {
+  if (rc == SQLITE_OK)
+  {
     // see https://sqlite.org/forum/forumpost/c94f943821
     rc = sqlite3_create_function(db, "crsql_finalize", -1, SQLITE_UTF8 | SQLITE_DIRECTONLY, pExtData, crsqlFinalize, 0, 0);
   }
@@ -474,7 +487,8 @@ __declspec(dllexport)
         0);
   }
 
-  if (rc == SQLITE_OK) {
+  if (rc == SQLITE_OK)
+  {
     // TODO: get the prior callback so we can call it rather than replace it?
     sqlite3_commit_hook(db, commitHook, pExtData);
     sqlite3_rollback_hook(db, rollbackHook, pExtData);

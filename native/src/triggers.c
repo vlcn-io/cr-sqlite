@@ -106,7 +106,7 @@ char *crsql_insertTriggerQuery(crsql_TableInfo *tableInfo, char *pkList, char *p
         tableInfo->tblName,
         pkList,
         pkNewList,
-        tableInfo->nonPks[i].cid);
+        tableInfo->nonPks[i].name);
   }
 
   joinedSubTriggers = crsql_join(subTriggers, tableInfo->nonPksLen);
@@ -168,11 +168,11 @@ int crsql_createUpdateTrigger(sqlite3 *db,
         __crsql_col_name,\
         __crsql_version,\
         __crsql_site_id\
-      ) SELECT %s, %Q, crsql_nextdbversion(), NULL WHERE crsql_internal_sync_bit() = 0 AND NEW.\"%s\" != OLD.\"%s\";\n",
+      ) SELECT %s, %Q, crsql_nextdbversion(), NULL WHERE crsql_internal_sync_bit() = 0 AND NEW.\"%w\" != OLD.\"%w\";\n",
                                      tableInfo->tblName,
                                      pkList,
                                      pkNewList,
-                                     tableInfo->nonPks[i].cid,
+                                     tableInfo->nonPks[i].name,
                                      tableInfo->nonPks[i].name,
                                      tableInfo->nonPks[i].name);
   }

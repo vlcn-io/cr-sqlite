@@ -95,11 +95,13 @@ static void teste2e()
   rc += sqlite3_exec(db, "insert into foo values (1, 2.0e2);", 0, 0, &err);
 
   sqlite3 *db2;
-  rc += sqlite3_open(":memory:", &db2);
+  rc = sqlite3_open(":memory:", &db2);
+  assert(rc == SQLITE_OK);
 
-  rc += sqlite3_prepare_v2(db, "SELECT * FROM crsql_changes", -1, &pStmt1, 0);
-  rc += sqlite3_prepare_v2(db, "INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?)", -1, &pStmt2, 0);
-  CHECK_OK
+  rc = sqlite3_prepare_v2(db, "SELECT * FROM crsql_changes", -1, &pStmt1, 0);
+  assert(rc == SQLITE_OK);
+  rc = sqlite3_prepare_v2(db, "INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?)", -1, &pStmt2, 0);
+  assert(rc == SQLITE_OK);
 
   while (sqlite3_step(pStmt1) == SQLITE_ROW) {
     for (int i = 0; i < 6; ++i) {
@@ -114,7 +116,7 @@ static void teste2e()
 
   rc += sqlite3_prepare_v2(db, "SELECT * FROM foo", -1, &pStmt1, 0);
   rc += sqlite3_prepare_v2(db, "SELECT * FROM foo", -1, &pStmt2, 0);
-  CHECK_OK
+  assert(rc == SQLITE_OK);
 
   int didCompare = 0;
   while (sqlite3_step(pStmt1) == SQLITE_ROW) {
@@ -135,12 +137,6 @@ static void teste2e()
   crsql_close(db2);
   printf("\t\e[0;32mSuccess\e[0m\n");
   return;
-
-fail:
-  printf("err: %s %d\n", err, rc);
-  sqlite3_free(err);
-  sqlite3_close(db);
-  assert(rc == SQLITE_OK);
 }
 
 void testModifySinglePK() {

@@ -82,7 +82,7 @@ static void testDeleteTriggerQuery()
       &errMsg);
 
   char *query = crsql_deleteTriggerQuery(tableInfo);
-  assert(strcmp("CREATE TRIGGER IF NOT EXISTS \"foo__crsql_dtrig\"      AFTER DELETE ON \"foo\"    BEGIN      INSERT OR REPLACE INTO \"foo__crsql_clock\" (        \"a\",        __crsql_col_name,        __crsql_version,        __crsql_site_id      ) SELECT         OLD.\"a\",        -1,        crsql_nextdbversion(),        NULL      WHERE crsql_internal_sync_bit() = 0;    END;", query) == 0);
+  assert(strcmp("CREATE TRIGGER IF NOT EXISTS \"foo__crsql_dtrig\"      AFTER DELETE ON \"foo\"    BEGIN      INSERT OR REPLACE INTO \"foo__crsql_clock\" (        \"a\",        __crsql_col_name,        __crsql_version,        __crsql_site_id      ) SELECT         OLD.\"a\",        '__crsql_del',        crsql_nextdbversion(),        NULL      WHERE crsql_internal_sync_bit() = 0;    END;", query) == 0);
 
   crsql_freeTableInfo(tableInfo);
   crsql_close(db);
@@ -110,7 +110,7 @@ static void testInsertTriggerQuery()
 
   char *query = crsql_insertTriggerQuery(tableInfo, "a, b", "NEW.a, NEW.b");
 
-  char *expected = "INSERT OR REPLACE INTO \"foo__crsql_clock\" (        a, b,        __crsql_col_name,        __crsql_version,        __crsql_site_id      ) SELECT         NEW.a, NEW.b,        2,        crsql_nextdbversion(),        NULL      WHERE crsql_internal_sync_bit() = 0;\n";
+  char *expected = "INSERT OR REPLACE INTO \"foo__crsql_clock\" (        a, b,        __crsql_col_name,        __crsql_version,        __crsql_site_id      ) SELECT         NEW.a, NEW.b,        'c',        crsql_nextdbversion(),        NULL      WHERE crsql_internal_sync_bit() = 0;\n";
 
   assert(strcmp(expected, query) == 0);
 

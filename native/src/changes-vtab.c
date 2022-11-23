@@ -31,15 +31,17 @@ static int changesConnect(
       db,
       // If we go without rowid we need to concat `table || !'! pk` to be the primary key
       // as xUpdate requires a single column to be the primary key if we use without rowid.
-      "CREATE TABLE x([table] TEXT NOT NULL, [pk] TEXT NOT NULL, [cid] TEXT NOT NULL, [val], [version] INTEGER NOT NULL, [site_id] BLOB NOT NULL) STRICT");
+      "CREATE TABLE x([table] TEXT NOT NULL, [pk] TEXT NOT NULL, [cid] TEXT NOT NULL, [val], [version] INTEGER NOT NULL, [site_id] BLOB NOT NULL)");
   if (rc != SQLITE_OK)
   {
+    *pzErr = sqlite3_mprintf("Could not define the table");
     return rc;
   }
   pNew = sqlite3_malloc(sizeof(*pNew));
   *ppVtab = (sqlite3_vtab *)pNew;
   if (pNew == 0)
   {
+    *pzErr = sqlite3_mprintf("Out of memory");
     return SQLITE_NOMEM;
   }
   memset(pNew, 0, sizeof(*pNew));
@@ -49,6 +51,7 @@ static int changesConnect(
   rc = crsql_ensureTableInfosAreUpToDate(db, pNew->pExtData, &(*ppVtab)->zErrMsg);
   if (rc != SQLITE_OK)
   {
+    *pzErr = sqlite3_mprintf("Could not update table infos");
     sqlite3_free(pNew);
     return rc;
   }

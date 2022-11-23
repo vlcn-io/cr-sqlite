@@ -75,12 +75,12 @@ char *crsql_insertTriggerQuery(crsql_TableInfo *tableInfo, char *pkList, char *p
     subTriggers[0] = sqlite3_mprintf(
         "INSERT OR REPLACE INTO \"%s__crsql_clock\" (\
         %s,\
-        __crsql_col_num,\
+        __crsql_col_name,\
         __crsql_version,\
         __crsql_site_id\
       ) SELECT \
         %s,\
-        %d,\
+        %Q,\
         crsql_nextdbversion(),\
         NULL\
       WHERE crsql_internal_sync_bit() = 0;\n",
@@ -94,12 +94,12 @@ char *crsql_insertTriggerQuery(crsql_TableInfo *tableInfo, char *pkList, char *p
     subTriggers[i] = sqlite3_mprintf(
         "INSERT OR REPLACE INTO \"%s__crsql_clock\" (\
         %s,\
-        __crsql_col_num,\
+        __crsql_col_name,\
         __crsql_version,\
         __crsql_site_id\
       ) SELECT \
         %s,\
-        %d,\
+        %Q,\
         crsql_nextdbversion(),\
         NULL\
       WHERE crsql_internal_sync_bit() = 0;\n",
@@ -165,10 +165,10 @@ int crsql_createUpdateTrigger(sqlite3 *db,
     // the same as the old value.
     subTriggers[i] = sqlite3_mprintf("INSERT OR REPLACE INTO \"%s__crsql_clock\" (\
         %s,\
-        __crsql_col_num,\
+        __crsql_col_name,\
         __crsql_version,\
         __crsql_site_id\
-      ) SELECT %s, %d, crsql_nextdbversion(), NULL WHERE crsql_internal_sync_bit() = 0 AND NEW.\"%s\" != OLD.\"%s\";\n",
+      ) SELECT %s, %Q, crsql_nextdbversion(), NULL WHERE crsql_internal_sync_bit() = 0 AND NEW.\"%s\" != OLD.\"%s\";\n",
                                      tableInfo->tblName,
                                      pkList,
                                      pkNewList,
@@ -229,12 +229,12 @@ char *crsql_deleteTriggerQuery(crsql_TableInfo *tableInfo)
     BEGIN\
       INSERT OR REPLACE INTO \"%s__crsql_clock\" (\
         %s,\
-        __crsql_col_num,\
+        __crsql_col_name,\
         __crsql_version,\
         __crsql_site_id\
       ) SELECT \
         %s,\
-        %d,\
+        %Q,\
         crsql_nextdbversion(),\
         NULL\
       WHERE crsql_internal_sync_bit() = 0;\

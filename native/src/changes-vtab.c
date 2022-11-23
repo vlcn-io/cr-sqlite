@@ -31,7 +31,7 @@ static int changesConnect(
       db,
       // If we go without rowid we need to concat `table || !'! pk` to be the primary key
       // as xUpdate requires a single column to be the primary key if we use without rowid.
-      "CREATE TABLE x([table] NOT NULL, [pk] NOT NULL, [cid] NOT NULL, [val], [version] NOT NULL, [site_id] NOT NULL)");
+      "CREATE TABLE x([table] TEXT NOT NULL, [pk] TEXT NOT NULL, [cid] TEXT NOT NULL, [val], [version] INTEGER NOT NULL, [site_id] BLOB NOT NULL) STRICT");
   if (rc != SQLITE_OK)
   {
     return rc;
@@ -98,7 +98,6 @@ static int changesCrsrFinalize(crsql_Changes_cursor *crsr)
   rc += sqlite3_finalize(crsr->pRowStmt);
   crsr->pRowStmt = 0;
 
-  crsr->cid = -1;
   crsr->version = MIN_POSSIBLE_DB_VERSION;
 
   return rc;
@@ -265,7 +264,6 @@ static int changesNext(sqlite3_vtab_cursor *cur)
   }
 
   pCur->pRowStmt = pRowStmt;
-  pCur->cid = cid;
   pCur->version = vrsn;
 
   return rc;
@@ -310,13 +308,7 @@ static int changesColumn(
     }
     break;
   case CHANGES_SINCE_VTAB_CID:
-    // we have no row -- the thing is deleted
-    // TODO: we could skip all these events that can no longer be sent due to deletion
-    if (pCur->pRowStmt == 0) {
-      sqlite3_result_int(ctx, DELETE_CID_SENTINEL);
-    } else {
-      sqlite3_result_int(ctx, pCur->cid);
-    }
+    sqlite3_result_value(ctx, sqlite3_column_value(pCur->pChangesStmt, CID));
     break;
   case CHANGES_SINCE_VTAB_VRSN:
     sqlite3_result_int64(ctx, pCur->version);

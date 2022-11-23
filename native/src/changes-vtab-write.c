@@ -33,7 +33,7 @@ int crsql_didCidWin(
   }
 
   zSql = sqlite3_mprintf(
-      "SELECT __crsql_version FROM \"%s__crsql_clock\" WHERE %s AND %d = __crsql_col_num",
+      "SELECT __crsql_version FROM \"%s__crsql_clock\" WHERE %s AND %Q = __crsql_col_name",
       insertTbl,
       pkWhereList,
       cid);
@@ -87,7 +87,7 @@ int crsql_checkForLocalDelete(
     char *pkWhereList)
 {
   char *zSql = sqlite3_mprintf(
-      "SELECT count(*) FROM \"%s__crsql_clock\" WHERE %s AND __crsql_col_num = %d",
+      "SELECT count(*) FROM \"%s__crsql_clock\" WHERE %s AND __crsql_col_name = %Q",
       tblName,
       pkWhereList,
       DELETE_CID_SENTINEL);
@@ -123,7 +123,7 @@ int crsql_setWinnerClock(
     crsql_TableInfo *tblInfo,
     const char *pkIdentifierList,
     const char *pkValsStr,
-    int insertCid,
+    const char *insertColName,
     sqlite3_int64 insertVrsn,
     const void *insertSiteId,
     int insertSiteIdLen)
@@ -131,17 +131,17 @@ int crsql_setWinnerClock(
   int rc = SQLITE_OK;
   char *zSql = sqlite3_mprintf(
       "INSERT OR REPLACE INTO \"%s__crsql_clock\" \
-      (%s, \"__crsql_col_num\", \"__crsql_version\", \"__crsql_site_id\")\
+      (%s, \"__crsql_col_name\", \"__crsql_version\", \"__crsql_site_id\")\
       VALUES (\
         %s,\
-        %d,\
+        %Q,\
         %lld,\
         ?\
       )",
       tblInfo->tblName,
       pkIdentifierList,
       pkValsStr,
-      insertCid,
+      insertColName,
       insertVrsn);
 
   sqlite3_stmt *pStmt = 0;
@@ -293,7 +293,8 @@ int crsql_mergeInsert(
   const unsigned char *insertTbl = sqlite3_value_text(argv[2 + CHANGES_SINCE_VTAB_TBL]);
   // `splitQuoteConcat` will validate these
   const unsigned char *insertPks = sqlite3_value_text(argv[2 + CHANGES_SINCE_VTAB_PK]);
-  int insertCid = sqlite3_value_int(argv[2 + CHANGES_SINCE_VTAB_CID]);
+  // TODO: check len doesn't exceed sane amount
+  const unsigned char *insertColName = sqlite3_value_text(argv[2 + CHANGES_SINCE_VTAB_CID]);
   // `splitQuoteConcat` will validate these -- even tho 1 val should do splitquoteconcat for the validation
   const unsigned char *insertVal = sqlite3_value_text(argv[2 + CHANGES_SINCE_VTAB_CVAL]);
   sqlite3_int64 insertVrsn = sqlite3_value_int64(argv[2 + CHANGES_SINCE_VTAB_VRSN]);
@@ -313,11 +314,6 @@ int crsql_mergeInsert(
   if (tblInfo == 0)
   {
     *errmsg = sqlite3_mprintf("crsql - could not find the schema information for table %s", insertTbl);
-    return SQLITE_ERROR;
-  }
-
-  if (insertCid >= tblInfo->baseColsLen) {
-    *errmsg = sqlite3_mprintf("out of bounds column id (%d) provided for patch to %s", insertCid, insertTbl);
     return SQLITE_ERROR;
   }
 
@@ -349,7 +345,7 @@ int crsql_mergeInsert(
   }
 
   char *pkIdentifierList = crsql_asIdentifierList(tblInfo->pks, tblInfo->pksLen, 0);
-  if (insertCid == DELETE_CID_SENTINEL)
+  if (strcmp(DELETE_CID_SENTINEL, insertColName) == 0)
   {
     rc = crsql_mergeDelete(
         db,
@@ -367,7 +363,7 @@ int crsql_mergeInsert(
     return rc;
   }
 
-  if (insertCid == PKS_ONLY_CID_SENTINEL)
+  if (strcmp(PKS_ONLY_CID_SENTINEL, insertColName) == 0)
   {
     rc = crsql_mergePkOnlyInsert(
         db,
@@ -383,7 +379,13 @@ int crsql_mergeInsert(
     return rc;
   }
 
-  int doesCidWin = crsql_didCidWin(db, pTab->pExtData->siteId, tblInfo->tblName, pkWhereList, insertSiteId, insertSiteIdLen, insertCid, insertVrsn, errmsg);
+  int doesCidWin = crsql_didCidWin(
+      db,
+      pTab->pExtData->siteId,
+      tblInfo->tblName,
+      pkWhereList,
+      insertSiteId,
+      insertSiteIdLen, insertColName, insertVrsn, errmsg);
   sqlite3_free(pkWhereList);
   if (doesCidWin == -1 || doesCidWin == 0)
   {
@@ -407,17 +409,17 @@ int crsql_mergeInsert(
   }
 
   zSql = sqlite3_mprintf(
-      "INSERT INTO \"%s\" (%s, \"%s\")\
+      "INSERT INTO \"%w\" (%s, \"%w\")\
       VALUES (%s, %s)\
       ON CONFLICT (%s) DO UPDATE\
-      SET \"%s\" = %s",
+      SET \"%w\" = %s",
       tblInfo->tblName,
       pkIdentifierList,
-      tblInfo->baseCols[insertCid].name,
+      insertColName,
       pkValsStr,
       sanitizedInsertVal[0],
       pkIdentifierList,
-      tblInfo->baseCols[insertCid].name,
+      insertColName,
       sanitizedInsertVal[0]);
 
   sqlite3_free(sanitizedInsertVal[0]);
@@ -450,7 +452,7 @@ int crsql_mergeInsert(
       tblInfo,
       pkIdentifierList,
       pkValsStr,
-      insertCid,
+      insertColName,
       insertVrsn,
       insertSiteId,
       insertSiteIdLen);

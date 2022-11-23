@@ -196,51 +196,19 @@ int crsql_createClockTable(
   char *pkList = 0;
   int rc = SQLITE_OK;
 
-  // drop the table if it exists. This will drop versions so we should
-  // put in place a path to preserve versions across schema updates.
-  // copy the data to a temp table, re-create this table, copy it back.
-  // of course if columns were re-ordered versions are pinned to the wrong columns.
-  // TODO: incorporate schema name!
-  // TODO: allow re-running `as_crr` against a table to incorporate schema changes
-  // only schema changes to concern ourselves with:
-  // - dropped columns
-  // - new primary key columns
-  // zSql = sqlite3_mprintf("DROP TABLE IF EXISTS \"%s__crsql_clock\"", tableInfo->tblName);
-  // rc = sqlite3_exec(db, zSql, 0, 0, err);
-  // sqlite3_free(zSql);
-  // if (rc != SQLITE_OK)
-  // {
-  //   return rc;
-  // }
-
-  // TODO: just forbid tables w/o primary keys
-  if (tableInfo->pksLen == 0)
-  {
-    zSql = sqlite3_mprintf("CREATE TABLE IF NOT EXISTS \"%s__crsql_clock\" (\
-      \"rowid\" NOT NULL,\
-      \"__crsql_col_num\" NOT NULL,\
-      \"__crsql_version\" NOT NULL,\
-      \"__crsql_site_id\",\
-      PRIMARY KEY (\"rowid\", \"__crsql_col_num\")\
-    )",
-                           tableInfo->tblName);
-  }
-  else
-  {
-    pkList = crsql_asIdentifierList(
-        tableInfo->pks,
-        tableInfo->pksLen,
-        0);
-    zSql = sqlite3_mprintf("CREATE TABLE IF NOT EXISTS \"%s__crsql_clock\" (\
+  pkList = crsql_asIdentifierList(
+      tableInfo->pks,
+      tableInfo->pksLen,
+      0);
+  zSql = sqlite3_mprintf("CREATE TABLE IF NOT EXISTS \"%s__crsql_clock\" (\
       %s,\
-      \"__crsql_col_num\" NOT NULL,\
+      \"__crsql_col_name\" NOT NULL,\
       \"__crsql_version\" NOT NULL,\
       \"__crsql_site_id\",\
-      PRIMARY KEY (%s, __crsql_col_num)\
+      PRIMARY KEY (%s, _\"_crsql_col_name\")\
     )",
-                           tableInfo->tblName, pkList, pkList);
-    sqlite3_free(pkList);
-  }
+                         tableInfo->tblName, pkList, pkList);
+  sqlite3_free(pkList);
 
   rc = sqlite3_exec(db, zSql, 0, 0, err);
   sqlite3_free(zSql);

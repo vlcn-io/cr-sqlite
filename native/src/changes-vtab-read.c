@@ -33,6 +33,14 @@ char *crsql_changesQueryForTable(crsql_TableInfo *tableInfo)
   return zSql;
 }
 
+// TODO: here we could do all the filtering to remove:
+// - records with no longer existing columns
+// - all rows prior to a delete entry for a row
+//
+// or we can do that in `xNext`
+// or we can compact the table on `commit_alter`
+// compacting in commit alter is likely the simplest option
+// with minimal impact on perf of normal operations
 /**
  * Union all the crr tables together to get a comprehensive
  * set of changes

@@ -211,8 +211,6 @@ static int changesNext(sqlite3_vtab_cursor *cur)
     return SQLITE_ERROR;
   }
 
-  // TODO: we should require pks in a validation step when
-  // building crrs
   if (tblInfo->pksLen == 0)
   {
     crsql_freeTableInfo(tblInfo);

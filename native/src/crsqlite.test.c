@@ -139,7 +139,7 @@ static void teste2e()
   return;
 }
 
-void testSelectChangesAfterChangingColumnName() {
+static void testSelectChangesAfterChangingColumnName() {
   printf("SelectAfterChangeingColumnName\n");
   
   int rc = SQLITE_OK;
@@ -157,11 +157,8 @@ void testSelectChangesAfterChangingColumnName() {
   assert(rc == SQLITE_OK);
 
   rc = sqlite3_exec(db, "SELECT crsql_begin_alter('foo')", 0, 0, &err);
-  assert(rc == SQLITE_OK);
   rc += sqlite3_exec(db, "ALTER TABLE foo DROP COLUMN b", 0, 0, 0);
-  assert(rc == SQLITE_OK);
   rc += sqlite3_exec(db, "ALTER TABLE foo ADD COLUMN c", 0, 0, 0);
-  assert(rc == SQLITE_OK);
   rc += sqlite3_exec(db, "SELECT crsql_commit_alter('foo')", 0, 0, 0);
   assert(rc == SQLITE_OK);
 
@@ -199,16 +196,53 @@ void testSelectChangesAfterChangingColumnName() {
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
-void testInsertChangesWithUnkownColumnNames() {
+static void testInsertChangesWithUnkownColumnNames() {
   printf("InsertChangesWithUnknownColumnName\n");
+
+  int rc = SQLITE_OK;
+  char *err = 0;
+  sqlite3 *db1;
+  sqlite3 *db2;
+  sqlite3_stmt *pStmt = 0;
+  rc = sqlite3_open(":memory:", &db1);
+  rc += sqlite3_open(":memory:", &db2);
+
+  rc += sqlite3_exec(db1, "CREATE TABLE foo(a primary key, b);", 0, 0, 0);
+  rc += sqlite3_exec(db1, "SELECT crsql_as_crr('foo')", 0, 0, 0);
+  rc += sqlite3_exec(db2, "CREATE TABLE foo(a primary key, c);", 0, 0, 0);
+  rc += sqlite3_exec(db2, "SELECT crsql_as_crr('foo')", 0, 0, 0);
+  assert(rc == SQLITE_OK);
+
+  rc += sqlite3_exec(db1, "INSERT INTO foo VALUES (1, 2);", 0, 0, 0);
+  rc += sqlite3_exec(db2, "INSERT INTO foo VALUES (2, 3);", 0, 0, 0);
+  assert(rc == SQLITE_OK);
+
+  sqlite3_stmt *pStmtRead = 0;
+  sqlite3_stmt *pStmtWrite = 0;
+  rc += sqlite3_prepare_v2(db1, "SELECT * FROM crsql_changes", -1, &pStmt, 0);
+  
+  rc = sqlite3_prepare_v2(db2, "INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?)", -1, &pStmtWrite, 0);
+  assert(rc == SQLITE_OK);
+
+  while (sqlite3_step(pStmtRead) == SQLITE_ROW) {
+    for (int i = 0; i < 6; ++i) {
+      sqlite3_bind_value(pStmtWrite, i + 1, sqlite3_column_value(pStmtWrite, i));
+    }
+
+    sqlite3_step(pStmtWrite);
+    sqlite3_reset(pStmtWrite);
+  }
+
+
+
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
-void testModifySinglePK() {
+static void testModifySinglePK() {
 
 }
 
-void testModifyCompoundPK() {
+static void testModifyCompoundPK() {
 
 }
 
@@ -220,6 +254,7 @@ void crsqlTestSuite()
   // testSyncBit();
   teste2e();
   testSelectChangesAfterChangingColumnName();
+  testInsertChangesWithUnkownColumnNames();
 
   // testIdempotence();
   // testColumnAdds();

@@ -57,5 +57,6 @@ int crsql_pullAllTableInfos(
     int *rTableInfosLen,
     char **errmsg);
 int crsql_isTableCompatible(sqlite3* db, const char *tblName, char **errmsg);
+int crsql_columnExists(const char * colName, crsql_ColumnInfo *colInfos, int colInfosLen);
 
 #endif

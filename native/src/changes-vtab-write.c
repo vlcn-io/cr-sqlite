@@ -293,8 +293,14 @@ int crsql_mergeInsert(
   const unsigned char *insertTbl = sqlite3_value_text(argv[2 + CHANGES_SINCE_VTAB_TBL]);
   // `splitQuoteConcat` will validate these
   const unsigned char *insertPks = sqlite3_value_text(argv[2 + CHANGES_SINCE_VTAB_PK]);
-  // TODO: check len doesn't exceed sane amount
+  
+  int inesrtColNameLen = sqlite3_value_bytes(argv[2 + CHANGES_SINCE_VTAB_CID]);
+  if (inesrtColNameLen > MAX_TBL_NAME_LEN) {
+    *errmsg = sqlite3_mprintf("column name exceeded max length");
+    return SQLITE_ERROR;
+  }
   const char *insertColName = (const char *)sqlite3_value_text(argv[2 + CHANGES_SINCE_VTAB_CID]);
+
   // `splitQuoteConcat` will validate these -- even tho 1 val should do splitquoteconcat for the validation
   const unsigned char *insertVal = sqlite3_value_text(argv[2 + CHANGES_SINCE_VTAB_CVAL]);
   sqlite3_int64 insertVrsn = sqlite3_value_int64(argv[2 + CHANGES_SINCE_VTAB_VRSN]);
@@ -316,6 +322,9 @@ int crsql_mergeInsert(
     *errmsg = sqlite3_mprintf("crsql - could not find the schema information for table %s", insertTbl);
     return SQLITE_ERROR;
   }
+
+  int isDelete = strcmp(DELETE_CID_SENTINEL, insertColName) == 0;
+  int isPkOnly = strcmp(PKS_ONLY_CID_SENTINEL, insertColName) == 0;
 
   char *pkWhereList = crsql_extractWhereList(tblInfo->pks, tblInfo->pksLen, (const char *)insertPks);
   if (pkWhereList == 0)
@@ -345,7 +354,7 @@ int crsql_mergeInsert(
   }
 
   char *pkIdentifierList = crsql_asIdentifierList(tblInfo->pks, tblInfo->pksLen, 0);
-  if (strcmp(DELETE_CID_SENTINEL, insertColName) == 0)
+  if (isDelete)
   {
     rc = crsql_mergeDelete(
         db,
@@ -363,7 +372,7 @@ int crsql_mergeInsert(
     return rc;
   }
 
-  if (strcmp(PKS_ONLY_CID_SENTINEL, insertColName) == 0)
+  if (isPkOnly || !crsql_columnExists(insertColName, tblInfo->nonPks, tblInfo->nonPksLen))
   {
     rc = crsql_mergePkOnlyInsert(
         db,

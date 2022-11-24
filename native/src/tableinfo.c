@@ -391,24 +391,29 @@ int crsql_isTableCompatible(sqlite3 *db, const char *tblName, char **errmsg)
 {
   // No unique indices besides primary key
   sqlite3_stmt *pStmt = 0;
-  char* zSql = sqlite3_mprintf("SELECT count(*) FROM pragma_index_list('%s') WHERE \"origin\" != 'pk' AND \"unique\" = 1", tblName);
+  char *zSql = sqlite3_mprintf("SELECT count(*) FROM pragma_index_list('%s') WHERE \"origin\" != 'pk' AND \"unique\" = 1", tblName);
   int rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
   sqlite3_free(zSql);
 
-  if (rc != SQLITE_OK) {
+  if (rc != SQLITE_OK)
+  {
     *errmsg = sqlite3_mprintf("Failed to analyze index information for %s", tblName);
     return 0;
   }
 
   rc = sqlite3_step(pStmt);
-  if (rc == SQLITE_ROW) {
+  if (rc == SQLITE_ROW)
+  {
     int count = sqlite3_column_int(pStmt, 0);
     sqlite3_finalize(pStmt);
-    if (count != 0) {
+    if (count != 0)
+    {
       *errmsg = sqlite3_mprintf("Table %s has unique indices besides the primary key. This is not allowed for CRRs", tblName);
       return 0;
     }
-  } else {
+  }
+  else
+  {
     sqlite3_finalize(pStmt);
     return 0;
   }
@@ -418,20 +423,25 @@ int crsql_isTableCompatible(sqlite3 *db, const char *tblName, char **errmsg)
   rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
   sqlite3_free(zSql);
 
-  if (rc != SQLITE_OK) {
+  if (rc != SQLITE_OK)
+  {
     *errmsg = sqlite3_mprintf("Failed to analyze primary key information for %s", tblName);
     return 0;
   }
 
   rc = sqlite3_step(pStmt);
-  if (rc == SQLITE_ROW) {
+  if (rc == SQLITE_ROW)
+  {
     int count = sqlite3_column_int(pStmt, 0);
     sqlite3_finalize(pStmt);
-    if (count == 0) {
+    if (count == 0)
+    {
       *errmsg = sqlite3_mprintf("Table %s has no primary key. CRRs must have a primary key", tblName);
       return 0;
     }
-  } else {
+  }
+  else
+  {
     sqlite3_finalize(pStmt);
     return 0;
   }
@@ -441,20 +451,25 @@ int crsql_isTableCompatible(sqlite3 *db, const char *tblName, char **errmsg)
   rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
   sqlite3_free(zSql);
 
-  if (rc != SQLITE_OK) {
+  if (rc != SQLITE_OK)
+  {
     *errmsg = sqlite3_mprintf("Failed to analyze primary key information for %s", tblName);
     return 0;
   }
 
   rc = sqlite3_step(pStmt);
-  if (rc == SQLITE_ROW) {
+  if (rc == SQLITE_ROW)
+  {
     int count = sqlite3_column_int(pStmt, 0);
     sqlite3_finalize(pStmt);
-    if (count != 0) {
+    if (count != 0)
+    {
       *errmsg = sqlite3_mprintf("Table %s has foreign key constraints. CRRs must not have checked foreign key constraints as they can be violated by row level security or replication.", tblName);
       return 0;
     }
-  } else {
+  }
+  else
+  {
     sqlite3_finalize(pStmt);
     return 0;
   }
@@ -464,23 +479,41 @@ int crsql_isTableCompatible(sqlite3 *db, const char *tblName, char **errmsg)
   rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
   sqlite3_free(zSql);
 
-  if (rc != SQLITE_OK) {
+  if (rc != SQLITE_OK)
+  {
     *errmsg = sqlite3_mprintf("Failed to analyze default value information for %s", tblName);
     return 0;
   }
 
   rc = sqlite3_step(pStmt);
-  if (rc == SQLITE_ROW) {
+  if (rc == SQLITE_ROW)
+  {
     int count = sqlite3_column_int(pStmt, 0);
     sqlite3_finalize(pStmt);
-    if (count != 0) {
+    if (count != 0)
+    {
       *errmsg = sqlite3_mprintf("Table %s has a NOT NULL column without a DEFAULT VALUE. This is not allowed as it prevents forwards and backwards compatbility between schema versions. Make the column nullable or assign a default value to it.", tblName);
       return 0;
     }
-  } else {
+  }
+  else
+  {
     sqlite3_finalize(pStmt);
     return 0;
   }
 
   return 1;
+}
+
+int crsql_columnExists(const char *colName, crsql_ColumnInfo *colInfos, int colInfosLen)
+{
+  for (int i = 0; i < colInfosLen; ++i)
+  {
+    if (strcmp(colInfos[i].name, colName) == 0)
+    {
+      return 1;
+    }
+  }
+
+  return 0;
 }

@@ -119,7 +119,9 @@ char *crsql_rowPatchDataQuery(
   if (pkWhereList == 0) {
     return 0;
   }
-  // TODO: if the col doesn't exist in tblInfo, don't do anything
+  // TODO: should we `quote([])` so it fatals on missing columns?
+  // we'd need something other than `%w` to escape [ in order to prevent
+  // injection then.
   char *zSql = sqlite3_mprintf(
       "SELECT quote(\"%w\") FROM \"%w\" WHERE %z",
       colName,

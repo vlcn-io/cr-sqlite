@@ -381,6 +381,20 @@ static void crsqlBeginAlterFunc(sqlite3_context *context, int argc, sqlite3_valu
   }
 }
 
+int crsql_compactPostAlter(sqlite3 *db, const char *tblName, char **errmsg) {
+  // 1. remove all entries in the clock table that have a column
+  // name that does not exist
+  char *zSql = sqlite3_mprintf(
+    "DELETE FROM \"%w__crsql_clock\" WHERE \"__crsql_col_name\" NOT IN (SELECT name FROM pragma_table_info(%Q))",
+    tblName,
+    tblName
+  );
+  int rc = sqlite3_exec(db, zSql, 0, 0, errmsg);
+  sqlite3_free(zSql);
+
+  return rc;
+}
+
 static void crsqlCommitAlterFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
   const char *tblName = 0;
@@ -406,16 +420,13 @@ static void crsqlCommitAlterFunc(sqlite3_context *context, int argc, sqlite3_val
     tblName = (const char *)sqlite3_value_text(argv[0]);
   }
 
-  rc = createCrr(context, db, schemaName, tblName, &errmsg);
-  if (rc != SQLITE_OK)
-  {
-    sqlite3_result_error(context, errmsg, -1);
-    sqlite3_free(errmsg);
-    sqlite3_exec(db, "ROLLBACK", 0, 0, 0);
-    return;
+  rc = crsql_compactPostAlter(db, tblName, &errmsg);
+  if (rc == SQLITE_OK) {
+    rc = createCrr(context, db, schemaName, tblName, &errmsg);
   }
-
-  rc = sqlite3_exec(db, "RELEASE alter_crr", 0, 0, &errmsg);
+  if (rc == SQLITE_OK) {
+    rc = sqlite3_exec(db, "RELEASE alter_crr", 0, 0, &errmsg);
+  }
   if (rc != SQLITE_OK)
   {
     sqlite3_result_error(context, errmsg, -1);

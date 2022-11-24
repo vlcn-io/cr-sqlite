@@ -157,7 +157,6 @@ void testSelectChangesAfterChangingColumnName() {
   assert(rc == SQLITE_OK);
 
   rc = sqlite3_exec(db, "SELECT crsql_begin_alter('foo')", 0, 0, &err);
-  printf("e: %s\n", err);
   assert(rc == SQLITE_OK);
   rc += sqlite3_exec(db, "ALTER TABLE foo DROP COLUMN b", 0, 0, 0);
   assert(rc == SQLITE_OK);
@@ -169,11 +168,13 @@ void testSelectChangesAfterChangingColumnName() {
   rc += sqlite3_prepare_v2(db, "SELECT * FROM crsql_changes", -1, &pStmt, 0);
   assert(rc == SQLITE_OK);
   int numRows = 0;
+  // Columns that no long exist post-alter should not
+  // be retained for replication
   while ((rc = sqlite3_step(pStmt)) == SQLITE_ROW) {
     ++numRows;
   }
   sqlite3_finalize(pStmt);
-  // assert(numRows == 0);
+  assert(numRows == 0);
   assert(rc == SQLITE_DONE);
 
   // insert some rows post schema change

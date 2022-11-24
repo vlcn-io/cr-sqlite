@@ -203,7 +203,6 @@ static void testInsertChangesWithUnkownColumnNames() {
   char *err = 0;
   sqlite3 *db1;
   sqlite3 *db2;
-  sqlite3_stmt *pStmt = 0;
   rc = sqlite3_open(":memory:", &db1);
   rc += sqlite3_open(":memory:", &db2);
 
@@ -219,22 +218,41 @@ static void testInsertChangesWithUnkownColumnNames() {
 
   sqlite3_stmt *pStmtRead = 0;
   sqlite3_stmt *pStmtWrite = 0;
-  rc += sqlite3_prepare_v2(db1, "SELECT * FROM crsql_changes", -1, &pStmt, 0);
+  rc += sqlite3_prepare_v2(db1, "SELECT * FROM crsql_changes", -1, &pStmtRead, 0);
   
   rc = sqlite3_prepare_v2(db2, "INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?)", -1, &pStmtWrite, 0);
   assert(rc == SQLITE_OK);
 
   while (sqlite3_step(pStmtRead) == SQLITE_ROW) {
     for (int i = 0; i < 6; ++i) {
-      sqlite3_bind_value(pStmtWrite, i + 1, sqlite3_column_value(pStmtWrite, i));
+      sqlite3_bind_value(pStmtWrite, i + 1, sqlite3_column_value(pStmtRead, i));
     }
 
     sqlite3_step(pStmtWrite);
     sqlite3_reset(pStmtWrite);
   }
+  sqlite3_finalize(pStmtWrite);
+  sqlite3_finalize(pStmtRead);
 
+  // select all from db2.
+  // it should have a row for pk 1.
+  sqlite3_prepare_v2(db2, "SELECT * FROM foo ORDER BY a ASC", -1, &pStmtRead, 0);
+  int comparisons = 0;
+  while (sqlite3_step(pStmtRead) == SQLITE_ROW) {
+    if (comparisons == 0) {
+      assert(sqlite3_column_int(pStmtRead, 0) == 1);
+      assert(sqlite3_column_type(pStmtRead, 1) == SQLITE_NULL);
+    } else {
+      assert(sqlite3_column_int(pStmtRead, 0) == 2);
+      assert(sqlite3_column_int(pStmtRead, 1) == 3);
+    }
+    comparisons +=1;
+  }
+  sqlite3_finalize(pStmtRead);
 
-
+  assert(comparisons == 2);
+  crsql_close(db1);
+  crsql_close(db2);
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 

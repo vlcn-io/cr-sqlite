@@ -31,15 +31,17 @@ static int changesConnect(
       db,
       // If we go without rowid we need to concat `table || !'! pk` to be the primary key
       // as xUpdate requires a single column to be the primary key if we use without rowid.
-      "CREATE TABLE x([table] NOT NULL, [pk] NOT NULL, [cid] NOT NULL, [val], [version] NOT NULL, [site_id] NOT NULL)");
+      "CREATE TABLE x([table] TEXT NOT NULL, [pk] TEXT NOT NULL, [cid] TEXT NOT NULL, [val], [version] INTEGER NOT NULL, [site_id] BLOB NOT NULL)");
   if (rc != SQLITE_OK)
   {
+    *pzErr = sqlite3_mprintf("Could not define the table");
     return rc;
   }
   pNew = sqlite3_malloc(sizeof(*pNew));
   *ppVtab = (sqlite3_vtab *)pNew;
   if (pNew == 0)
   {
+    *pzErr = sqlite3_mprintf("Out of memory");
     return SQLITE_NOMEM;
   }
   memset(pNew, 0, sizeof(*pNew));
@@ -49,6 +51,7 @@ static int changesConnect(
   rc = crsql_ensureTableInfosAreUpToDate(db, pNew->pExtData, &(*ppVtab)->zErrMsg);
   if (rc != SQLITE_OK)
   {
+    *pzErr = sqlite3_mprintf("Could not update table infos");
     sqlite3_free(pNew);
     return rc;
   }
@@ -98,7 +101,6 @@ static int changesCrsrFinalize(crsql_Changes_cursor *crsr)
   rc += sqlite3_finalize(crsr->pRowStmt);
   crsr->pRowStmt = 0;
 
-  crsr->cid = -1;
   crsr->version = MIN_POSSIBLE_DB_VERSION;
 
   return rc;
@@ -195,7 +197,7 @@ static int changesNext(sqlite3_vtab_cursor *cur)
 
   const char *tbl = (const char *)sqlite3_column_text(pCur->pChangesStmt, TBL);
   const char *pks = (const char *)sqlite3_column_text(pCur->pChangesStmt, PKS);
-  int cid = sqlite3_column_int(pCur->pChangesStmt, CID);
+  const char *cid = (const char *)sqlite3_column_text(pCur->pChangesStmt, CID);
   sqlite3_int64 vrsn = sqlite3_column_int64(pCur->pChangesStmt, VRSN);
 
   crsql_TableInfo *tblInfo = crsql_findTableInfo(
@@ -209,8 +211,6 @@ static int changesNext(sqlite3_vtab_cursor *cur)
     return SQLITE_ERROR;
   }
 
-  // TODO: we should require pks in a validation step when
-  // building crrs
   if (tblInfo->pksLen == 0)
   {
     crsql_freeTableInfo(tblInfo);
@@ -265,7 +265,6 @@ static int changesNext(sqlite3_vtab_cursor *cur)
   }
 
   pCur->pRowStmt = pRowStmt;
-  pCur->cid = cid;
   pCur->version = vrsn;
 
   return rc;
@@ -310,12 +309,10 @@ static int changesColumn(
     }
     break;
   case CHANGES_SINCE_VTAB_CID:
-    // we have no row -- the thing is deleted
-    // TODO: we could skip all these events that can no longer be sent due to deletion
     if (pCur->pRowStmt == 0) {
-      sqlite3_result_int(ctx, DELETE_CID_SENTINEL);
+      sqlite3_result_text(ctx, DELETE_CID_SENTINEL, -1, SQLITE_STATIC);
     } else {
-      sqlite3_result_int(ctx, pCur->cid);
+      sqlite3_result_value(ctx, sqlite3_column_value(pCur->pChangesStmt, CID));
     }
     break;
   case CHANGES_SINCE_VTAB_VRSN:

@@ -32,7 +32,7 @@ static void testCreateClockTable()
   char *err = 0;
 
   rc = sqlite3_open(":memory:", &db);
-  sqlite3_exec(db, "CREATE TABLE foo (a)", 0, 0, 0);
+  sqlite3_exec(db, "CREATE TABLE foo (a, b, primary key (a, b))", 0, 0, 0);
   sqlite3_exec(db, "CREATE TABLE bar (a primary key)", 0, 0, 0);
   sqlite3_exec(db, "CREATE TABLE baz (a primary key, b)", 0, 0, 0);
   sqlite3_exec(db, "CREATE TABLE boo (a primary key, b, c)", 0, 0, 0);
@@ -95,11 +95,13 @@ static void teste2e()
   rc += sqlite3_exec(db, "insert into foo values (1, 2.0e2);", 0, 0, &err);
 
   sqlite3 *db2;
-  rc += sqlite3_open(":memory:", &db2);
+  rc = sqlite3_open(":memory:", &db2);
+  assert(rc == SQLITE_OK);
 
-  rc += sqlite3_prepare_v2(db, "SELECT * FROM crsql_changes", -1, &pStmt1, 0);
-  rc += sqlite3_prepare_v2(db, "INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?)", -1, &pStmt2, 0);
-  CHECK_OK
+  rc = sqlite3_prepare_v2(db, "SELECT * FROM crsql_changes", -1, &pStmt1, 0);
+  assert(rc == SQLITE_OK);
+  rc = sqlite3_prepare_v2(db, "INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?)", -1, &pStmt2, 0);
+  assert(rc == SQLITE_OK);
 
   while (sqlite3_step(pStmt1) == SQLITE_ROW) {
     for (int i = 0; i < 6; ++i) {
@@ -114,7 +116,7 @@ static void teste2e()
 
   rc += sqlite3_prepare_v2(db, "SELECT * FROM foo", -1, &pStmt1, 0);
   rc += sqlite3_prepare_v2(db, "SELECT * FROM foo", -1, &pStmt2, 0);
-  CHECK_OK
+  assert(rc == SQLITE_OK);
 
   int didCompare = 0;
   while (sqlite3_step(pStmt1) == SQLITE_ROW) {
@@ -135,19 +137,130 @@ static void teste2e()
   crsql_close(db2);
   printf("\t\e[0;32mSuccess\e[0m\n");
   return;
+}
 
-fail:
-  printf("err: %s %d\n", err, rc);
-  sqlite3_free(err);
-  sqlite3_close(db);
+static void testSelectChangesAfterChangingColumnName() {
+  printf("SelectAfterChangeingColumnName\n");
+  
+  int rc = SQLITE_OK;
+  char *err = 0;
+  sqlite3 *db;
+  sqlite3_stmt *pStmt = 0;
+  rc = sqlite3_open(":memory:", &db);
+
+  rc += sqlite3_exec(db, "CREATE TABLE foo(a primary key, b);", 0, 0, 0);
+  rc += sqlite3_exec(db, "SELECT crsql_as_crr('foo')", 0, 0, 0);
   assert(rc == SQLITE_OK);
+
+  // insert some rows so we have changes
+  rc += sqlite3_exec(db, "INSERT INTO foo VALUES (1, 2);", 0, 0, 0);
+  assert(rc == SQLITE_OK);
+
+  rc = sqlite3_exec(db, "SELECT crsql_begin_alter('foo')", 0, 0, &err);
+  rc += sqlite3_exec(db, "ALTER TABLE foo DROP COLUMN b", 0, 0, 0);
+  rc += sqlite3_exec(db, "ALTER TABLE foo ADD COLUMN c", 0, 0, 0);
+  rc += sqlite3_exec(db, "SELECT crsql_commit_alter('foo')", 0, 0, 0);
+  assert(rc == SQLITE_OK);
+
+  rc += sqlite3_prepare_v2(db, "SELECT * FROM crsql_changes", -1, &pStmt, 0);
+  assert(rc == SQLITE_OK);
+  int numRows = 0;
+  // Columns that no long exist post-alter should not
+  // be retained for replication
+  while ((rc = sqlite3_step(pStmt)) == SQLITE_ROW) {
+    ++numRows;
+  }
+  sqlite3_finalize(pStmt);
+  assert(numRows == 0);
+  assert(rc == SQLITE_DONE);
+
+  // insert some rows post schema change
+  rc = sqlite3_exec(db, "INSERT INTO foo VALUES (2, 3);", 0, 0, 0);
+  rc += sqlite3_prepare_v2(db, "SELECT * FROM crsql_changes", -1, &pStmt, 0);
+  assert(rc == SQLITE_OK);
+  numRows = 0;
+  // Columns that no long exist post-alter should not
+  // be retained for replication
+  while ((rc = sqlite3_step(pStmt)) == SQLITE_ROW) {
+    assert(strcmp("foo", (const char*)sqlite3_column_text(pStmt, 0)) == 0);
+    assert(strcmp("2", (const char*)sqlite3_column_text(pStmt, 1)) == 0);
+    assert(strcmp("c", (const char*)sqlite3_column_text(pStmt, 2)) == 0);
+    assert(strcmp("3", (const char*)sqlite3_column_text(pStmt, 3)) == 0);
+    ++numRows;
+  }
+  sqlite3_finalize(pStmt);
+  assert(numRows == 1);
+  assert(rc == SQLITE_DONE);
+
+  crsql_close(db);
+  printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
-void testModifySinglePK() {
+static void testInsertChangesWithUnkownColumnNames() {
+  printf("InsertChangesWithUnknownColumnName\n");
+
+  int rc = SQLITE_OK;
+  char *err = 0;
+  sqlite3 *db1;
+  sqlite3 *db2;
+  rc = sqlite3_open(":memory:", &db1);
+  rc += sqlite3_open(":memory:", &db2);
+
+  rc += sqlite3_exec(db1, "CREATE TABLE foo(a primary key, b);", 0, 0, 0);
+  rc += sqlite3_exec(db1, "SELECT crsql_as_crr('foo')", 0, 0, 0);
+  rc += sqlite3_exec(db2, "CREATE TABLE foo(a primary key, c);", 0, 0, 0);
+  rc += sqlite3_exec(db2, "SELECT crsql_as_crr('foo')", 0, 0, 0);
+  assert(rc == SQLITE_OK);
+
+  rc += sqlite3_exec(db1, "INSERT INTO foo VALUES (1, 2);", 0, 0, 0);
+  rc += sqlite3_exec(db2, "INSERT INTO foo VALUES (2, 3);", 0, 0, 0);
+  assert(rc == SQLITE_OK);
+
+  sqlite3_stmt *pStmtRead = 0;
+  sqlite3_stmt *pStmtWrite = 0;
+  rc += sqlite3_prepare_v2(db1, "SELECT * FROM crsql_changes", -1, &pStmtRead, 0);
+  
+  rc = sqlite3_prepare_v2(db2, "INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?)", -1, &pStmtWrite, 0);
+  assert(rc == SQLITE_OK);
+
+  while (sqlite3_step(pStmtRead) == SQLITE_ROW) {
+    for (int i = 0; i < 6; ++i) {
+      sqlite3_bind_value(pStmtWrite, i + 1, sqlite3_column_value(pStmtRead, i));
+    }
+
+    sqlite3_step(pStmtWrite);
+    sqlite3_reset(pStmtWrite);
+  }
+  sqlite3_finalize(pStmtWrite);
+  sqlite3_finalize(pStmtRead);
+
+  // select all from db2.
+  // it should have a row for pk 1.
+  sqlite3_prepare_v2(db2, "SELECT * FROM foo ORDER BY a ASC", -1, &pStmtRead, 0);
+  int comparisons = 0;
+  while (sqlite3_step(pStmtRead) == SQLITE_ROW) {
+    if (comparisons == 0) {
+      assert(sqlite3_column_int(pStmtRead, 0) == 1);
+      assert(sqlite3_column_type(pStmtRead, 1) == SQLITE_NULL);
+    } else {
+      assert(sqlite3_column_int(pStmtRead, 0) == 2);
+      assert(sqlite3_column_int(pStmtRead, 1) == 3);
+    }
+    comparisons +=1;
+  }
+  sqlite3_finalize(pStmtRead);
+
+  assert(comparisons == 2);
+  crsql_close(db1);
+  crsql_close(db2);
+  printf("\t\e[0;32mSuccess\e[0m\n");
+}
+
+static void testModifySinglePK() {
 
 }
 
-void testModifyCompoundPK() {
+static void testModifyCompoundPK() {
 
 }
 
@@ -158,6 +271,9 @@ void crsqlTestSuite()
   testCreateClockTable();
   // testSyncBit();
   teste2e();
+  testSelectChangesAfterChangingColumnName();
+  testInsertChangesWithUnkownColumnNames();
+
   // testIdempotence();
   // testColumnAdds();
   // testColumnDrops();

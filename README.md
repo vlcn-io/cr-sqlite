@@ -17,13 +17,22 @@ This project implements [CRDTs](https://crdt.tech/) and [CRRs](https://hal.inria
 
 # Usage
 
-`crsqlite` exposes two APIs:
+`crsqlite` exposes three APIs:
 
 - A function extension (`crsql_as_crr`) to upgrade existing tables to "crrs" or "conflict free replicated relations"
-  - `select crsql_as_crr('table_name')`
-- And a virtual table (`crsql_changes`) to ask the database for changesets or to apply changesets from another database
-  - `select * from crsql_changes where version > x`
-  - `insert into crsql_changes values ([patches receied from select on another peer])`
+  - `SELECT crsql_as_crr('table_name')`
+- A virtual table (`crsql_changes`) to ask the database for changesets or to apply changesets from another database
+  - `SELECT * FROM crsql_changes WHERE version > x AND site_id != my_site`
+  - `INSERT INTO crsql_changes VALUES ([patches receied from select on another peer])`
+- And (on latest) `crsql_alter_begin('table_name')` & `crsql_alter_commit('table_name')` primitives to allow altering table definitions that have been upgraded to `crr`s.
+  - Until we move forward with extending the syntax of SQLite to be CRR aware, altering CRRs looks like:
+    ```sql
+    SELECT crsql_alter_begin('table_name');
+    -- 1 or more alterations to `table_name`
+    ALTER TABLE table_name ...;
+    SELECT crsql_alter_commit('table_name');
+    ```
+    A future version of cr-sqlite may extend the SQL syntax to make this more natural.
 
 Application code would use the function extension to enable crr support on tables.
 Networking code would use the `crsql_changes` virtual table to fetch and apply changes.

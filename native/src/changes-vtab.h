@@ -113,7 +113,6 @@ struct crsql_Changes_cursor
   sqlite3_stmt *pChangesStmt;
   sqlite3_stmt *pRowStmt;
 
-  int cid;
   sqlite3_int64 version;
 };
 

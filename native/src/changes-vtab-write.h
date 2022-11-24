@@ -20,7 +20,7 @@ int crsql_didCidWin(
     const char *pkWhereList,
     const void *insertSiteId,
     int insertSiteIdLen,
-    int cid,
+    const char* colName,
     sqlite3_int64 version,
     char **errmsg);
 

@@ -1,6 +1,7 @@
 #include "changes-vtab-read.h"
 #include "consts.h"
 #include "util.h"
+#include <string.h>
 
 /**
  * Construct the query to grab the changes made against
@@ -17,7 +18,7 @@ char *crsql_changesQueryForTable(crsql_TableInfo *tableInfo)
       "SELECT\
       '%s' as tbl,\
       %z as pks,\
-      __crsql_col_num as cid,\
+      __crsql_col_name as cid,\
       __crsql_version as vrsn,\
       __crsql_site_id as site_id\
     FROM \"%s__crsql_clock\"\
@@ -32,6 +33,14 @@ char *crsql_changesQueryForTable(crsql_TableInfo *tableInfo)
   return zSql;
 }
 
+// TODO: here we could do all the filtering to remove:
+// - records with no longer existing columns
+// - all rows prior to a delete entry for a row
+//
+// or we can do that in `xNext`
+// or we can compact the table on `commit_alter`
+// compacting in commit alter is likely the simplest option
+// with minimal impact on perf of normal operations
 /**
  * Union all the crr tables together to get a comprehensive
  * set of changes
@@ -99,10 +108,10 @@ char *crsql_changesUnionQuery(
 char *crsql_rowPatchDataQuery(
     sqlite3 *db,
     crsql_TableInfo *tblInfo,
-    int cid,
+    const char* colName,
     const char *pks)
 {
-  if (cid == DELETE_CID_SENTINEL) {
+  if (strcmp(DELETE_CID_SENTINEL, colName) == 0) {
     return sqlite3_mprintf("");
   }
 
@@ -110,9 +119,12 @@ char *crsql_rowPatchDataQuery(
   if (pkWhereList == 0) {
     return 0;
   }
+  // TODO: should we `quote([])` so it fatals on missing columns?
+  // we'd need something other than `%w` to escape [ in order to prevent
+  // injection then.
   char *zSql = sqlite3_mprintf(
-      "SELECT quote(\"%s\") FROM \"%s\" WHERE %z",
-      tblInfo->baseCols[cid].name,
+      "SELECT quote(\"%w\") FROM \"%w\" WHERE %z",
+      colName,
       tblInfo->tblName,
       pkWhereList);
 

@@ -75,12 +75,12 @@ char *crsql_insertTriggerQuery(crsql_TableInfo *tableInfo, char *pkList, char *p
     subTriggers[0] = sqlite3_mprintf(
         "INSERT OR REPLACE INTO \"%s__crsql_clock\" (\
         %s,\
-        __crsql_col_num,\
+        __crsql_col_name,\
         __crsql_version,\
         __crsql_site_id\
       ) SELECT \
         %s,\
-        %d,\
+        %Q,\
         crsql_nextdbversion(),\
         NULL\
       WHERE crsql_internal_sync_bit() = 0;\n",
@@ -94,19 +94,19 @@ char *crsql_insertTriggerQuery(crsql_TableInfo *tableInfo, char *pkList, char *p
     subTriggers[i] = sqlite3_mprintf(
         "INSERT OR REPLACE INTO \"%s__crsql_clock\" (\
         %s,\
-        __crsql_col_num,\
+        __crsql_col_name,\
         __crsql_version,\
         __crsql_site_id\
       ) SELECT \
         %s,\
-        %d,\
+        %Q,\
         crsql_nextdbversion(),\
         NULL\
       WHERE crsql_internal_sync_bit() = 0;\n",
         tableInfo->tblName,
         pkList,
         pkNewList,
-        tableInfo->nonPks[i].cid);
+        tableInfo->nonPks[i].name);
   }
 
   joinedSubTriggers = crsql_join(subTriggers, tableInfo->nonPksLen);
@@ -165,14 +165,14 @@ int crsql_createUpdateTrigger(sqlite3 *db,
     // the same as the old value.
     subTriggers[i] = sqlite3_mprintf("INSERT OR REPLACE INTO \"%s__crsql_clock\" (\
         %s,\
-        __crsql_col_num,\
+        __crsql_col_name,\
         __crsql_version,\
         __crsql_site_id\
-      ) SELECT %s, %d, crsql_nextdbversion(), NULL WHERE crsql_internal_sync_bit() = 0 AND NEW.\"%s\" != OLD.\"%s\";\n",
+      ) SELECT %s, %Q, crsql_nextdbversion(), NULL WHERE crsql_internal_sync_bit() = 0 AND NEW.\"%w\" != OLD.\"%w\";\n",
                                      tableInfo->tblName,
                                      pkList,
                                      pkNewList,
-                                     tableInfo->nonPks[i].cid,
+                                     tableInfo->nonPks[i].name,
                                      tableInfo->nonPks[i].name,
                                      tableInfo->nonPks[i].name);
   }
@@ -229,12 +229,12 @@ char *crsql_deleteTriggerQuery(crsql_TableInfo *tableInfo)
     BEGIN\
       INSERT OR REPLACE INTO \"%s__crsql_clock\" (\
         %s,\
-        __crsql_col_num,\
+        __crsql_col_name,\
         __crsql_version,\
         __crsql_site_id\
       ) SELECT \
         %s,\
-        %d,\
+        %Q,\
         crsql_nextdbversion(),\
         NULL\
       WHERE crsql_internal_sync_bit() = 0;\
@@ -290,13 +290,13 @@ int crsql_createCrrTriggers(
 
 int crsql_removeCrrTriggersIfExist(
     sqlite3 *db,
-    crsql_TableInfo *tableInfo,
+    const char *tblName,
     char **err)
 {
   char *zSql = 0;
   int rc = SQLITE_OK;
 
-  zSql = sqlite3_mprintf("DROP TRIGGER IF EXISTS \"%s__crsql_itrig\"", tableInfo->tblName);
+  zSql = sqlite3_mprintf("DROP TRIGGER IF EXISTS \"%s__crsql_itrig\"", tblName);
   rc = sqlite3_exec(db, zSql, 0, 0, err);
   sqlite3_free(zSql);
   if (rc != SQLITE_OK)
@@ -304,7 +304,7 @@ int crsql_removeCrrTriggersIfExist(
     return rc;
   }
 
-  zSql = sqlite3_mprintf("DROP TRIGGER IF EXISTS \"%s__crsql_utrig\"", tableInfo->tblName);
+  zSql = sqlite3_mprintf("DROP TRIGGER IF EXISTS \"%s__crsql_utrig\"", tblName);
   rc = sqlite3_exec(db, zSql, 0, 0, err);
   sqlite3_free(zSql);
   if (rc != SQLITE_OK)
@@ -312,7 +312,7 @@ int crsql_removeCrrTriggersIfExist(
     return rc;
   }
 
-  zSql = sqlite3_mprintf("DROP TRIGGER IF EXISTS \"%s__crsql_dtrig\"", tableInfo->tblName);
+  zSql = sqlite3_mprintf("DROP TRIGGER IF EXISTS \"%s__crsql_dtrig\"", tblName);
   rc = sqlite3_exec(db, zSql, 0, 0, err);
   sqlite3_free(zSql);
   if (rc != SQLITE_OK)

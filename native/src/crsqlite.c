@@ -196,51 +196,19 @@ int crsql_createClockTable(
   char *pkList = 0;
   int rc = SQLITE_OK;
 
-  // drop the table if it exists. This will drop versions so we should
-  // put in place a path to preserve versions across schema updates.
-  // copy the data to a temp table, re-create this table, copy it back.
-  // of course if columns were re-ordered versions are pinned to the wrong columns.
-  // TODO: incorporate schema name!
-  // TODO: allow re-running `as_crr` against a table to incorporate schema changes
-  // only schema changes to concern ourselves with:
-  // - dropped columns
-  // - new primary key columns
-  // zSql = sqlite3_mprintf("DROP TABLE IF EXISTS \"%s__crsql_clock\"", tableInfo->tblName);
-  // rc = sqlite3_exec(db, zSql, 0, 0, err);
-  // sqlite3_free(zSql);
-  // if (rc != SQLITE_OK)
-  // {
-  //   return rc;
-  // }
-
-  // TODO: just forbid tables w/o primary keys
-  if (tableInfo->pksLen == 0)
-  {
-    zSql = sqlite3_mprintf("CREATE TABLE IF NOT EXISTS \"%s__crsql_clock\" (\
-      \"rowid\" NOT NULL,\
-      \"__crsql_col_num\" NOT NULL,\
-      \"__crsql_version\" NOT NULL,\
-      \"__crsql_site_id\",\
-      PRIMARY KEY (\"rowid\", \"__crsql_col_num\")\
-    )",
-                           tableInfo->tblName);
-  }
-  else
-  {
-    pkList = crsql_asIdentifierList(
-        tableInfo->pks,
-        tableInfo->pksLen,
-        0);
-    zSql = sqlite3_mprintf("CREATE TABLE IF NOT EXISTS \"%s__crsql_clock\" (\
+  pkList = crsql_asIdentifierList(
+      tableInfo->pks,
+      tableInfo->pksLen,
+      0);
+  zSql = sqlite3_mprintf("CREATE TABLE IF NOT EXISTS \"%s__crsql_clock\" (\
       %s,\
-      \"__crsql_col_num\" NOT NULL,\
+      \"__crsql_col_name\" NOT NULL,\
       \"__crsql_version\" NOT NULL,\
       \"__crsql_site_id\",\
-      PRIMARY KEY (%s, __crsql_col_num)\
+      PRIMARY KEY (%s, \"__crsql_col_name\")\
     )",
-                           tableInfo->tblName, pkList, pkList);
-    sqlite3_free(pkList);
-  }
+                         tableInfo->tblName, pkList, pkList);
+  sqlite3_free(pkList);
 
   rc = sqlite3_exec(db, zSql, 0, 0, err);
   sqlite3_free(zSql);
@@ -250,7 +218,7 @@ int crsql_createClockTable(
   }
 
   zSql = sqlite3_mprintf(
-      "CREATE INDEX IF NOT EXISTS \"%s__crsql_clock_v_idx\" ON \"%s__crsql_clock\" (__crsql_version)",
+      "CREATE INDEX IF NOT EXISTS \"%s__crsql_clock_v_idx\" ON \"%s__crsql_clock\" (\"__crsql_version\")",
       tableInfo->tblName,
       tableInfo->tblName);
   sqlite3_exec(db, zSql, 0, 0, err);
@@ -293,7 +261,7 @@ static int createCrr(
   rc = crsql_createClockTable(db, tableInfo, err);
   if (rc == SQLITE_OK)
   {
-    rc = crsql_removeCrrTriggersIfExist(db, tableInfo, err);
+    rc = crsql_removeCrrTriggersIfExist(db, tableInfo->tblName, err);
     if (rc == SQLITE_OK)
     {
       rc = crsql_createCrrTriggers(db, tableInfo, err);
@@ -363,11 +331,109 @@ static void crsqlMakeCrrFunc(sqlite3_context *context, int argc, sqlite3_value *
   {
     sqlite3_result_error(context, errmsg, -1);
     sqlite3_free(errmsg);
-    sqlite3_exec(db, "ROLLBACK TO as_crr", 0, 0, 0);
+    sqlite3_exec(db, "ROLLBACK", 0, 0, 0);
     return;
   }
 
   sqlite3_exec(db, "RELEASE as_crr", 0, 0, 0);
+}
+
+static void crsqlBeginAlterFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
+{
+  const char *tblName = 0;
+  const char *schemaName = 0;
+  int rc = SQLITE_OK;
+  sqlite3 *db = sqlite3_context_db_handle(context);
+  char *errmsg = 0;
+
+  if (argc == 0)
+  {
+    sqlite3_result_error(context, "Wrong number of args provided to crsql_as_crr. Provide the schema name and table name or just the table name.", -1);
+    return;
+  }
+
+  if (argc == 2)
+  {
+    schemaName = (const char *)sqlite3_value_text(argv[0]);
+    tblName = (const char *)sqlite3_value_text(argv[1]);
+  }
+  else
+  {
+    schemaName = "main";
+    tblName = (const char *)sqlite3_value_text(argv[0]);
+  }
+
+  rc = sqlite3_exec(db, "SAVEPOINT alter_crr", 0, 0, &errmsg);
+  if (rc != SQLITE_OK)
+  {
+    sqlite3_result_error(context, errmsg, -1);
+    sqlite3_free(errmsg);
+    return;
+  }
+
+  rc = crsql_removeCrrTriggersIfExist(db, tblName, &errmsg);
+  if (rc != SQLITE_OK)
+  {
+    sqlite3_result_error(context, errmsg, -1);
+    sqlite3_free(errmsg);
+    sqlite3_exec(db, "ROLLBACK", 0, 0, 0);
+    return;
+  }
+}
+
+int crsql_compactPostAlter(sqlite3 *db, const char *tblName, char **errmsg) {
+  // 1. remove all entries in the clock table that have a column
+  // name that does not exist
+  char *zSql = sqlite3_mprintf(
+    "DELETE FROM \"%w__crsql_clock\" WHERE \"__crsql_col_name\" NOT IN (SELECT name FROM pragma_table_info(%Q))",
+    tblName,
+    tblName
+  );
+  int rc = sqlite3_exec(db, zSql, 0, 0, errmsg);
+  sqlite3_free(zSql);
+
+  return rc;
+}
+
+static void crsqlCommitAlterFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
+{
+  const char *tblName = 0;
+  const char *schemaName = 0;
+  int rc = SQLITE_OK;
+  sqlite3 *db = sqlite3_context_db_handle(context);
+  char *errmsg = 0;
+
+  if (argc == 0)
+  {
+    sqlite3_result_error(context, "Wrong number of args provided to crsql_commit_alter. Provide the schema name and table name or just the table name.", -1);
+    return;
+  }
+
+  if (argc == 2)
+  {
+    schemaName = (const char *)sqlite3_value_text(argv[0]);
+    tblName = (const char *)sqlite3_value_text(argv[1]);
+  }
+  else
+  {
+    schemaName = "main";
+    tblName = (const char *)sqlite3_value_text(argv[0]);
+  }
+
+  rc = crsql_compactPostAlter(db, tblName, &errmsg);
+  if (rc == SQLITE_OK) {
+    rc = createCrr(context, db, schemaName, tblName, &errmsg);
+  }
+  if (rc == SQLITE_OK) {
+    rc = sqlite3_exec(db, "RELEASE alter_crr", 0, 0, &errmsg);
+  }
+  if (rc != SQLITE_OK)
+  {
+    sqlite3_result_error(context, errmsg, -1);
+    sqlite3_free(errmsg);
+    sqlite3_exec(db, "ROLLBACK", 0, 0, 0);
+    return;
+  }
 }
 
 static void freeConnectionExtData(void *pUserData)
@@ -450,6 +516,20 @@ __declspec(dllexport)
                                  // existing database state. directonly.
                                  SQLITE_UTF8 | SQLITE_DIRECTONLY,
                                  0, crsqlMakeCrrFunc, 0, 0);
+  }
+
+  if (rc == SQLITE_OK)
+  {
+    rc = sqlite3_create_function(db, "crsql_begin_alter", -1,
+                                 SQLITE_UTF8 | SQLITE_DIRECTONLY,
+                                 0, crsqlBeginAlterFunc, 0, 0);
+  }
+
+  if (rc == SQLITE_OK)
+  {
+    rc = sqlite3_create_function(db, "crsql_commit_alter", -1,
+                                 SQLITE_UTF8 | SQLITE_DIRECTONLY,
+                                 0, crsqlCommitAlterFunc, 0, 0);
   }
 
   if (rc == SQLITE_OK)

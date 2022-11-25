@@ -289,6 +289,7 @@ export class WholeDbReplicator {
       return;
     }
     log("pushing changesets across the network", changes);
+    // console.log(changes);
     this.network.pushChanges(from, changes);
   };
 }

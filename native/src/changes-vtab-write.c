@@ -135,7 +135,7 @@ int crsql_setWinnerClock(
       VALUES (\
         %s,\
         %Q,\
-        %lld,\
+        MAX(crsql_nextdbversion(), %lld),\
         ?\
       )",
       tblInfo->tblName,
@@ -206,6 +206,7 @@ int crsql_mergePkOnlyInsert(
     return rc;
   }
 
+  // TODO: if insert was ignored, no reason to change clock
   return crsql_setWinnerClock(
       db,
       tblInfo,

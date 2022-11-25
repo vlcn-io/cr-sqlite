@@ -199,6 +199,7 @@ static int changesNext(sqlite3_vtab_cursor *cur)
   const char *pks = (const char *)sqlite3_column_text(pCur->pChangesStmt, PKS);
   const char *cid = (const char *)sqlite3_column_text(pCur->pChangesStmt, CID);
   sqlite3_int64 vrsn = sqlite3_column_int64(pCur->pChangesStmt, VRSN);
+  pCur->version = vrsn;
 
   crsql_TableInfo *tblInfo = crsql_findTableInfo(
       pCur->pTab->pExtData->zpTableInfos,
@@ -265,7 +266,6 @@ static int changesNext(sqlite3_vtab_cursor *cur)
   }
 
   pCur->pRowStmt = pRowStmt;
-  pCur->version = vrsn;
 
   return rc;
 }

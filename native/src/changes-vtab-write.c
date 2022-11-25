@@ -135,13 +135,14 @@ int crsql_setWinnerClock(
       VALUES (\
         %s,\
         %Q,\
-        crsql_nextdbversion(),\
+        MAX(crsql_nextdbversion(), %lld),\
         ?\
       )",
       tblInfo->tblName,
       pkIdentifierList,
       pkValsStr,
-      insertColName);
+      insertColName,
+      insertVrsn);
 
   sqlite3_stmt *pStmt = 0;
   rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);

@@ -98,7 +98,7 @@ def test_delete():
   rows = get_changes_since(db, 1, -1)
   siteid = db.execute("select crsql_siteid()").fetchone()[0]
   # Deletes are marked with a sentinel id
-  assert(rows == [('component', '1', '__crsql_del', None, 0, siteid)]);
+  assert(rows == [('component', '1', '__crsql_del', None, 2, siteid)]);
 
   db.execute("DELETE FROM component")
   db.execute("DELETE FROM deck")
@@ -110,32 +110,31 @@ def test_delete():
   # given we have past events that we're missing data for, they're now marked off as deletes
   # TODO: should deletes not get a proper version? Would be better for ordering and chunking replications
   assert(rows == [
-    ("component", "1", "__crsql_del", None, 0, siteid),
-    ("component", "1", "__crsql_del", None, 0, siteid),
-    ("component", "1", "__crsql_del", None, 0, siteid),
-    ("component", "2", "__crsql_del", None, 0, siteid),
-    ("component", "2", "__crsql_del", None, 0, siteid),
-    ("component", "2", "__crsql_del", None, 0, siteid),
-    ("component", "3", "__crsql_del", None, 0, siteid),
-    ("component", "3", "__crsql_del", None, 0, siteid),
-    ("component", "3", "__crsql_del", None, 0, siteid),
-    ("deck", "1", "__crsql_del", None, 0, siteid),
-    ("deck", "1", "__crsql_del", None, 0, siteid),
-    ("slide", "1", "__crsql_del", None, 0, siteid),
-    ("slide", "1", "__crsql_del", None, 0, siteid),
-    ("slide", "2", "__crsql_del", None, 0, siteid),
-    ("slide", "2", "__crsql_del", None, 0, siteid),
-    ("slide", "3", "__crsql_del", None, 0, siteid),
-    ("slide", "3", "__crsql_del", None, 0, siteid),
-    ("user", "1", "name", "'Javi'", 1, siteid),
+    ("component", "1", "__crsql_del", None, 1, siteid),
+    ("component", "1", "__crsql_del", None, 1, siteid),
     ("component", "1", "__crsql_del", None, 1, siteid),
     ("component", "2", "__crsql_del", None, 1, siteid),
+    ("component", "2", "__crsql_del", None, 1, siteid),
+    ("component", "2", "__crsql_del", None, 1, siteid),
+    ("component", "3", "__crsql_del", None, 1, siteid),
+    ("component", "3", "__crsql_del", None, 1, siteid),
     ("component", "3", "__crsql_del", None, 1, siteid),
     ("deck", "1", "__crsql_del", None, 1, siteid),
+    ("deck", "1", "__crsql_del", None, 1, siteid),
+    ("slide", "1", "__crsql_del", None, 1, siteid),
     ("slide", "1", "__crsql_del", None, 1, siteid),
     ("slide", "2", "__crsql_del", None, 1, siteid),
+    ("slide", "2", "__crsql_del", None, 1, siteid),
     ("slide", "3", "__crsql_del", None, 1, siteid),
-]);
+    ("slide", "3", "__crsql_del", None, 1, siteid),
+    ("user", "1", "name", "'Javi'", 1, siteid),
+    ("component", "1", "__crsql_del", None, 2, siteid),
+    ("component", "2", "__crsql_del", None, 3, siteid),
+    ("component", "3", "__crsql_del", None, 3, siteid),
+    ("deck", "1", "__crsql_del", None, 3, siteid),
+    ("slide", "1", "__crsql_del", None, 3, siteid),
+    ("slide", "2", "__crsql_del", None, 3, siteid),
+    ("slide", "3", "__crsql_del", None, 3, siteid)]);
 
   # test insert
 

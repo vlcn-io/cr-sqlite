@@ -1,5 +1,6 @@
 todo:
 
+- update the p2p example to forward messages on behalf of other peers?
 - site id must be proxied thru given comparison against it as a tie breaker
 - delete doesn't record version? tech. ok given delete wins but it is information loss.
 - relay / daisy chain data from peers via poke after receive.

@@ -1,5 +1,11 @@
 # @vlcn.io/crsqlite
 
+## 0.4.0
+
+### Minor Changes
+
+- fix multi-way merge
+
 ## 0.3.0
 
 ### Minor Changes

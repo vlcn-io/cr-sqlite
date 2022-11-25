@@ -135,14 +135,13 @@ int crsql_setWinnerClock(
       VALUES (\
         %s,\
         %Q,\
-        %lld,\
+        crsql_nextdbversion(),\
         ?\
       )",
       tblInfo->tblName,
       pkIdentifierList,
       pkValsStr,
-      insertColName,
-      insertVrsn);
+      insertColName);
 
   sqlite3_stmt *pStmt = 0;
   rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
@@ -206,6 +205,7 @@ int crsql_mergePkOnlyInsert(
     return rc;
   }
 
+  // TODO: if insert was ignored, no reason to change clock
   return crsql_setWinnerClock(
       db,
       tblInfo,

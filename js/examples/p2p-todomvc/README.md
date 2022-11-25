@@ -17,4 +17,6 @@ pnpm start
 
 Open instances _in different browsers_ (i.e., safari, firefox, chrome) and connect between them.
 
-Cross-tab reactivity is in the works via running `cr-sqlite` in a `SharedWorker` rather than in the main thread. The shared worker will be shared by all tabs.
+Or, open them all in the same browser which uses cross-tabs comms.
+
+https://user-images.githubusercontent.com/1009003/204034968-54d8b9c5-b3b3-4c48-b2ac-27e0b83843e1.mov

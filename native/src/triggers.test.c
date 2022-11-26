@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-void crsql_close(sqlite3* db);
+int crsql_close(sqlite3* db);
 
 // This would be more testable if we could test
 // query construction rather than actual table creation.

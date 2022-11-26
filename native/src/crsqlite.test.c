@@ -367,6 +367,15 @@ static void testLamportCondition()
   // now update col c on db2
   // and sync right to left
   // change should be taken
+  rc += sqlite3_exec(db2, "UPDATE hoot SET c = 33 WHERE b = 1", 0, 0, 0);
+  rc += syncLeftToRight(db2, db1, db2v);
+
+  sqlite3_stmt *pStmt = 0;
+  sqlite3_prepare_v2(db1, "SELECT c FROM hoot WHERE b = 1", -1, &pStmt, 0);
+  rc = sqlite3_step(pStmt);
+  assert(rc == SQLITE_ROW);
+  assert(sqlite3_column_int(pStmt, 0) == 33);
+  sqlite3_finalize(pStmt);
 
   crsql_close(db1);
   crsql_close(db2);

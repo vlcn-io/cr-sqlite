@@ -12,7 +12,7 @@
     { "path": "../sync-reference/whole-db" },
     { "path": "../tests/xplat-tests" },
     { "path": "../tests/nodeno-tests" },
-    { "path": "../wasm-esm/wa-crsqlite" },
+    { "path": "../browser/wa-crsqlite" },
     { "path": "../rx-tbl" },
     { "path": "../sync-reference/server" }
   ]

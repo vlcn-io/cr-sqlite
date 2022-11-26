@@ -6,7 +6,7 @@
   },
   "include": ["./src/"],
   "references": [
-    { "path": "../../wasm-esm/wa-crsqlite" },
+    { "path": "../../browser/wa-crsqlite" },
     { "path": "../../sync-reference/whole-db" }
   ]
 }

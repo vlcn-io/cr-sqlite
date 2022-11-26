@@ -1,8 +1,8 @@
 packages:
-  - "js/wasm-esm/crsqlite"
-  - "js/wasm-esm/sandbox"
-  - "js/wasm-esm/wa-crsqlite"
-  - "js/wasm-esm/wa-sqlite"
+  - "js/browser/crsqlite"
+  - "js/browser/sandbox"
+  - "js/browser/wa-crsqlite"
+  - "js/browser/wa-sqlite"
   - "js/sync-reference/webrtc"
   - "js/sync-reference/whole-db"
   - "js/sync-reference/server"

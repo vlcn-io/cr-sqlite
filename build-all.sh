@@ -12,7 +12,7 @@ cd native
 make loadable
 
 # make npm packages
-cd ../js/wasm-esm/wa-crsqlite
+cd ../js/browser/wa-crsqlite
 bash ./build.sh
 
 # cd ../crsqlite

@@ -24,7 +24,7 @@
   "repository": {
     "type": "git",
     "url": "git@github.com:vlcn-io/cr-sqlite.git",
-    "directory": "https://github.com/vlcn-io/cr-sqlite/tree/main/js/wasm-esm/crsqlite"
+    "directory": "https://github.com/vlcn-io/cr-sqlite/tree/main/js/browser/crsqlite"
   },
   "dependencies": {
     "comlink": "^4.3.1",

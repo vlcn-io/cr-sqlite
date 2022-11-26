@@ -4,8 +4,7 @@
 // @ts-ignore
 import express from "express";
 import { IncomingMessage } from "http";
-import { Socket } from "net";
-import { WebSocketServer, WebSocket } from "ws";
+import { WebSocketServer } from "ws";
 import * as winston from "winston";
 import * as http from "http";
 
@@ -37,7 +36,7 @@ wss.on("connection", (ws, request) => {
 });
 
 function authenticate(req: IncomingMessage, cb: (err: any) => void) {
-  logger.log("info", "authenticating");
+  // if you had auth code...
   cb(null);
 }
 

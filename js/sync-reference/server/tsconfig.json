@@ -1,9 +1,9 @@
 {
-  "extends": "../tsconfig-template.json",
+  "extends": "../../tsconfig-template.json",
   "compilerOptions": {
     "outDir": "./dist/",
     "rootDir": "./src"
   },
   "include": ["./src/"],
-  "references": [{ "path": "../../nodeno/allinone" }]
+  "references": [{ "path": "../../node-allinone" }]
 }

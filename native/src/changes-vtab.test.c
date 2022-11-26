@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-void crsql_close(sqlite3* db);
+int crsql_close(sqlite3* db);
 
 static void testManyPkTable()
 {

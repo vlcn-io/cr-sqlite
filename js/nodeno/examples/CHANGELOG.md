@@ -1,5 +1,23 @@
 # @vlcn.io/node-tests
 
+## 0.3.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/crsqlite@0.4.1
+
+## 0.3.0
+
+### Minor Changes
+
+- fix multi-way merge
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/crsqlite@0.4.0
+
 ## 0.2.1
 
 ### Patch Changes

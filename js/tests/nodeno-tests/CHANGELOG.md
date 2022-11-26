@@ -1,5 +1,25 @@
 # @vlcn.io/nodeno-tests
 
+## 0.3.1
+
+### Patch Changes
+
+- @vlcn.io/crsqlite-allinone@0.3.1
+
+## 0.3.0
+
+### Minor Changes
+
+- fix multi-way merge
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/crsqlite-allinone@0.3.0
+  - @vlcn.io/rx-tbl@0.3.0
+  - @vlcn.io/xplat-tests@0.3.0
+  - @vlcn.io/xplat-api@0.3.0
+
 ## 0.2.1
 
 ### Patch Changes

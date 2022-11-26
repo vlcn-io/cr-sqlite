@@ -52,6 +52,7 @@ int crsql_didCidWin(
   rc = sqlite3_step(pStmt);
   if (rc == SQLITE_DONE)
   {
+    sqlite3_finalize(pStmt);
     // no rows returned
     // we of course win if there's nothing there.
     return 1;
@@ -59,6 +60,7 @@ int crsql_didCidWin(
 
   if (rc != SQLITE_ROW)
   {
+    sqlite3_finalize(pStmt);
     return -1;
   }
 

@@ -1,5 +1,24 @@
 # @vlcn.io/wa-crsqlite
 
+## 0.4.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/wa-sqlite@0.11.1
+
+## 0.4.0
+
+### Minor Changes
+
+- fix multi-way merge
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/wa-sqlite@0.11.0
+  - @vlcn.io/xplat-api@0.3.0
+
 ## 0.3.0
 
 ### Minor Changes

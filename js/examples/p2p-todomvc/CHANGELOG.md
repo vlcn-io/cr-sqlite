@@ -1,5 +1,24 @@
 # @vlcn.io/crsqlite-p2p-todomvc
 
+## 0.4.1
+
+### Patch Changes
+
+- @vlcn.io/wa-crsqlite@0.4.1
+
+## 0.4.0
+
+### Minor Changes
+
+- fix multi-way merge
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/network-webrtc@0.3.0
+  - @vlcn.io/rx-tbl@0.3.0
+  - @vlcn.io/wa-crsqlite@0.4.0
+
 ## 0.3.0
 
 ### Minor Changes

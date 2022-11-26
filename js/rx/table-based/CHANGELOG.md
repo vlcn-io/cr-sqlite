@@ -1,5 +1,16 @@
 # @vlcn.io/rx-tbl
 
+## 0.3.0
+
+### Minor Changes
+
+- fix multi-way merge
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/xplat-api@0.3.0
+
 ## 0.2.0
 
 ### Minor Changes

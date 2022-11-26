@@ -10,6 +10,7 @@ packages:
   - "js/tests/nodeno-tests"
   - "js/tests/browser-tests"
   - "js/rx/table-based"
+  - "js/sync-server"
   - "js/nodeno/allinone"
   - "js/nodeno/examples"
   - "js/xplat-api"

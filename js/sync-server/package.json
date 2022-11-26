@@ -1,0 +1,33 @@
+{
+  "name": "@vlcn.io/sync-server",
+  "type": "module",
+  "version": "0.3.0",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "module": "dist/index.js",
+  "main": "dist/index.js",
+  "sideEffects": false,
+  "devDependencies": {
+    "typescript": "^4.9.3"
+  },
+  "scripts": {
+    "tsc": "tsc",
+    "watch": "tsc --watch",
+    "deep-clean": "rm -rf ./dist || true && rm tsconfig.tsbuildinfo || true"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:vlcn-io/cr-sqlite.git",
+    "directory": "https://github.com/vlcn-io/cr-sqlite/tree/main/js/sync-server"
+  },
+  "dependencies": {
+    "@types/express": "^4.17.14",
+    "@types/node": "^18.11.9",
+    "@vlcn.io/crsqlite-allinone": "workspace:*",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "uuid": "^9.0.0"
+  }
+}

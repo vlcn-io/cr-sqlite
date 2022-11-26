@@ -20,6 +20,6 @@ To be used until the official SQLite build is up to the task.
 
 # Licensing
 
-All components of `vlcn` are **Apache 2 License**. Let it be known that this optional component of `vlcn` does refer to `wa-sqlite` which is `GPLv3`
+All other components of `vlcn` are **Apache 2 License**. Let it be known that this optional component of `vlcn` (you can use any of the alternative db connectors -- crsqlite-wasm, crsqlite-allinone, better-sqlite3 w/ crsqlite loaded at runtime, etc. -- or you can use this one) does require use of `wa-sqlite` which is `GPLv3` making this component `GPLv3`.
 
-Once the official SQLite WASM build is stable and performant, we'll allow users afraid of licensing amibguity to use that (via @vlcn.io/crsqlite-wasm) and remove the use of `wa-sqlite`.
+Once the official SQLite WASM build is stable and performant, we'll switch to only supporting the official WASM build and return to only having Apache 2, or more permissive, licensed packages.

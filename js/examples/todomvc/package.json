@@ -1,0 +1,28 @@
+{
+  "name": "@vlcn.io/todomvc",
+  "private": true,
+  "type": "module",
+  "version": "0.4.1",
+  "sideEffects": false,
+  "scripts": {
+    "start": "vite",
+    "build": "vite build",
+    "tsc": "tsc --noEmit",
+    "preview": "vite preview",
+    "test:unit": "vitest"
+  },
+  "dependencies": {
+    "@types/ws": "^8.5.3",
+    "@vlcn.io/wa-crsqlite": "workspace:*",
+    "nanoid": "^4.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "uuid": "^9.0.0",
+    "ws": "^8.11.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.0.25",
+    "@types/react-dom": "^18.0.8",
+    "vite": "^3.2.2"
+  }
+}

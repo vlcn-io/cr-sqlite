@@ -1,19 +1,59 @@
-import cluster from "cluster";
-import * as express from "express";
-import * as os from "os";
+/**
+ * A simple reference implementation for a sync server.
+ */
+// @ts-ignore
+import express from "express";
+import { IncomingMessage } from "http";
+import { Socket } from "net";
+import { WebSocketServer, WebSocket } from "ws";
+import * as winston from "winston";
+import * as http from "http";
 
-const port = 3000;
-const cCPUs = os.cpus().length;
-// TODO: We should manually route to the correct worker based on dbid to
-// prevent concurrent connections to the same db.
-// dbid % num_workers -> worker to use
+const logger = winston.createLogger({
+  level: "info",
+  format: winston.format.json(),
+  transports: [
+    new winston.transports.Console({
+      format: winston.format.simple(),
+    }),
+  ],
+});
+
+const port = 8080;
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+const server = http.createServer(app);
 
-app.post("/conn", (req, res) => {
-  // respond with conn to relevant WS server
-  res.send({});
+const wss = new WebSocketServer({ noServer: true });
+wss.on("connection", (ws, request) => {
+  logger.log("info", `established ws connection`);
+
+  ws.on("message", (data) => {
+    logger.log("info", `Received messages ${data}`);
+  });
+
+  ws.on("close", () => {});
 });
 
-app.listen(port);
+function authenticate(req: IncomingMessage, cb: (err: any) => void) {
+  logger.log("info", "authenticating");
+  cb(null);
+}
+
+server.on("upgrade", (request, socket, head) => {
+  // This function is not defined on purpose. Implement it with your own logic.
+  authenticate(request, (err) => {
+    if (err) {
+      socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
+      socket.destroy();
+      return;
+    }
+
+    wss.handleUpgrade(request, socket, head, (ws) => {
+      wss.emit("connection", ws, request);
+    });
+  });
+});
+
+server.listen(port, () => logger.log("info", `listening on port ${port}!`));

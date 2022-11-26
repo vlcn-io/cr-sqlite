@@ -16,6 +16,7 @@ packages:
   - "js/xplat-api"
   - "js/tsbuild-all"
   - "js/examples/p2p-todomvc"
+  - "js/examples/todomvc"
   - "js/examples/peer-server"
   - "native"
   - "py/correctness"

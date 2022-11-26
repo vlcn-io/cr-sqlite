@@ -24,6 +24,12 @@ Need a way to manage the sync server...
 
 ---
 
+Java and 1 write thread per db?
+WAL mode on dbs.
+Reads from any connection.
+
+---
+
 # yagni -- Simplest Thing that can Work
 
 - express srv

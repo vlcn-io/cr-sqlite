@@ -8,6 +8,6 @@
   "references": [
     { "path": "../../xplat-api" },
     { "path": "../../sync-reference/whole-db" },
-    { "path": "../../rx/table-based" }
+    { "path": "../../rx-tbl" }
   ]
 }

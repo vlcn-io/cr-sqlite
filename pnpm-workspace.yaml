@@ -1,6 +1,5 @@
 packages:
   - "js/wasm-esm/crsqlite"
-  - "js/wasm-esm/examples"
   - "js/wasm-esm/sandbox"
   - "js/wasm-esm/wa-crsqlite"
   - "js/wasm-esm/wa-sqlite"
@@ -10,7 +9,7 @@ packages:
   - "js/tests/xplat-tests"
   - "js/tests/nodeno-tests"
   - "js/tests/browser-tests"
-  - "js/rx/table-based"
+  - "js/rx-tbl"
   - "js/node-allinone"
   - "js/xplat-api"
   - "js/tsbuild-all"
@@ -18,5 +17,6 @@ packages:
   - "js/examples/todomvc"
   - "js/examples/peer-server"
   - "js/examples/node"
+  - "js/examples/basic-browser-setup"
   - "native"
   - "py/correctness"

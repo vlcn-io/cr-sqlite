@@ -20,14 +20,6 @@ To be used until the official SQLite build is up to the task.
 
 # Licensing
 
-All components of `vlcn` are **Apache 2 License**. Let it be known that this one component of `vlcn` does refer to `wa-sqlite` which is `GPLv3`
+All other components of `vlcn` are **Apache 2 License**. Let it be known that this optional component of `vlcn` (you can use any of the alternative db connectors -- crsqlite-wasm, crsqlite-allinone, better-sqlite3 w/ crsqlite loaded at runtime, etc. -- or you can use this one) does require use of `wa-sqlite` which is `GPLv3` making this component `GPLv3`.
 
-Once the official SQLite WASM build is stable and performant, we'll allow users afraid of licensing amibguity to use that (via @vlcn.io/crsqlite-wasm) and remove the use of `wa-sqlite`. My current non-lawyer interpretation would be that users of this package do not need to GPL their code given the packge:
-
-1. isn't statically linked
-2. does not need to be bundled with the calling application (i.e., can be imported on the fly)
-3. talks over a generic and open SQL interface under which any sqlite build could suffice
-4. it would be beyond the pale to consider any work that uses a database to be a derived work of that databaseb
-
-https://opensource.stackexchange.com/questions/2157/is-it-allowed-to-dynamically-link-a-gpl-licensed-library-for-commercial-use
-https://tech.popdata.org/the-gpl-license-and-linking-still-unclear-after-30-years/
+Once the official SQLite WASM build is stable and performant, we'll switch to only supporting the official WASM build and return to only having Apache 2, or more permissive, licensed packages.

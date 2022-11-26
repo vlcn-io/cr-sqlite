@@ -5,9 +5,11 @@ SQLITE_EXTENSION_INIT3
 
 #define SUITE(N) if (strcmp(suite, "all") == 0 || strcmp(suite, N) == 0)
 
-void crsql_close(sqlite3* db) {
-  sqlite3_exec(db, "SELECT crsql_finalize()", 0, 0, 0);
-  sqlite3_close(db);
+int crsql_close(sqlite3* db) {
+  int rc = SQLITE_OK;
+  rc += sqlite3_exec(db, "SELECT crsql_finalize()", 0, 0, 0);
+  rc += sqlite3_close(db);
+  return rc;
 }
 
 void crsqlUtilTestSuite();

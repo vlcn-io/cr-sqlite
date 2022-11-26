@@ -17,7 +17,7 @@ SQLITE_EXTENSION_INIT1
   }
 #endif
 
-void crsql_close(sqlite3 *db);
+int crsql_close(sqlite3 *db);
 
 static void testCreateClockTable()
 {
@@ -302,6 +302,7 @@ static int syncLeftToRight(sqlite3 *db1, sqlite3 *db2, sqlite3_int64 since)
 
   rc += sqlite3_prepare_v2(db2, "SELECT crsql_siteid()", -1, &pStmt, 0);
   if (sqlite3_step(pStmt) != SQLITE_ROW) {
+    sqlite3_finalize(pStmt);
     return SQLITE_ERROR;
   }
 
@@ -310,7 +311,8 @@ static int syncLeftToRight(sqlite3 *db1, sqlite3 *db2, sqlite3_int64 since)
       db1, zSql, -1, &pStmtRead, 0);
   sqlite3_free(zSql);
   rc += sqlite3_bind_value(pStmtRead, 1, sqlite3_column_value(pStmt, 0));
-  rc += sqlite3_prepare_v2(db2, "INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?)", -1, &pStmtWrite, 0);
+  rc += sqlite3_prepare_v2(
+    db2, "INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?)", -1, &pStmtWrite, 0);
   assert(rc == SQLITE_OK);
 
   while (sqlite3_step(pStmtRead) == SQLITE_ROW)
@@ -377,8 +379,10 @@ static void testLamportCondition()
   assert(sqlite3_column_int(pStmt, 0) == 33);
   sqlite3_finalize(pStmt);
 
-  crsql_close(db1);
-  crsql_close(db2);
+  rc = crsql_close(db1);
+  assert(rc == SQLITE_OK);
+  rc += crsql_close(db2);
+  assert(rc == SQLITE_OK);
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 

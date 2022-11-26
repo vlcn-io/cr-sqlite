@@ -117,6 +117,7 @@ int crsql_recreateDbVersionStmt(sqlite3 *db, crsql_ExtData *pExtData)
 
   if (rc != SQLITE_OK) {
     sqlite3_finalize(pExtData->pDbVersionStmt);
+    pExtData->pDbVersionStmt = 0;
   }
 
   return rc;

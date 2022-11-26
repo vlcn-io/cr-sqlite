@@ -14,7 +14,7 @@
   }
 #endif
 
-void crsql_close(sqlite3* db);
+int crsql_close(sqlite3* db);
 
 static void testChangesQueryForTable()
 {

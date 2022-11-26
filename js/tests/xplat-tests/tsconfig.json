@@ -7,7 +7,7 @@
   "include": ["./src/"],
   "references": [
     { "path": "../../xplat-api" },
-    { "path": "../../replicators/whole-db" },
+    { "path": "../../sync-reference/whole-db" },
     { "path": "../../rx/table-based" }
   ]
 }

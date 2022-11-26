@@ -21,7 +21,7 @@
   "repository": {
     "type": "git",
     "url": "git@github.com:vlcn-io/cr-sqlite.git",
-    "directory": "https://github.com/vlcn-io/cr-sqlite/tree/main/js/replicators/whole-db"
+    "directory": "https://github.com/vlcn-io/cr-sqlite/tree/main/js/examples/node-deno"
   },
   "dependencies": {
     "@vlcn.io/crsqlite": "workspace:*",

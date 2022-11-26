@@ -5,5 +5,8 @@
     "rootDir": "./src"
   },
   "include": ["./src/"],
-  "references": []
+  "references": [
+    { "path": "../../wasm-esm/wa-crsqlite" },
+    { "path": "../../sync-reference/whole-db" }
+  ]
 }

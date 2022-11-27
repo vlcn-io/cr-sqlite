@@ -36,12 +36,11 @@ wss.on("connection", (ws, request) => {
 });
 
 function authenticate(req: IncomingMessage, cb: (err: any) => void) {
-  // if you had auth code...
+  // This function is not defined on purpose. Implement it with your own logic.
   cb(null);
 }
 
 server.on("upgrade", (request, socket, head) => {
-  // This function is not defined on purpose. Implement it with your own logic.
   authenticate(request, (err) => {
     if (err) {
       socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");

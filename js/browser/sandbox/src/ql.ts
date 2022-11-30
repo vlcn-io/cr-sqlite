@@ -5,7 +5,11 @@ const ohm: typeof ohmSynth = (ohmSynth as any).default;
 const grammar = ohm.grammar(String.raw`
 CompSQL {
   Select 
-  	= caseInsensitive<"SELECT"> "{" PropertyList "}" caseInsensitive<"FROM"> Rest
+  	= caseInsensitive<"SELECT"> "{" PropertyList "}" caseInsensitive<"FROM"> Rest -- obj
+    | caseInsensitive<"SELECT"> AllButFrom caseInsensitive<"FROM"> Rest -- row
+
+  AllButFrom = 
+    (~caseInsensitive<"FROM"> any)*
   
   SelectInner
     = "{" PropertyList "}" caseInsensitive<"FROM"> Rest
@@ -42,14 +46,24 @@ CompSQL {
 
 const semantics = grammar.createSemantics();
 semantics.addOperation("toSQL", {
-  Select(_select, _lBrack, propertyList, _rBrack, _from, rest) {
+  Select_obj(_select, _lBrack, propertyList, _rBrack, _from, rest) {
     return `SELECT json_object(
       ${propertyList.toSQL()}
     ) FROM ${rest.toSQL()}`;
   },
+
+  Select_row(_select, allButFrom, _from, rest) {
+    return `SELECT ${allButFrom.toSQL()} FROM ${rest.toSQL()}`;
+  },
+
+  AllButFrom(s) {
+    return s.sourceString;
+  },
+
   _iter(...children) {
     return children.map((c) => c.sourceString).join();
   },
+
   SelectInner(_lBrack, propertyList, _rBrack, _from, rest) {
     return `json_object(
       ${propertyList.toSQL()}

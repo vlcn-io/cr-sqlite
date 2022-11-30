@@ -56,6 +56,10 @@ SELECT {
     addedAt: tp.added_at_timestamp,
     trackNumber: tp.track_index,
     track: (SELECT {
+      name: t.name,
+      durationMs: t.duration_ms,
+      trackNumer: t.track_number,
+      id: t.id
       album: (SELECT {
         id: a.id,
         name: a.name,
@@ -67,14 +71,15 @@ SELECT {
         LEFT JOIN spotify_tracks_artists AS ta
         ON ta.artist_id = art.id
         WHERE ta.track_id = t.id],
-      name: t.name,
-      durationMs: t.duration_ms,
-      trackNumer: t.track_number,
-      id: t.id
     } FROM spotify_tracks AS t WHERE t.id = tp.track_id)
   } FROM spotify_tracks_playlists as tp WHERE tp.playlist_id = p.id]
 } FROM spotify_playlists AS p WHERE p.id = ${id}
 `;
+
+// use frag usage:
+// sql`
+
+// `
 
 // more ergonimic?
 `spotify_playlists: [{

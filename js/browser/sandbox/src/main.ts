@@ -46,16 +46,20 @@ const trackArtists = /*sql*/ `(SELECT {
   ON ta.artist_id = art.id
   WHERE ta.track_id = t.id)`;
 
+// note:
+// we can hoist sub-selects as fragments
+// and make them reactive on the component that uses them.
+// e.g., like Relay `useFragment` hooks.
 const top = sql`
 SELECT {
   tracks: [SELECT {
     addedAt: tp.added_at_timestamp,
     trackNumber: tp.track_index,
-    track: [SELECT {
-      album: [SELECT {
+    track: (SELECT {
+      album: (SELECT {
         id: a.id,
         name: a.name,
-      } FROM spotify_albums AS a WHERE a.id = t.album_id],
+      } FROM spotify_albums AS a WHERE a.id = t.album_id),
       artists: [SELECT {
         id: art.id,
         name: art.name
@@ -67,9 +71,20 @@ SELECT {
       durationMs: t.duration_ms,
       trackNumer: t.track_number,
       id: t.id
-    } FROM spotify_tracks AS t WHERE t.id = tp.track_id]
+    } FROM spotify_tracks AS t WHERE t.id = tp.track_id)
   } FROM spotify_tracks_playlists as tp WHERE tp.playlist_id = p.id]
 } FROM spotify_playlists AS p WHERE p.id = ${id}
 `;
+
+// more ergonimic?
+`spotify_playlists: [{
+  tracks: [spotify_tracks_playlists {
+    addedAt,
+    trackNumber,
+    track: (spotify_tracks {
+      
+    })
+  }]
+}]`;
 
 console.log(top);

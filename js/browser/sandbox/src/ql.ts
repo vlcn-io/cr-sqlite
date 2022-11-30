@@ -15,10 +15,10 @@ CompSQL {
     | AllButOpen "[" Rest "]" Rest -- allButOpen
  
   AllButOpen =
-  	(~"[" any)*
+  	(~("["|"(") any)*
   
   AllButClose =
-    (~("]"|"[") any)*
+    (~("]"|"["|")"|"(") any)*
     
   PropertyList
   	= PropertyList Property ","? -- list
@@ -27,6 +27,7 @@ CompSQL {
   Property
   	= propertyKey ScopedName -- primitive
     | propertyKey "[" caseInsensitive<"SELECT"> SelectInner "]" -- complex
+    | propertyKey "(" Select ")" -- complexSingle
   
   propertyKey
   	= name ":"
@@ -85,6 +86,10 @@ semantics.addOperation("toSQL", {
 
   Property_complex(key, _lParen, _select, selectInner, _rParen) {
     return `'${key.toSQL()}', (SELECT json_group_array(${selectInner.toSQL()})`;
+  },
+
+  Property_complexSingle(key, _lParen, select, _rParen) {
+    return `'${key.toSQL()}', (${select.toSQL()})`;
   },
 
   propertyKey(name, _colon) {

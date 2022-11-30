@@ -1,5 +1,5 @@
 import * as nanoid from "nanoid";
-import parse from "./ql";
+import parse, { sql } from "./ql";
 import sqliteWasm from "@vlcn.io/wa-crsqlite";
 
 const sqlite = await sqliteWasm();
@@ -22,22 +22,54 @@ await db1.execMany([
   `INSERT INTO component VALUES (3, 'some more text', 1);`,
 ]);
 
-function sql(strings, ...values) {
-  const interoplated = String.raw({ raw: strings }, ...values);
-  return parse(interoplated);
-}
-
 const r = await db1.execA(sql`
 SELECT {
   id: deck.id,
-  slides: (SELECT { 
+  slides: [SELECT { 
     id: slide.id,
     order: slide."order",
-    components: (SELECT {
+    components: [SELECT {
       id: component.id,
       text: component.text
-    } FROM component WHERE component.slide_id = slide.id)
-  } FROM slide WHERE slide.deck_id = deck.id),
+    } FROM component WHERE component.slide_id = slide.id]
+  } FROM slide WHERE slide.deck_id = deck.id],
 } FROM deck`);
 
 console.log(r.map((s: any) => JSON.parse(s)));
+
+const id = "1";
+const trackArtists = /*sql*/ `(SELECT {
+  id: art.id,
+  name: art.name
+} FROM spotify_arists AS art
+  LEFT JOIN spotify_tracks_artists AS ta
+  ON ta.artist_id = art.id
+  WHERE ta.track_id = t.id)`;
+
+const top = sql`
+SELECT {
+  tracks: [SELECT {
+    addedAt: tp.added_at_timestamp,
+    trackNumber: tp.track_index,
+    track: [SELECT {
+      album: [SELECT {
+        id: a.id,
+        name: a.name,
+      } FROM spotify_albums AS a WHERE a.id = t.album_id],
+      artists: [SELECT {
+        id: art.id,
+        name: art.name
+      } FROM spotify_artists AS art
+        LEFT JOIN spotify_tracks_artists AS ta
+        ON ta.artist_id = art.id
+        WHERE ta.track_id = t.id],
+      name: t.name,
+      durationMs: t.duration_ms,
+      trackNumer: t.track_number,
+      id: t.id
+    } FROM spotify_tracks AS t WHERE t.id = tp.track_id]
+  } FROM spotify_tracks_playlists as tp WHERE tp.playlist_id = p.id]
+} FROM spotify_playlists AS p WHERE p.id = ${id}
+`;
+
+console.log(top);

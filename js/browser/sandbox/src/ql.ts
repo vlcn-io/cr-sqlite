@@ -11,14 +11,14 @@ CompSQL {
     = "{" PropertyList "}" caseInsensitive<"FROM"> Rest
 
   Rest
-  	= AllButOpen "(" Rest ")" Rest -- allButOpen
-    | AllButClose -- allButClose
+  	= AllButClose -- allButClose
+    | AllButOpen "[" Rest "]" Rest -- allButOpen
  
   AllButOpen =
-  	(~"(" any)*
+  	(~"[" any)*
   
   AllButClose =
-  	(~")" any)*
+    (~("]"|"[") any)*
     
   PropertyList
   	= PropertyList Property ","? -- list
@@ -26,7 +26,7 @@ CompSQL {
   
   Property
   	= propertyKey ScopedName -- primitive
-    | propertyKey "(" caseInsensitive<"SELECT"> SelectInner ")" -- complex
+    | propertyKey "[" caseInsensitive<"SELECT"> SelectInner "]" -- complex
   
   propertyKey
   	= name ":"
@@ -35,8 +35,8 @@ CompSQL {
   	= (name ".")? name
   
   name
-  	= alnum+
-    | "\"" alnum+ "\"" -- quoted
+  	= (alnum|"_")+
+    | "\"" (alnum|"_")+ "\"" -- quoted
 }`);
 
 const semantics = grammar.createSemantics();
@@ -112,4 +112,9 @@ export default function parse(str: string): string {
 
   const adapter = semantics(matchResult);
   return adapter.toSQL();
+}
+
+export function sql(strings, ...values) {
+  const interoplated = String.raw({ raw: strings }, ...values);
+  return parse(interoplated);
 }

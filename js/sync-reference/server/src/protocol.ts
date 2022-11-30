@@ -15,7 +15,7 @@ export type Changeset = [
 ];
 
 export type ChangesReceivedMsg = {
-  siteId: SiteIdWire;
+  from: SiteIdWire;
   /**
    * seqStart must always be equal to
    * seqEnd from the prior message that was sent.
@@ -36,39 +36,42 @@ export type ChangesReceivedMsg = {
    */
   seqStart: [Version, number];
   seqEnd: [Version, number];
-  changes: Changeset;
+  changes: Changeset[];
 };
 
-export type ChangesRequestedMsg = {};
+export type ChangesRequestedMsg = {
+  from: SiteIdWire;
+  since: Version;
+};
 
-export interface ClientServerWholeTblProtocol {
+export interface CentralWholeTblStreamProtocol {
   /**
    * Push changes to a client connected to the server
    */
-  pushChnages(): void;
+  pushChanges(to: SiteIdWire, changes: Changeset[]): void;
 
   /**
-   * Request changes from the client that just connected
-   * to the server.
+   * Request changes from the given site since the
+   * given version.
    */
-  requestChanges(): void;
+  requestChanges(from: SiteIdWire, since: Version): void;
 
   /**
    * When a new client connects to the server
    */
-  onNewConnection(): void;
-
-  /**
-   * When a client sends the server changes
-   */
-  onChangesReceived(msg: ChangesReceivedMsg): void;
+  onNewConnection(cb: (siteId: SiteIdWire) => void): void;
 
   /**
    * When a client requests changes from the server.
    * The client tells the server what the last
    * version it has from the server.
    */
-  onChangesRequested(msg: ChangesRequestedMsg): void;
+  onChangesRequested(cb: (msg: ChangesRequestedMsg) => void): void;
+
+  /**
+   * When a client sends the server changes
+   */
+  onChangesReceived(cb: (msg: ChangesReceivedMsg) => Promise<void>): void;
 
   // if a client notices messages are out of order,
   // it should just terminate and recreate the connection

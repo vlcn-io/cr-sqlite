@@ -1,0 +1,115 @@
+import * as ohmSynth from "ohm-js";
+
+const ohm: typeof ohmSynth = (ohmSynth as any).default;
+
+const grammar = ohm.grammar(String.raw`
+CompSQL {
+  Select 
+  	= caseInsensitive<"SELECT"> "{" PropertyList "}" caseInsensitive<"FROM"> Rest
+  
+  SelectInner
+    = "{" PropertyList "}" caseInsensitive<"FROM"> Rest
+
+  Rest
+  	= AllButOpen "(" Rest ")" Rest -- allButOpen
+    | AllButClose -- allButClose
+ 
+  AllButOpen =
+  	(~"(" any)*
+  
+  AllButClose =
+  	(~")" any)*
+    
+  PropertyList
+  	= PropertyList Property ","? -- list
+    | "" -- empty
+  
+  Property
+  	= propertyKey ScopedName -- primitive
+    | propertyKey "(" caseInsensitive<"SELECT"> SelectInner ")" -- complex
+  
+  propertyKey
+  	= name ":"
+  
+  ScopedName
+  	= (name ".")? name
+  
+  name
+  	= alnum+
+    | "\"" alnum+ "\"" -- quoted
+}`);
+
+const semantics = grammar.createSemantics();
+semantics.addOperation("toSQL", {
+  Select(_select, _lBrack, propertyList, _rBrack, _from, rest) {
+    return `SELECT json_object(
+      ${propertyList.toSQL()}
+    ) FROM ${rest.toSQL()}`;
+  },
+  _iter(...children) {
+    return children.map((c) => c.sourceString).join();
+  },
+  SelectInner(_lBrack, propertyList, _rBrack, _from, rest) {
+    return `json_object(
+      ${propertyList.toSQL()}
+    )) FROM ${rest.toSQL()}`;
+  },
+
+  Rest_allButOpen(allButOpen, _lParen, r1, _rParen, r2) {
+    return `${allButOpen.toSQL()} (${r1.toSQL()}) ${r2.toSQL()}`;
+  },
+
+  Rest_allButClose(allButClose) {
+    return allButClose.toSQL();
+  },
+
+  AllButOpen(s) {
+    return s.sourceString;
+  },
+
+  AllButClose(s) {
+    return s.sourceString;
+  },
+
+  PropertyList_list(propList, prop, _maybeComma) {
+    return [...propList.toSQL(), prop.toSQL()];
+  },
+
+  PropertyList_empty(_) {
+    return [];
+  },
+
+  Property_primitive(key, scopedName) {
+    return `'${key.toSQL()}', ${scopedName.toSQL()}`;
+  },
+
+  Property_complex(key, _lParen, _select, selectInner, _rParen) {
+    return `'${key.toSQL()}', (SELECT json_group_array(${selectInner.toSQL()})`;
+  },
+
+  propertyKey(name, _colon) {
+    return name.toSQL();
+  },
+
+  ScopedName(n1, _dot, n2) {
+    if (n1) {
+      return n1.toSQL() + "." + n2.toSQL();
+    }
+
+    return n2.toSQL();
+  },
+
+  name(name) {
+    return name.sourceString;
+  },
+});
+
+export default function parse(str: string): string {
+  const matchResult = grammar.match(str);
+  if (matchResult.failed()) {
+    throw new Error(matchResult.message);
+  }
+
+  const adapter = semantics(matchResult);
+  return adapter.toSQL();
+}

@@ -1,158 +1,43 @@
 import * as nanoid from "nanoid";
-
+import parse from "./ql";
 import sqliteWasm from "@vlcn.io/wa-crsqlite";
 
 const sqlite = await sqliteWasm();
 const db1 = await sqlite.open(":memory:");
 
 await db1.execMany([
-  `CREATE TABLE IF NOT EXISTS todo_list ("name" primary key, "creation_time");`,
-  `CREATE TABLE IF NOT EXISTS todo ("id" primary key, "list", "text", "complete");`,
+  `CREATE TABLE deck (id primary key, name);`,
+  `CREATE TABLE slide (id primary key, "order", deck_id);`,
+  `CREATE TABLE component (id primary key, text, slide_id);`,
+  `CREATE INDEX slide_deck ON slide (deck_id);`,
+  `CREATE INDEX comp_slide ON component (slide_id);`,
 ]);
+
 await db1.execMany([
-  `SELECT crsql_as_crr('todo_list');`,
-  `SELECT crsql_as_crr('todo');`,
+  `INSERT INTO deck VALUES (1, 'first');`,
+  `INSERT INTO slide VALUES (1, 0, 1);`,
+  `INSERT INTO slide VALUES (2, 1, 1);`,
+  `INSERT INTO component VALUES (1, 'some text', 1);`,
+  `INSERT INTO component VALUES (2, 'some other text', 1);`,
+  `INSERT INTO component VALUES (3, 'some more text', 1);`,
 ]);
 
-let list = [
-  "milk",
-  "potatos",
-  "avocado",
-  "butter",
-  "cheese",
-  "broccoli",
-  "spinach",
-];
-// `insert or ignore` given this is a notebook and ppl will re-run cells.
-await db1.exec(`INSERT OR IGNORE INTO todo_list VALUES ('groceries', ?)`, [
-  Date.now(),
-]);
-await Promise.all(
-  list.map((item) =>
-    db1.exec(`INSERT INTO todo VALUES (?, 'groceries', ?, 0)`, [
-      nanoid.nanoid(),
-      item,
-    ])
-  )
-);
+function sql(strings, ...values) {
+  const interoplated = String.raw({ raw: strings }, ...values);
+  return parse(interoplated);
+}
 
-list = ["test", "document", "explain", "onboard", "hire"];
-await db1.exec(`INSERT OR IGNORE INTO todo_list VALUES ('work', ?)`, [
-  Date.now(),
-]);
-await Promise.all(
-  list.map((item) =>
-    db1.exec(`INSERT INTO todo VALUES (?, 'work', ?, 0)`, [
-      nanoid.nanoid(),
-      item,
-    ])
-  )
-);
+const r = await db1.execA(sql`
+SELECT {
+  id: deck.id,
+  slides: (SELECT { 
+    id: slide.id,
+    order: slide."order",
+    components: (SELECT {
+      id: component.id,
+      text: component.text
+    } FROM component WHERE component.slide_id = slide.id)
+  } FROM slide WHERE slide.deck_id = deck.id),
+} FROM deck`);
 
-let groceries = await db1.execO(
-  `SELECT "list", "text" FROM "todo" WHERE "list" = 'groceries'`
-);
-console.log(groceries);
-let work = await db1.execO(
-  `SELECT "list", "text" FROM "todo" WHERE "list" = 'work'`
-);
-console.log(work);
-
-let changesets = await db1.execA(
-  "SELECT * FROM crsql_changes where version > -1"
-);
-console.log("changesets", changesets);
-
-const db2 = await sqlite.open(":memory:");
-await db2.execMany([
-  `CREATE TABLE IF NOT EXISTS todo_list ("name" primary key, "creation_time");`,
-  `CREATE TABLE IF NOT EXISTS todo ("id" primary key, "list", "text", "complete");`,
-  `SELECT crsql_as_crr('todo_list');`,
-  `SELECT crsql_as_crr('todo');`,
-]);
-let changesets2 = await db2.execA(
-  "SELECT * FROM crsql_changes where version > -1"
-);
-console.log(changesets);
-
-const siteid = (await db1.execA(`SELECT crsql_siteid()`))[0][0];
-await db2.transaction(async () => {
-  for (const cs of changesets) {
-    await db2.exec(`INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?)`, cs);
-  }
-});
-
-groceries = await db2.execO(
-  `SELECT "list", "text" FROM "todo" WHERE "list" = 'groceries'`
-);
-console.log(groceries);
-work = await db2.execO(
-  `SELECT "list", "text" FROM "todo" WHERE "list" = 'work'`
-);
-console.log(work);
-
-let db1version = (await db1.execA(`SELECT crsql_dbversion()`))[0][0];
-let db2version = (await db2.execA(`SELECT crsql_dbversion()`))[0][0];
-
-console.log(db1version);
-console.log(db2version);
-
-await db1.exec(`INSERT OR IGNORE INTO todo_list VALUES (?, ?)`, [
-  "home",
-  Date.now(),
-]);
-await db2.exec(`INSERT OR IGNORE INTO todo_list VALUES (?, ?)`, [
-  "home",
-  Date.now(),
-]);
-// both dbs add some stuff to that list
-await db1.exec(`INSERT INTO todo VALUES (?, ?, ?, ?)`, [
-  nanoid.nanoid(),
-  "home",
-  "paint",
-  0,
-]);
-await db2.exec(`INSERT INTO todo VALUES (?, ?, ?, ?)`, [
-  nanoid.nanoid(),
-  "home",
-  "mow",
-  0,
-]);
-await db1.exec(`INSERT INTO todo VALUES (?, ?, ?, ?)`, [
-  nanoid.nanoid(),
-  "home",
-  "water",
-  0,
-]);
-// given each item is a nanoid for primary key, `weed` will show up twice
-await db2.exec(`INSERT INTO todo VALUES (?, ?, ?, ?)`, [
-  nanoid.nanoid(),
-  "home",
-  "weed",
-  0,
-]);
-await db1.exec(`INSERT INTO todo VALUES (?, ?, ?, ?)`, [
-  nanoid.nanoid(),
-  "home",
-  "weed",
-  0,
-]);
-// and complete things on other lists
-await db1.exec(`UPDATE todo SET complete = 1 WHERE list = 'groceries'`);
-
-let changesets1 = await db1.execA(
-  "SELECT * FROM crsql_changes where version > ?",
-  [db1version]
-);
-changesets2 = await db2.execA("SELECT * FROM crsql_changes where version > ?", [
-  db2version,
-]);
-
-console.log(changesets1);
-console.log(changesets2);
-
-// sqlite.base.exec(db.db, "SELECT crsql_siteid()", (r) => {
-//   console.log(r);
-// });
-
-(window as any).sqlite = sqlite;
+console.log(r.map((s: any) => JSON.parse(s)));

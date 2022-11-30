@@ -23,12 +23,14 @@ importers:
       '@vlcn.io/wa-crsqlite': workspace:*
       comlink: ^4.3.1
       nanoid: ^4.0.0
+      ohm-js: ^16.4.0
       uuid-tool: ^2.0.3
       vite: ^3.2.2
     dependencies:
       '@vlcn.io/wa-crsqlite': link:../wa-crsqlite
       comlink: 4.3.1
       nanoid: 4.0.0
+      ohm-js: 16.4.0
       uuid-tool: 2.0.3
     devDependencies:
       vite: 3.2.4
@@ -6308,6 +6310,11 @@ packages:
       has-symbols: 1.0.3
       object-keys: 1.1.1
     dev: true
+
+  /ohm-js/16.4.0:
+    resolution: {integrity: sha512-u1QI5h2w29I4838+/m32rzqfNNH1Qej9L6O1MTZZMx7bVOu09orc/TO0HRVeYh5jStieZ3INszM7oqbCdx2x7A==}
+    engines: {node: '>=0.12.1'}
+    dev: false
 
   /on-finished/2.3.0:
     resolution: {integrity: sha512-ikqdkGAAyf/X/gPhXGvfgAytDZtDbr+bkNUJ0N9h5MI/dmdgCs3l6hoHrcUv41sRKew3jIwrp4qQDXiK99Utww==}

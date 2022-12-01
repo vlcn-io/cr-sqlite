@@ -1,5 +1,11 @@
 # @vlcn.io/node-tests
 
+## 0.3.2
+
+### Patch Changes
+
+- bump better-sqlite3 version
+
 ## 0.3.1
 
 ### Patch Changes

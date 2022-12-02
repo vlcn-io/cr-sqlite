@@ -4,6 +4,7 @@ import * as SQLite from "@vlcn.io/wa-sqlite";
 import { IDBBatchAtomicVFS } from "@vlcn.io/wa-sqlite/src/examples/IDBBatchAtomicVFS.js";
 import { DBAsync, StmtAsync } from "@vlcn.io/xplat-api";
 import { SQLITE_UTF8 } from "@vlcn.io/wa-sqlite";
+import { NodeVFS } from "./node-vfs";
 
 let api: SQLite3 | null = null;
 type SQLiteAPI = ReturnType<typeof SQLite.Factory>;
@@ -11,6 +12,7 @@ type SQLiteAPI = ReturnType<typeof SQLite.Factory>;
 let queue: Promise<any> = Promise.resolve();
 let txQueue: Promise<any> = Promise.resolve();
 
+const isNode = !("indexedDB" in globalThis) && "process" in globalThis;
 const isDebug = (globalThis as any).__vlcn_wa_crsqlite_dbg;
 function log(...data: any[]) {
   if (isDebug) {
@@ -90,7 +92,7 @@ export class SQLite3 {
         SQLite.SQLITE_OPEN_CREATE |
           SQLite.SQLITE_OPEN_READWRITE |
           SQLite.SQLITE_OPEN_URI,
-        filename != null ? "idb-batch-atomic" : undefined
+        filename != null ? (isNode ? "node" : "idb-batch-atomic") : undefined
       )
       .then((db) => new DB(this.base, db));
   }
@@ -368,6 +370,26 @@ export default async function initWasm(
     return api;
   }
 
+  const original: any = {};
+  if (isNode) {
+    const { resolve, dirname } = await import("node:path" as any);
+    const { createRequire } = await import("node:module" as any);
+    const { fileURLToPath } = await import("node:url" as any);
+
+    const wasmRoot =
+      locateWasm?.(".") ||
+      resolve(dirname(fileURLToPath(import.meta.url)), "../wa-sqlite/dist");
+    const wasmLoader =
+      locateWasm?.("wa-sqlite-async.mjs") ||
+      resolve(wasmRoot, "wa-sqlite-async.mjs");
+
+    const global: any = globalThis;
+    original.__dirname = global.__dirname;
+    original.require = global.require;
+    global.__dirname = wasmRoot;
+    global.require = createRequire(wasmLoader);
+  }
+
   const module = await SQLiteAsyncESMFactory({
     locateFile(file: string) {
       if (locateWasm) {
@@ -377,9 +399,17 @@ export default async function initWasm(
     },
   });
   const sqlite3 = SQLite.Factory(module);
-  sqlite3.vfs_register(
-    new IDBBatchAtomicVFS("idb-batch-atomic", { durability: "relaxed" })
-  );
+
+  if (isNode) {
+    const global: any = globalThis;
+    global.__dirname = original.__dirname;
+    global.require = original.require;
+    sqlite3.vfs_register(new NodeVFS());
+  } else {
+    sqlite3.vfs_register(
+      new IDBBatchAtomicVFS("idb-batch-atomic", { durability: "relaxed" })
+    );
+  }
 
   api = new SQLite3(sqlite3);
   return api;

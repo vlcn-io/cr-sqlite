@@ -505,7 +505,7 @@ int crsql_isTableCompatible(sqlite3 *db, const char *tblName, char **errmsg)
     sqlite3_finalize(pStmt);
     if (count != 0)
     {
-      *errmsg = sqlite3_mprintf("Table %s has a NOT NULL column without a DEFAULT VALUE, or is in STRICT typing mode. This is not allowed as it prevents forwards and backwards compatbility between schema versions. Turn off STRICT, or make the column nullable, or assign a default value to it.", tblName);
+      *errmsg = sqlite3_mprintf("Table %s has a NOT NULL column without a DEFAULT VALUE, or is in STRICT typing mode. This is not allowed as it prevents forwards and backwards compatability between schema versions. Turn off STRICT, or make the column nullable, or assign a default value to it.", tblName);
       return 0;
     }
   }

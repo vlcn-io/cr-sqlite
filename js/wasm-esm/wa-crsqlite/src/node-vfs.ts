@@ -28,8 +28,15 @@ export class NodeVFS extends Base {
         Math.floor(Math.random() * Number.MAX_SAFE_INTEGER).toString(36);
       path = resolve(path) as string;
 
+      let mode = "r+";
       try {
-        const mode = flags & SQLITE_OPEN_CREATE ? "w+" : "r+";
+        await access(path);
+      } catch (error) {
+        if (flags & SQLITE_OPEN_CREATE) mode = "w+";
+        else throw error;
+      }
+
+      try {
         const handle = await open(path, mode);
         this.files.set(id, { handle, flags, path });
         outFlags.set(flags);

@@ -216,6 +216,17 @@ static void testIsTableCompatible() {
   assert(rc == 0);
   sqlite3_free(errmsg);
 
+  // strict mode should be ok
+  rc = sqlite3_exec(db, "CREATE TABLE atable (\"id\" TEXT PRIMARY KEY) STRICT", 0, 0, 0);
+  assert(rc == SQLITE_OK);
+  rc = crsql_isTableCompatible(db, "atable", &errmsg);
+  assert(rc == 1);
+
+  rc = sqlite3_exec(db, "CREATE TABLE atable2 (\"id\" TEXT PRIMARY KEY, x TEXT) STRICT;", 0, 0, 0);
+  assert(rc == SQLITE_OK);
+  rc = crsql_isTableCompatible(db, "atable2", &errmsg);
+  assert(rc == 1);
+
   printf("\t\e[0;32mSuccess\e[0m\n");
   crsql_close(db);
 }

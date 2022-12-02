@@ -488,7 +488,7 @@ int crsql_isTableCompatible(sqlite3 *db, const char *tblName, char **errmsg)
   }
 
   // check for default value or nullable
-  zSql = sqlite3_mprintf("SELECT count(*) FROM pragma_table_xinfo('%s') WHERE \"notnull\" = 1 AND \"dflt_value\" IS NULL", tblName);
+  zSql = sqlite3_mprintf("SELECT count(*) FROM pragma_table_xinfo('%s') WHERE \"notnull\" = 1 AND \"dflt_value\" IS NULL AND \"pk\" != 1", tblName);
   rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
   sqlite3_free(zSql);
 

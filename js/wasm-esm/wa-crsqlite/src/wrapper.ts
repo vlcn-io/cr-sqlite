@@ -139,6 +139,9 @@ export class DB implements DBAsync {
     );
   }
 
+  /**
+   * @returns returns an object for each row, e.g. `{ col1: valA, col2: valB, ... }`
+   */
   execO<T extends {}>(
     sql: string,
     bind?: SQLiteCompatibleType[]
@@ -148,6 +151,9 @@ export class DB implements DBAsync {
     );
   }
 
+  /**
+   * @returns returns an array for each row, e.g. `[ valA, valB, ... ]`
+   */
   execA<T extends any[]>(
     sql: string,
     bind?: SQLiteCompatibleType[]

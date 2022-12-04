@@ -488,7 +488,7 @@ int crsql_isTableCompatible(sqlite3 *db, const char *tblName, char **errmsg)
   }
 
   // check for default value or nullable
-  zSql = sqlite3_mprintf("SELECT count(*) FROM pragma_table_xinfo('%s') WHERE \"notnull\" = 1 AND \"dflt_value\" IS NULL", tblName);
+  zSql = sqlite3_mprintf("SELECT count(*) FROM pragma_table_xinfo('%s') WHERE \"notnull\" = 1 AND \"dflt_value\" IS NULL AND \"pk\" != 1", tblName);
   rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
   sqlite3_free(zSql);
 
@@ -505,7 +505,7 @@ int crsql_isTableCompatible(sqlite3 *db, const char *tblName, char **errmsg)
     sqlite3_finalize(pStmt);
     if (count != 0)
     {
-      *errmsg = sqlite3_mprintf("Table %s has a NOT NULL column without a DEFAULT VALUE. This is not allowed as it prevents forwards and backwards compatbility between schema versions. Make the column nullable or assign a default value to it.", tblName);
+      *errmsg = sqlite3_mprintf("Table %s has a NOT NULL column without a DEFAULT VALUE. This is not allowed as it prevents forwards and backwards compatability between schema versions. Make the column nullable or assign a default value to it.", tblName);
       return 0;
     }
   }

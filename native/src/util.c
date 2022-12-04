@@ -48,7 +48,7 @@ static char *joinHelper(char **in, size_t inlen, size_t inpos, size_t accum)
 {
   if (inpos == inlen)
   {
-    return strcpy(sqlite3_malloc(accum + 1) + accum, "");
+    return strcpy((char *)sqlite3_malloc(accum + 1) + accum, "");
   }
   else
   {
@@ -103,7 +103,7 @@ char *crsql_join2(char *(*map)(const char *), char **in, size_t len, char *delim
     return 0;
   }
 
-  char *toJoin[len];
+  char **toJoin = sqlite3_malloc(len * sizeof(char *));
   int resultLen = 0;
   char *ret = 0;
   for (size_t i = 0; i < len; ++i)
@@ -132,6 +132,7 @@ char *crsql_join2(char *(*map)(const char *), char **in, size_t len, char *delim
 
     sqlite3_free(toJoin[i]);
   }
+  sqlite3_free(toJoin);
 
   return ret;
 }
@@ -299,7 +300,7 @@ char *crsql_asIdentifierListStr(char **in, size_t inlen, char delim)
 {
   int finalLen = 0;
   char *ret = 0;
-  char *mapped[inlen];
+  char **mapped = sqlite3_malloc(inlen * sizeof(char *));
 
   for (size_t i = 0; i < inlen; ++i)
   {
@@ -321,6 +322,7 @@ char *crsql_asIdentifierListStr(char **in, size_t inlen, char delim)
   {
     sqlite3_free(mapped[i]);
   }
+  sqlite3_free(mapped);
 
   return ret;
 }
@@ -337,7 +339,7 @@ char *crsql_getDbVersionUnionQuery(
     int numRows,
     char **tableNames)
 {
-  char *unionsArr[numRows];
+  char **unionsArr = sqlite3_malloc(numRows * sizeof(char *));
   char *unionsStr;
   char *ret;
   int i = 0;
@@ -360,6 +362,7 @@ char *crsql_getDbVersionUnionQuery(
   {
     sqlite3_free(unionsArr[i]);
   }
+  sqlite3_free(unionsArr);
 
   // compose the final query
   // and update the pointer to the string to point to it.

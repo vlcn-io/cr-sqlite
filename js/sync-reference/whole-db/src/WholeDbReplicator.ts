@@ -200,7 +200,7 @@ export class WholeDbReplicator {
   private poked = async (pokedBy: SiteIDWire, pokerVersion: bigint) => {
     log("received a poke from ", pokedBy);
     const rows = await this.db.execA(
-      "SELECT CAST(version as TEXT) FROM __crsql_wdbreplicator_peers WHERE site_id = ?",
+      "SELECT version FROM __crsql_wdbreplicator_peers WHERE site_id = ?",
       [uuidParse(pokedBy)]
     );
     let ourVersionForPoker: bigint = 0n;
@@ -240,7 +240,7 @@ export class WholeDbReplicator {
       let maxVersion = 0n;
       log("inserting changesets in tx", changesets);
       const stmt = await this.db.prepare(
-        'INSERT INTO crsql_changes ("table", "pk", "cid", "val", "version", "site_id") VALUES (?, ?, ?, ?, CAST(? as INTEGER), ?)'
+        'INSERT INTO crsql_changes ("table", "pk", "cid", "val", "version", "site_id") VALUES (?, ?, ?, ?, ?, ?)'
       );
       // TODO: may want to chunk
       try {
@@ -256,7 +256,7 @@ export class WholeDbReplicator {
             cs[1],
             cs[2],
             cs[3],
-            v.toString(),
+            v,
             cs[5] ? uuidParse(cs[5]) : 0
           );
         }
@@ -268,8 +268,8 @@ export class WholeDbReplicator {
       }
 
       await this.db.exec(
-        `INSERT OR REPLACE INTO __crsql_wdbreplicator_peers (site_id, version) VALUES (?, CAST(? as INTEGER))`,
-        [uuidParse(fromSiteId), maxVersion.toString()]
+        `INSERT OR REPLACE INTO __crsql_wdbreplicator_peers (site_id, version) VALUES (?, ?)`,
+        [uuidParse(fromSiteId), maxVersion]
       );
     });
   };
@@ -278,8 +278,8 @@ export class WholeDbReplicator {
     const fromAsBlob = uuidParse(from);
     // The casting is due to bigint support problems in various wasm builds of sqlite
     const changes: Changeset[] = await this.db.execA<Changeset>(
-      `SELECT "table", "pk", "cid", "val", CAST("version" as TEXT), "site_id" FROM crsql_changes WHERE site_id != ? AND version > CAST(? as INTEGER)`,
-      [fromAsBlob, since.toString()]
+      `SELECT "table", "pk", "cid", "val", "version", "site_id" FROM crsql_changes WHERE site_id != ? AND version > ?`,
+      [fromAsBlob, since]
     );
 
     // TODO: temporary. better to `quote` out of db and `unquote` (to implement) into db

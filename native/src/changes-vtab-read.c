@@ -62,7 +62,7 @@ char *crsql_changesUnionQuery(
     crsql_TableInfo **tableInfos,
     int tableInfosLen)
 {
-  char *unionsArr[tableInfosLen];
+  char **unionsArr = sqlite3_malloc(tableInfosLen * sizeof(char *));
   char *unionsStr = 0;
   int i = 0;
 
@@ -92,6 +92,7 @@ char *crsql_changesUnionQuery(
   {
     sqlite3_free(unionsArr[i]);
   }
+  sqlite3_free(unionsArr);
 
   // compose the final query
   return sqlite3_mprintf(

@@ -75,7 +75,8 @@ int crsql_createInsertTrigger(
 
 char *crsql_insertTriggerQuery(crsql_TableInfo *tableInfo, char *pkList, char *pkNewList)
 {
-  char *subTriggers[tableInfo->nonPksLen == 0 ? 1 : tableInfo->nonPksLen];
+  const int length = tableInfo->nonPksLen == 0 ? 1 : tableInfo->nonPksLen;
+  char **subTriggers = sqlite3_malloc(length * sizeof(char *));
   char *joinedSubTriggers;
 
   // We need a CREATE_SENTINEL to stand in for the create event so we can replicate PKs
@@ -132,6 +133,7 @@ char *crsql_insertTriggerQuery(crsql_TableInfo *tableInfo, char *pkList, char *p
   {
     sqlite3_free(subTriggers[0]);
   }
+  sqlite3_free(subTriggers);
 
   return joinedSubTriggers;
 }
@@ -153,7 +155,7 @@ int crsql_createUpdateTrigger(sqlite3 *db,
   char *pkList = 0;
   char *pkNewList = 0;
   int rc = SQLITE_OK;
-  char *subTriggers[tableInfo->nonPksLen];
+  char **subTriggers = sqlite3_malloc(tableInfo->nonPksLen * sizeof(char*));
   char *joinedSubTriggers;
 
   if (tableInfo->nonPksLen == 0)
@@ -195,6 +197,7 @@ int crsql_createUpdateTrigger(sqlite3 *db,
   {
     sqlite3_free(subTriggers[i]);
   }
+  sqlite3_free(subTriggers);
 
   zSql = sqlite3_mprintf("CREATE TRIGGER IF NOT EXISTS \"%s__crsql_utrig\"\
       AFTER UPDATE ON \"%s\"\

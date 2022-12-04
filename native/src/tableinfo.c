@@ -73,13 +73,15 @@ static char *quote(const char *in)
 
 char *crsql_quoteConcat(crsql_ColumnInfo *cols, int len)
 {
-  char *names[len];
+  char **names = sqlite3_malloc(len * sizeof(char *));
   for (int i = 0; i < len; ++i)
   {
     names[i] = cols[i].name;
   }
 
-  return crsql_join2(&quote, names, len, " || '|' || ");
+  char *ret = crsql_join2(&quote, names, len, " || '|' || ");
+  sqlite3_free(names);
+  return ret;
 }
 
 static void crsql_freeColumnInfos(crsql_ColumnInfo *columnInfos, int len)

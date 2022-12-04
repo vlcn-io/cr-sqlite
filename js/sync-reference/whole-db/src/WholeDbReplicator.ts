@@ -175,7 +175,7 @@ export class WholeDbReplicator {
 
   private async createPeerTrackingTable() {
     await this.db.exec(
-      "CREATE TABLE IF NOT EXISTS __crsql_wdbreplicator_peers (site_id primary key, version)"
+      "CREATE TABLE IF NOT EXISTS __crsql_wdbreplicator_peers (site_id BLOB primary key, version INTEGER) STRICT"
     );
   }
 

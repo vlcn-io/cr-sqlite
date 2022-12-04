@@ -26,7 +26,6 @@ SQLITE_EXTENSION_INIT1
 #include <string.h>
 #include <limits.h>
 #include <assert.h>
-#include <stdatomic.h>
 
 static void uuid(unsigned char *blob)
 {

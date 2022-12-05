@@ -266,7 +266,8 @@ static int changesNext(sqlite3_vtab_cursor *cur)
     // it could just be the case that the thing was deleted so we have nothing to retrieve
     // to fill in values for
     // do we re-write cids in this case?
-    if (rc == SQLITE_DONE) {
+    if (rc == SQLITE_DONE)
+    {
       return SQLITE_OK;
     }
     pTabBase->zErrMsg = sqlite3_mprintf("crsql internal error fetching row data");
@@ -321,9 +322,12 @@ static int changesColumn(
     }
     break;
   case CHANGES_SINCE_VTAB_CID:
-    if (pCur->pRowStmt == 0) {
+    if (pCur->pRowStmt == 0)
+    {
       sqlite3_result_text(ctx, DELETE_CID_SENTINEL, -1, SQLITE_STATIC);
-    } else {
+    }
+    else
+    {
       sqlite3_result_value(ctx, sqlite3_column_value(pCur->pChangesStmt, CID));
     }
     break;
@@ -331,17 +335,13 @@ static int changesColumn(
     sqlite3_result_int64(ctx, pCur->version);
     break;
   case CHANGES_SINCE_VTAB_SITE_ID:
-    if (pCur->pRowStmt == 0)
+    if (sqlite3_column_type(pCur->pChangesStmt, SITE_ID) == SQLITE_NULL)
     {
       sqlite3_result_blob(ctx, pCur->pTab->pExtData->siteId, SITE_ID_LEN, SQLITE_STATIC);
     }
     else
     {
-      if (sqlite3_column_type(pCur->pRowStmt, SITE_ID) == SQLITE_NULL) {
-        sqlite3_result_blob(ctx, pCur->pTab->pExtData->siteId, SITE_ID_LEN, SQLITE_STATIC);
-      } else {
-        sqlite3_result_value(ctx, sqlite3_column_value(pCur->pRowStmt, SITE_ID));
-      }
+      sqlite3_result_value(ctx, sqlite3_column_value(pCur->pChangesStmt, SITE_ID));
     }
     break;
   default:
@@ -385,7 +385,8 @@ static int changesFilter(
   }
 
   // nothing to fetch, no crrs exist.
-  if (pTab->pExtData->tableInfosLen == 0) {
+  if (pTab->pExtData->tableInfosLen == 0)
+  {
     return SQLITE_OK;
   }
 

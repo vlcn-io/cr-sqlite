@@ -264,7 +264,6 @@ static void teste2e()
 
   rc += sqlite3_exec(db1, "insert into foo values (1, 2.0e2);", 0, 0, &err);
   rc += sqlite3_exec(db2, "insert into foo values (2, X'1232');", 0, 0, &err);
-  // rc += sqlite3_exec(db3, "insert into foo values (3, 'str');", 0, 0, &err);
 
   assert(rc == SQLITE_OK);
 
@@ -300,10 +299,23 @@ static void teste2e()
   rc = sqlite3_prepare_v2(db2, "SELECT * FROM foo ORDER BY a ASC", -1, &pStmt2, 0);
   rc += sqlite3_prepare_v2(db3, "SELECT * FROM foo ORDER BY a ASC", -1, &pStmt3, 0);
   assert(rc == SQLITE_OK);
-
   assert(stmtsReturnSameResults(pStmt2, pStmt3) == 1);
+  sqlite3_finalize(pStmt2);
+  sqlite3_finalize(pStmt3);
 
   // now modify 3 and sync back from 2 to 1
+  rc += sqlite3_exec(db3, "insert into foo values (3, 'str');", 0, 0, &err);
+  syncLeftToRight(db3, db2, 0);
+  syncLeftToRight(db2, db1, 0);
+
+  rc = sqlite3_prepare_v2(db1, "SELECT * FROM foo ORDER BY a ASC", -1, &pStmt1, 0);
+  rc += sqlite3_prepare_v2(db3, "SELECT * FROM foo ORDER BY a ASC", -1, &pStmt3, 0);
+  assert(rc == SQLITE_OK);
+  assert(stmtsReturnSameResults(pStmt1, pStmt3) == 1);
+  sqlite3_finalize(pStmt1);
+  sqlite3_finalize(pStmt3);
+
+  // test modification cases -- although these are handled under `testLamportCondition`
 
   crsql_close(db1);
   crsql_close(db2);
@@ -528,7 +540,6 @@ void crsqlTestSuite()
   printf("\e[47m\e[1;30mSuite: crsql\e[0m\n");
 
   testCreateClockTable();
-  // testSyncBit();
   teste2e();
   testSelectChangesAfterChangingColumnName();
   testInsertChangesWithUnkownColumnNames();
@@ -542,6 +553,4 @@ void crsqlTestSuite()
   // testSyncBit();
   // testDbVersion();
   // testSiteId();
-  // test all the new logic around perDbData
-  // getting, freeing, reusing, releasing, refcounting, etc.
 }

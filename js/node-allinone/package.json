@@ -1,0 +1,42 @@
+{
+  "name": "@vlcn.io/crsqlite-allinone",
+  "version": "0.3.2",
+  "description": "CR-SQLite loadable extension",
+  "homepage": "https://vlcn.io",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/vlcn-io/cr-sqlite",
+    "directory": "https://github.com/vlcn-io/cr-sqlite/tree/main/js/node-allinone"
+  },
+  "module": "dist/index.js",
+  "main": "dist/index.js",
+  "files": [
+    "dist/**"
+  ],
+  "dependencies": {
+    "@vlcn.io/crsqlite": "workspace:*",
+    "@vlcn.io/xplat-api": "workspace:*",
+    "better-sqlite3": "^8.0.1",
+    "import-meta-resolve": "^2.1.0",
+    "nanoid": "^4.0.0"
+  },
+  "scripts": {
+    "build": "tsc --build",
+    "watch": "tsc --build -w",
+    "test": "vitest --run",
+    "deep-clean": "rm -rf ./dist || true && rm tsconfig.tsbuildinfo || true"
+  },
+  "license": "MIT",
+  "keywords": [
+    "sql",
+    "sqlite",
+    "sqlite3",
+    "crdt"
+  ],
+  "devDependencies": {
+    "@types/jest": "^29.2.2",
+    "typescript": "^4.8.4",
+    "vitest": "^0.25.0"
+  }
+}

@@ -9,10 +9,13 @@ import sqliteWasm from "@vlcn.io/wa-crsqlite";
 import tblrx from "@vlcn.io/rx-tbl";
 import wdbRtc from "@vlcn.io/network-webrtc";
 
-async function main() {
-  const sqlite = await sqliteWasm();
+// @ts-ignore
+import wasmUrl from "@vlcn.io/wa-crsqlite/wa-sqlite-async.wasm?url";
 
-  const db = await sqlite.open("p2p-wdb-todomvc-5");
+async function main() {
+  const sqlite = await sqliteWasm(() => wasmUrl);
+
+  const db = await sqlite.open("p2p-wdb-todomvc-6");
   (window as any).db = db;
 
   await db.exec(

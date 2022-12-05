@@ -6,8 +6,7 @@
   },
   "include": ["./src/"],
   "references": [
-    { "path": "../../xplat-api" },
-    { "path": "../../sync-reference/whole-db" },
-    { "path": "../../rx-tbl" }
+    { "path": "../../browser/wa-crsqlite" },
+    { "path": "../../sync-reference/whole-db" }
   ]
 }

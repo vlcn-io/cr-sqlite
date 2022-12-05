@@ -5,9 +5,5 @@
     "rootDir": "./src"
   },
   "include": ["./src/"],
-  "references": [
-    { "path": "../../xplat-api" },
-    { "path": "../../sync-reference/whole-db" },
-    { "path": "../../rx-tbl" }
-  ]
+  "references": [{ "path": "../../node-allinone" }]
 }

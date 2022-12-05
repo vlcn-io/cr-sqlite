@@ -1,26 +1,28 @@
 import { test, expect } from "vitest";
-
-import { wdbTests } from "@vlcn.io/xplat-tests";
+import { DBAsync, DB as DBSync } from "@vlcn.io/xplat-api";
+type DB = DBAsync | DBSync;
 import crsqlite from "@vlcn.io/crsqlite-allinone";
 
-Object.entries(wdbTests).forEach((x) => {
-  test(x[0], () => {
-    const tc = x[1];
-    tc(
-      async () => crsqlite.open(),
-      (p: boolean) => expect(p).toBe(true)
-    );
+function runTests(tests: {[key: string]: (
+  dbProvider: () => Promise<DB>,
+    assert: (p: boolean) => void
+) => any}) {
+  Object.entries(tests).forEach((x) => {
+    test(x[0], () => {
+      const tc = x[1];
+      tc(
+        async () => crsqlite.open(),
+        (p: boolean) => expect(p).toBe(true)
+      );
+    });
   });
-});
+}
+
+import { wdbTests } from "@vlcn.io/xplat-tests";
+runTests(wdbTests);
 
 import { tblrxTests } from "@vlcn.io/xplat-tests";
+runTests(tblrxTests);
 
-Object.entries(tblrxTests).forEach((x) => {
-  test(x[0], () => {
-    const tc = x[1];
-    tc(
-      async () => crsqlite.open(),
-      (p: boolean) => expect(p).toBe(true)
-    );
-  });
-});
+import { intTests } from "@vlcn.io/xplat-tests";
+runTests(intTests);

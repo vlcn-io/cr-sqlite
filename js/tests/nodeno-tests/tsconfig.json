@@ -6,8 +6,8 @@
   },
   "include": ["./src/"],
   "references": [
-    { "path": "../../nodeno/allinone" },
+    { "path": "../../node-allinone" },
     { "path": "../../tests/xplat-tests" },
-    { "path": "../../rx/table-based" }
+    { "path": "../../rx-tbl" }
   ]
 }

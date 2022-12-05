@@ -1,7 +1,7 @@
 import { DBAsync, DB as DBSync } from "@vlcn.io/xplat-api";
 import wdbr, { PokeProtocol } from "@vlcn.io/replicator-wholedb";
 // @ts-ignore
-import { v4 as uuidv4, stringify as uuidStringify } from "uuid";
+import { v4 as uuidv4, stringify as uuidStringify, parse as uuidParse } from "uuid";
 import { Changeset } from "@vlcn.io/replicator-wholedb";
 
 type DB = DBAsync | DBSync;
@@ -127,10 +127,12 @@ export const tests = {
 
     if (last && "then" in last) {
       await last;
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      assert(sentPokeCnt == 1);
     } else {
       await new Promise((resolve) => setTimeout(resolve, 0));
+      assert(sentPokeCnt == 1);
     }
-    assert(sentPokeCnt == 1);
 
     r.dispose();
     db.close();
@@ -326,22 +328,28 @@ export const tests = {
       const r = await wdbr.install(await createSimpleSchema(db), db, protocol);
 
       const changeset: readonly Changeset[] = [
-        ["foo", 1, "b", "'foobar'", 1, uuidv4()],
+        ["foo", 1, "b", "'foobar'", 1, changeSender],
       ];
 
       await changesReceived!(changeSender, changeset);
 
-      const row = (
+      // TODO see https://github.com/rhashimoto/wa-sqlite/issues/69
+      // as to why we have this crappy quoting
+      const rows = (
         await db.execA<any>(
-          "select site_id, version from __crsql_wdbreplicator_peers"
+          "select quote(site_id), version from __crsql_wdbreplicator_peers"
         )
-      )[0];
-      assert(uuidStringify(row[0]) == changeSender);
+      );
+      const row = rows[0];
+
+      assert(uuidStringify(hexToBytes(row[0].substring(2, row[0].length - 1))) == changeSender);
       assert(row[1] == 1);
 
       r.dispose();
       db.close();
     },
+
+    // TODO: test recording of site_id blob in `changes` vtab
 
   "tear down removes triggers": (
     dbProvider: () => Promise<DB>,
@@ -350,3 +358,9 @@ export const tests = {
 
   // test out of bounds cids, bad pks, bad vals, etc.
 } as const;
+
+function hexToBytes(hex: string) {
+  for (var bytes = [], c = 0; c < hex.length; c += 2)
+      bytes.push(parseInt(hex.substr(c, 2), 16));
+  return bytes;
+}

@@ -1,12 +1,17 @@
 {
-  "name": "@vlcn.io/xplat-tests",
-  "private": true,
+  "name": "@vlcn.io/wa-crsqlite",
   "type": "module",
-  "version": "0.3.0",
+  "version": "0.4.1",
   "files": [
-    "dist"
+    "dist",
+    "src"
   ],
-  "main": "dist/index.js",
+  "exports": {
+    ".": "./dist/wrapper.js",
+    "./wa-sqlite-async.wasm": "./dist/wa-sqlite-async.wasm"
+  },
+  "module": "dist/wrapper.js",
+  "types": "dist/wrapper.d.ts",
   "sideEffects": false,
   "devDependencies": {
     "typescript": "^4.8.4"
@@ -19,12 +24,11 @@
   "repository": {
     "type": "git",
     "url": "git@github.com:vlcn-io/cr-sqlite.git",
-    "directory": "https://github.com/vlcn-io/cr-sqlite/tree/main/js/test/xplat-tests"
+    "directory": "https://github.com/vlcn-io/cr-sqlite/tree/main/js/browser/crsqlite"
   },
   "dependencies": {
-    "@vlcn.io/replicator-wholedb": "workspace:*",
+    "comlink": "^4.3.1",
     "@vlcn.io/xplat-api": "workspace:*",
-    "@vlcn.io/rx-tbl": "workspace:*",
-    "uuid": "^9.0.0"
+    "@vlcn.io/wa-sqlite": "workspace:*"
   }
 }

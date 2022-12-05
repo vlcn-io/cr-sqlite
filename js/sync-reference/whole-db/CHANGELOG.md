@@ -1,5 +1,13 @@
 # @vlcn.io/replicator-wholedb
 
+## 0.3.1
+
+### Patch Changes
+
+- fix bigint overflow in wasm, fix site_id not being returned with changesets
+- Updated dependencies
+  - @vlcn.io/xplat-api@0.3.1
+
 ## 0.3.0
 
 ### Minor Changes

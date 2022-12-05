@@ -1,5 +1,16 @@
 # @vlcn.io/nodeno-tests
 
+## 0.3.3
+
+### Patch Changes
+
+- fix bigint overflow in wasm, fix site_id not being returned with changesets
+- Updated dependencies
+  - @vlcn.io/crsqlite-allinone@0.3.3
+  - @vlcn.io/rx-tbl@0.3.1
+  - @vlcn.io/xplat-tests@0.3.1
+  - @vlcn.io/xplat-api@0.3.1
+
 ## 0.3.2
 
 ### Patch Changes

@@ -1,5 +1,15 @@
 # @vlcn.io/crsqlite-p2p-todomvc
 
+## 0.4.2
+
+### Patch Changes
+
+- fix bigint overflow in wasm, fix site_id not being returned with changesets
+- Updated dependencies
+  - @vlcn.io/wa-crsqlite@0.4.2
+  - @vlcn.io/rx-tbl@0.3.1
+  - @vlcn.io/network-webrtc@0.3.1
+
 ## 0.4.1
 
 ### Patch Changes

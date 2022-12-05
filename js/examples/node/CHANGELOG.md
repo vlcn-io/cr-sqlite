@@ -1,5 +1,13 @@
 # @vlcn.io/node-tests
 
+## 0.3.3
+
+### Patch Changes
+
+- fix bigint overflow in wasm, fix site_id not being returned with changesets
+- Updated dependencies
+  - @vlcn.io/crsqlite@0.4.2
+
 ## 0.3.2
 
 ### Patch Changes

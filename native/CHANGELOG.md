@@ -1,5 +1,11 @@
 # @vlcn.io/crsqlite
 
+## 0.4.2
+
+### Patch Changes
+
+- fix bigint overflow in wasm, fix site_id not being returned with changesets
+
 ## 0.4.1
 
 ### Patch Changes

@@ -1,5 +1,14 @@
 # @vlcn.io/wa-crsqlite
 
+## 0.4.2
+
+### Patch Changes
+
+- fix bigint overflow in wasm, fix site_id not being returned with changesets
+- Updated dependencies
+  - @vlcn.io/wa-sqlite@0.11.2
+  - @vlcn.io/xplat-api@0.3.1
+
 ## 0.4.1
 
 ### Patch Changes

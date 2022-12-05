@@ -1,5 +1,11 @@
 # @vlcn.io/examples-peer-server
 
+## 0.3.1
+
+### Patch Changes
+
+- fix bigint overflow in wasm, fix site_id not being returned with changesets
+
 ## 0.3.0
 
 ### Minor Changes

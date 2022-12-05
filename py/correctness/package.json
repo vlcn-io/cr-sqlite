@@ -1,6 +1,6 @@
 {
   "name": "@vlcn.io/py-correctness",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": true,
   "description": "CR-SQLite loadable extension",
   "homepage": "https://vlcn.io",

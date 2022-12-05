@@ -6,11 +6,11 @@ import wasmUrl from "@vlcn.io/wa-crsqlite/wa-sqlite-async.wasm?url";
 
 const crsqlite = await sqliteWasm(() => wasmUrl);
 
-describe("WholeDbReplicator.cy.ts", () => {
+describe("tblrx.cy.ts", () => {
   Object.entries(tblrxTests).forEach((x) => {
     it(x[0], () => {
       const tc = x[1];
-      tc(
+      return tc(
         () => crsqlite.open(),
         (p: boolean) => expect(p).to.equal(true)
       );

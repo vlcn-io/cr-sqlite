@@ -1,7 +1,7 @@
 import { DBAsync, DB as DBSync } from "@vlcn.io/xplat-api";
 import wdbr, { PokeProtocol } from "@vlcn.io/replicator-wholedb";
 // @ts-ignore
-import { v4 as uuidv4, stringify as uuidStringify } from "uuid";
+import { v4 as uuidv4, stringify as uuidStringify, parse as uuidParse } from "uuid";
 import { Changeset } from "@vlcn.io/replicator-wholedb";
 
 type DB = DBAsync | DBSync;
@@ -326,16 +326,18 @@ export const tests = {
       const r = await wdbr.install(await createSimpleSchema(db), db, protocol);
 
       const changeset: readonly Changeset[] = [
-        ["foo", 1, "b", "'foobar'", 1, uuidv4()],
+        ["foo", 1, "b", "'foobar'", 1, changeSender],
       ];
 
       await changesReceived!(changeSender, changeset);
 
-      const row = (
+      const rows = (
         await db.execA<any>(
           "select site_id, version from __crsql_wdbreplicator_peers"
         )
-      )[0];
+      );
+      const row = rows[0];
+
       assert(uuidStringify(row[0]) == changeSender);
       assert(row[1] == 1);
 

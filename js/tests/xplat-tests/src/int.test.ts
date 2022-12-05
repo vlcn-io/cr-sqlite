@@ -42,7 +42,6 @@ export const tests = {
       BigInt(Number.MAX_SAFE_INTEGER) + BigInt(Number.MAX_SAFE_INTEGER)
     ]);
     r = await db.execA('SELECT b FROM i64col');
-    console.log(r[0][0]);
     assert(r[0][0] == BigInt(Number.MAX_SAFE_INTEGER) + BigInt(Number.MAX_SAFE_INTEGER));
   },
 };

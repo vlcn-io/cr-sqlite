@@ -10,7 +10,7 @@ describe("WholeDbReplicator.cy.ts", () => {
   Object.entries(wdbTests).forEach((x) => {
     it(x[0], () => {
       const tc = x[1];
-      tc(
+      return tc(
         () => crsqlite.open(),
         (p: boolean) => expect(p).to.equal(true)
       );

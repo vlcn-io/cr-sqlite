@@ -278,13 +278,13 @@ export class WholeDbReplicator {
     const fromAsBlob = uuidParse(from);
     // The casting is due to bigint support problems in various wasm builds of sqlite
     const changes: Changeset[] = await this.db.execA<Changeset>(
-      `SELECT "table", "pk", "cid", "val", "version", quote("site_id") FROM crsql_changes WHERE site_id != ? AND version > ?`,
+      `SELECT "table", "pk", "cid", "val", "version", "site_id" FROM crsql_changes WHERE site_id != ? AND version > ?`,
       [fromAsBlob, since]
     );
 
     // TODO: temporary. better to `quote` out of db and `unquote` (to implement) into db
     // TODO: further complicated by https://github.com/rhashimoto/wa-sqlite/issues/69
-    changes.forEach((c) => (c[5] = uuidStringify(hexToBytes(c[5].substring(2, c[5].length - 1) as any))));
+    changes.forEach((c) => (c[5] = uuidStringify(c[5] as any)));
 
     if (changes.length == 0) {
       return;
@@ -296,9 +296,3 @@ export class WholeDbReplicator {
 }
 
 export default api;
-
-function hexToBytes(hex: string) {
-  for (var bytes = [], c = 0; c < hex.length; c += 2)
-      bytes.push(parseInt(hex.substr(c, 2), 16));
-  return bytes;
-}

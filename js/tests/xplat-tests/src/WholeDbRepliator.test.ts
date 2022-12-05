@@ -333,16 +333,14 @@ export const tests = {
 
       await changesReceived!(changeSender, changeset);
 
-      // TODO see https://github.com/rhashimoto/wa-sqlite/issues/69
-      // as to why we have this crappy quoting
       const rows = (
         await db.execA<any>(
-          "select quote(site_id), version from __crsql_wdbreplicator_peers"
+          "select site_id, version from __crsql_wdbreplicator_peers"
         )
       );
       const row = rows[0];
 
-      assert(uuidStringify(hexToBytes(row[0].substring(2, row[0].length - 1))) == changeSender);
+      assert(uuidStringify(row[0]) == changeSender);
       assert(row[1] == 1);
 
       r.dispose();
@@ -358,9 +356,3 @@ export const tests = {
 
   // test out of bounds cids, bad pks, bad vals, etc.
 } as const;
-
-function hexToBytes(hex: string) {
-  for (var bytes = [], c = 0; c < hex.length; c += 2)
-      bytes.push(parseInt(hex.substr(c, 2), 16));
-  return bytes;
-}

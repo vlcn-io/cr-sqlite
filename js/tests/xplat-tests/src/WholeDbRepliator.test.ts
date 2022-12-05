@@ -346,8 +346,12 @@ export const tests = {
       r.dispose();
       db.close();
     },
+  
+  "applied changes surface the right site id": async () => {
 
-    // TODO: test recording of site_id blob in `changes` vtab
+  },
+
+  // TODO: test recording of site_id blob in `changes` vtab
 
   "tear down removes triggers": (
     dbProvider: () => Promise<DB>,

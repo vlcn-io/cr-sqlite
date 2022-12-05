@@ -1,11 +1,13 @@
 // @ts-ignore
-import { access, FileHandle, open, rm } from "node:fs/promises";
+import { access, FileHandle, open, rm, mkdir, rmdir } from "node:fs/promises";
 import {
   SQLITE_OPEN_DELETEONCLOSE,
   SQLITE_IOERR_SHORT_READ,
   SQLITE_OPEN_CREATE,
+  SQLITE_LOCK_SHARED,
   SQLITE_CANTOPEN,
   SQLITE_IOERR,
+  SQLITE_BUSY,
   SQLITE_OK,
   Base,
   // @ts-ignore
@@ -106,6 +108,27 @@ export class NodeVFS extends Base {
         accessOut.set(1);
       } catch {
         accessOut.set(0);
+      }
+    });
+  }
+    
+  xLock(id: number, type: number) {
+    return this.handle(id, async ({ path }) => {
+      if (!(type & SQLITE_LOCK_SHARED)) return;
+      try {
+        await mkdir(path + ".lock");
+      } catch {
+        return SQLITE_BUSY;
+      }
+    });
+  }
+  
+  xUnlock(id: number) {
+    return this.handle(id, async ({ path }) => {
+      try {
+        await rmdir(path + ".lock");
+      } catch (error: any) {
+        if (error.errno !== -4058) throw error;
       }
     });
   }

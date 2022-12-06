@@ -5,18 +5,9 @@
 import express from "express";
 import { IncomingMessage } from "http";
 import { WebSocketServer } from "ws";
-import * as winston from "winston";
 import * as http from "http";
-
-const logger = winston.createLogger({
-  level: "info",
-  format: winston.format.json(),
-  transports: [
-    new winston.transports.Console({
-      format: winston.format.simple(),
-    }),
-  ],
-});
+import { Connection } from "./connection.js";
+import logger from "./logger.js";
 
 const port = 8080;
 const app = express();
@@ -25,14 +16,12 @@ app.use(express.urlencoded({ extended: true }));
 const server = http.createServer(app);
 
 const wss = new WebSocketServer({ noServer: true });
+// const protocol = new Protocol();
+
 wss.on("connection", (ws, request) => {
   logger.log("info", `established ws connection`);
 
-  ws.on("message", (data) => {
-    logger.log("info", `Received messages ${data}`);
-  });
-
-  ws.on("close", () => {});
+  new Connection(ws);
 });
 
 function authenticate(req: IncomingMessage, cb: (err: any) => void) {

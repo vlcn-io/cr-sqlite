@@ -20,6 +20,11 @@ export class EstablishedConnection {
   ) {
     /**
      * We should ask client for `changes since` since we last saw them.
+     *
+     * No. Clients will send us changes since they last saw us.
+     *
+     * This is more resillient to people who end up copying database files around
+     * and create duplicative site ids.
      */
   }
 
@@ -63,7 +68,7 @@ export class EstablishedConnection {
       }
     }
 
-    this.db.applyChangeset(data.changes);
+    this.db.applyChangeset(this.connection.site, data.changes);
     this.#expectedSeq = data.seqEnd;
 
     this.connection.send({

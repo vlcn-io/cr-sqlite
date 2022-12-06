@@ -14,6 +14,10 @@ import { ChangesAckedMsg, ChangesRequestedMsg } from "./protocol.js";
 
 export default class ChangeStream {
   #begun: boolean = false;
+  #closed: boolean = false;
+  #disposables: (() => void)[] = [];
+  #outstandingAcks = 0;
+
   constructor(
     private readonly db: DBType,
     private readonly connection: EstablishedConnection
@@ -30,9 +34,33 @@ export default class ChangeStream {
     }
 
     this.#begun = true;
+
+    this.#disposables.push(this.db.onChanged(this.#dbChanged));
   }
 
   processAck(msg: ChangesAckedMsg) {}
 
-  #connClosed = () => {};
+  #dbChanged() {
+    if (this.#closed) {
+      // events could have been queued
+      logger.info(
+        `receiving db changed event on closed connection. DB: ${this.db.siteId}, Peer: ${this.connection.site}`
+      );
+      return;
+    }
+
+    if (!this.#begun) {
+      throw new Error(
+        `Attemping to stream changes when streaming has not begun for DB: ${this.db.siteId} and Peer: ${this.connection.site}`
+      );
+    }
+  }
+
+  #connClosed = () => {
+    logger.info(
+      `Closed connection to Peer: ${this.connection.site} for DB: ${this.db.siteId}`
+    );
+    this.#closed = true;
+    this.#disposables.forEach((d) => d());
+  };
 }

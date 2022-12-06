@@ -107,6 +107,8 @@ export class Connection {
   }
 
   #closed() {
+    this.ws.removeAllListeners();
+    this.#establishedConnection = undefined;
     this?.onClosed?.();
   }
 }

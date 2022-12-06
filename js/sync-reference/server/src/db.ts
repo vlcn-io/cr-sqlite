@@ -1,19 +1,25 @@
 import { Changeset, SiteIdWire } from "./protocol.js";
 import { resolve } from "import-meta-resolve";
 import * as fs from "fs";
-import { validate as uuidValidate } from "uuid";
+import { validate as uuidValidate, parse as uuidParse } from "uuid";
 
 import { Database } from "better-sqlite3";
 import * as SQLiteDB from "better-sqlite3";
 import * as path from "path";
 import config from "./config.js";
+import logger from "./logger.js";
 
 const modulePath = await resolve("@vlcn.io/crsqlite", import.meta.url);
 
-// Map of weak refs to DB instances
+const activeDBs = new Map<SiteIdWire, WeakRef<DB>>();
+const finalizationRegistry = new FinalizationRegistry((siteId: SiteIdWire) => {
+  activeDBs.delete(siteId);
+});
 
 class DB {
   #db: Database;
+  #listeners = new Set<(source: SiteIdWire) => void>();
+
   constructor(
     public readonly siteId: SiteIdWire,
     dbPath: string,
@@ -25,14 +31,36 @@ class DB {
       this.#bootstrapSiteId();
     }
 
-    // now load extensions
+    this.#db.loadExtension(new URL(modulePath).pathname);
   }
 
-  applyChangeset(changes: Changeset[]) {}
+  applyChangeset(from: SiteIdWire, changes: Changeset[]) {
+    // write them then notify safely
 
-  onChanged(cb: () => void) {}
+    this.#notifyListeners(from);
+  }
 
-  #bootstrapSiteId() {}
+  #notifyListeners(source: SiteIdWire) {
+    for (const l of this.#listeners) {
+      try {
+        l(source);
+      } catch (e: any) {
+        logger.error(e.message);
+      }
+    }
+  }
+
+  onChanged(cb: () => void) {
+    this.#listeners.add(cb);
+    return () => this.#listeners.delete(cb);
+  }
+
+  #bootstrapSiteId() {
+    // new db and the user provided a site id
+    this.#db.exec(`CREATE TABLE "__crsql_siteid" (site_id)`);
+    const stmt = this.#db.prepare(`INSERT INTO "__crsql_siteid" VALUES (?)`);
+    stmt.run(uuidParse(this.siteId));
+  }
 }
 
 export type DBType = DB;
@@ -52,6 +80,16 @@ export default async function dbFactory(
     throw new Error("Invalid UUID supplied for DBID");
   }
 
+  const existing = activeDBs.get(desiredDb);
+  if (existing) {
+    const deref = existing.deref();
+    if (deref) {
+      return deref;
+    } else {
+      activeDBs.delete(desiredDb);
+    }
+  }
+
   const dbPath = path.join(config.dbDir, desiredDb);
   try {
     await fs.promises.access(dbPath, fs.constants.F_OK);
@@ -62,5 +100,10 @@ export default async function dbFactory(
     // otherwise create the thing
   }
 
-  return new DB(desiredDb, dbPath, isNew);
+  const ret = new DB(desiredDb, dbPath, isNew);
+  const ref = new WeakRef(ret);
+  activeDBs.set(desiredDb, ref);
+  finalizationRegistry.register(ret, desiredDb);
+
+  return ret;
 }

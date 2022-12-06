@@ -5,7 +5,11 @@ export type TableName = string;
 export type Version = number | string;
 type TODO = any;
 
-export type Msg = ChangesReceivedMsg | ChangesRequestedMsg | ChangesAckedMsg;
+export type Msg =
+  | ChangesReceivedMsg
+  | ChangesRequestedMsg
+  | ChangesAckedMsg
+  | EstablishConnectionMsg;
 
 export type Changeset = [
   TableName,
@@ -52,6 +56,19 @@ export type ChangesAckedMsg = {
   _tag: "a";
   from: SiteIdWire;
   seqEnd: [Version, number];
+};
+
+export type EstablishConnectionMsg = {
+  _tag: "e";
+  from: SiteIdWire;
+  to: SiteIdWire;
+  // if the db doesn't exist the user can create it
+  // with the provided schema name.
+  // obviously we need some form of auth around this
+  // and tracking as to how much data the user is using.
+  create?: {
+    schemaName: string;
+  };
 };
 
 export interface CentralWholeTblStreamProtocol {

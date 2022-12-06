@@ -16,8 +16,8 @@
  * We also need a simple way to create new dbs with a provided schema.
  */
 
-import { EstablishedConnection } from "./connection";
-import { SiteIdWire } from "./protocol";
+import { EstablishedConnection } from "./connection.js";
+import { SiteIdWire } from "./protocol.js";
 
 const connections = new Map<SiteIdWire, EstablishedConnection>();
 const establishedConnections = {
@@ -34,4 +34,6 @@ const establishedConnections = {
   },
 };
 
-export default establishedConnections;
+class EstablishedConnections {}
+
+export default function establishedConnectionsFactory(desiredDb: SiteIdWire) {}

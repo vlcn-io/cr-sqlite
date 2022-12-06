@@ -6,8 +6,8 @@ import express from "express";
 import { IncomingMessage } from "http";
 import { WebSocketServer } from "ws";
 import * as http from "http";
-import { Connection } from "./connection";
-import logger from "./logger";
+import { Connection } from "./connection.js";
+import logger from "./logger.js";
 
 const port = 8080;
 const app = express();

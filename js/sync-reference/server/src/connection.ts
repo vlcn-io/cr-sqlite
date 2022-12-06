@@ -1,11 +1,14 @@
 import { RawData, WebSocket } from "ws";
-import establishedConnections from "./establishedConnections";
-import logger from "./logger";
-import { SiteIdWire } from "./protocol";
+import dbFactory, { DB } from "./db.js";
+import logger from "./logger.js";
+import { EstablishConnectionMsg, Msg, SiteIdWire } from "./protocol.js";
 
 const connectionCode = {
   OK: 0,
   DUPLICATE_SITE: 1,
+  DB_OPEN_FAIL: 2,
+  MSG_DECODE_FAILURE: 3,
+  INVALID_MSG_STATE: 4,
 } as const;
 type ConnectionCodeKey = keyof typeof connectionCode;
 
@@ -18,22 +21,48 @@ export class Connection {
       this.#closed();
     });
 
-    ws.on("message", (data) => {
-      logger.log("info", `Received messages ${data}`);
-      if (this.#establishedConnection) {
-        this.#establishedConnection.processMsg(data);
-      } else {
-        // if we got the right msg, establish
-      }
-    });
+    ws.on("message", this.#onMsg);
   }
+
+  #onMsg = (data: RawData) => {
+    logger.log("info", `Received message`);
+    let decoded: null | Msg;
+    try {
+      decoded = JSON.parse(data.toString()) as Msg;
+    } catch (e) {
+      this.close("MSG_DECODE_FAILURE");
+      return;
+    }
+
+    if (this.#establishedConnection) {
+      if (decoded._tag == "e") {
+        this.close("INVALID_MSG_STATE");
+        return;
+      }
+      this.#establishedConnection.processMsg(decoded);
+      return;
+    }
+
+    if (decoded._tag != "e") {
+      this.close("INVALID_MSG_STATE");
+      return;
+    }
+
+    try {
+      this.#establish(decoded);
+    } catch (e) {
+      this.close("DB_OPEN_FAIL");
+    }
+  };
 
   onClosed?: () => void;
 
-  #established(site: SiteIdWire) {
-    this.#site = site;
-    this.#establishedConnection = new EstablishedConnection(this);
-    establishedConnections.add(this.#establishedConnection);
+  #establish(msg: EstablishConnectionMsg) {
+    this.#site = msg.from;
+    this.#establishedConnection = new EstablishedConnection(
+      this,
+      dbFactory(msg.to)
+    );
   }
 
   get site() {
@@ -50,7 +79,10 @@ export class Connection {
 }
 
 export class EstablishedConnection {
-  constructor(private readonly connection: Connection) {
+  constructor(
+    private readonly connection: Connection,
+    private readonly db: DB
+  ) {
     /**
      * We should ask client for `changes since` since we last saw them.
      */
@@ -60,7 +92,7 @@ export class EstablishedConnection {
     return this.connection.site;
   }
 
-  processMsg(data: RawData) {
+  processMsg(data: Msg) {
     /**
      * Client will ask us for `changes since`
      * which will then kick off the stream

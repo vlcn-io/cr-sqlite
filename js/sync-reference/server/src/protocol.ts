@@ -21,7 +21,7 @@ export type Changeset = [
 ];
 
 export type ChangesReceivedMsg = {
-  _tag: "r";
+  _tag: "receive";
   from: SiteIdWire;
   /**
    * seqStart must always be equal to
@@ -47,19 +47,19 @@ export type ChangesReceivedMsg = {
 };
 
 export type ChangesRequestedMsg = {
-  _tag: "q";
+  _tag: "request";
   from: SiteIdWire;
   seqStart: [Version, number];
 };
 
 export type ChangesAckedMsg = {
-  _tag: "a";
+  _tag: "ack";
   from: SiteIdWire;
   seqEnd: [Version, number];
 };
 
 export type EstablishConnectionMsg = {
-  _tag: "e";
+  _tag: "establish";
   from: SiteIdWire;
   to: SiteIdWire;
   // if the db doesn't exist the user can create it

@@ -9,6 +9,7 @@ const connectionCode = {
   DB_OPEN_FAIL: 2,
   MSG_DECODE_FAILURE: 3,
   INVALID_MSG_STATE: 4,
+  ERROR: 5,
 } as const;
 type ConnectionCodeKey = keyof typeof connectionCode;
 
@@ -35,20 +36,31 @@ export class Connection {
     }
 
     if (this.#establishedConnection) {
-      if (decoded._tag == "e") {
+      if (decoded._tag == "establish") {
         this.close("INVALID_MSG_STATE");
         return;
       }
-      this.#establishedConnection.processMsg(decoded);
+
+      try {
+        this.#establishedConnection.processMsg(decoded);
+      } catch (e: any) {
+        if (e.code) {
+          this.close(e.code);
+        } else {
+          this.close("ERROR");
+        }
+      }
+
       return;
     }
 
-    if (decoded._tag != "e") {
+    if (decoded._tag != "establish") {
       this.close("INVALID_MSG_STATE");
       return;
     }
 
     try {
+      logger.log("info", `esatblishing connection to db ${decoded.to}`);
       this.#establish(decoded);
     } catch (e) {
       this.close("DB_OPEN_FAIL");
@@ -97,6 +109,18 @@ export class EstablishedConnection {
      * Client will ask us for `changes since`
      * which will then kick off the stream
      */
+    switch (data._tag) {
+      case "ack":
+        break;
+      case "receive":
+      // apply changes received
+      case "request":
+      // start our stream
+      case "establish":
+        throw {
+          code: "INVALID_MSG_STATE",
+        };
+    }
   }
 
   close(code: ConnectionCodeKey, data?: string) {

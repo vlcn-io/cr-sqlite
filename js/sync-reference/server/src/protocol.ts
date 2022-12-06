@@ -48,13 +48,11 @@ export type ChangesReceivedMsg = {
 
 export type ChangesRequestedMsg = {
   _tag: "request";
-  from: SiteIdWire;
   seqStart: [Version, number];
 };
 
 export type ChangesAckedMsg = {
   _tag: "ack";
-  from: SiteIdWire;
   seqEnd: [Version, number];
 };
 
@@ -62,6 +60,7 @@ export type EstablishConnectionMsg = {
   _tag: "establish";
   from: SiteIdWire;
   to: SiteIdWire;
+  seqStart: [Version, number];
   // if the db doesn't exist the user can create it
   // with the provided schema name.
   // obviously we need some form of auth around this

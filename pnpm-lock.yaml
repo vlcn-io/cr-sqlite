@@ -201,23 +201,29 @@ importers:
 
   js/sync-reference/server:
     specifiers:
+      '@types/better-sqlite3': ^7.6.2
       '@types/express': ^4.17.14
       '@types/node': ^18.11.9
+      '@types/uuid': ^8.3.4
       '@types/ws': ^8.5.3
       '@vlcn.io/crsqlite-allinone': workspace:*
       cors: ^2.8.5
       express: ^4.18.2
+      import-meta-resolve: ^2.1.0
       typescript: ^4.9.3
       uuid: ^9.0.0
       winston: ^3.8.2
       ws: ^8.11.0
     dependencies:
+      '@types/better-sqlite3': 7.6.2
       '@types/express': 4.17.14
       '@types/node': 18.11.9
+      '@types/uuid': 8.3.4
       '@types/ws': 8.5.3
       '@vlcn.io/crsqlite-allinone': link:../../node-allinone
       cors: 2.8.5
       express: 4.18.2
+      import-meta-resolve: 2.1.0
       uuid: 9.0.0
       winston: 3.8.2
       ws: 8.11.0
@@ -1388,6 +1394,12 @@ packages:
     dependencies:
       '@babel/types': 7.20.2
     dev: true
+
+  /@types/better-sqlite3/7.6.2:
+    resolution: {integrity: sha512-RgmaapusqTq6IMAr4McMyAsC6RshYTCjXCnzwVV59WctUxC8bNPyUfT9t5F81lKcU41lLurhjqjoMHfauzfqGg==}
+    dependencies:
+      '@types/node': 18.11.9
+    dev: false
 
   /@types/body-parser/1.19.2:
     resolution: {integrity: sha512-ALYone6pm6QmwZoAgeyNksccT9Q4AWZQ6PvfwR37GT6r6FWUPguq6sUmNGSMV2Wr761oQoBxwGGa6DR5o1DC9g==}

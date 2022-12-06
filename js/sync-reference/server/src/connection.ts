@@ -1,7 +1,16 @@
 import { RawData, WebSocket } from "ws";
-import dbFactory, { DB } from "./db.js";
+import dbFactory from "./db.js";
+import { EstablishedConnection } from "./establishedConnection.js";
 import logger from "./logger.js";
-import { EstablishConnectionMsg, Msg, SiteIdWire } from "./protocol.js";
+import {
+  ChangesAckedMsg,
+  ChangesReceivedMsg,
+  ChangesRequestedMsg,
+  EstablishConnectionMsg,
+  Msg,
+  SiteIdWire,
+  Version,
+} from "./protocol.js";
 
 const connectionCode = {
   OK: 0,
@@ -10,8 +19,9 @@ const connectionCode = {
   MSG_DECODE_FAILURE: 3,
   INVALID_MSG_STATE: 4,
   ERROR: 5,
+  OUT_OF_ORDER_DELIVERY: 6,
 } as const;
-type ConnectionCodeKey = keyof typeof connectionCode;
+export type ConnectionCodeKey = keyof typeof connectionCode;
 
 export class Connection {
   #site?: SiteIdWire;
@@ -23,6 +33,10 @@ export class Connection {
     });
 
     ws.on("message", this.#onMsg);
+  }
+
+  send(msg: Msg) {
+    this.ws.send(msg);
   }
 
   #onMsg = (data: RawData) => {
@@ -71,10 +85,17 @@ export class Connection {
 
   #establish(msg: EstablishConnectionMsg) {
     this.#site = msg.from;
-    this.#establishedConnection = new EstablishedConnection(
-      this,
-      dbFactory(msg.to)
-    );
+    dbFactory(msg.to, msg.create)
+      .then((db) => {
+        this.#establishedConnection = new EstablishedConnection(this, db);
+        this.#establishedConnection.processMsg({
+          _tag: "request",
+          seqStart: msg.seqStart,
+        });
+      })
+      .catch((e) => {
+        this.close("DB_OPEN_FAIL");
+      });
   }
 
   get site() {
@@ -89,66 +110,3 @@ export class Connection {
     this?.onClosed?.();
   }
 }
-
-export class EstablishedConnection {
-  constructor(
-    private readonly connection: Connection,
-    private readonly db: DB
-  ) {
-    /**
-     * We should ask client for `changes since` since we last saw them.
-     */
-  }
-
-  get site(): SiteIdWire {
-    return this.connection.site;
-  }
-
-  processMsg(data: Msg) {
-    /**
-     * Client will ask us for `changes since`
-     * which will then kick off the stream
-     */
-    switch (data._tag) {
-      case "ack":
-        break;
-      case "receive":
-      // apply changes received
-      case "request":
-      // start our stream
-      case "establish":
-        throw {
-          code: "INVALID_MSG_STATE",
-        };
-    }
-  }
-
-  close(code: ConnectionCodeKey, data?: string) {
-    this.connection.close(code, data);
-  }
-
-  set onClosed(cb: () => void) {
-    if (this.connection.onClosed) {
-      throw new Error(
-        "Trying to register onClosed on a connection that already has a listener"
-      );
-    }
-
-    this.connection.onClosed = cb;
-  }
-
-  dbChanged() {
-    // attempt to push to our connected site but keep track of backpressure and batch
-    // items if it is too high.
-    // We have to keep track of backpressure at the app level
-    // due to: https://stackoverflow.com/questions/19414277/can-i-have-flow-control-on-my-websockets
-    //
-    // if backpressure gets too high, destroy the connection.
-    // "too high" should be determined based on available ram and expected
-    // concurrent connections.
-    //
-    // ideally we don't even buffer changesets.
-  }
-}
-
-// connection pool we can notify of db change events

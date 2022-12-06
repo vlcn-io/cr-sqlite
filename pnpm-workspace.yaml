@@ -6,6 +6,7 @@ packages:
   - "js/sync-reference/webrtc"
   - "js/sync-reference/whole-db"
   - "js/sync-reference/server"
+  - "js/sync-reference/client"
   - "js/tests/xplat-tests"
   - "js/tests/nodeno-tests"
   - "js/tests/browser-tests"

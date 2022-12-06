@@ -14,6 +14,7 @@
     { "path": "../tests/nodeno-tests" },
     { "path": "../browser/wa-crsqlite" },
     { "path": "../rx-tbl" },
-    { "path": "../sync-reference/server" }
+    { "path": "../sync-reference/server" },
+    { "path": "../sync-reference/client" }
   ]
 }

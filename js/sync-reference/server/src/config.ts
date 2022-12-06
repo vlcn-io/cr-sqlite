@@ -4,6 +4,7 @@ type Config = {
 
 let _config = {
   dbDir: "./dbs",
+  maxOutstandingAcks: 10,
 };
 
 export function configure(config: Config) {

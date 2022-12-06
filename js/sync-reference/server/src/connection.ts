@@ -102,8 +102,11 @@ export class Connection {
     return this.#site!;
   }
 
-  close(code: ConnectionCodeKey, data?: string) {
-    this.ws.close(connectionCode[code], data);
+  close(code: ConnectionCodeKey, data?: Object) {
+    this.ws.close(
+      connectionCode[code],
+      data ? JSON.stringify(data) : undefined
+    );
   }
 
   #closed() {

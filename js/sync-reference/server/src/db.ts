@@ -1,7 +1,11 @@
-import { Changeset, SiteIdWire } from "./protocol.js";
+import { Changeset, SiteIdWire, Version } from "./protocol.js";
 import { resolve } from "import-meta-resolve";
 import * as fs from "fs";
-import { validate as uuidValidate, parse as uuidParse } from "uuid";
+import {
+  validate as uuidValidate,
+  parse as uuidParse,
+  stringify as uuidStringify,
+} from "uuid";
 
 import { Database } from "better-sqlite3";
 import * as SQLiteDB from "better-sqlite3";
@@ -19,6 +23,8 @@ const finalizationRegistry = new FinalizationRegistry((siteId: SiteIdWire) => {
 class DB {
   #db: Database;
   #listeners = new Set<(source: SiteIdWire) => void>();
+  #applyChangesTx;
+  #pullChangesetStmt;
 
   constructor(
     public readonly siteId: SiteIdWire,
@@ -32,12 +38,53 @@ class DB {
     }
 
     this.#db.loadExtension(new URL(modulePath).pathname);
+    this.#pullChangesetStmt = this.#db.prepare(
+      `SELECT "table", "pk", "cid", "val", "version", "site_id" FROM crsql_changes WHERE version > ? AND site_id != ?`
+    );
+    this.#pullChangesetStmt.raw(true);
+
+    const applyChangesStmt = this.#db.prepare(
+      `INSERT INTO crsql_changes ("table", "pk", "cid", "val", "version", "site_id") VALUES (?, ?, ?, ?, ?, ?)`
+    );
+
+    this.#applyChangesTx = this.#db.transaction((changes: Changeset[]) => {
+      for (const cs of changes) {
+        const v = BigInt(cs[4]);
+        applyChangesStmt.run(
+          cs[0],
+          cs[1],
+          cs[2],
+          cs[3],
+          v,
+          cs[5] ? uuidParse(cs[5]) : null
+        );
+      }
+    });
   }
 
   applyChangeset(from: SiteIdWire, changes: Changeset[]) {
     // write them then notify safely
+    this.#applyChangesTx(changes);
 
-    this.#notifyListeners(from);
+    // queue this so we can finish acking before firing off more changes
+    // to connected clients
+    setImmediate(() => {
+      this.#notifyListeners(from);
+    });
+  }
+
+  pullChangeset(requestor: SiteIdWire, since: [Version, number]): Changeset[] {
+    const changes = this.#pullChangesetStmt.all(
+      uuidParse(requestor),
+      BigInt(since[0])
+    );
+    changes.forEach((c) => {
+      // idk -- can we not keep this as an array buffer?
+      c[5] = uuidStringify(c[5] as any);
+      // since BigInt doesn't serialize -- convert to string
+      c[4] = c[4].toString();
+    });
+    return changes;
   }
 
   #notifyListeners(source: SiteIdWire) {
@@ -50,7 +97,7 @@ class DB {
     }
   }
 
-  onChanged(cb: () => void) {
+  onChanged(cb: (source: SiteIdWire) => void) {
     this.#listeners.add(cb);
     return () => this.#listeners.delete(cb);
   }

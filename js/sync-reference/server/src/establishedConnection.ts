@@ -77,6 +77,10 @@ export class EstablishedConnection {
     });
   }
 
+  send(data: Msg) {
+    this.connection.send(data);
+  }
+
   #trackAck(data: ChangesAckedMsg) {
     if (!this.#changeStream) {
       throw {
@@ -100,7 +104,7 @@ export class EstablishedConnection {
     this.#changeStream.begin(data);
   }
 
-  close(code: ConnectionCodeKey, data?: string) {
+  close(code: ConnectionCodeKey, data?: Object) {
     this.connection.close(code, data);
   }
 

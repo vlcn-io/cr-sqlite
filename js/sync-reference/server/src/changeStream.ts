@@ -10,7 +10,7 @@ import {
   ChangesRequestedMsg,
   SiteIdWire,
   Version,
-} from "./protocol.js";
+} from "@vlcn.io/client-server-common";
 
 // change stream:
 // 1. sends the requested changes up till now

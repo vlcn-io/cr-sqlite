@@ -208,6 +208,12 @@ importers:
     devDependencies:
       typescript: 4.9.3
 
+  js/sync-reference/client-server-common:
+    specifiers:
+      typescript: ^4.9.3
+    devDependencies:
+      typescript: 4.9.3
+
   js/sync-reference/server:
     specifiers:
       '@types/better-sqlite3': ^7.6.2
@@ -215,6 +221,7 @@ importers:
       '@types/node': ^18.11.9
       '@types/uuid': ^8.3.4
       '@types/ws': ^8.5.3
+      '@vlcn.io/client-server-common': workspace:*
       '@vlcn.io/crsqlite-allinone': workspace:*
       cors: ^2.8.5
       express: ^4.18.2
@@ -224,6 +231,7 @@ importers:
       winston: ^3.8.2
       ws: ^8.11.0
     dependencies:
+      '@vlcn.io/client-server-common': link:../client-server-common
       '@vlcn.io/crsqlite-allinone': link:../../node-allinone
       cors: 2.8.5
       express: 4.18.2

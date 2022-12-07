@@ -15,6 +15,7 @@
     { "path": "../browser/wa-crsqlite" },
     { "path": "../rx-tbl" },
     { "path": "../sync-reference/server" },
-    { "path": "../sync-reference/client" }
+    { "path": "../sync-reference/client" },
+    { "path": "../sync-reference/client-server-common" }
   ]
 }

@@ -1,4 +1,4 @@
-import { Changeset, SiteIdWire, Version } from "./protocol.js";
+import { Changeset, SiteIdWire, Version } from "@vlcn.io/client-server-common";
 import { resolve } from "import-meta-resolve";
 import * as fs from "fs";
 import {

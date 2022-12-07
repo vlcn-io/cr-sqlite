@@ -8,7 +8,7 @@ import {
   Msg,
   SiteIdWire,
   Version,
-} from "./protocol.js";
+} from "@vlcn.io/client-server-common";
 
 export class EstablishedConnection {
   #changeStream?: ChangeStream;

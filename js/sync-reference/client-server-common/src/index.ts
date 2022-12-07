@@ -3,7 +3,6 @@ export type CID = string;
 export type QuoteConcatedPKs = string | number;
 export type TableName = string;
 export type Version = number | string;
-type TODO = any;
 
 export type Msg =
   | ChangesReceivedMsg
@@ -69,41 +68,3 @@ export type EstablishConnectionMsg = {
     schemaName: string;
   };
 };
-
-export interface CentralWholeTblStreamProtocol {
-  /**
-   * Push changes to a client connected to the server.
-   * We need a way to implement backpressure
-   */
-  pushChanges(to: SiteIdWire, changes: Changeset[]): void;
-
-  /**
-   * Request changes from the given site since the
-   * given version.
-   */
-  requestChanges(from: SiteIdWire, since: Version): void;
-
-  /**
-   * When a new client connects to the server
-   */
-  onNewConnection?: (siteId: SiteIdWire) => void;
-
-  /**
-   * When a client requests changes from the server.
-   * The client tells the server what the last
-   * version it has from the server.
-   */
-  onChangesRequested?: (msg: ChangesRequestedMsg) => void;
-
-  /**
-   * When a client sends the server changes
-   */
-  onChangesReceived?: (msg: ChangesReceivedMsg) => Promise<void>;
-
-  onChangesAcked?: (msg: ChangesAckedMsg) => Promise<void>;
-
-  // if a client notices messages are out of order,
-  // it should just terminate and recreate the connection
-  // to restart sync.
-  // onOutOfOrder
-}

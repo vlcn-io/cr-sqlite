@@ -26,9 +26,10 @@
   "repository": {
     "type": "git",
     "url": "git@github.com:vlcn-io/cr-sqlite.git",
-    "directory": "https://github.com/vlcn-io/cr-sqlite/tree/main/js/sync-server"
+    "directory": "https://github.com/vlcn-io/cr-sqlite/tree/main/js/sync-reference/server"
   },
   "dependencies": {
+    "@vlcn.io/client-server-common": "workspace:*",
     "@vlcn.io/crsqlite-allinone": "workspace:*",
     "cors": "^2.8.5",
     "express": "^4.18.2",

@@ -3,14 +3,10 @@ import dbFactory from "./db.js";
 import { EstablishedConnection } from "./establishedConnection.js";
 import logger from "./logger.js";
 import {
-  ChangesAckedMsg,
-  ChangesReceivedMsg,
-  ChangesRequestedMsg,
   EstablishConnectionMsg,
   Msg,
   SiteIdWire,
-  Version,
-} from "./protocol.js";
+} from "@vlcn.io/client-server-common";
 
 const connectionCode = {
   OK: 0,

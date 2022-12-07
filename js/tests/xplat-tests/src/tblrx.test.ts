@@ -43,12 +43,13 @@ export const tests = {
       notified = tbls;
     });
 
-    db.transaction(async () => {
+    await db.transaction(async () => {
       await db.exec("INSERT INTO foo VALUES (1, 2)");
       await new Promise((resolve) => setTimeout(resolve, 0));
       assert(notified.size == 0);
     });
 
+    await new Promise((resolve) => setTimeout(resolve, 0));
     assert(notified.size == 1);
     assert(notified.has("foo"));
 
@@ -118,7 +119,7 @@ export const tests = {
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     assert(notified.size == 1);
-    assert(notified.has("foo"));
+    assert(notified.has("bar"));
   },
 
   "does not fatal for connections that have not loaded the rx extension": (
@@ -144,15 +145,15 @@ export const tests = {
       notified = true;
     });
 
+    disposer();
+
     await db.exec("INSERT INTO foo VALUES (1,2)");
     await db.exec("INSERT INTO foo VALUES (2,3)");
     const last = db.exec("DELETE FROM foo WHERE a = 1");
 
-    assert(notified == false);
-    disposer();
-
     if (last && "then" in last) {
       await last;
+      await new Promise((resolve) => setTimeout(resolve, 0));
     } else {
       await new Promise((resolve) => setTimeout(resolve, 0));
     }

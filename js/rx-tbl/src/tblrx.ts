@@ -26,10 +26,6 @@ class TblRx {
 
     this.db.onUpdate((updateType, dbName, tblName, rowid) => {
       // Ignoring updates to internal tables.
-      console.log("ut: ", updateType);
-      console.log("dbn: ", dbName);
-      console.log("tbln: ", tblName);
-      console.log("rid: ", rowid);
       if (tblName.indexOf("__crsql") !== -1) {
         return;
       }

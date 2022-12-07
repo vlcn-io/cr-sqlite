@@ -3,7 +3,7 @@ import Database from "better-sqlite3";
 import { resolve } from "import-meta-resolve";
 const modulePath = new URL(await resolve("@vlcn.io/crsqlite", import.meta.url))
   .pathname;
-import { DB as IDB, Stmt as IStmt } from "@vlcn.io/xplat-api";
+import { DB as IDB, Stmt as IStmt, UpdateType } from "@vlcn.io/xplat-api";
 
 const api = {
   open(filename?: string, mode: string = "c"): DB {
@@ -49,6 +49,17 @@ export class DB implements IDB {
     } else {
       return this.db.prepare(sql).raw().all();
     }
+  }
+
+  onUpdate(
+    cb: (
+      type: UpdateType,
+      dbName: string,
+      tblName: string,
+      rowid: bigint
+    ) => void
+  ): void {
+    throw new Error("Update hook is not currently exposed by better-sqlite3");
   }
 
   isOpen() {

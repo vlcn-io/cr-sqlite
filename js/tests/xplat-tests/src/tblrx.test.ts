@@ -16,18 +16,43 @@ export const tests = {
   ) => {
     const db = await dbProvider();
     await createSimpleSchema(db);
-    const rx = await tblrx(db);
+    const rx = tblrx(db);
+    let notified = new Set<string>();
+    rx.on((tbls) => {
+      notified = tbls;
+    });
 
-    assert(
-      (
-        await db.execA<number[]>(
-          "SELECT count(*) FROM temp.sqlite_master WHERE type = 'trigger' AND name LIKE 'foo__crsql_tblrx_%'"
-        )
-      )[0][0] == 3
-    );
+    await db.exec("INSERT INTO foo VALUES (1, 2)");
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
-    assert(rx.watching.length == 1);
-    assert(rx.watching[0] == "foo");
+    assert(notified.size == 1);
+    assert(notified.has("foo"));
+
+    await db.close();
+  },
+
+  "only is notified on tx complete": async (
+    dbProvider: () => Promise<DB>,
+    assert: (p: boolean) => void
+  ) => {
+    const db = await dbProvider();
+    await createSimpleSchema(db);
+    const rx = tblrx(db);
+    let notified = new Set<string>();
+    rx.on((tbls) => {
+      notified = tbls;
+    });
+
+    db.transaction(async () => {
+      await db.exec("INSERT INTO foo VALUES (1, 2)");
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      assert(notified.size == 0);
+    });
+
+    assert(notified.size == 1);
+    assert(notified.has("foo"));
+
+    await db.close();
   },
 
   // TODO: untestable in async db mode
@@ -75,21 +100,25 @@ export const tests = {
     });
   },
 
-  "can be re-installed on schema change": async (
+  "support schema changes post installation of rx": async (
     dbProvider: () => Promise<DB>,
     assert: (p: boolean) => void
   ) => {
     const db = await dbProvider();
     await createSimpleSchema(db);
     const rx = await tblrx(db);
+    let notified = new Set<string>();
+    rx.on((tbls) => {
+      notified = tbls;
+    });
 
-    db.exec("CREATE TABLE bar (a, b)");
-    await rx.schemaChanged();
+    await db.exec("CREATE TABLE bar (a, b)");
+    await db.exec("INSERT INTO bar VALUES (1,2)");
 
-    assert(rx.watching.length == 2);
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
-    assert(rx.watching[0] == "foo");
-    assert(rx.watching[1] == "bar");
+    assert(notified.size == 1);
+    assert(notified.has("foo"));
   },
 
   "does not fatal for connections that have not loaded the rx extension": (
@@ -108,15 +137,15 @@ export const tests = {
   ) => {
     const db = await dbProvider();
     await createSimpleSchema(db);
-    const rx = await tblrx(db);
+    const rx = tblrx(db);
 
     let notified = false;
     const disposer = rx.on(() => {
       notified = true;
     });
 
-    db.exec("INSERT INTO foo VALUES (1,2)");
-    db.exec("INSERT INTO foo VALUES (2,3)");
+    await db.exec("INSERT INTO foo VALUES (1,2)");
+    await db.exec("INSERT INTO foo VALUES (2,3)");
     const last = db.exec("DELETE FROM foo WHERE a = 1");
 
     assert(notified == false);

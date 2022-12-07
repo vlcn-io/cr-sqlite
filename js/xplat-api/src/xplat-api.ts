@@ -1,3 +1,10 @@
+export type UpdateType = 9 | 18 | 23;
+export const updateType = {
+  DELETE: 9,
+  INSERT: 18,
+  UPDATE: 23,
+};
+
 export interface DB {
   execMany(sql: string[]): void;
   exec(sql: string, bind?: unknown[]): void;
@@ -9,6 +16,14 @@ export interface DB {
   createFunction(name: string, fn: (...args: any) => unknown, opts?: {}): void;
   savepoint(cb: () => void): void;
   transaction(cb: () => void): void;
+  onUpdate(
+    cb: (
+      type: UpdateType,
+      dbName: string,
+      tblName: string,
+      rowid: bigint
+    ) => void
+  ): void;
 }
 
 export type DBAsync = {
@@ -17,6 +32,14 @@ export type DBAsync = {
   execO<T extends {}>(sql: string, bind?: unknown[]): Promise<T[]>;
   execA<T extends any[]>(sql: string, bind?: unknown[]): Promise<T[]>;
   close(): void;
+  onUpdate(
+    cb: (
+      type: UpdateType,
+      dbName: string,
+      tblName: string,
+      rowid: bigint
+    ) => void
+  ): void;
 
   prepare(sql: string): Promise<StmtAsync>;
   createFunction(name: string, fn: (...args: any) => unknown, opts?: {}): void;

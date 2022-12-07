@@ -2,7 +2,7 @@ import SQLiteAsyncESMFactory from "@vlcn.io/wa-sqlite/dist/wa-sqlite-async.mjs";
 import * as SQLite from "@vlcn.io/wa-sqlite";
 // @ts-ignore
 import { IDBBatchAtomicVFS } from "@vlcn.io/wa-sqlite/src/examples/IDBBatchAtomicVFS.js";
-import { DBAsync, StmtAsync } from "@vlcn.io/xplat-api";
+import { DBAsync, StmtAsync, UpdateType } from "@vlcn.io/xplat-api";
 import { SQLITE_UTF8 } from "@vlcn.io/wa-sqlite";
 
 let api: SQLite3 | null = null;
@@ -137,6 +137,17 @@ export class DB implements DBAsync {
     return serialize(this.cache, computeCacheKey(sql, "a", bind), () =>
       this.statements(sql, false, bind)
     );
+  }
+
+  onUpdate(
+    cb: (
+      type: UpdateType,
+      dbName: string,
+      tblName: string,
+      rowid: bigint
+    ) => void
+  ): void {
+    this.api.update_hook(this.db, cb);
   }
 
   /**

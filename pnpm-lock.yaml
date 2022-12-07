@@ -201,6 +201,7 @@ importers:
 
   js/sync-reference/client:
     specifiers:
+      '@types/uuid': ^8.3.4
       '@vlcn.io/client-server-common': workspace:*
       '@vlcn.io/xplat-api': workspace:*
       typescript: ^4.9.3
@@ -210,6 +211,7 @@ importers:
       '@vlcn.io/xplat-api': link:../../xplat-api
       uuid: 9.0.0
     devDependencies:
+      '@types/uuid': 8.3.4
       typescript: 4.9.3
 
   js/sync-reference/client-server-common:

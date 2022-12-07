@@ -8,6 +8,7 @@
 import wrapDb, { DB } from "./DB.js";
 import { SiteIdWire } from "@vlcn.io/client-server-common";
 import { DB as DBSync, DBAsync } from "@vlcn.io/xplat-api";
+import ChangeStream from "./changeStream.js";
 
 type ReplicatorArgs = {
   localDb: DBSync | DBAsync;
@@ -19,14 +20,15 @@ type ReplicatorArgs = {
 };
 
 class Replicator {
-  #ws: WebSocket;
+  #ws: WebSocket | null = null;
   #localDb;
   #remoteDbId;
   #create?: {
     schemaName: string;
   };
   #started = false;
-  #disposers: (() => void)[] = [];
+  #changeStream: ChangeStream | null = null;
+  #uri: string;
 
   constructor({
     localDb,
@@ -43,8 +45,8 @@ class Replicator {
   }) {
     this.#localDb = localDb;
     this.#remoteDbId = remoteDbId;
-    this.#ws = new WebSocket(uri);
     this.#create = create;
+    this.#uri = uri;
   }
 
   start() {
@@ -56,50 +58,27 @@ class Replicator {
       );
     }
     this.#started = true;
+    this.#ws = new WebSocket(this.#uri);
 
     this.#ws.onopen = this.#opened;
     this.#ws.onmessage = this.#handleMessage;
     this.#ws.onclose = this.#handleClose;
     // TODO: ping/pong to detect undetectable close events
-
-    this.#localDb.createReplicationTrackingTableIfNotExists();
-
-    this.#disposers.push(this.#localDb.onUpdate(this.#localDbChanged));
   }
 
   #opened = (e: Event) => {
-    // look what version we have for the remote already
-
-    const seqStart = this.#localDb.seqIdFor(this.#remoteDbId);
-
-    // send establish meessage
-    this.#ws.send(
-      JSON.stringify({
-        _tag: "establish",
-        from: this.#localDb.siteId,
-        to: this.#remoteDbId,
-        seqStart,
-        create: this.#create,
-      })
+    if (this.#changeStream != null) {
+      throw new Error(
+        "Change stream already exists for connection that just opened"
+      );
+    }
+    this.#changeStream = new ChangeStream(
+      this.#localDb,
+      this.#ws!,
+      this.#remoteDbId,
+      this.#create
     );
-  };
-
-  #localDbChanged = () => {
-    // listen to RX for changes
-    // replicate those changes
-    // ensure we don't listen to changes applied due to sync.
-    // the whole db replicator uses the sync bit --
-    // select crsql_wdbreplicator() WHERE crsql_internal_sync_bit() = 0;
-    // but we want to sync post tx..
-    // well we can pull from changes where != server... a little duplicative.
-    // we can throttle the replication
-    // - 100ms intervals
-    // - 10 outstanding acks
-    //
-    // if we want to ensure we omit sync changes
-    // then we need to extend our commit hook callback to provide sync bit information.
-    //
-    // invoke our changeStream?
+    this.#changeStream.start();
   };
 
   #handleMessage = (e: Event) => {
@@ -107,9 +86,14 @@ class Replicator {
     // changes received
     console.log(e);
 
-    // remember to ack it
-    // remember to incr / decr outstanding acks
-    //
+    // handle the various cases
+
+    // receive?
+    // apply it
+    // ack it
+
+    // request? The server shouldn't request from us.
+    // ack? processAck for changeStream
   };
 
   #handleClose = (e: Event) => {
@@ -124,8 +108,12 @@ class Replicator {
 
   stop() {
     this.#started = false;
-    this.#ws.close();
-    this.#disposers.forEach((d) => d());
+    this.#changeStream?.stop();
+    this.#changeStream = null;
+    if (this.#ws != null) {
+      this.#ws.close();
+      this.#ws = null;
+    }
   }
 }
 
@@ -133,6 +121,12 @@ export default async function startSyncWith(
   args: ReplicatorArgs
 ): Promise<Replicator> {
   const wrapped = await wrapDb(args.localDb);
+  if (wrapped.siteId === args.remoteDbId) {
+    throw new Error(
+      `Attempting to sync to self? Site ids match? ${wrapped.siteId}`
+    );
+  }
+
   const r = new Replicator({
     ...args,
     localDb: wrapped,

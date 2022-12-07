@@ -10,6 +10,7 @@
   "main": "dist/index.js",
   "sideEffects": false,
   "devDependencies": {
+    "@types/uuid": "^8.3.4",
     "typescript": "^4.9.3"
   },
   "scripts": {
@@ -24,8 +25,8 @@
     "directory": "https://github.com/vlcn-io/cr-sqlite/tree/main/js/sync-client"
   },
   "dependencies": {
-    "uuid": "^9.0.0",
     "@vlcn.io/client-server-common": "workspace:*",
-    "@vlcn.io/xplat-api": "workspace:*"
+    "@vlcn.io/xplat-api": "workspace:*",
+    "uuid": "^9.0.0"
   }
 }

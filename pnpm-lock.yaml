@@ -201,9 +201,13 @@ importers:
 
   js/sync-reference/client:
     specifiers:
+      '@vlcn.io/client-server-common': workspace:*
+      '@vlcn.io/xplat-api': workspace:*
       typescript: ^4.9.3
       uuid: ^9.0.0
     dependencies:
+      '@vlcn.io/client-server-common': link:../client-server-common
+      '@vlcn.io/xplat-api': link:../../xplat-api
       uuid: 9.0.0
     devDependencies:
       typescript: 4.9.3

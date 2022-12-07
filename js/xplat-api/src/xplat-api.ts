@@ -23,7 +23,7 @@ export interface DB {
       tblName: string,
       rowid: bigint
     ) => void
-  ): void;
+  ): () => void;
 }
 
 export type DBAsync = {
@@ -39,7 +39,7 @@ export type DBAsync = {
       tblName: string,
       rowid: bigint
     ) => void
-  ): void;
+  ): () => void;
 
   prepare(sql: string): Promise<StmtAsync>;
   createFunction(name: string, fn: (...args: any) => unknown, opts?: {}): void;

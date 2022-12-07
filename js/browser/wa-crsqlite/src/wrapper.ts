@@ -124,6 +124,9 @@ function computeCacheKey(
 
 export class DB implements DBAsync {
   private cache = new Map<string, Promise<any>>();
+  #updateHooks: Set<
+    (type: UpdateType, dbName: string, tblName: string, rowid: bigint) => void
+  > | null = null;
   constructor(public api: SQLiteAPI, public db: number) {}
 
   execMany(sql: string[]): Promise<any> {
@@ -146,9 +149,36 @@ export class DB implements DBAsync {
       tblName: string,
       rowid: bigint
     ) => void
-  ): void {
-    this.api.update_hook(this.db, cb);
+  ): () => void {
+    if (this.#updateHooks == null) {
+      this.api.update_hook(this.db, this.#onUpdate);
+      this.#updateHooks = new Set();
+    }
+    this.#updateHooks.add(cb);
+
+    return () => this.#updateHooks?.delete(cb);
   }
+
+  #onUpdate = (
+    type: UpdateType,
+    dbName: string,
+    tblName: string,
+    rowid: bigint
+  ) => {
+    if (this.#updateHooks == null) {
+      return;
+    }
+    this.#updateHooks.forEach((h) => {
+      // we wrap these since listeners can be thought of as separate threads of execution
+      // one dieing shouldn't prevent others from being notified.
+      try {
+        h(type, dbName, tblName, rowid);
+      } catch (e) {
+        console.error("Failed notifying a DB update listener");
+        console.error(e);
+      }
+    });
+  };
 
   /**
    * @returns returns an object for each row, e.g. `{ col1: valA, col2: valB, ... }`

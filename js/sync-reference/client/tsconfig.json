@@ -5,5 +5,8 @@
     "rootDir": "./src"
   },
   "include": ["./src/"],
-  "references": [{ "path": "../../node-allinone" }]
+  "references": [
+    { "path": "../client-server-common" },
+    { "path": "../../xplat-api" }
+  ]
 }

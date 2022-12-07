@@ -24,6 +24,8 @@
     "directory": "https://github.com/vlcn-io/cr-sqlite/tree/main/js/sync-client"
   },
   "dependencies": {
-    "uuid": "^9.0.0"
+    "uuid": "^9.0.0",
+    "@vlcn.io/client-server-common": "workspace:*",
+    "@vlcn.io/xplat-api": "workspace:*"
   }
 }

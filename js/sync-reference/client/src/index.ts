@@ -19,6 +19,8 @@ class Replicator {
   #ws: WebSocket;
   #localDb;
   #remoteDbId;
+  #started = false;
+
   constructor({ localDb, uri, remoteDbId, schemaName }: ReplicatorArgs) {
     this.#localDb = localDb;
     this.#remoteDbId = remoteDbId;
@@ -26,10 +28,19 @@ class Replicator {
   }
 
   start() {
-    // create peer table if not exists
-    // listen to db for changes
+    if (this.#started) {
+      throw new Error(
+        `Syncing between local db: ${this.#localDb.siteId} and remote db: ${
+          this.#remoteDbId
+        } has already started`
+      );
+    }
+    this.#started = true;
+
     this.#ws.onopen = this.#opened;
     this.#ws.onmessage = this.#handleMessage;
+
+    this.#localDb.createReplicationTrackingTable();
   }
 
   #opened = (e: Event) => {

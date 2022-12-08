@@ -4,6 +4,7 @@ type Config = {
 
 let _config = {
   dbDir: "./dbs",
+  schemaDir: "./schemas"
   maxOutstandingAcks: 10,
 };
 

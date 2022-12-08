@@ -30,15 +30,18 @@ class DB {
   constructor(
     public readonly siteId: SiteIdWire,
     dbPath: string,
-    isNew: boolean
+    create?: { schemaName: string }
   ) {
     this.#db = new SQLiteDB(dbPath);
 
-    if (isNew) {
+    if (create) {
       this.#bootstrapSiteId();
     }
 
     this.#db.loadExtension(new URL(modulePath).pathname);
+    if (create) {
+      this.#applySchema(create.schemaName);
+    }
     this.#pullChangesetStmt = this.#db.prepare(
       `SELECT "table", "pk", "cid", "val", "version", "site_id" FROM crsql_changes WHERE version > ? AND site_id != ?`
     );
@@ -96,6 +99,33 @@ class DB {
         logger.error(e.message);
       }
     }
+  }
+
+  // TODO: the whol migration story to figure out...
+  // and either:
+  // 1. schema replication to clients
+  // or
+  // 2. no sync till clients upgrade
+  #applySchema(schemaName: string) {
+    const match = schemaName.match(/^[a-zA-Z0-9\-_]+$/);
+    if (match == null) {
+      logger.error("bad schema name", {
+        event: "DB.#applySchema",
+        schemaName,
+        db: this.siteId,
+        req: contextStore.get().reqId,
+      });
+      throw new Error(
+        "invalid schema name provided. Must only contain alphanumeric characters and/or -, _"
+      );
+    }
+
+    // TODO: make this promise based
+    const schemaPath = path.join(config.schemaDir, schemaName);
+    const contents = fs.readFileSync(schemaPath, {
+      encoding: "utf8",
+    });
+    this.#db.exec(contents);
   }
 
   onChanged(cb: (source: SiteIdWire) => void) {
@@ -158,9 +188,11 @@ export default async function dbFactory(
       throw e;
     }
     // otherwise create the thing
+    isNew = true;
   }
 
-  const ret = new DB(desiredDb, dbPath, isNew);
+  // do not pass create arg if the db already exists.
+  const ret = new DB(desiredDb, dbPath, isNew ? create : undefined);
   const ref = new WeakRef(ret);
   activeDBs.set(desiredDb, ref);
   finalizationRegistry.register(ret, desiredDb);

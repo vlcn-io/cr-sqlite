@@ -32,7 +32,7 @@ async function main() {
     remoteDbId: "a0a36bfc-12da-4582-ae2e-928eaca0dc08",
     uri: "ws://localhost:8080/sync",
     create: {
-      schemaName: "todo-mvc.sqlite",
+      schemaName: "todo-mvc",
     },
     rx,
   });

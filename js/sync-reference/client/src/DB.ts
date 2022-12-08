@@ -100,7 +100,7 @@ export default async function wrap(
   const ret = new DB(db, r[0][0], rx, pullChangesetStmt, applyChangesetStmt);
 
   await db.exec(
-    "CREATE TABLE IF NOT EXISTS __crsql_peers (site_id PRIMARY KEY, version INTEGER, seq INTEGER) STRICT;"
+    "CREATE TABLE IF NOT EXISTS __crsql_peers (site_id BLOB PRIMARY KEY, version INTEGER, seq INTEGER) STRICT;"
   );
 
   return ret;

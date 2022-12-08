@@ -244,6 +244,7 @@ importers:
       nanoid: ^4.0.0
       typescript: ^4.9.3
       uuid: ^9.0.0
+      vitest: ^0.25.2
       winston: ^3.8.2
       ws: ^8.11.0
     dependencies:
@@ -264,6 +265,7 @@ importers:
       '@types/uuid': 8.3.4
       '@types/ws': 8.5.3
       typescript: 4.9.3
+      vitest: 0.25.2
 
   js/sync-reference/webrtc:
     specifiers:

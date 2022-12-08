@@ -18,6 +18,11 @@ const modulePath = await resolve("@vlcn.io/crsqlite", import.meta.url);
 
 const activeDBs = new Map<SiteIdWire, WeakRef<DB>>();
 const finalizationRegistry = new FinalizationRegistry((siteId: SiteIdWire) => {
+  const ref = activeDBs.get(siteId);
+  const db = ref?.deref();
+  if (db) {
+    db.close();
+  }
   activeDBs.delete(siteId);
 });
 
@@ -66,6 +71,10 @@ class DB {
     });
   }
 
+  get __db_for_tests(): any {
+    return this.#db;
+  }
+
   applyChangeset(from: SiteIdWire, changes: Changeset[]) {
     // write them then notify safely
     this.#applyChangesTx(changes);
@@ -107,21 +116,8 @@ class DB {
   // or
   // 2. no sync till clients upgrade
   #applySchema(schemaName: string) {
-    const match = schemaName.match(/^[a-zA-Z0-9\-_]+$/);
-    if (match == null) {
-      logger.error("bad schema name", {
-        event: "DB.#applySchema",
-        schemaName,
-        db: this.siteId,
-        req: contextStore.get().reqId,
-      });
-      throw new Error(
-        "invalid schema name provided. Must only contain alphanumeric characters and/or -, _"
-      );
-    }
-
     // TODO: make this promise based
-    const schemaPath = path.join(config.schemaDir, schemaName);
+    const schemaPath = path.join(config.get.schemaDir, schemaName);
     const contents = fs.readFileSync(schemaPath, {
       encoding: "utf8",
     });
@@ -138,6 +134,19 @@ class DB {
     this.#db.exec(`CREATE TABLE "__crsql_siteid" (site_id)`);
     const stmt = this.#db.prepare(`INSERT INTO "__crsql_siteid" VALUES (?)`);
     stmt.run(uuidParse(this.siteId));
+  }
+
+  close() {
+    try {
+      this.#db.exec("SELECT crsql_finalize();");
+      this.#db.close();
+    } catch (e: any) {
+      logger.error(e.message, {
+        event: "DB.close.fail",
+        dbid: this.siteId,
+        req: contextStore.get().reqId,
+      });
+    }
   }
 }
 
@@ -164,6 +173,22 @@ export default async function dbFactory(
     throw new Error("Invalid UUID supplied for DBID");
   }
 
+  if (create) {
+    const schemaName = create.schemaName;
+    const match = schemaName.match(/^[a-zA-Z0-9\-_]+$/);
+    if (match == null) {
+      logger.error("bad schema name", {
+        event: "DB.#applySchema",
+        schemaName,
+        db: desiredDb,
+        req: contextStore.get().reqId,
+      });
+      throw new Error(
+        "invalid schema name provided. Must only contain alphanumeric characters and/or -, _"
+      );
+    }
+  }
+
   const existing = activeDBs.get(desiredDb);
   if (existing) {
     logger.info(`db ${desiredDb} found in cache`);
@@ -175,7 +200,7 @@ export default async function dbFactory(
     }
   }
 
-  const dbPath = path.join(config.dbDir, desiredDb);
+  const dbPath = path.join(config.get.dbDir, desiredDb);
   try {
     await fs.promises.access(dbPath, fs.constants.F_OK);
   } catch (e) {

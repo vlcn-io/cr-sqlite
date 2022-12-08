@@ -63,11 +63,21 @@ export class EstablishedConnection {
         start[0] != this.#expectedSeq[0] ||
         start[1] != this.#expectedSeq[1]
       ) {
+        logger.error(
+          `Out of order deliver from ${this.connection.site}. start: ${
+            start[0]
+          }, expected: ${this.#expectedSeq[0]}`
+        );
         throw {
           code: "OUT_OF_ORDER_DELIVERY",
         };
       }
     }
+
+    logger.debug(
+      `Applying changes from ${this.connection.site} len ${data.changes.length}`
+    );
+    logger.debug(`start: ${data.seqStart[0]} end: ${data.seqEnd[0]}`);
 
     this.db.applyChangeset(this.connection.site, data.changes);
     this.#expectedSeq = data.seqEnd;

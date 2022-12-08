@@ -13,7 +13,7 @@ type Ctx = {};
 async function main() {
   const sqlite = await sqliteWasm(() => wasmUrl);
 
-  const db = await sqlite.open("p2p-wdb-todomvc-6");
+  const db = await sqlite.open("wdb-todomvc");
   (window as any).db = db;
 
   await db.exec(

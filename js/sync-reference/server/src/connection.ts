@@ -62,6 +62,9 @@ export class Connection {
 
       // Received message while awaiting establish completion
       if (!this.#establishedConnection) {
+        logger.debug(
+          `Enqueue on establishPromise for ${decoded._tag} from ${this.#site}`
+        );
         this.#establishPromise!.then(() => {
           this.#onMsg(data);
         });
@@ -72,8 +75,10 @@ export class Connection {
         this.#establishedConnection!.processMsg(decoded);
       } catch (e: any) {
         if (e.code) {
+          logger.error(`Closing with code: ${e.code} to ${this.#site}`);
           this.close(e.code);
         } else {
+          logger.error(e.message);
           this.close("ERROR");
         }
       }

@@ -101,7 +101,7 @@ $(TARGET_SQLITE3_VANILLA): $(prefix) src/sqlite/shell.c
 	-DSQLITE_THREADSAFE=0 \
 	-DSQLITE_ENABLE_NORMALIZE \
 	-I./src/ -I./src/sqlite \
-	sqlite/sqlite3.c sqlite/shell.c \
+	src/sqlite/sqlite3.c src/sqlite/shell.c \
 	-o $@
 
 $(TARGET_SQLITE3_EXTRA_C): src/sqlite/sqlite3.c src/core_init.c

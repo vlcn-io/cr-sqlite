@@ -51,6 +51,9 @@ export default class ChangeStream {
     this.#lastSeq = msg.seqStart;
 
     this.#disposables.push(this.db.onChanged(this.#dbChanged));
+
+    // kickoff initial sync
+    this.#dbChanged(null);
   }
 
   processAck(msg: ChangesAckedMsg) {

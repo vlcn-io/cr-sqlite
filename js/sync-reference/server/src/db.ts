@@ -88,8 +88,8 @@ class DB {
 
   pullChangeset(requestor: SiteIdWire, since: [Version, number]): Changeset[] {
     const changes = this.#pullChangesetStmt.all(
-      uuidParse(requestor),
-      BigInt(since[0])
+      BigInt(since[0]),
+      uuidParse(requestor)
     );
     changes.forEach((c) => {
       // idk -- can we not keep this as an array buffer?

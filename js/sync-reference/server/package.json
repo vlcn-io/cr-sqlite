@@ -15,11 +15,13 @@
     "@types/node": "^18.11.9",
     "@types/uuid": "^8.3.4",
     "@types/ws": "^8.5.3",
-    "typescript": "^4.9.3"
+    "typescript": "^4.9.3",
+    "vitest": "^0.25.2"
   },
   "scripts": {
     "build": "tsc --build",
     "watch": "tsc --build --watch",
+    "test": "vitest run",
     "deep-clean": "rm -rf ./dist || true && rm tsconfig.tsbuildinfo || true",
     "start": "pnpm build && node dist/main.js"
   },

@@ -38,7 +38,7 @@ export class Connection {
   }
 
   send(msg: Msg) {
-    this.ws.send(msg);
+    this.ws.send(JSON.stringify(msg));
   }
 
   #onMsg = (data: RawData) => {
@@ -95,6 +95,7 @@ export class Connection {
           req: contextStore.get().reqId,
           code: e.code,
           msg: e.message,
+          stack: e.stack,
         });
         if (e.code) {
           this.close(e.code);
@@ -136,18 +137,19 @@ export class Connection {
     });
 
     this.#site = msg.from;
-    this.#establishPromise = dbFactory(msg.to, msg.create)
-      .then((db) => {
+    this.#establishPromise = dbFactory(msg.to, msg.create).then(
+      (db) => {
         this.#establishedConnection = new EstablishedConnection(this, db);
         this.#establishedConnection.processMsg({
           _tag: "request",
           seqStart: msg.seqStart,
         });
-      })
-      .catch((e) => {
+      },
+      (e) => {
         logger.error(e.message);
         this.close("DB_OPEN_FAIL");
-      });
+      }
+    );
   }
 
   get site() {

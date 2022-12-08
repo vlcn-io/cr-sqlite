@@ -3,7 +3,7 @@ import {
   SiteIdWire,
   Version,
 } from "@vlcn.io/client-server-common";
-import { DB } from "./DB.js";
+import { DB, SEND } from "./DB.js";
 import logger from "./logger.js";
 
 const maxOutstandingAcks = 10;
@@ -44,14 +44,14 @@ export default class ChangeStream {
     }
     this.#started = true;
 
-    // TODO: no-- we need to use rx to collapse updates.
     this.#disposers.push(this.db.onUpdate(this.#localDbChanged));
 
     // send the establish message
 
     // send establish meessage
-    const seqStart = await this.db.seqIdFor(this.remoteDbId);
+    const seqStart = await this.db.seqIdFor(this.remoteDbId, SEND);
     this.#lastSeq = seqStart;
+    logger.info("asking server to establish the connection");
     this.ws.send(
       JSON.stringify({
         _tag: "establish",
@@ -67,10 +67,13 @@ export default class ChangeStream {
   }
 
   async processAck(msg: ChangesAckedMsg) {
+    logger.info("Received ack");
     this.#outstandingAcks -= 1;
     if (this.#outstandingAcks < 0) {
       throw new Error("Too many acks received");
     }
+
+    // TODO: record what the server acked in out `SEND` in our db
 
     // We just droped below threshold and had previously blocked a send.
     // Can send now.
@@ -109,8 +112,10 @@ export default class ChangeStream {
 
     const seqEnd: [Version, number] = [changes[changes.length - 1][4], 0];
     this.#lastSeq = seqEnd;
+    logger.debug("update last seq to", seqEnd);
 
     this.#outstandingAcks += 1;
+    logger.info("Syncing to server. num changes: ", changes.length);
     this.ws.send(
       JSON.stringify({
         _tag: "receive",

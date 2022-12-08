@@ -3,6 +3,11 @@ import { DB as DBSync, DBAsync, Stmt, StmtAsync } from "@vlcn.io/xplat-api";
 import { parse as uuidParse, stringify as uuidStringify } from "uuid";
 import tblrx from "@vlcn.io/rx-tbl";
 import { TblRx } from "@vlcn.io/rx-tbl/src/tblrx";
+import logger from "./logger";
+
+export const SEND = 0 as const;
+export const RECEIVE = 1 as const;
+type VersionEvent = typeof RECEIVE | typeof SEND;
 
 // exposes the minimal interface required by the replicator
 // to the DB.
@@ -23,11 +28,14 @@ export class DB {
     return this.rx.on(cb);
   }
 
-  async seqIdFor(siteId: SiteIdWire): Promise<[Version, number]> {
+  async seqIdFor(
+    siteId: SiteIdWire,
+    event: VersionEvent
+  ): Promise<[Version, number]> {
     const parsed = uuidParse(siteId);
     const rows = await this.db.execA(
-      "SELECT version, seq FROM __crsql_peers WHERE site_id = ?",
-      [parsed]
+      "SELECT version, seq FROM __crsql_peers WHERE site_id = ? AND event = ?",
+      [parsed, event]
     );
     if (rows.length == 0) {
       // never seen the site before
@@ -39,6 +47,7 @@ export class DB {
     return [row[0].toString(), row[1]];
   }
 
+  // TODO: track seq monotonicity
   async applyChangeset(from: SiteIdWire, changes: Changeset[]) {
     // write them then notify safely
     await this.db.transaction(async () => {
@@ -65,12 +74,12 @@ export class DB {
     siteId: SiteIdWire,
     seq: [Version, number]
   ): Promise<Changeset[]> {
+    logger.info("Pulling changes since ", seq);
     const changes = await this.pullChangesetStmt.all(
-      uuidParse(siteId),
-      BigInt(seq[0])
+      BigInt(seq[0]),
+      uuidParse(siteId)
     );
     changes.forEach((c) => {
-      // idk -- can we not keep this as an array buffer?
       c[5] = uuidStringify(c[5] as any);
       // since BigInt doesn't serialize -- convert to string
       c[4] = c[4].toString();
@@ -106,7 +115,7 @@ export default async function wrap(
   );
 
   await db.exec(
-    "CREATE TABLE IF NOT EXISTS __crsql_peers (site_id BLOB PRIMARY KEY, version INTEGER, seq INTEGER) STRICT;"
+    "CREATE TABLE IF NOT EXISTS __crsql_peers (site_id BLOB PRIMARY KEY, event INTEGER, version INTEGER, seq INTEGER) STRICT;"
   );
 
   return ret;

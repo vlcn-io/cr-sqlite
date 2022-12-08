@@ -18,6 +18,11 @@ const modulePath = await resolve("@vlcn.io/crsqlite", import.meta.url);
 
 const activeDBs = new Map<SiteIdWire, WeakRef<DB>>();
 const finalizationRegistry = new FinalizationRegistry((siteId: SiteIdWire) => {
+  const ref = activeDBs.get(siteId);
+  const db = ref?.deref();
+  if (db) {
+    db.close();
+  }
   activeDBs.delete(siteId);
 });
 
@@ -30,15 +35,18 @@ class DB {
   constructor(
     public readonly siteId: SiteIdWire,
     dbPath: string,
-    isNew: boolean
+    create?: { schemaName: string }
   ) {
     this.#db = new SQLiteDB(dbPath);
 
-    if (isNew) {
+    if (create) {
       this.#bootstrapSiteId();
     }
 
     this.#db.loadExtension(new URL(modulePath).pathname);
+    if (create) {
+      this.#applySchema(create.schemaName);
+    }
     this.#pullChangesetStmt = this.#db.prepare(
       `SELECT "table", "pk", "cid", "val", "version", "site_id" FROM crsql_changes WHERE version > ? AND site_id != ?`
     );
@@ -63,6 +71,10 @@ class DB {
     });
   }
 
+  get __db_for_tests(): any {
+    return this.#db;
+  }
+
   applyChangeset(from: SiteIdWire, changes: Changeset[]) {
     // write them then notify safely
     this.#applyChangesTx(changes);
@@ -76,8 +88,8 @@ class DB {
 
   pullChangeset(requestor: SiteIdWire, since: [Version, number]): Changeset[] {
     const changes = this.#pullChangesetStmt.all(
-      uuidParse(requestor),
-      BigInt(since[0])
+      BigInt(since[0]),
+      uuidParse(requestor)
     );
     changes.forEach((c) => {
       // idk -- can we not keep this as an array buffer?
@@ -98,6 +110,20 @@ class DB {
     }
   }
 
+  // TODO: the whol migration story to figure out...
+  // and either:
+  // 1. schema replication to clients
+  // or
+  // 2. no sync till clients upgrade
+  #applySchema(schemaName: string) {
+    // TODO: make this promise based
+    const schemaPath = path.join(config.get.schemaDir, schemaName);
+    const contents = fs.readFileSync(schemaPath, {
+      encoding: "utf8",
+    });
+    this.#db.exec(contents);
+  }
+
   onChanged(cb: (source: SiteIdWire) => void) {
     this.#listeners.add(cb);
     return () => this.#listeners.delete(cb);
@@ -108,6 +134,19 @@ class DB {
     this.#db.exec(`CREATE TABLE "__crsql_siteid" (site_id)`);
     const stmt = this.#db.prepare(`INSERT INTO "__crsql_siteid" VALUES (?)`);
     stmt.run(uuidParse(this.siteId));
+  }
+
+  close() {
+    try {
+      this.#db.exec("SELECT crsql_finalize();");
+      this.#db.close();
+    } catch (e: any) {
+      logger.error(e.message, {
+        event: "DB.close.fail",
+        dbid: this.siteId,
+        req: contextStore.get().reqId,
+      });
+    }
   }
 }
 
@@ -134,6 +173,22 @@ export default async function dbFactory(
     throw new Error("Invalid UUID supplied for DBID");
   }
 
+  if (create) {
+    const schemaName = create.schemaName;
+    const match = schemaName.match(/^[a-zA-Z0-9\-_]+$/);
+    if (match == null) {
+      logger.error("bad schema name", {
+        event: "DB.#applySchema",
+        schemaName,
+        db: desiredDb,
+        req: contextStore.get().reqId,
+      });
+      throw new Error(
+        "invalid schema name provided. Must only contain alphanumeric characters and/or -, _"
+      );
+    }
+  }
+
   const existing = activeDBs.get(desiredDb);
   if (existing) {
     logger.info(`db ${desiredDb} found in cache`);
@@ -145,7 +200,7 @@ export default async function dbFactory(
     }
   }
 
-  const dbPath = path.join(config.dbDir, desiredDb);
+  const dbPath = path.join(config.get.dbDir, desiredDb);
   try {
     await fs.promises.access(dbPath, fs.constants.F_OK);
   } catch (e) {
@@ -158,9 +213,11 @@ export default async function dbFactory(
       throw e;
     }
     // otherwise create the thing
+    isNew = true;
   }
 
-  const ret = new DB(desiredDb, dbPath, isNew);
+  // do not pass create arg if the db already exists.
+  const ret = new DB(desiredDb, dbPath, isNew ? create : undefined);
   const ref = new WeakRef(ret);
   activeDBs.set(desiredDb, ref);
   finalizationRegistry.register(ret, desiredDb);

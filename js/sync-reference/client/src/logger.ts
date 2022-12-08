@@ -10,6 +10,10 @@ const logger = {
   warn(...args: any[]) {
     console.warn(...args);
   },
+
+  debug(...args: any[]) {
+    console.log(...args);
+  },
 };
 
 export default logger;

@@ -5,8 +5,8 @@
  *  - we watch our db and send changes as transactions complete
  */
 
-import wrapDb, { DB } from "./DB.js";
-import { SiteIdWire } from "@vlcn.io/client-server-common";
+import wrapDb, { DB, RECEIVE } from "./DB.js";
+import { SiteIdWire, Version } from "@vlcn.io/client-server-common";
 import { DB as DBSync, DBAsync } from "@vlcn.io/xplat-api";
 import ChangeStream from "./changeStream.js";
 import { TblRx } from "@vlcn.io/rx-tbl";
@@ -32,6 +32,7 @@ class Replicator {
   #started = false;
   #changeStream: ChangeStream | null = null;
   #uri: string;
+  #expectedSeq?: [Version, number];
 
   constructor({
     localDb,
@@ -77,13 +78,16 @@ class Replicator {
         "Change stream already exists for connection that just opened"
       );
     }
-    this.#changeStream = new ChangeStream(
-      this.#localDb,
-      this.#ws!,
-      this.#remoteDbId,
-      this.#create
-    );
-    this.#changeStream.start();
+    this.#localDb.seqIdFor(this.#remoteDbId, RECEIVE).then((seq) => {
+      this.#expectedSeq = seq;
+      this.#changeStream = new ChangeStream(
+        this.#localDb,
+        this.#ws!,
+        this.#remoteDbId,
+        this.#create
+      );
+      this.#changeStream.start();
+    });
   };
 
   #handleMessage = (e: Event) => {

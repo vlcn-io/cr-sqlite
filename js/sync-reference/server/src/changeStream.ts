@@ -51,6 +51,9 @@ export default class ChangeStream {
     this.#lastSeq = msg.seqStart;
 
     this.#disposables.push(this.db.onChanged(this.#dbChanged));
+
+    // kickoff initial sync
+    this.#dbChanged(null);
   }
 
   processAck(msg: ChangesAckedMsg) {
@@ -70,14 +73,14 @@ export default class ChangeStream {
     // We just droped below threshold and had previously blocked a send.
     // Can send now.
     if (
-      this.#outstandingAcks == config.maxOutstandingAcks - 1 &&
+      this.#outstandingAcks == config.get.maxOutstandingAcks - 1 &&
       this.#blockedSend
     ) {
       this.#dbChanged(null);
     }
   }
 
-  #dbChanged(source: SiteIdWire | null) {
+  #dbChanged = (source: SiteIdWire | null) => {
     if (this.#closed) {
       // events could have been queued
       logger.warn("receive db change event on closed connection", {
@@ -102,7 +105,7 @@ export default class ChangeStream {
       return;
     }
 
-    if (this.#outstandingAcks == config.maxOutstandingAcks) {
+    if (this.#outstandingAcks == config.get.maxOutstandingAcks) {
       this.#blockedSend = true;
       logger.warn("too many outstanding acks", {
         event: "ChangeStream.#dbChange.tooManyOutstandingAcks",
@@ -146,7 +149,7 @@ export default class ChangeStream {
       seqStart: startSeq,
       seqEnd,
     });
-  }
+  };
 
   #connClosed = () => {
     logger.info(`Closed connection`, {

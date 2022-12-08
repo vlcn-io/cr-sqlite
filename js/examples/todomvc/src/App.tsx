@@ -1,8 +1,8 @@
 import * as React from "react";
-import { Ctx, useQuery } from "./hooks";
+import { useQuery } from "./hooks.js";
 import { useState, useCallback, memo } from "react";
 import { nanoid } from "nanoid";
-import Peers from "./Peers";
+import { Ctx } from "./ctx.js";
 
 type Todo = {
   id: string;
@@ -241,15 +241,6 @@ export default function App({ ctx }: { ctx: Ctx }) {
 
   return (
     <div className="todoapp">
-      <Peers ctx={ctx} />
-      <div
-        className="siteid"
-        onClick={() => {
-          navigator.clipboard.writeText(ctx.siteid);
-        }}
-      >
-        PeerID: {ctx.siteid}
-      </div>
       <Header ctx={ctx} />
       <section
         className="main"

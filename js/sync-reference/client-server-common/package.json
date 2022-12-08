@@ -1,0 +1,27 @@
+{
+  "name": "@vlcn.io/client-server-common",
+  "type": "module",
+  "version": "0.0.1",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "module": "dist/index.js",
+  "main": "dist/index.js",
+  "sideEffects": false,
+  "devDependencies": {
+    "typescript": "^4.9.3"
+  },
+  "scripts": {
+    "build": "tsc --build",
+    "watch": "tsc --build --watch",
+    "deep-clean": "rm -rf ./dist || true && rm tsconfig.tsbuildinfo || true",
+    "start": "pnpm build && node dist/main.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:vlcn-io/cr-sqlite.git",
+    "directory": "https://github.com/vlcn-io/cr-sqlite/tree/main/js/sync-reference/client-server-common"
+  },
+  "dependencies": {}
+}

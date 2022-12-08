@@ -2,7 +2,7 @@ import SQLiteAsyncESMFactory from "@vlcn.io/wa-sqlite/dist/wa-sqlite-async.mjs";
 import * as SQLite from "@vlcn.io/wa-sqlite";
 // @ts-ignore
 import { IDBBatchAtomicVFS } from "@vlcn.io/wa-sqlite/src/examples/IDBBatchAtomicVFS.js";
-import { DBAsync, StmtAsync } from "@vlcn.io/xplat-api";
+import { DBAsync, StmtAsync, UpdateType } from "@vlcn.io/xplat-api";
 import { SQLITE_UTF8 } from "@vlcn.io/wa-sqlite";
 
 let api: SQLite3 | null = null;
@@ -124,6 +124,9 @@ function computeCacheKey(
 
 export class DB implements DBAsync {
   private cache = new Map<string, Promise<any>>();
+  #updateHooks: Set<
+    (type: UpdateType, dbName: string, tblName: string, rowid: bigint) => void
+  > | null = null;
   constructor(public api: SQLiteAPI, public db: number) {}
 
   execMany(sql: string[]): Promise<any> {
@@ -138,6 +141,44 @@ export class DB implements DBAsync {
       this.statements(sql, false, bind)
     );
   }
+
+  onUpdate(
+    cb: (
+      type: UpdateType,
+      dbName: string,
+      tblName: string,
+      rowid: bigint
+    ) => void
+  ): () => void {
+    if (this.#updateHooks == null) {
+      this.api.update_hook(this.db, this.#onUpdate);
+      this.#updateHooks = new Set();
+    }
+    this.#updateHooks.add(cb);
+
+    return () => this.#updateHooks?.delete(cb);
+  }
+
+  #onUpdate = (
+    type: UpdateType,
+    dbName: string,
+    tblName: string,
+    rowid: bigint
+  ) => {
+    if (this.#updateHooks == null) {
+      return;
+    }
+    this.#updateHooks.forEach((h) => {
+      // we wrap these since listeners can be thought of as separate threads of execution
+      // one dieing shouldn't prevent others from being notified.
+      try {
+        h(type, dbName, tblName, rowid);
+      } catch (e) {
+        console.error("Failed notifying a DB update listener");
+        console.error(e);
+      }
+    });
+  };
 
   /**
    * @returns returns an object for each row, e.g. `{ col1: valA, col2: valB, ... }`

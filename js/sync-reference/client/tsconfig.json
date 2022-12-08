@@ -2,12 +2,12 @@
   "extends": "../../tsconfig-template.json",
   "compilerOptions": {
     "outDir": "./dist/",
-    "rootDir": "./src",
-    "allowSyntheticDefaultImports": true
+    "rootDir": "./src"
   },
   "include": ["./src/"],
   "references": [
-    { "path": "../../node-allinone" },
-    { "path": "../client-server-common" }
+    { "path": "../client-server-common" },
+    { "path": "../../xplat-api" },
+    { "path": "../../rx-tbl" }
   ]
 }

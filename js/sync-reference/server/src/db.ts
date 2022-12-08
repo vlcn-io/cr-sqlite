@@ -1,4 +1,4 @@
-import { Changeset, SiteIdWire, Version } from "./protocol.js";
+import { Changeset, SiteIdWire, Version } from "@vlcn.io/client-server-common";
 import { resolve } from "import-meta-resolve";
 import * as fs from "fs";
 import {
@@ -8,10 +8,11 @@ import {
 } from "uuid";
 
 import { Database } from "better-sqlite3";
-import * as SQLiteDB from "better-sqlite3";
+import SQLiteDB from "better-sqlite3";
 import * as path from "path";
 import config from "./config.js";
 import logger from "./logger.js";
+import contextStore from "./contextStore.js";
 
 const modulePath = await resolve("@vlcn.io/crsqlite", import.meta.url);
 
@@ -124,11 +125,18 @@ export default async function dbFactory(
 ): Promise<DB> {
   let isNew = false;
   if (!uuidValidate(desiredDb)) {
+    logger.error("invalid uuid", {
+      event: "dbFactory.invalidUuid",
+      desiredDb,
+      req: contextStore.get().reqId,
+      create,
+    });
     throw new Error("Invalid UUID supplied for DBID");
   }
 
   const existing = activeDBs.get(desiredDb);
   if (existing) {
+    logger.info(`db ${desiredDb} found in cache`);
     const deref = existing.deref();
     if (deref) {
       return deref;
@@ -142,6 +150,11 @@ export default async function dbFactory(
     await fs.promises.access(dbPath, fs.constants.F_OK);
   } catch (e) {
     if (!create) {
+      logger.error("no db, no create", {
+        event: "dbFactory.nodb",
+        desiredDb,
+        req: contextStore.get().reqId,
+      });
       throw e;
     }
     // otherwise create the thing

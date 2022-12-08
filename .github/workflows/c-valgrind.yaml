@@ -26,9 +26,6 @@ jobs:
       - name: Install valgrind
         run: sudo apt install -y valgrind
 
-      # there's always 16 bytes left allocated yet to be tracked down.
-      # this number never goes up no matter how many tests and operations we run
-      # in the process which is the good news.
       - name: Run Valgrind
         run: |
           cd native

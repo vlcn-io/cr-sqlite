@@ -523,8 +523,60 @@ static void testLamportCondition()
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
+// Setting a value to the same value it is already?
+// No change should happen unless the versions are different.
 static void noopsDoNotMoveClocks()
 {
+  printf("NoopsDoNotMoveClocks\n");
+  // syncing from A -> B, while no changes happen on B, moves up
+  // B's clock still.
+
+  sqlite3 *db1;
+  sqlite3 *db2;
+  int rc = SQLITE_OK;
+
+  rc += sqlite3_open(":memory:", &db1);
+  rc += sqlite3_open(":memory:", &db2);
+
+  rc += sqlite3_exec(db1, "CREATE TABLE \"hoot\" (\"a\", \"b\" primary key, \"c\")", 0, 0, 0);
+  rc += sqlite3_exec(db2, "CREATE TABLE \"hoot\" (\"a\", \"b\" primary key, \"c\")", 0, 0, 0);
+  rc += sqlite3_exec(db1, "SELECT crsql_as_crr('hoot');", 0, 0, 0);
+  rc += sqlite3_exec(db2, "SELECT crsql_as_crr('hoot');", 0, 0, 0);
+  assert(rc == SQLITE_OK);
+
+  rc += sqlite3_exec(db1, "INSERT INTO hoot VALUES (1, 1, 1);", 0, 0, 0);
+  rc += sqlite3_exec(db1, "UPDATE hoot SET a = 1 WHERE b = 1;", 0, 0, 0);
+  rc += sqlite3_exec(db1, "UPDATE hoot SET a = 2 WHERE b = 1;", 0, 0, 0);
+  rc += sqlite3_exec(db1, "UPDATE hoot SET a = 3 WHERE b = 1;", 0, 0, 0);
+  assert(rc == SQLITE_OK);
+
+  rc += sqlite3_exec(db2, "INSERT INTO hoot VALUES (1, 1, 1);", 0, 0, 0);
+  rc += sqlite3_exec(db2, "UPDATE hoot SET a = 1 WHERE b = 1;", 0, 0, 0);
+  rc += sqlite3_exec(db2, "UPDATE hoot SET a = 2 WHERE b = 1;", 0, 0, 0);
+  rc += sqlite3_exec(db2, "UPDATE hoot SET a = 3 WHERE b = 1;", 0, 0, 0);
+  assert(rc == SQLITE_OK);
+
+  sqlite3_int64 db1vPre = getDbVersion(db1);
+  sqlite3_int64 db2vPre = getDbVersion(db2);
+
+  // identical
+  assert(db1vPre == db2vPre);
+
+  rc += syncLeftToRight(db1, db2, 0);
+  assert(rc == SQLITE_OK);
+
+  sqlite3_int64 db1vPost = getDbVersion(db1);
+  sqlite3_int64 db2vPost = getDbVersion(db2);
+
+  // no changes merged since changes are no-ops, no versions changed
+  assert(db1vPre == db2vPost);
+  assert(db1vPre == db1vPost);
+
+  rc = crsql_close(db1);
+  assert(rc == SQLITE_OK);
+  rc += crsql_close(db2);
+  assert(rc == SQLITE_OK);
+  printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
 static void testModifySinglePK()

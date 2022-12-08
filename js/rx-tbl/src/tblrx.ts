@@ -8,6 +8,10 @@
  *
  * Exception are events caused by data sync. Although the network layer could touch the ORM
  * for these cases.
+ *
+ * The main thing this class does is to collapse all
+ * calls from SQLite into one single call so our app
+ * doesn't get hammered by large inserts or updates.
  */
 
 // exist (select 1 from pragma_function_list where name = 'crsql_tbl_rx')

@@ -149,6 +149,7 @@ importers:
       '@types/react': ^18.0.25
       '@types/react-dom': ^18.0.8
       '@types/ws': ^8.5.3
+      '@vlcn.io/sync-client': workspace:*
       '@vlcn.io/wa-crsqlite': workspace:*
       nanoid: ^4.0.0
       react: ^18.2.0
@@ -158,6 +159,7 @@ importers:
       ws: ^8.11.0
     dependencies:
       '@types/ws': 8.5.3
+      '@vlcn.io/sync-client': link:../../sync-reference/client
       '@vlcn.io/wa-crsqlite': link:../../browser/wa-crsqlite
       nanoid: 4.0.0
       react: 18.2.0
@@ -203,11 +205,13 @@ importers:
     specifiers:
       '@types/uuid': ^8.3.4
       '@vlcn.io/client-server-common': workspace:*
+      '@vlcn.io/rx-tbl': workspace:*
       '@vlcn.io/xplat-api': workspace:*
       typescript: ^4.9.3
       uuid: ^9.0.0
     dependencies:
       '@vlcn.io/client-server-common': link:../client-server-common
+      '@vlcn.io/rx-tbl': link:../../rx-tbl
       '@vlcn.io/xplat-api': link:../../xplat-api
       uuid: 9.0.0
     devDependencies:

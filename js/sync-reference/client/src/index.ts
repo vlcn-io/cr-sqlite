@@ -103,10 +103,10 @@ class Replicator {
       // via some amount of retries
       // and backoff
     }
-    this.stop();
+    this.#stop();
   };
 
-  stop() {
+  #stop() {
     this.#started = false;
     this.#changeStream?.stop();
     this.#changeStream = null;
@@ -114,6 +114,11 @@ class Replicator {
       this.#ws.close();
       this.#ws = null;
     }
+  }
+
+  dispose() {
+    this.#stop();
+    this.#localDb.dispose();
   }
 }
 

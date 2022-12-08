@@ -14,6 +14,7 @@
   "dependencies": {
     "@types/ws": "^8.5.3",
     "@vlcn.io/wa-crsqlite": "workspace:*",
+    "@vlcn.io/sync-client": "workspace:*",
     "nanoid": "^4.0.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

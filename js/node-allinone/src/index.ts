@@ -58,7 +58,7 @@ export class DB implements IDB {
       tblName: string,
       rowid: bigint
     ) => void
-  ): void {
+  ): () => void {
     throw new Error("Update hook is not currently exposed by better-sqlite3");
   }
 

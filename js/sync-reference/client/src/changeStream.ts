@@ -78,6 +78,7 @@ export default class ChangeStream {
     }
   }
 
+  // TODO: should we throttle to ~50ms?
   #localDbChanged = async () => {
     if (this.#closed) {
       console.warn("Reciving db change event on closed connection");

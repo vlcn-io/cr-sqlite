@@ -148,7 +148,9 @@ importers:
     specifiers:
       '@types/react': ^18.0.25
       '@types/react-dom': ^18.0.8
+      '@types/uuid': ^8.3.4
       '@types/ws': ^8.5.3
+      '@vlcn.io/rx-tbl': workspace:*
       '@vlcn.io/sync-client': workspace:*
       '@vlcn.io/wa-crsqlite': workspace:*
       nanoid: ^4.0.0
@@ -159,6 +161,7 @@ importers:
       ws: ^8.11.0
     dependencies:
       '@types/ws': 8.5.3
+      '@vlcn.io/rx-tbl': link:../../rx-tbl
       '@vlcn.io/sync-client': link:../../sync-reference/client
       '@vlcn.io/wa-crsqlite': link:../../browser/wa-crsqlite
       nanoid: 4.0.0
@@ -169,6 +172,7 @@ importers:
     devDependencies:
       '@types/react': 18.0.25
       '@types/react-dom': 18.0.9
+      '@types/uuid': 8.3.4
       vite: 3.2.4
 
   js/node-allinone:
@@ -232,7 +236,8 @@ importers:
       '@types/uuid': ^8.3.4
       '@types/ws': ^8.5.3
       '@vlcn.io/client-server-common': workspace:*
-      '@vlcn.io/crsqlite-allinone': workspace:*
+      '@vlcn.io/crsqlite': workspace:*
+      better-sqlite3: ^8.0.1
       cors: ^2.8.5
       express: ^4.18.2
       import-meta-resolve: ^2.1.0
@@ -242,7 +247,8 @@ importers:
       ws: ^8.11.0
     dependencies:
       '@vlcn.io/client-server-common': link:../client-server-common
-      '@vlcn.io/crsqlite-allinone': link:../../node-allinone
+      '@vlcn.io/crsqlite': link:../../../native
+      better-sqlite3: 8.0.1
       cors: 2.8.5
       express: 4.18.2
       import-meta-resolve: 2.1.0

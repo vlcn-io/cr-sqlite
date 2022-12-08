@@ -18,7 +18,7 @@
 
 import { DB, DBAsync } from "@vlcn.io/xplat-api";
 
-class TblRx {
+export class TblRx {
   #listeners = new Set<(tbls: Set<string>) => void>();
   #pendingNotification: Set<string> | null = null;
   #bc = new BroadcastChannel("@vlcn.io/rx-tbl");

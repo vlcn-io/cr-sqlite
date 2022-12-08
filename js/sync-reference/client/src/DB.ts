@@ -2,27 +2,25 @@ import { Changeset, SiteIdWire, Version } from "@vlcn.io/client-server-common";
 import { DB as DBSync, DBAsync, Stmt, StmtAsync } from "@vlcn.io/xplat-api";
 import { parse as uuidParse, stringify as uuidStringify } from "uuid";
 import tblrx from "@vlcn.io/rx-tbl";
+import { TblRx } from "@vlcn.io/rx-tbl/src/tblrx";
 
 // exposes the minimal interface required by the replicator
 // to the DB.
 export class DB {
-  #rx;
-
   constructor(
     private readonly db: DBSync | DBAsync,
     public readonly siteId: SiteIdWire,
+    private readonly rx: TblRx,
     private readonly pullChangesetStmt: Stmt | StmtAsync,
     private readonly applyChangesetStmt: Stmt | StmtAsync
   ) {
     if (!this.siteId) {
       throw new Error(`Unable to fetch site id from the local db`);
     }
-
-    this.#rx = tblrx(db);
   }
 
   onUpdate(cb: () => void) {
-    return this.#rx.on(cb);
+    return this.rx.on(cb);
   }
 
   async seqIdFor(siteId: SiteIdWire): Promise<[Version, number]> {
@@ -86,7 +84,10 @@ export class DB {
   }
 }
 
-export default async function wrap(db: DBSync | DBAsync): Promise<DB> {
+export default async function wrap(
+  db: DBSync | DBAsync,
+  rx: TblRx
+): Promise<DB> {
   const r = await db.execA("SELECT crsql_siteid()");
 
   const pullChangesetStmt = await db.prepare(
@@ -96,7 +97,7 @@ export default async function wrap(db: DBSync | DBAsync): Promise<DB> {
     `INSERT INTO crsql_changes ("table", "pk", "cid", "val", "version", "site_id") VALUES (?, ?, ?, ?, ?, ?)`
   );
 
-  const ret = new DB(db, r[0][0], pullChangesetStmt, applyChangesetStmt);
+  const ret = new DB(db, r[0][0], rx, pullChangesetStmt, applyChangesetStmt);
 
   await db.exec(
     "CREATE TABLE IF NOT EXISTS __crsql_peers (site_id PRIMARY KEY, version INTEGER, seq INTEGER) STRICT;"

@@ -9,11 +9,13 @@ import wrapDb, { DB } from "./DB.js";
 import { SiteIdWire } from "@vlcn.io/client-server-common";
 import { DB as DBSync, DBAsync } from "@vlcn.io/xplat-api";
 import ChangeStream from "./changeStream.js";
+import { TblRx } from "@vlcn.io/rx-tbl";
 
 type ReplicatorArgs = {
   localDb: DBSync | DBAsync;
   uri: string;
   remoteDbId: SiteIdWire;
+  rx: TblRx;
   create?: {
     schemaName: string;
   };
@@ -125,7 +127,7 @@ class Replicator {
 export default async function startSyncWith(
   args: ReplicatorArgs
 ): Promise<Replicator> {
-  const wrapped = await wrapDb(args.localDb);
+  const wrapped = await wrapDb(args.localDb, args.rx);
   if (wrapped.siteId === args.remoteDbId) {
     throw new Error(
       `Attempting to sync to self? Site ids match? ${wrapped.siteId}`

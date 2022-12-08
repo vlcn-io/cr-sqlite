@@ -51,4 +51,6 @@ int main(int argc, char *argv[])
   SUITE("vtabwrite") crsqlChangesVtabWriteTestSuite();
   SUITE("vtabcommon") crsqlChangesVtabCommonTestSuite();
   SUITE("extdata") crsqlExtDataTestSuite();
+
+  sqlite3_shutdown();
 }

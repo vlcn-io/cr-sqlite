@@ -17,7 +17,8 @@ export class DB {
     public readonly siteId: SiteIdWire,
     private readonly rx: TblRx,
     private readonly pullChangesetStmt: Stmt | StmtAsync,
-    private readonly applyChangesetStmt: Stmt | StmtAsync
+    private readonly applyChangesetStmt: Stmt | StmtAsync,
+    private readonly updatePeerTrackerStmt: Stmt | StmtAsync
   ) {
     if (!this.siteId) {
       throw new Error(`Unable to fetch site id from the local db`);
@@ -48,7 +49,11 @@ export class DB {
   }
 
   // TODO: track seq monotonicity
-  async applyChangeset(from: SiteIdWire, changes: Changeset[]) {
+  async applyChangeset(
+    from: SiteIdWire,
+    changes: Changeset[],
+    seqEnd: [Version, number]
+  ) {
     // write them then notify safely
     await this.db.transaction(async () => {
       for (const cs of changes) {
@@ -67,7 +72,24 @@ export class DB {
           cs[5] ? uuidParse(cs[5]) : null
         );
       }
+
+      // now update our record of the server
+      await this.updatePeerTracker(from, RECEIVE, seqEnd);
     });
+  }
+
+  async updatePeerTracker(
+    from: SiteIdWire,
+    event: VersionEvent,
+    seqEnd: [Version, number]
+  ) {
+    console.log(from);
+    await this.updatePeerTrackerStmt.run(
+      uuidParse(from),
+      event,
+      BigInt(seqEnd[0]),
+      seqEnd[1]
+    );
   }
 
   async pullChangeset(
@@ -99,23 +121,30 @@ export default async function wrap(
 ): Promise<DB> {
   const r = await db.execA("SELECT crsql_siteid()");
 
-  const pullChangesetStmt = await db.prepare(
-    `SELECT "table", "pk", "cid", "val", "version", "site_id" FROM crsql_changes WHERE version > ? AND site_id != ?`
+  await db.exec(
+    "CREATE TABLE IF NOT EXISTS __crsql_peers (site_id BLOB PRIMARY KEY, event INTEGER, version INTEGER, seq INTEGER) STRICT;"
   );
-  const applyChangesetStmt = await db.prepare(
-    `INSERT INTO crsql_changes ("table", "pk", "cid", "val", "version", "site_id") VALUES (?, ?, ?, ?, ?, ?)`
-  );
+
+  const [pullChangesetStmt, applyChangesetStmt, updatePeerTrackerStmt] =
+    await Promise.all([
+      db.prepare(
+        `SELECT "table", "pk", "cid", "val", "version", "site_id" FROM crsql_changes WHERE version > ? AND site_id != ?`
+      ),
+      db.prepare(
+        `INSERT INTO crsql_changes ("table", "pk", "cid", "val", "version", "site_id") VALUES (?, ?, ?, ?, ?, ?)`
+      ),
+      db.prepare(
+        `INSERT OR REPLACE INTO "__crsql_peers" ("site_id", "event", "version", "seq") VALUES (?, ?, ?, ?)`
+      ),
+    ]);
 
   const ret = new DB(
     db,
     uuidStringify(r[0][0]),
     rx,
     pullChangesetStmt,
-    applyChangesetStmt
-  );
-
-  await db.exec(
-    "CREATE TABLE IF NOT EXISTS __crsql_peers (site_id BLOB PRIMARY KEY, event INTEGER, version INTEGER, seq INTEGER) STRICT;"
+    applyChangesetStmt,
+    updatePeerTrackerStmt
   );
 
   return ret;

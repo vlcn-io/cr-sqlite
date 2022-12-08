@@ -6,7 +6,12 @@
  */
 
 import wrapDb, { DB, RECEIVE } from "./DB.js";
-import { SiteIdWire, Version } from "@vlcn.io/client-server-common";
+import {
+  ChangesReceivedMsg,
+  Msg,
+  SiteIdWire,
+  Version,
+} from "@vlcn.io/client-server-common";
 import { DB as DBSync, DBAsync } from "@vlcn.io/xplat-api";
 import ChangeStream from "./changeStream.js";
 import { TblRx } from "@vlcn.io/rx-tbl";
@@ -90,20 +95,71 @@ class Replicator {
     });
   };
 
-  #handleMessage = (e: Event) => {
+  #handleMessage = (e: MessageEvent) => {
     logger.info("Received message", e);
-    // change request should never be received by server.
-    // changes received
 
-    // handle the various cases
+    let msg: Msg | null = null;
+    try {
+      msg = JSON.parse(e.data);
+    } catch (err) {
+      logger.error("Failed to parse ", e.data);
+      throw e;
+    }
 
-    // receive?
-    // apply it
-    // ack it
+    if (msg == null) {
+      logger.error("Message decoded to null", e.data);
+      throw new Error("Message decoded to null");
+    }
 
-    // request? The server shouldn't request from us.
-    // ack? processAck for changeStream
+    switch (msg._tag) {
+      case "ack":
+        if (!this.#changeStream) {
+          logger.error("received an ack with no allocated change stream");
+          this.#ws?.close();
+        }
+        this.#changeStream?.processAck(msg);
+        return;
+      case "establish":
+        logger.error("unexpected establish message");
+        this.#ws?.close();
+        return;
+      case "receive":
+        this.#applyChanges(msg);
+        return;
+      case "request":
+        logger.error("unespected request message");
+        return;
+    }
+    logger.error("unexpected message type", (msg as any)._tag);
   };
+
+  #applyChanges(data: ChangesReceivedMsg) {
+    const expected = this.#expectedSeq;
+    if (!expected) {
+      logger.error(
+        "received changes but did not allocated an expected seq number"
+      );
+      this.#ws?.close();
+      return;
+    }
+
+    const start = data.seqStart;
+    if (start[0] != expected[0] || start[1] != expected[1]) {
+      logger.error("out of order delivery from server", start, expected);
+      this.#ws?.close();
+    }
+
+    logger.debug("applying changes from server. Len: ", data.changes.length);
+    this.#localDb.applyChangeset(this.#remoteDbId, data.changes, data.seqEnd);
+    this.#expectedSeq = data.seqEnd;
+
+    this.#ws?.send(
+      JSON.stringify({
+        _tag: "ack",
+        seqEnd: data.seqEnd,
+      })
+    );
+  }
 
   #handleClose = (e: Event) => {
     logger.info("Received close", e);

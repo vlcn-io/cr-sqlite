@@ -3,7 +3,7 @@ import {
   SiteIdWire,
   Version,
 } from "@vlcn.io/client-server-common";
-import { DB, SEND } from "./DB.js";
+import { DB, RECEIVE, SEND } from "./DB.js";
 import logger from "./logger.js";
 
 const maxOutstandingAcks = 10;
@@ -49,8 +49,12 @@ export default class ChangeStream {
     // send the establish message
 
     // send establish meessage
-    const seqStart = await this.db.seqIdFor(this.remoteDbId, SEND);
-    this.#lastSeq = seqStart;
+    let seqStart: [Version, number] = [0, 0];
+    [this.#lastSeq, seqStart] = await Promise.all([
+      this.db.seqIdFor(this.remoteDbId, SEND),
+      this.db.seqIdFor(this.remoteDbId, RECEIVE),
+    ]);
+
     logger.info("asking server to establish the connection");
     this.ws.send(
       JSON.stringify({
@@ -73,7 +77,9 @@ export default class ChangeStream {
       throw new Error("Too many acks received");
     }
 
-    // TODO: record what the server acked in out `SEND` in our db
+    // only update tracker on ack
+    // so we know that our change was persisted at the remote server
+    await this.db.updatePeerTracker(this.remoteDbId, SEND, msg.seqEnd);
 
     // We just droped below threshold and had previously blocked a send.
     // Can send now.

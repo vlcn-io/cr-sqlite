@@ -97,6 +97,8 @@ export class DB {
     seq: [Version, number]
   ): Promise<Changeset[]> {
     logger.info("Pulling changes since ", seq);
+    // pull changes since we last sent the server changes,
+    // excluding what the server has sent us
     const changes = await this.pullChangesetStmt.all(
       BigInt(seq[0]),
       uuidParse(siteId)

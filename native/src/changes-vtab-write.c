@@ -29,21 +29,12 @@ int crsql_didCidWin(
     const unsigned char *localSiteId,
     const char *insertTbl,
     const char *pkWhereList,
-    const void *insertSiteId,
-    int insertSiteIdLen,
-    const char * colName,
+    const char *colName,
+    const char *sanitizedInsertVal,
     sqlite3_int64 version,
     char **errmsg)
 {
   char *zSql = 0;
-  int siteComparison = crsql_siteIdCmp(insertSiteId, insertSiteIdLen, localSiteId, SITE_ID_LEN);
-
-  if (siteComparison == 0)
-  {
-    // we're patching into our own site? Makes no sense.
-    *errmsg = sqlite3_mprintf("crsql - a site is trying to patch itself.");
-    return -1;
-  }
 
   zSql = sqlite3_mprintf(
       "SELECT __crsql_version FROM \"%s__crsql_clock\" WHERE %s AND %Q = __crsql_col_name",
@@ -53,7 +44,7 @@ int crsql_didCidWin(
 
   // run zSql
   sqlite3_stmt *pStmt = 0;
-  int rc = sqlite3_prepare(db, zSql, -1, &pStmt, 0);
+  int rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
   sqlite3_free(zSql);
 
   if (rc != SQLITE_OK)
@@ -80,19 +71,42 @@ int crsql_didCidWin(
   sqlite3_int64 localVersion = sqlite3_column_int64(pStmt, 0);
   sqlite3_finalize(pStmt);
 
-  if (siteComparison > 0)
+  if (version > localVersion)
   {
-    return version >= localVersion;
+    return 1;
   }
-  else if (siteComparison < 0)
+  else if (version < localVersion)
   {
-    return version > localVersion;
+    return 0;
   }
-  else
+
+  // else -- versions are equal
+  // - pull curr value
+  // - compare for tie break
+  zSql = sqlite3_mprintf("SELECT quote(%Q) FROM %Q WHERE %s", colName, insertTbl, pkWhereList);
+  rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
+  sqlite3_free(zSql);
+
+  if (rc != SQLITE_OK)
   {
-    // should be impossible given prior siteComparison == 0 if statement
+    sqlite3_finalize(pStmt);
+    *errmsg = sqlite3_mprintf("could not prepare statement to find row to merge with. %s", insertTbl);
     return -1;
   }
+
+  rc = sqlite3_step(pStmt);
+  if (rc != SQLITE_ROW)
+  {
+    *errmsg = sqlite3_mprintf("could not find row to merge with for tbl %s", insertTbl);
+    sqlite3_finalize(pStmt);
+    return -1;
+  }
+
+  const char *localValue = (const char *)sqlite3_column_text(pStmt, 0);
+  int ret = strcmp(sanitizedInsertVal, localValue);
+  sqlite3_finalize(pStmt);
+
+  return ret;
 }
 
 #define DELETED_LOCALLY -1
@@ -169,12 +183,15 @@ int crsql_setWinnerClock(
     return rc;
   }
 
-  if (insertSiteId == 0) {
+  if (insertSiteId == 0)
+  {
     sqlite3_bind_null(pStmt, 1);
-  } else {
+  }
+  else
+  {
     sqlite3_bind_blob(pStmt, 1, insertSiteId, insertSiteIdLen, SQLITE_TRANSIENT);
   }
-  
+
   rc = sqlite3_step(pStmt);
   sqlite3_finalize(pStmt);
 
@@ -291,8 +308,9 @@ int crsql_mergeInsert(
       db,
       pTab->pExtData,
       errmsg);
-    
-  if (rc != SQLITE_OK) {
+
+  if (rc != SQLITE_OK)
+  {
     *errmsg = sqlite3_mprintf("Failed to update crr table information");
     return rc;
   }
@@ -309,9 +327,10 @@ int crsql_mergeInsert(
   const unsigned char *insertTbl = sqlite3_value_text(argv[2 + CHANGES_SINCE_VTAB_TBL]);
   // `splitQuoteConcat` will validate these
   const unsigned char *insertPks = sqlite3_value_text(argv[2 + CHANGES_SINCE_VTAB_PK]);
-  
+
   int inesrtColNameLen = sqlite3_value_bytes(argv[2 + CHANGES_SINCE_VTAB_CID]);
-  if (inesrtColNameLen > MAX_TBL_NAME_LEN) {
+  if (inesrtColNameLen > MAX_TBL_NAME_LEN)
+  {
     *errmsg = sqlite3_mprintf("column name exceeded max length");
     return SQLITE_ERROR;
   }
@@ -404,25 +423,6 @@ int crsql_mergeInsert(
     return rc;
   }
 
-  int doesCidWin = crsql_didCidWin(
-      db,
-      pTab->pExtData->siteId,
-      tblInfo->tblName,
-      pkWhereList,
-      insertSiteId,
-      insertSiteIdLen, insertColName, insertVrsn, errmsg);
-  sqlite3_free(pkWhereList);
-  if (doesCidWin == -1 || doesCidWin == 0)
-  {
-    sqlite3_free(pkValsStr);
-    sqlite3_free(pkIdentifierList);
-    // doesCidWin == 0? compared against our clocks, nothing wins. OK and Done.
-    if (doesCidWin == -1 && *errmsg == 0) {
-      *errmsg = sqlite3_mprintf("Failed computing cid win");
-    }
-    return doesCidWin == 0 ? SQLITE_OK : SQLITE_ERROR;
-  }
-
   char **sanitizedInsertVal = crsql_splitQuoteConcat((const char *)insertVal, 1);
 
   if (sanitizedInsertVal == 0)
@@ -431,6 +431,28 @@ int crsql_mergeInsert(
     sqlite3_free(pkIdentifierList);
     *errmsg = sqlite3_mprintf("Failed sanitizing value for changeset");
     return SQLITE_ERROR;
+  }
+
+  int doesCidWin = crsql_didCidWin(
+      db,
+      pTab->pExtData->siteId,
+      tblInfo->tblName,
+      pkWhereList,
+      insertColName,
+      sanitizedInsertVal[0],
+      insertVrsn,
+      errmsg);
+  sqlite3_free(pkWhereList);
+  if (doesCidWin == -1 || doesCidWin == 0)
+  {
+    sqlite3_free(pkValsStr);
+    sqlite3_free(pkIdentifierList);
+    // doesCidWin == 0? compared against our clocks, nothing wins. OK and Done.
+    if (doesCidWin == -1 && *errmsg == 0)
+    {
+      *errmsg = sqlite3_mprintf("Failed computing cid win");
+    }
+    return doesCidWin == 0 ? SQLITE_OK : SQLITE_ERROR;
   }
 
   zSql = sqlite3_mprintf(
@@ -484,7 +506,8 @@ int crsql_mergeInsert(
   sqlite3_free(pkIdentifierList);
   sqlite3_free(pkValsStr);
 
-  if (rc != SQLITE_OK) {
+  if (rc != SQLITE_OK)
+  {
     *errmsg = sqlite3_mprintf("Failed updating winner clock");
   }
 

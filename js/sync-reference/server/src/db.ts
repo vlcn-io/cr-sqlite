@@ -87,13 +87,16 @@ class DB {
   }
 
   pullChangeset(requestor: SiteIdWire, since: [Version, number]): Changeset[] {
+    // pull changes since the client last saw changes, excluding what the client itself sent us
     const changes = this.#pullChangesetStmt.all(
       BigInt(since[0]),
       uuidParse(requestor)
     );
     changes.forEach((c) => {
-      // idk -- can we not keep this as an array buffer?
-      c[5] = uuidStringify(c[5] as any);
+      // we mask the site ids of clients via the server site id
+      // 1. for privacy
+      // 2. to prevent looping during proxying
+      c[5] = this.siteId;
       // since BigInt doesn't serialize -- convert to string
       c[4] = c[4].toString();
     });

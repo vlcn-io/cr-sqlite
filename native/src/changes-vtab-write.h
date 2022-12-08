@@ -31,9 +31,8 @@ int crsql_didCidWin(
     const unsigned char *localSiteId,
     const char *insertTbl,
     const char *pkWhereList,
-    const void *insertSiteId,
-    int insertSiteIdLen,
-    const char* colName,
+    const char *colName,
+    const char *sanitizedInsertVal,
     sqlite3_int64 version,
     char **errmsg);
 

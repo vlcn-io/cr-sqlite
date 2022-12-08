@@ -44,13 +44,15 @@ export default class ChangeStream {
     }
     this.#started = true;
 
-    // TODO: no-- we need to use rx to collapse updates.
     this.#disposers.push(this.db.onUpdate(this.#localDbChanged));
 
     // send the establish message
 
     // send establish meessage
     const seqStart = await this.db.seqIdFor(this.remoteDbId);
+    // TODO: it is wrong to save this into #lastSeq
+    // #lastSeq is about what we last sent to the server
+    // not what we last got from them.
     this.#lastSeq = seqStart;
     logger.info("asking server to establish the connection");
     this.ws.send(
@@ -73,6 +75,8 @@ export default class ChangeStream {
     if (this.#outstandingAcks < 0) {
       throw new Error("Too many acks received");
     }
+
+    // TODO: record what we've last sent the server.
 
     // We just droped below threshold and had previously blocked a send.
     // Can send now.

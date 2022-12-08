@@ -77,7 +77,7 @@ export default class ChangeStream {
     }
   }
 
-  #dbChanged(source: SiteIdWire | null) {
+  #dbChanged = (source: SiteIdWire | null) => {
     if (this.#closed) {
       // events could have been queued
       logger.warn("receive db change event on closed connection", {
@@ -146,7 +146,7 @@ export default class ChangeStream {
       seqStart: startSeq,
       seqEnd,
     });
-  }
+  };
 
   #connClosed = () => {
     logger.info(`Closed connection`, {

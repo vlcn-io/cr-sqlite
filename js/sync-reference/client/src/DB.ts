@@ -39,6 +39,7 @@ export class DB {
     return [row[0].toString(), row[1]];
   }
 
+  // TODO: track seq monotonicity
   async applyChangeset(from: SiteIdWire, changes: Changeset[]) {
     // write them then notify safely
     await this.db.transaction(async () => {

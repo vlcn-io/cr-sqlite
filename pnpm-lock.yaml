@@ -241,6 +241,7 @@ importers:
       cors: ^2.8.5
       express: ^4.18.2
       import-meta-resolve: ^2.1.0
+      nanoid: ^4.0.0
       typescript: ^4.9.3
       uuid: ^9.0.0
       winston: ^3.8.2
@@ -252,6 +253,7 @@ importers:
       cors: 2.8.5
       express: 4.18.2
       import-meta-resolve: 2.1.0
+      nanoid: 4.0.0
       uuid: 9.0.0
       winston: 3.8.2
       ws: 8.11.0

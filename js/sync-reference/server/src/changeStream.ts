@@ -11,6 +11,7 @@ import {
   SiteIdWire,
   Version,
 } from "@vlcn.io/client-server-common";
+import contextStore from "./contextStore.js";
 
 // change stream:
 // 1. sends the requested changes up till now
@@ -35,7 +36,12 @@ export default class ChangeStream {
 
   begin(msg: ChangesRequestedMsg) {
     if (this.#begun) {
-      logger.error(`Change stream to ${this.db.siteId} was already started`);
+      logger.error("change stream already started", {
+        event: "ChangeStream.begin.invalidState",
+        req: contextStore.get().reqId,
+        from: this.connection.site,
+        to: this.db.siteId,
+      });
       throw {
         code: "INVALID_MSG_STATE",
       };
@@ -50,6 +56,12 @@ export default class ChangeStream {
   processAck(msg: ChangesAckedMsg) {
     this.#outstandingAcks -= 1;
     if (this.#outstandingAcks < 0) {
+      logger.error("too many acks", {
+        event: "ChangeStream.processAck.tooMany",
+        req: contextStore.get().reqId,
+        from: this.connection.site,
+        to: this.db.siteId,
+      });
       this.connection.close("INVALID_MSG_STATE", {
         msg: "too many acks received",
       });
@@ -68,9 +80,12 @@ export default class ChangeStream {
   #dbChanged(source: SiteIdWire | null) {
     if (this.#closed) {
       // events could have been queued
-      logger.info(
-        `receiving db changed event on closed connection. DB: ${this.db.siteId}, Peer: ${this.connection.site}`
-      );
+      logger.warn("receive db change event on closed connection", {
+        event: "ChangeStream.#dbChanged.closed",
+        from: this.connection.site,
+        to: this.db.siteId,
+        req: contextStore.get().reqId,
+      });
       return;
     }
 
@@ -89,9 +104,12 @@ export default class ChangeStream {
 
     if (this.#outstandingAcks == config.maxOutstandingAcks) {
       this.#blockedSend = true;
-      logger.info(
-        `db changed but Peer: ${this.connection.site} has too many outstanding acks`
-      );
+      logger.warn("too many outstanding acks", {
+        event: "ChangeStream.#dbChange.tooManyOutstandingAcks",
+        from: this.connection.site,
+        to: this.db.siteId,
+        req: contextStore.get().reqId,
+      });
       return;
     }
 
@@ -112,6 +130,15 @@ export default class ChangeStream {
     this.#lastSeq = seqEnd;
     this.#outstandingAcks += 1;
 
+    logger.info("sending changesets", {
+      event: "ChangeStream.#dbChanged.send",
+      to: this.connection.site,
+      from: this.db.siteId,
+      req: contextStore.get().reqId,
+      length: changes.length,
+      seqStart: startSeq,
+      seqEnd,
+    });
     this.connection.send({
       _tag: "receive",
       changes,
@@ -122,9 +149,12 @@ export default class ChangeStream {
   }
 
   #connClosed = () => {
-    logger.info(
-      `Closed connection to Peer: ${this.connection.site} for DB: ${this.db.siteId}`
-    );
+    logger.info(`Closed connection`, {
+      event: "ChangeStream.#connClosed",
+      to: this.connection.site,
+      from: this.db.siteId,
+      req: contextStore.get().reqId,
+    });
     this.#closed = true;
     this.#disposables.forEach((d) => d());
   };

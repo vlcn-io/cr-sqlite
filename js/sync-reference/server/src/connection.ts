@@ -7,6 +7,7 @@ import {
   Msg,
   SiteIdWire,
 } from "@vlcn.io/client-server-common";
+import contextStore from "./contextStore.js";
 
 const connectionCode = {
   OK: 1000,
@@ -26,6 +27,10 @@ export class Connection {
 
   constructor(private readonly ws: WebSocket) {
     ws.on("close", () => {
+      logger.info("ws connection closed", {
+        event: "Connection.closed",
+        req: contextStore.get().reqId,
+      });
       this.#closed();
     });
 
@@ -37,12 +42,18 @@ export class Connection {
   }
 
   #onMsg = (data: RawData) => {
-    logger.log("info", `Received message`);
+    logger.info(`receive msg`, {
+      event: "Connection.#onMsg",
+      req: contextStore.get().reqId,
+    });
     let decoded: null | Msg;
     try {
       decoded = JSON.parse(data.toString()) as Msg;
     } catch (e) {
-      logger.error(`Could not decode message from ${this.#site}`);
+      logger.error("decode failure", {
+        event: "Connection.#onMsg.decodeFailure",
+        req: contextStore.get().reqId,
+      });
       this.close("MSG_DECODE_FAILURE");
       return;
     }
@@ -62,9 +73,12 @@ export class Connection {
 
       // Received message while awaiting establish completion
       if (!this.#establishedConnection) {
-        logger.debug(
-          `Enqueue on establishPromise for ${decoded._tag} from ${this.#site}`
-        );
+        logger.debug("Enqueue on establishPromise", {
+          event: "Connection.#onMsg.enqueue",
+          tag: decoded._tag,
+          from: this.#site,
+          req: contextStore.get().reqId,
+        });
         this.#establishPromise!.then(() => {
           this.#onMsg(data);
         });
@@ -74,8 +88,15 @@ export class Connection {
       try {
         this.#establishedConnection!.processMsg(decoded);
       } catch (e: any) {
+        logger.error("Closing", {
+          event: "Conection.#onMsg.error",
+          tag: decoded._tag,
+          from: this.#site,
+          req: contextStore.get().reqId,
+          code: e.code,
+          msg: e.message,
+        });
         if (e.code) {
-          logger.error(`Closing with code: ${e.code} to ${this.#site}`);
           this.close(e.code);
         } else {
           logger.error(e.message);
@@ -87,17 +108,17 @@ export class Connection {
     }
 
     if (decoded._tag != "establish") {
-      logger.error(
-        `Received ${decoded._tag} msg but connection is not established`
-      );
+      logger.error(`Received msg but connection is not established`, {
+        event: "Connection.#onMsg.invalidState",
+        tag: decoded._tag,
+        from: this.#site,
+        req: contextStore.get().reqId,
+      });
       this.close("INVALID_MSG_STATE");
       return;
     }
 
     try {
-      logger.info(
-        `esatblishing connection to db ${decoded.to} from site ${decoded.from}`
-      );
       this.#establish(decoded);
     } catch (e) {
       this.close("DB_OPEN_FAIL");
@@ -107,6 +128,13 @@ export class Connection {
   onClosed?: () => void;
 
   #establish(msg: EstablishConnectionMsg) {
+    logger.info(`upgrading to established connection`, {
+      event: "Connection.#establish",
+      from: msg.from,
+      db: msg.to,
+      req: contextStore.get().reqId,
+    });
+
     this.#site = msg.from;
     this.#establishPromise = dbFactory(msg.to, msg.create)
       .then((db) => {
@@ -127,6 +155,10 @@ export class Connection {
   }
 
   close(code: ConnectionCodeKey, data?: Object) {
+    logger.info("requested to close ws connection", {
+      event: "Connection.close",
+      req: contextStore.get().reqId,
+    });
     this.ws.close(
       connectionCode[code],
       data ? JSON.stringify(data) : undefined

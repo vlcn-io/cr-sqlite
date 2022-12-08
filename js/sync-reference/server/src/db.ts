@@ -12,6 +12,7 @@ import SQLiteDB from "better-sqlite3";
 import * as path from "path";
 import config from "./config.js";
 import logger from "./logger.js";
+import contextStore from "./contextStore.js";
 
 const modulePath = await resolve("@vlcn.io/crsqlite", import.meta.url);
 
@@ -122,10 +123,14 @@ export default async function dbFactory(
   desiredDb: SiteIdWire,
   create?: { schemaName: string }
 ): Promise<DB> {
-  logger.info(`in db factory for DB: ${desiredDb}`);
   let isNew = false;
   if (!uuidValidate(desiredDb)) {
-    logger.info(`invalid uuid for DB: ${desiredDb}`);
+    logger.error("invalid uuid", {
+      event: "dbFactory.invalidUuid",
+      desiredDb,
+      req: contextStore.get().reqId,
+      create,
+    });
     throw new Error("Invalid UUID supplied for DBID");
   }
 
@@ -145,6 +150,11 @@ export default async function dbFactory(
     await fs.promises.access(dbPath, fs.constants.F_OK);
   } catch (e) {
     if (!create) {
+      logger.error("no db, no create", {
+        event: "dbFactory.nodb",
+        desiredDb,
+        req: contextStore.get().reqId,
+      });
       throw e;
     }
     // otherwise create the thing
@@ -155,6 +165,5 @@ export default async function dbFactory(
   activeDBs.set(desiredDb, ref);
   finalizationRegistry.register(ret, desiredDb);
 
-  logger.info(`Retruning db ref for DB: ${desiredDb}`);
   return ret;
 }

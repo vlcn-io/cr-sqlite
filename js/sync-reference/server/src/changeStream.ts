@@ -70,7 +70,7 @@ export default class ChangeStream {
     // We just droped below threshold and had previously blocked a send.
     // Can send now.
     if (
-      this.#outstandingAcks == config.maxOutstandingAcks - 1 &&
+      this.#outstandingAcks == config.get.maxOutstandingAcks - 1 &&
       this.#blockedSend
     ) {
       this.#dbChanged(null);
@@ -102,7 +102,7 @@ export default class ChangeStream {
       return;
     }
 
-    if (this.#outstandingAcks == config.maxOutstandingAcks) {
+    if (this.#outstandingAcks == config.get.maxOutstandingAcks) {
       this.#blockedSend = true;
       logger.warn("too many outstanding acks", {
         event: "ChangeStream.#dbChange.tooManyOutstandingAcks",

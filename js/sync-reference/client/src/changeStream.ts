@@ -52,6 +52,7 @@ export default class ChangeStream {
     // send establish meessage
     const seqStart = await this.db.seqIdFor(this.remoteDbId);
     this.#lastSeq = seqStart;
+    logger.info("asking server to establish the connection");
     this.ws.send(
       JSON.stringify({
         _tag: "establish",
@@ -67,6 +68,7 @@ export default class ChangeStream {
   }
 
   async processAck(msg: ChangesAckedMsg) {
+    logger.info("Received ack");
     this.#outstandingAcks -= 1;
     if (this.#outstandingAcks < 0) {
       throw new Error("Too many acks received");
@@ -111,6 +113,7 @@ export default class ChangeStream {
     this.#lastSeq = seqEnd;
 
     this.#outstandingAcks += 1;
+    logger.info("Syncing to server. num changes: ", changes.length);
     this.ws.send(
       JSON.stringify({
         _tag: "receive",

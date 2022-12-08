@@ -10,6 +10,7 @@ import { SiteIdWire } from "@vlcn.io/client-server-common";
 import { DB as DBSync, DBAsync } from "@vlcn.io/xplat-api";
 import ChangeStream from "./changeStream.js";
 import { TblRx } from "@vlcn.io/rx-tbl";
+import logger from "./logger.js";
 
 type ReplicatorArgs = {
   localDb: DBSync | DBAsync;
@@ -52,6 +53,7 @@ class Replicator {
   }
 
   start() {
+    logger.info("starting replicator");
     if (this.#started) {
       throw new Error(
         `Syncing between local db: ${this.#localDb.siteId} and remote db: ${
@@ -69,6 +71,7 @@ class Replicator {
   }
 
   #opened = (e: Event) => {
+    logger.info("Opened connection");
     if (this.#changeStream != null) {
       throw new Error(
         "Change stream already exists for connection that just opened"
@@ -84,9 +87,9 @@ class Replicator {
   };
 
   #handleMessage = (e: Event) => {
+    logger.info("Received message", e);
     // change request should never be received by server.
     // changes received
-    console.log(e);
 
     // handle the various cases
 
@@ -99,6 +102,7 @@ class Replicator {
   };
 
   #handleClose = (e: Event) => {
+    logger.info("Received close", e);
     if (this.#started) {
       // if the close is not due to us stopping
       // then we should restart the connection
@@ -109,6 +113,7 @@ class Replicator {
   };
 
   #stop() {
+    logger.info("Stopping replicator");
     this.#started = false;
     this.#changeStream?.stop();
     this.#changeStream = null;

@@ -4,6 +4,7 @@ import {
   Version,
 } from "@vlcn.io/client-server-common";
 import { DB } from "./DB.js";
+import logger from "./logger.js";
 
 const maxOutstandingAcks = 10;
 /**
@@ -80,6 +81,7 @@ export default class ChangeStream {
 
   // TODO: should we throttle to ~50ms?
   #localDbChanged = async () => {
+    logger.info("received local db change event");
     if (this.#closed) {
       console.warn("Reciving db change event on closed connection");
       return;
@@ -121,6 +123,7 @@ export default class ChangeStream {
   };
 
   stop() {
+    logger.info("stopping change stream");
     this.#started = false;
     this.#closed = true;
     this.#disposers.forEach((d) => d());

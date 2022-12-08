@@ -9,6 +9,7 @@ import {
   SiteIdWire,
   Version,
 } from "@vlcn.io/client-server-common";
+import logger from "./logger.js";
 
 export class EstablishedConnection {
   #changeStream?: ChangeStream;

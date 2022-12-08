@@ -8,7 +8,7 @@ import {
 } from "uuid";
 
 import { Database } from "better-sqlite3";
-import * as SQLiteDB from "better-sqlite3";
+import SQLiteDB from "better-sqlite3";
 import * as path from "path";
 import config from "./config.js";
 import logger from "./logger.js";
@@ -122,13 +122,16 @@ export default async function dbFactory(
   desiredDb: SiteIdWire,
   create?: { schemaName: string }
 ): Promise<DB> {
+  logger.info(`in db factory for DB: ${desiredDb}`);
   let isNew = false;
   if (!uuidValidate(desiredDb)) {
+    logger.info(`invalid uuid for DB: ${desiredDb}`);
     throw new Error("Invalid UUID supplied for DBID");
   }
 
   const existing = activeDBs.get(desiredDb);
   if (existing) {
+    logger.info(`db ${desiredDb} found in cache`);
     const deref = existing.deref();
     if (deref) {
       return deref;
@@ -152,5 +155,6 @@ export default async function dbFactory(
   activeDBs.set(desiredDb, ref);
   finalizationRegistry.register(ret, desiredDb);
 
+  logger.info(`Retruning db ref for DB: ${desiredDb}`);
   return ret;
 }

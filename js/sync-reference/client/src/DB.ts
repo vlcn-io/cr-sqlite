@@ -97,7 +97,13 @@ export default async function wrap(
     `INSERT INTO crsql_changes ("table", "pk", "cid", "val", "version", "site_id") VALUES (?, ?, ?, ?, ?, ?)`
   );
 
-  const ret = new DB(db, r[0][0], rx, pullChangesetStmt, applyChangesetStmt);
+  const ret = new DB(
+    db,
+    uuidStringify(r[0][0]),
+    rx,
+    pullChangesetStmt,
+    applyChangesetStmt
+  );
 
   await db.exec(
     "CREATE TABLE IF NOT EXISTS __crsql_peers (site_id BLOB PRIMARY KEY, version INTEGER, seq INTEGER) STRICT;"

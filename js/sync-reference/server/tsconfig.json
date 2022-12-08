@@ -2,7 +2,8 @@
   "extends": "../../tsconfig-template.json",
   "compilerOptions": {
     "outDir": "./dist/",
-    "rootDir": "./src"
+    "rootDir": "./src",
+    "allowSyntheticDefaultImports": true
   },
   "include": ["./src/"],
   "references": [

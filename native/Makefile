@@ -79,6 +79,8 @@ correctness: $(TARGET_LOADABLE) FORCE
 	cd ../py/correctness && pytest
 valgrind: $(TARGET_TEST)
 	valgrind $(prefix)/test
+analyzer:
+	scan-build $(MAKE) clean loadable
 
 $(TARGET_LOADABLE): $(prefix) $(ext_files)
 	$(CC) -I./src/ -I./src/sqlite \

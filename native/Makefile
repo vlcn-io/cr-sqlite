@@ -37,6 +37,7 @@ TARGET_SQLITE3_EXTRA_C=$(prefix)/sqlite3-extra.c
 TARGET_SQLITE3=$(prefix)/sqlite3
 TARGET_SQLITE3_VANILLA=$(prefix)/vanilla-sqlite3
 TARGET_TEST=$(prefix)/test
+TARGET_FUZZ=$(prefix)/fuzz
 
 ext_files=src/crsqlite.c \
 	src/util.c \
@@ -85,6 +86,8 @@ ubsan: CC=clang
 ubsan: LDLIBS += -lubsan
 ubsan: clean $(TARGET_TEST)
 	$(prefix)/test
+fuzz: $(TARGET_FUZZ)
+	$(prefix)/fuzz
 
 $(TARGET_LOADABLE): $(prefix) $(ext_files)
 	$(CC) -I./src/ -I./src/sqlite \
@@ -124,6 +127,16 @@ $(TARGET_TEST): $(prefix) $(TARGET_SQLITE3_EXTRA_C) src/tests.c src/*.test.c $(e
 	-I./src/ -I./src/sqlite \
 	$(TARGET_SQLITE3_EXTRA_C) src/tests.c src/*.test.c $(ext_files) \
 	$(LDLIBS) \
+	-o $@
+
+$(TARGET_FUZZ): $(prefix) $(TARGET_SQLITE3_EXTRA_C) src/fuzzer.cc $(ext_files)
+	clang -fsanitize=fuzzer \
+	$(DEFINE_SQLITE_PATH) \
+	-DSQLITE_THREADSAFE=0 -DSQLITE_OMIT_LOAD_EXTENSION=1 \
+	-DSQLITE_ENABLE_NORMALIZE \
+	-DSQLITE_EXTRA_INIT=core_init \
+	-I./src/ -I./src/sqlite \
+	$(TARGET_SQLITE3_EXTRA_C) src/fuzzer.cc $(ext_files) \
 	-o $@
 
 .PHONY: all clean format \

@@ -1,5 +1,17 @@
 # @vlcn.io/sync-server
 
+## 0.4.0
+
+### Minor Changes
+
+- fix tie breaking for merge, add example client-server sync
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/client-server-common@0.1.0
+  - @vlcn.io/crsqlite@0.5.0
+
 ## 0.3.1
 
 ### Patch Changes

@@ -1,5 +1,17 @@
 # @vlcn.io/wa-crsqlite
 
+## 0.5.0
+
+### Minor Changes
+
+- fix tie breaking for merge, add example client-server sync
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/wa-sqlite@0.12.0
+  - @vlcn.io/xplat-api@0.4.0
+
 ## 0.4.2
 
 ### Patch Changes

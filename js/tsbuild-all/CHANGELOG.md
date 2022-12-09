@@ -1,5 +1,11 @@
 # @vlcn.io/tsbuild-all
 
+## 0.4.0
+
+### Minor Changes
+
+- fix tie breaking for merge, add example client-server sync
+
 ## 0.3.1
 
 ### Patch Changes

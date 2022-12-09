@@ -1,5 +1,11 @@
 # @vlcn.io/crsqlite
 
+## 0.5.0
+
+### Minor Changes
+
+- fix tie breaking for merge, add example client-server sync
+
 ## 0.4.2
 
 ### Patch Changes

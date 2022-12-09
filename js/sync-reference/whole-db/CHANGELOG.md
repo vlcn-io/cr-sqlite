@@ -1,5 +1,16 @@
 # @vlcn.io/replicator-wholedb
 
+## 0.4.0
+
+### Minor Changes
+
+- fix tie breaking for merge, add example client-server sync
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/xplat-api@0.4.0
+
 ## 0.3.1
 
 ### Patch Changes

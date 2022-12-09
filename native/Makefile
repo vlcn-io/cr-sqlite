@@ -81,6 +81,10 @@ valgrind: $(TARGET_TEST)
 	valgrind $(prefix)/test
 analyzer:
 	scan-build $(MAKE) clean loadable
+ubsan: CC=clang
+ubsan: LDLIBS += -lubsan
+ubsan: clean $(TARGET_TEST)
+	$(prefix)/test
 
 $(TARGET_LOADABLE): $(prefix) $(ext_files)
 	$(CC) -I./src/ -I./src/sqlite \
@@ -119,6 +123,7 @@ $(TARGET_TEST): $(prefix) $(TARGET_SQLITE3_EXTRA_C) src/tests.c src/*.test.c $(e
 	-DUNIT_TEST=1 \
 	-I./src/ -I./src/sqlite \
 	$(TARGET_SQLITE3_EXTRA_C) src/tests.c src/*.test.c $(ext_files) \
+	$(LDLIBS) \
 	-o $@
 
 .PHONY: all clean format \

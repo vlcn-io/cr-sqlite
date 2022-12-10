@@ -37,7 +37,7 @@ int crsql_didCidWin(
   char *zSql = 0;
 
   zSql = sqlite3_mprintf(
-      "SELECT __crsql_version FROM \"%s__crsql_clock\" WHERE %s AND \"%w\" = __crsql_col_name",
+      "SELECT __crsql_version FROM \"%s__crsql_clock\" WHERE %s AND %Q = __crsql_col_name",
       insertTbl,
       pkWhereList,
       colName);

@@ -1,5 +1,14 @@
 # @vlcn.io/browser-tests
 
+## 0.4.1
+
+### Patch Changes
+
+- fix mem leak and cid win value selection bug
+- Updated dependencies
+  - @vlcn.io/wa-crsqlite@0.5.1
+  - @vlcn.io/xplat-tests@0.4.1
+
 ## 0.4.0
 
 ### Minor Changes

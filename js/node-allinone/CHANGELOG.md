@@ -1,5 +1,14 @@
 # @vlcn.io/crsqlite-allinone
 
+## 0.4.1
+
+### Patch Changes
+
+- fix mem leak and cid win value selection bug
+- Updated dependencies
+  - @vlcn.io/xplat-api@0.4.1
+  - @vlcn.io/crsqlite@0.5.1
+
 ## 0.4.0
 
 ### Minor Changes

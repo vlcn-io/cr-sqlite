@@ -1,5 +1,15 @@
 # @vlcn.io/todomvc
 
+## 0.5.1
+
+### Patch Changes
+
+- fix mem leak and cid win value selection bug
+- Updated dependencies
+  - @vlcn.io/wa-crsqlite@0.5.1
+  - @vlcn.io/rx-tbl@0.4.1
+  - @vlcn.io/sync-client@0.4.1
+
 ## 0.5.0
 
 ### Minor Changes

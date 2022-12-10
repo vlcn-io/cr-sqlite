@@ -1,5 +1,14 @@
 # @vlcn.io/wa-crsqlite
 
+## 0.5.1
+
+### Patch Changes
+
+- fix mem leak and cid win value selection bug
+- Updated dependencies
+  - @vlcn.io/wa-sqlite@0.12.1
+  - @vlcn.io/xplat-api@0.4.1
+
 ## 0.5.0
 
 ### Minor Changes

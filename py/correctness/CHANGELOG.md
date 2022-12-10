@@ -1,5 +1,11 @@
 # @vlcn.io/py-correctness
 
+## 0.4.1
+
+### Patch Changes
+
+- fix mem leak and cid win value selection bug
+
 ## 0.4.0
 
 ### Minor Changes

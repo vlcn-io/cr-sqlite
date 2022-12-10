@@ -23,8 +23,8 @@
     "install": "prebuild-install || node-gyp rebuild --release",
     "build-release": "node-gyp rebuild --release",
     "build-debug": "node-gyp rebuild --debug",
-    "rebuild-release": "npm run build-release",
-    "rebuild-debug": "npm run build-debug",
+    "rebuild-release": "pnpm run build-release",
+    "rebuild-debug": "pnpm run build-debug",
     "test": "make test"
   },
   "license": "MIT",

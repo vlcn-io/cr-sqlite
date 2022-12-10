@@ -447,6 +447,8 @@ int crsql_mergeInsert(
   {
     sqlite3_free(pkValsStr);
     sqlite3_free(pkIdentifierList);
+    sqlite3_free(sanitizedInsertVal[0]);
+    sqlite3_free(sanitizedInsertVal);
     // doesCidWin == 0? compared against our clocks, nothing wins. OK and Done.
     if (doesCidWin == -1 && *errmsg == 0)
     {

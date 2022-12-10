@@ -20,5 +20,5 @@ const disposer = rx.on((modifiedTables: Set<string>) => {
 });
 
 // when you need to release your subscription
-dispoer();
+disposer();
 ```

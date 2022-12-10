@@ -37,7 +37,7 @@ int crsql_didCidWin(
   char *zSql = 0;
 
   zSql = sqlite3_mprintf(
-      "SELECT __crsql_version FROM \"%s__crsql_clock\" WHERE %s AND %Q = __crsql_col_name",
+      "SELECT __crsql_version FROM \"%s__crsql_clock\" WHERE %s AND \"%w\" = __crsql_col_name",
       insertTbl,
       pkWhereList,
       colName);
@@ -83,7 +83,7 @@ int crsql_didCidWin(
   // else -- versions are equal
   // - pull curr value
   // - compare for tie break
-  zSql = sqlite3_mprintf("SELECT quote(%Q) FROM %Q WHERE %s", colName, insertTbl, pkWhereList);
+  zSql = sqlite3_mprintf("SELECT quote(\"%w\") FROM \"%w\" WHERE %s", colName, insertTbl, pkWhereList);
   rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
   sqlite3_free(zSql);
 

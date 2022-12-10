@@ -568,7 +568,6 @@ static void noopsDoNotMoveClocks()
   sqlite3_int64 db1vPost = getDbVersion(db1);
   sqlite3_int64 db2vPost = getDbVersion(db2);
 
-  // no changes merged since changes are no-ops, no versions changed
   assert(db1vPre == db2vPost);
   assert(db1vPre == db1vPost);
 
@@ -578,6 +577,17 @@ static void noopsDoNotMoveClocks()
   assert(rc == SQLITE_OK);
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
+
+// static void testCidWinBug1()
+// {
+//   sqlite3 *db1;
+//   sqlite3 *db2;
+//   int rc = SQLITE_OK;
+
+//   rc += sqlite3_open(":memory:", &db);
+//   rc += sqlite3_exec(db, "CREATE TABLE [todos] ([id] text primary key, [title] text, [text] text, [completed] boolean)", 0, 0, 0);
+//   rc += sqlite3_esec(db, "SELECT crsql_as_crr('todos')");
+// }
 
 static void testModifySinglePK()
 {
@@ -596,6 +606,7 @@ void crsqlTestSuite()
   testSelectChangesAfterChangingColumnName();
   testInsertChangesWithUnkownColumnNames();
   testLamportCondition();
+  noopsDoNotMoveClocks();
 
   // testIdempotence();
   // testColumnAdds();

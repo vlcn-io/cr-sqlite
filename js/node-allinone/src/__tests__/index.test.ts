@@ -1,6 +1,23 @@
 import * as nanoid from "nanoid";
 import sqlite from "../index.js";
 import { test, expect } from "vitest";
+import { DB, DBAsync } from "@vlcn.io/xplat-api";
+
+type SiteIDWire = string;
+type SiteIDLocal = Uint8Array;
+type CID = string;
+type QuoteConcatedPKs = string | number;
+type TableName = string;
+type Version = number | string;
+
+export type Changeset = [
+  TableName,
+  QuoteConcatedPKs,
+  CID,
+  any, // val,
+  Version,
+  SiteIDWire // site_id
+];
 
 // test that we wrapped correctly
 test("failing example", () => {
@@ -159,4 +176,92 @@ test("failing two -- discord: https://discord.com/channels/989870439897653248/98
     `INSERT INTO crsql_changes ("cid", "pk", "site_id", "table", "val", "version") VALUES (?,?,?,?,?,?)`,
     change
   );
+});
+
+test("using sync api as async GH #104", async () => {
+  const changesReceived = async (
+    db: DB | DBAsync,
+    changesets: readonly Changeset[]
+  ) => {
+    await db.transaction(async () => {
+      // uncomment to make fail
+      let maxVersion = 0n;
+      // console.log("inserting changesets in tx", changesets);
+      const stmt = await db.prepare(
+        'INSERT INTO crsql_changes ("table", "pk", "cid", "val", "version", "site_id") VALUES (?, ?, ?, ?, ?, ?)'
+      );
+      // TODO: may want to chunk
+      try {
+        // TODO: should we discard the changes altogether if they're less than the tracking version
+        // we have for this peer?
+        // that'd preclude resetting tho.
+        for (const cs of changesets) {
+          // console.log("changeset", [cs[2], cs[3]]);
+          const v = BigInt(cs[4]);
+          maxVersion = v > maxVersion ? v : maxVersion;
+          // cannot use same statement in parallel
+          await stmt.run(
+            cs[0],
+            cs[1],
+            cs[2],
+            cs[3],
+            v,
+            cs[5] // ? uuidParse(cs[5]) : 0
+          );
+        }
+      } catch (e) {
+        console.error(e);
+        throw e;
+      } finally {
+        stmt.finalize();
+      }
+    }); // uncomment to make fail
+  };
+
+  const initSql = [
+    `CREATE TABLE IF NOT EXISTS myTable (
+      id BLOB PRIMARY KEY,
+      a,
+      b,
+      c,
+      d,
+      e,
+      f,
+      g,
+      h
+  );`,
+    `SELECT crsql_as_crr('myTable');`,
+  ];
+
+  const dbSource = sqlite.open();
+  dbSource.execMany(initSql);
+  dbSource.exec(
+    `INSERT INTO myTable (id,a,b,c,d,e,f,g,h)
+                    VALUES (?,?,?,?,?,?,?,?,?)`,
+    [
+      "A7A33CBF-65DD-4D36-B193-E64B9EC61EC7",
+      "a value",
+      "b value",
+      "c value",
+      "d value",
+      "e value",
+      "f value",
+      "g value",
+      "h value",
+    ]
+  );
+
+  const changes: Changeset[] = await dbSource.execA<Changeset>(
+    `SELECT "table", "pk", "cid", "val", "version", "site_id" FROM crsql_changes`
+  );
+
+  const dbTarget = sqlite.open();
+  dbTarget.execMany(initSql);
+
+  try {
+    await changesReceived(dbTarget, changes);
+  } finally {
+    // console.log("closing db");
+    dbTarget.close();
+  }
 });

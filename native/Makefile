@@ -38,6 +38,7 @@ TARGET_SQLITE3=$(prefix)/sqlite3
 TARGET_SQLITE3_VANILLA=$(prefix)/vanilla-sqlite3
 TARGET_TEST=$(prefix)/test
 TARGET_FUZZ=$(prefix)/fuzz
+TARGET_TEST_ASAN=$(prefix)/test-asan
 
 ext_files=src/crsqlite.c \
 	src/util.c \
@@ -76,6 +77,8 @@ sqlite3: $(TARGET_SQLITE3)
 vanilla: $(TARGET_SQLITE3_VANILLA)
 test: $(TARGET_TEST)
 	$(prefix)/test
+asan: $(TARGET_TEST_ASAN)
+	$(prefix)/test
 correctness: $(TARGET_LOADABLE) FORCE
 	cd ../py/correctness && pytest
 valgrind: $(TARGET_TEST)
@@ -89,12 +92,15 @@ ubsan: clean $(TARGET_TEST)
 fuzz: $(TARGET_FUZZ)
 	$(prefix)/fuzz
 
+# Build the loadable extension.
 $(TARGET_LOADABLE): $(prefix) $(ext_files)
-	$(CC) -I./src/ -I./src/sqlite \
+	$(CC) -O2 -I./src/ -I./src/sqlite \
 	$(LOADABLE_CFLAGS) \
 	$(DEFINE_SQLITE_PATH) \
 	$(ext_files) -o $@
 
+# Build a SQLite CLI that pre-loads cr-sqlite
+# useful for debugging.
 $(TARGET_SQLITE3): $(prefix) $(TARGET_SQLITE3_EXTRA_C) src/sqlite/shell.c $(ext_files)
 	$(CC) -g \
 	$(DEFINE_SQLITE_PATH) \
@@ -105,6 +111,9 @@ $(TARGET_SQLITE3): $(prefix) $(TARGET_SQLITE3_EXTRA_C) src/sqlite/shell.c $(ext_
 	$(TARGET_SQLITE3_EXTRA_C) src/sqlite/shell.c $(ext_files) \
 	-o $@
 
+# Build a normal SQLite CLI that does not include cr-sqlite.
+# cr-sqlite can be laoded in via `load_extension`
+# useful for debugging.
 $(TARGET_SQLITE3_VANILLA): $(prefix) src/sqlite/shell.c
 	$(CC) -g \
 	$(DEFINE_SQLITE_PATH) \
@@ -117,8 +126,21 @@ $(TARGET_SQLITE3_VANILLA): $(prefix) src/sqlite/shell.c
 $(TARGET_SQLITE3_EXTRA_C): src/sqlite/sqlite3.c src/core_init.c
 	cat src/sqlite/sqlite3.c src/core_init.c > $@
 
+# run tests
 $(TARGET_TEST): $(prefix) $(TARGET_SQLITE3_EXTRA_C) src/tests.c src/*.test.c $(ext_files)
 	$(CC) -g -Wall \
+	$(DEFINE_SQLITE_PATH) \
+	-DSQLITE_THREADSAFE=0 -DSQLITE_OMIT_LOAD_EXTENSION=1 \
+	-DSQLITE_ENABLE_NORMALIZE \
+	-DSQLITE_EXTRA_INIT=core_init \
+	-DUNIT_TEST=1 \
+	-I./src/ -I./src/sqlite \
+	$(TARGET_SQLITE3_EXTRA_C) src/tests.c src/*.test.c $(ext_files) \
+	$(LDLIBS) \
+	-o $@
+
+$(TARGET_TEST_ASAN): $(prefix) $(TARGET_SQLITE3_EXTRA_C) src/tests.c src/*.test.c $(ext_files)
+	clang -fsanitize=address -O1 -fno-omit-frame-pointer -Wall \
 	$(DEFINE_SQLITE_PATH) \
 	-DSQLITE_THREADSAFE=0 -DSQLITE_OMIT_LOAD_EXTENSION=1 \
 	-DSQLITE_ENABLE_NORMALIZE \
@@ -144,4 +166,5 @@ $(TARGET_FUZZ): $(prefix) $(TARGET_SQLITE3_EXTRA_C) src/fuzzer.cc $(ext_files)
 	loadable \
 	sqlite3 \
 	correctness \
-	valgrind
+	valgrind \
+	ubsan analyzer fuzz asan

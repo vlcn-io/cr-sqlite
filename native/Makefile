@@ -2,7 +2,7 @@ COMMIT=$(shell git rev-parse HEAD)
 VERSION=$(shell cat VERSION)
 DATE=$(shell date +'%FT%TZ%z')
 
-LOADABLE_CFLAGS=-std=c99 -fPIC -shared
+LOADABLE_CFLAGS=-std=c99 -fPIC -shared -Wall
 
 ifeq ($(shell uname -s),Darwin)
 CONFIG_DARWIN=y
@@ -108,7 +108,7 @@ $(TARGET_SQLITE3_EXTRA_C): src/sqlite/sqlite3.c src/core_init.c
 	cat src/sqlite/sqlite3.c src/core_init.c > $@
 
 $(TARGET_TEST): $(prefix) $(TARGET_SQLITE3_EXTRA_C) src/tests.c src/*.test.c $(ext_files)
-	gcc -g \
+	gcc -g -Wall \
 	$(DEFINE_SQLITE_PATH) \
 	-DSQLITE_THREADSAFE=0 -DSQLITE_OMIT_LOAD_EXTENSION=1 \
 	-DSQLITE_ENABLE_NORMALIZE \

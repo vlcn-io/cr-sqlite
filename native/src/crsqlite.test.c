@@ -141,6 +141,7 @@ static char *getQuotedSiteId(sqlite3 *db)
   int rc = SQLITE_OK;
 
   rc += sqlite3_prepare_v2(db, "SELECT quote(crsql_siteid())", -1, &pStmt, 0);
+  assert(rc == SQLITE_OK);
   if (sqlite3_step(pStmt) != SQLITE_ROW)
   {
     sqlite3_finalize(pStmt);
@@ -392,7 +393,6 @@ static void testInsertChangesWithUnkownColumnNames()
   printf("InsertChangesWithUnknownColumnName\n");
 
   int rc = SQLITE_OK;
-  char *err = 0;
   sqlite3 *db1;
   sqlite3 *db2;
   rc = sqlite3_open(":memory:", &db1);
@@ -589,13 +589,13 @@ static void noopsDoNotMoveClocks()
 //   rc += sqlite3_esec(db, "SELECT crsql_as_crr('todos')");
 // }
 
-static void testModifySinglePK()
-{
-}
+// static void testModifySinglePK()
+// {
+// }
 
-static void testModifyCompoundPK()
-{
-}
+// static void testModifyCompoundPK()
+// {
+// }
 
 void crsqlTestSuite()
 {

@@ -19,15 +19,15 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-
-int crsql_close(sqlite3* db);
+int crsql_close(sqlite3 *db);
 
 static void textNewExtData()
 {
   printf("NewExtData\n");
   sqlite3 *db;
-  int rc;
+  int rc = SQLITE_OK;
   rc = sqlite3_open(":memory:", &db);
+  assert(rc == SQLITE_OK);
   crsql_ExtData *pExtData = crsql_newExtData(db);
 
   assert(pExtData->dbVersion == -1);
@@ -57,8 +57,9 @@ static void testFreeExtData()
   sqlite3 *db;
   int rc;
   rc = sqlite3_open(":memory:", &db);
+  assert(rc == SQLITE_OK);
   crsql_ExtData *pExtData = crsql_newExtData(db);
-  
+
   crsql_finalize(pExtData);
   crsql_freeExtData(pExtData);
   crsql_close(db);
@@ -71,6 +72,7 @@ static void testFinalize()
   sqlite3 *db;
   int rc;
   rc = sqlite3_open(":memory:", &db);
+  assert(rc == SQLITE_OK);
   crsql_ExtData *pExtData = crsql_newExtData(db);
 
   crsql_finalize(pExtData);
@@ -91,6 +93,7 @@ static void testFetchPragmaSchemaVersion()
   int rc;
   int didChange = 0;
   rc = sqlite3_open(":memory:", &db);
+  assert(rc == SQLITE_OK);
   crsql_ExtData *pExtData = crsql_newExtData(db);
 
   // fetch the schema info for db version update

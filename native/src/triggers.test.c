@@ -21,7 +21,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-int crsql_close(sqlite3* db);
+int crsql_close(sqlite3 *db);
 
 // This would be more testable if we could test
 // query construction rather than actual table creation.
@@ -113,16 +113,16 @@ static void testInsertTriggerQuery()
   char *errMsg = 0;
   int rc = sqlite3_open(":memory:", &db);
 
-  rc = sqlite3_exec(
-    db,
-    "CREATE TABLE \"foo\" (\"a\", \"b\", \"c\", PRIMARY KEY (\"a\", \"b\"))",
-    0,
-    0,
-    &errMsg);
-  rc = crsql_getTableInfo(db, "foo", &tableInfo, &errMsg);
+  rc += sqlite3_exec(
+      db,
+      "CREATE TABLE \"foo\" (\"a\", \"b\", \"c\", PRIMARY KEY (\"a\", \"b\"))",
+      0,
+      0,
+      &errMsg);
+  rc += crsql_getTableInfo(db, "foo", &tableInfo, &errMsg);
+  assert(rc == SQLITE_OK);
 
   char *query = crsql_insertTriggerQuery(tableInfo, "a, b", "NEW.a, NEW.b");
-
   char *expected = "INSERT OR REPLACE INTO \"foo__crsql_clock\" (        a, b,        __crsql_col_name,        __crsql_version,        __crsql_site_id      ) SELECT         NEW.a, NEW.b,        'c',        crsql_nextdbversion(),        NULL      WHERE crsql_internal_sync_bit() = 0;\n";
 
   assert(strcmp(expected, query) == 0);

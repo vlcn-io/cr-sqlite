@@ -29,7 +29,7 @@
   }
 #endif
 
-int crsql_close(sqlite3* db);
+int crsql_close(sqlite3 *db);
 
 static void testGetVersionUnionQuery()
 {
@@ -167,21 +167,20 @@ fail:
   printf("bad return code: %d\n", rc);
 }
 
-static void testAsIdentifierListStr() {
+static void testAsIdentifierListStr()
+{
   printf("AsIdentifierListStr\n");
-  
-  char* tc1[] = {
-    "one",
-    "two",
-    "three"
-  };
+
+  char *tc1[] = {
+      "one",
+      "two",
+      "three"};
   char *res;
 
   res = crsql_asIdentifierListStr(
-    tc1,
-    3,
-    ','
-  );
+      tc1,
+      3,
+      ',');
 
   assert(strcmp(res, "\"one\",\"two\",\"three\"") == 0);
   assert(strlen(res) == 19);
@@ -190,22 +189,21 @@ static void testAsIdentifierListStr() {
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
-static char* join2map(const char *in) {
+static char *join2map(const char *in)
+{
   return sqlite3_mprintf("foo %s bar", in);
 }
 
-static void testJoin2() {
+static void testJoin2()
+{
   printf("Join2\n");
-  char* tc0[] = {
-  };
-  char* tc1[] = {
-    "one"
-  };
-  char* tc2[] = {
-    "one",
-    "two"
-  };
-  char * result;
+  char *tc0[] = {};
+  char *tc1[] = {
+      "one"};
+  char *tc2[] = {
+      "one",
+      "two"};
+  char *result;
 
   result = crsql_join2(&join2map, tc0, 0, ", ");
   assert(result == 0);
@@ -221,7 +219,8 @@ static void testJoin2() {
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
-void testSiteIdCmp() {
+void testSiteIdCmp()
+{
   printf("SiteIdCmp\n");
 
   char left[1] = {0x00};
@@ -252,15 +251,15 @@ void testSiteIdCmp() {
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
-#define FREE_PARTS(L) for (int i = 0; i < L; ++i) {\
-  sqlite3_free(parts[i]);\
-}\
-sqlite3_free(parts);
+#define FREE_PARTS(L)         \
+  for (int i = 0; i < L; ++i) \
+  {                           \
+    sqlite3_free(parts[i]);   \
+  }                           \
+  sqlite3_free(parts);
 
-void testSplitQuoteConcat() {
-  char *in = "";
-  int len = 1;
-
+void testSplitQuoteConcat()
+{
   // test NULL
   char **parts = crsql_splitQuoteConcat("NULL", 1);
   assert(strcmp(parts[0], "NULL") == 0);

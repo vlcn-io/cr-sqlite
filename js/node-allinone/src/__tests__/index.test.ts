@@ -196,7 +196,7 @@ test("using sync api as async GH #104", async () => {
         // we have for this peer?
         // that'd preclude resetting tho.
         for (const cs of changesets) {
-          console.log("changeset", [cs[2], cs[3]]);
+          // console.log("changeset", [cs[2], cs[3]]);
           const v = BigInt(cs[4]);
           maxVersion = v > maxVersion ? v : maxVersion;
           // cannot use same statement in parallel
@@ -261,7 +261,7 @@ test("using sync api as async GH #104", async () => {
   try {
     await changesReceived(dbTarget, changes);
   } finally {
-    console.log("closing db");
+    // console.log("closing db");
     dbTarget.close();
   }
 });

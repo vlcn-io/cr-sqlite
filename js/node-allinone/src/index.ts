@@ -92,7 +92,13 @@ export class DB implements IDB {
 
   transaction(cb: () => void) {
     const cb2 = this.db.transaction(cb);
-    return cb2();
+    const ret = cb2();
+    if (typeof ret === "object" && typeof ret.then === "function") {
+      console.warn(
+        "better-sqlite3 should be used synchronously. Passing an async function to transaction will not behave as expected. See https://github.com/vlcn-io/cr-sqlite/issues/104"
+      );
+    }
+    return ret;
   }
 
   close() {

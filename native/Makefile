@@ -1,6 +1,7 @@
 COMMIT=$(shell git rev-parse HEAD)
 VERSION=$(shell cat VERSION)
 DATE=$(shell date +'%FT%TZ%z')
+CC:=gcc
 
 LOADABLE_CFLAGS=-std=c99 -fPIC -shared
 
@@ -36,6 +37,7 @@ TARGET_SQLITE3_EXTRA_C=$(prefix)/sqlite3-extra.c
 TARGET_SQLITE3=$(prefix)/sqlite3
 TARGET_SQLITE3_VANILLA=$(prefix)/vanilla-sqlite3
 TARGET_TEST=$(prefix)/test
+TARGET_FUZZ=$(prefix)/fuzz
 
 ext_files=src/crsqlite.c \
 	src/util.c \
@@ -78,15 +80,23 @@ correctness: $(TARGET_LOADABLE) FORCE
 	cd ../py/correctness && pytest
 valgrind: $(TARGET_TEST)
 	valgrind $(prefix)/test
+analyzer:
+	scan-build $(MAKE) clean loadable
+ubsan: CC=clang
+ubsan: LDLIBS += -lubsan
+ubsan: clean $(TARGET_TEST)
+	$(prefix)/test
+fuzz: $(TARGET_FUZZ)
+	$(prefix)/fuzz
 
 $(TARGET_LOADABLE): $(prefix) $(ext_files)
-	gcc -I./src/ -I./src/sqlite \
+	$(CC) -I./src/ -I./src/sqlite \
 	$(LOADABLE_CFLAGS) \
 	$(DEFINE_SQLITE_PATH) \
 	$(ext_files) -o $@
 
 $(TARGET_SQLITE3): $(prefix) $(TARGET_SQLITE3_EXTRA_C) src/sqlite/shell.c $(ext_files)
-	gcc -g \
+	$(CC) -g \
 	$(DEFINE_SQLITE_PATH) \
 	-DSQLITE_THREADSAFE=0 -DSQLITE_OMIT_LOAD_EXTENSION=1 \
 	-DSQLITE_ENABLE_NORMALIZE \
@@ -96,7 +106,7 @@ $(TARGET_SQLITE3): $(prefix) $(TARGET_SQLITE3_EXTRA_C) src/sqlite/shell.c $(ext_
 	-o $@
 
 $(TARGET_SQLITE3_VANILLA): $(prefix) src/sqlite/shell.c
-	gcc -g \
+	$(CC) -g \
 	$(DEFINE_SQLITE_PATH) \
 	-DSQLITE_THREADSAFE=0 \
 	-DSQLITE_ENABLE_NORMALIZE \
@@ -108,7 +118,7 @@ $(TARGET_SQLITE3_EXTRA_C): src/sqlite/sqlite3.c src/core_init.c
 	cat src/sqlite/sqlite3.c src/core_init.c > $@
 
 $(TARGET_TEST): $(prefix) $(TARGET_SQLITE3_EXTRA_C) src/tests.c src/*.test.c $(ext_files)
-	gcc -g \
+	$(CC) -g \
 	$(DEFINE_SQLITE_PATH) \
 	-DSQLITE_THREADSAFE=0 -DSQLITE_OMIT_LOAD_EXTENSION=1 \
 	-DSQLITE_ENABLE_NORMALIZE \
@@ -116,6 +126,17 @@ $(TARGET_TEST): $(prefix) $(TARGET_SQLITE3_EXTRA_C) src/tests.c src/*.test.c $(e
 	-DUNIT_TEST=1 \
 	-I./src/ -I./src/sqlite \
 	$(TARGET_SQLITE3_EXTRA_C) src/tests.c src/*.test.c $(ext_files) \
+	$(LDLIBS) \
+	-o $@
+
+$(TARGET_FUZZ): $(prefix) $(TARGET_SQLITE3_EXTRA_C) src/fuzzer.cc $(ext_files)
+	clang -fsanitize=fuzzer \
+	$(DEFINE_SQLITE_PATH) \
+	-DSQLITE_THREADSAFE=0 -DSQLITE_OMIT_LOAD_EXTENSION=1 \
+	-DSQLITE_ENABLE_NORMALIZE \
+	-DSQLITE_EXTRA_INIT=core_init \
+	-I./src/ -I./src/sqlite \
+	$(TARGET_SQLITE3_EXTRA_C) src/fuzzer.cc $(ext_files) \
 	-o $@
 
 .PHONY: all clean format \

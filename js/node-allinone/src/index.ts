@@ -92,7 +92,7 @@ export class DB implements IDB {
 
   transaction(cb: () => void) {
     const cb2 = this.db.transaction(cb);
-    cb2();
+    return cb2();
   }
 
   close() {

@@ -60,13 +60,15 @@ export class EstablishedConnection {
     if (this.#expectedSeq) {
       const start = data.seqStart;
       if (
-        start[0] != this.#expectedSeq[0] ||
-        start[1] != this.#expectedSeq[1]
+        start[0] > this.#expectedSeq[0] ||
+        (start[0] > this.#expectedSeq[0] && start[1] != this.#expectedSeq[1])
       ) {
         logger.error(
           `Out of order deliver from ${this.connection.site}. start: ${
             start[0]
-          }, expected: ${this.#expectedSeq[0]}`
+          }, expected: ${this.#expectedSeq[0]} b: ${
+            start[0] > this.#expectedSeq[0]
+          }`
         );
         throw {
           code: "OUT_OF_ORDER_DELIVERY",

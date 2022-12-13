@@ -1,5 +1,10 @@
 todo:
 
+- let server in client-server sync receive out of order events?
+
+  - it isn't doing the peer tracking in client-server setup, client is, so this is ok
+  - this means we don't need to override site id on the client
+
 - update the p2p example to forward messages on behalf of other peers?
 - site id must be proxied thru given comparison against it as a tie breaker
 - delete doesn't record version? tech. ok given delete wins but it is information loss.

@@ -1,6 +1,10 @@
 import { Changeset, SiteIdWire, Version } from "@vlcn.io/client-server-common";
 import { DB as DBSync, DBAsync, Stmt, StmtAsync } from "@vlcn.io/xplat-api";
-import { parse as uuidParse, stringify as uuidStringify } from "uuid";
+import {
+  parse as uuidParse,
+  stringify as uuidStringify,
+  v4 as uuidv4,
+} from "uuid";
 import tblrx from "@vlcn.io/rx-tbl";
 import { TblRx } from "@vlcn.io/rx-tbl/src/tblrx";
 import logger from "./logger";
@@ -18,7 +22,8 @@ export class DB {
     private readonly rx: TblRx,
     private readonly pullChangesetStmt: Stmt | StmtAsync,
     private readonly applyChangesetStmt: Stmt | StmtAsync,
-    private readonly updatePeerTrackerStmt: Stmt | StmtAsync
+    private readonly updatePeerTrackerStmt: Stmt | StmtAsync,
+    private readonly origSiteId: SiteIdWire
   ) {
     if (!this.siteId) {
       throw new Error(`Unable to fetch site id from the local db`);
@@ -105,6 +110,9 @@ export class DB {
     );
     changes.forEach((c) => {
       c[5] = uuidStringify(c[5] as any);
+      if (c[5] === this.origSiteId) {
+        c[5] = this.siteId;
+      }
       // since BigInt doesn't serialize -- convert to string
       c[4] = c[4].toString();
     });
@@ -142,11 +150,17 @@ export default async function wrap(
 
   const ret = new DB(
     db,
-    uuidStringify(r[0][0]),
+    // client-server sync does not use the site id of the client db.
+    // we should write something up explaining the problems it avoids to give
+    // a client a new uuid on every session.
+    // and the requirements that imposes on the server and
+    // breaking ties
+    uuidv4(),
     rx,
     pullChangesetStmt,
     applyChangesetStmt,
-    updatePeerTrackerStmt
+    updatePeerTrackerStmt,
+    uuidStringify(r[0][0])
   );
 
   return ret;

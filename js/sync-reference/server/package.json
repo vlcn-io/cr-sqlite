@@ -6,6 +6,9 @@
     "dist",
     "src"
   ],
+  "bin": {
+    "vlcn-ref-server": "./dist/bin/main.js"
+  },
   "module": "dist/index.js",
   "main": "dist/index.js",
   "sideEffects": false,
@@ -23,7 +26,7 @@
     "watch": "tsc --build --watch",
     "test": "vitest run",
     "deep-clean": "rm -rf ./dist || true && rm tsconfig.tsbuildinfo || true",
-    "start": "pnpm build && node dist/main.js"
+    "start": "pnpm build && node dist/bin/main.js"
   },
   "repository": {
     "type": "git",

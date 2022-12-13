@@ -6,10 +6,10 @@ import express from "express";
 import { IncomingMessage } from "node:http";
 import { WebSocketServer } from "ws";
 import * as http from "http";
-import { Connection } from "./connection.js";
-import logger from "./logger.js";
+import { Connection } from "../connection.js";
+import logger from "../logger.js";
 import { nanoid } from "nanoid";
-import contextStore from "./contextStore.js";
+import contextStore from "../contextStore.js";
 
 const port = 8080;
 const app = express();

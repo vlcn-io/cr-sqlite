@@ -124,7 +124,7 @@ export default async function wrap(
   const r = await db.execA("SELECT crsql_siteid()");
 
   await db.exec(
-    "CREATE TABLE IF NOT EXISTS __crsql_peers (site_id BLOB PRIMARY KEY, event INTEGER, version INTEGER, seq INTEGER) STRICT;"
+    "CREATE TABLE IF NOT EXISTS __crsql_peers (site_id BLOB, event INTEGER, version INTEGER, seq INTEGER, primary key (site_id, event)) STRICT;"
   );
 
   const [pullChangesetStmt, applyChangesetStmt, updatePeerTrackerStmt] =

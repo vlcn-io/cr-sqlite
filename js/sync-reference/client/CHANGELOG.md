@@ -1,5 +1,11 @@
 # @vlcn.io/sync-client
 
+## 0.4.2
+
+### Patch Changes
+
+- allow messages from the past
+
 ## 0.4.1
 
 ### Patch Changes

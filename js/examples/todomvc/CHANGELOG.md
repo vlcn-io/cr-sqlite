@@ -1,5 +1,12 @@
 # @vlcn.io/todomvc
 
+## 0.5.2
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/sync-client@0.4.2
+
 ## 0.5.1
 
 ### Patch Changes

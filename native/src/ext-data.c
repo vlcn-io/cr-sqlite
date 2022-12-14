@@ -28,7 +28,7 @@ crsql_ExtData *crsql_newExtData(sqlite3 *db)
     return 0;
   }
   pExtData->pPragmaDataVersionStmt = 0;
-  rc = sqlite3_prepare_v3(db, "PRAGMA data_version", -1, SQLITE_PREPARE_PERSISTENT, $(pExtData->pPragmaDataVersionStmt), 0);
+  rc = sqlite3_prepare_v3(db, "PRAGMA data_version", -1, SQLITE_PREPARE_PERSISTENT, &(pExtData->pPragmaDataVersionStmt), 0);
   if (rc != SQLITE_OK)
   {
     sqlite3_finalize(pExtData->pPragmaDataVersionStmt);
@@ -274,7 +274,13 @@ int crsql_getDbVersion(sqlite3 *db, crsql_ExtData *pExtData, char **errmsg)
   // without checking the schema version.
   // It is an error to use crsqlite in such a way that you modify
   // a schema and fetch changes in the same transaction.
-  if (pExtData->dbVersion != -1)
+  rc = crsql_fetchPragmaDataVersion(db, pExtData);
+  if (rc == -1)
+  {
+    *errmsg = sqlite3_mprintf("failed to fetch PRAGMA data_version");
+    return SQLITE_ERROR;
+  }
+  if (pExtData->dbVersion != -1 && rc != 0)
   {
     return SQLITE_OK;
   }

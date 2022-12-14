@@ -46,6 +46,7 @@ struct crsql_ExtData
 crsql_ExtData *crsql_newExtData(sqlite3 *db);
 void crsql_freeExtData(crsql_ExtData *pExtData);
 int crsql_fetchPragmaSchemaVersion(sqlite3 *db, crsql_ExtData *pExtData, int which);
+int crsql_fetchPragmaDataVersion(sqlite3 *db, crsql_ExtData *pExtData);
 int crsql_recreateDbVersionStmt(sqlite3 *db, crsql_ExtData *pExtData);
 int crsql_fetchDbVersionFromStorage(sqlite3 *db, crsql_ExtData *pExtData, char **errmsg);
 int crsql_getDbVersion(sqlite3 *db, crsql_ExtData *pExtData, char **errmsg);

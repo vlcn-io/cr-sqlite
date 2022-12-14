@@ -300,14 +300,6 @@ static void fetchDbVersionFromStorage()
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
-static int commitHook(void *pUserData)
-{
-  crsql_ExtData *pExtData = (crsql_ExtData *)pUserData;
-
-  pExtData->dbVersion = -1;
-  return SQLITE_OK;
-}
-
 void crsqlExtDataTestSuite()
 {
   printf("\e[47m\e[1;30mSuite: crsql_ExtData\e[0m\n");

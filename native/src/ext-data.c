@@ -280,7 +280,7 @@ int crsql_getDbVersion(sqlite3 *db, crsql_ExtData *pExtData, char **errmsg)
     *errmsg = sqlite3_mprintf("failed to fetch PRAGMA data_version");
     return SQLITE_ERROR;
   }
-  if (pExtData->dbVersion != -1 && rc != 0)
+  if (pExtData->dbVersion != -1 && rc == 0)
   {
     return SQLITE_OK;
   }

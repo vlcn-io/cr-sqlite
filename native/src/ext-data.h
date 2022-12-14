@@ -24,6 +24,8 @@ struct crsql_ExtData
 {
   // perma statement -- used to check db schema version
   sqlite3_stmt *pPragmaSchemaVersionStmt;
+  sqlite3_stmt *pPragmaDataVersionStmt;
+  int pragmaDataVersion;
 
   // this gets set at the start of each transaction on the first invocation
   // to crsql_nextdbversion()
@@ -48,6 +50,6 @@ int crsql_recreateDbVersionStmt(sqlite3 *db, crsql_ExtData *pExtData);
 int crsql_fetchDbVersionFromStorage(sqlite3 *db, crsql_ExtData *pExtData, char **errmsg);
 int crsql_getDbVersion(sqlite3 *db, crsql_ExtData *pExtData, char **errmsg);
 void crsql_finalize(crsql_ExtData *pExtData);
-int crsql_ensureTableInfosAreUpToDate(sqlite3* db, crsql_ExtData *pExtData, char **errmsg);
+int crsql_ensureTableInfosAreUpToDate(sqlite3 *db, crsql_ExtData *pExtData, char **errmsg);
 
 #endif

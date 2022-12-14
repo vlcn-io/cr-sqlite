@@ -33,6 +33,8 @@ static void textNewExtData()
   assert(pExtData->dbVersion == -1);
   // statement used to determine schema version
   assert(pExtData->pPragmaSchemaVersionStmt != 0);
+  // statement used to determine data version
+  assert(pExtData->pPragmaDataVersionStmt != 0);
   // last schema version fetched -- none so -1
   assert(pExtData->pragmaSchemaVersion == -1);
   // same as above

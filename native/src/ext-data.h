@@ -20,8 +20,7 @@ SQLITE_EXTENSION_INIT3
 #include "tableinfo.h"
 
 typedef struct crsql_ExtData crsql_ExtData;
-struct crsql_ExtData
-{
+struct crsql_ExtData {
   // perma statement -- used to check db schema version
   sqlite3_stmt *pPragmaSchemaVersionStmt;
   sqlite3_stmt *pPragmaDataVersionStmt;
@@ -45,12 +44,15 @@ struct crsql_ExtData
 
 crsql_ExtData *crsql_newExtData(sqlite3 *db);
 void crsql_freeExtData(crsql_ExtData *pExtData);
-int crsql_fetchPragmaSchemaVersion(sqlite3 *db, crsql_ExtData *pExtData, int which);
+int crsql_fetchPragmaSchemaVersion(sqlite3 *db, crsql_ExtData *pExtData,
+                                   int which);
 int crsql_fetchPragmaDataVersion(sqlite3 *db, crsql_ExtData *pExtData);
 int crsql_recreateDbVersionStmt(sqlite3 *db, crsql_ExtData *pExtData);
-int crsql_fetchDbVersionFromStorage(sqlite3 *db, crsql_ExtData *pExtData, char **errmsg);
+int crsql_fetchDbVersionFromStorage(sqlite3 *db, crsql_ExtData *pExtData,
+                                    char **errmsg);
 int crsql_getDbVersion(sqlite3 *db, crsql_ExtData *pExtData, char **errmsg);
 void crsql_finalize(crsql_ExtData *pExtData);
-int crsql_ensureTableInfosAreUpToDate(sqlite3 *db, crsql_ExtData *pExtData, char **errmsg);
+int crsql_ensureTableInfosAreUpToDate(sqlite3 *db, crsql_ExtData *pExtData,
+                                      char **errmsg);
 
 #endif

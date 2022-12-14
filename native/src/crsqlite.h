@@ -17,8 +17,9 @@
 #include "sqlite3ext.h"
 SQLITE_EXTENSION_INIT3
 
-#include "tableinfo.h"
 #include <stdint.h>
+
+#include "tableinfo.h"
 
 #ifndef UNIT_TEST
 #define STATIC static
@@ -26,9 +27,6 @@ SQLITE_EXTENSION_INIT3
 #define STATIC
 #endif
 
-int crsql_createClockTable(
-    sqlite3 *db,
-    crsql_TableInfo *tableInfo,
-    char **err);
+int crsql_createClockTable(sqlite3 *db, crsql_TableInfo *tableInfo, char **err);
 
 #endif

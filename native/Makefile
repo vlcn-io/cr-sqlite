@@ -50,9 +50,9 @@ ext_files=src/crsqlite.c \
 	src/changes-vtab-write.c \
 	src/ext-data.c \
 	src/get-table.c
-ext_headers=crsqlite.h \
-	src/csflite-utils.h \
-	src/tablinfo.h \
+ext_headers=src/crsqlite.h \
+	src/util.h \
+	src/tableinfo.h \
 	src/triggers.h \
 	src/changes-vtab.h \
 	src/changes-vtab-read.h \

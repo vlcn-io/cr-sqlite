@@ -144,7 +144,7 @@ class Replicator {
     }
 
     const start = data.seqStart;
-    if (start[0] != expected[0] || start[1] != expected[1]) {
+    if (start[0] > expected[0] || (start[0] > expected[0] && start[1] != expected[1])) {
       logger.error("out of order delivery from server", start, expected);
       this.#ws?.close();
     }

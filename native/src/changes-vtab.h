@@ -20,12 +20,12 @@
  * SELECT * FROM crsql_chages WHERE site_id != SITE_ID AND version > V
  * ```
  *
- * The site id parameter is used to prevent a site from fetching its own changes that were
- * patched into the remote.
+ * The site id parameter is used to prevent a site from fetching its own
+ * changes that were patched into the remote.
  *
  * The version parameter is used to get changes after a specific version.
- * Sites should keep track of the latest version they've received from other sites
- * and use that number as a cursor to fetch future changes.
+ * Sites should keep track of the latest version they've received from other
+ * sites and use that number as a cursor to fetch future changes.
  *
  * The changes table has the following columns:
  * 1. table - the name of the table the patch is from
@@ -33,15 +33,17 @@
  *    table has many columns that comprise the primary key then
  *    the values are quote concatenated in pk order.
  * 3. col_vals - the values to patch. quote concatenated in cid order.
- * 4. col_versions - the cids of the changed columns and the versions of those columns
- * 5. version - the min version of the patch. Used for filtering and for sites to update their
- *    "last seen" version from other sites
+ * 4. col_versions - the cids of the changed columns and the versions of those
+ * columns
+ * 5. version - the min version of the patch. Used for filtering and for sites
+ * to update their "last seen" version from other sites
  * 6. site_id - the site_id that is responsible for the update. If this is 0
  *    then the update was made locally.
  *
  * To apply a changeset:
  * ```sql
- * INSERT INTO changes (table, pk, col_vals, col_versions, site_id) VALUES (...)
+ * INSERT INTO changes (table, pk, col_vals, col_versions, site_id) VALUES
+ * (...)
  * ```
  */
 #ifndef CHANGES_VTAB_H
@@ -52,10 +54,11 @@
 #endif
 SQLITE_EXTENSION_INIT3
 
-#include "tableinfo.h"
+#include <stdint.h>
+
 #include "crsqlite.h"
 #include "ext-data.h"
-#include <stdint.h>
+#include "tableinfo.h"
 
 extern sqlite3_module crsql_changesModule;
 
@@ -83,8 +86,7 @@ extern sqlite3_module crsql_changesModule;
  * after which a sync process would connect.
  */
 typedef struct crsql_Changes_vtab crsql_Changes_vtab;
-struct crsql_Changes_vtab
-{
+struct crsql_Changes_vtab {
   sqlite3_vtab base;
   sqlite3 *db;
 
@@ -117,8 +119,7 @@ struct crsql_Changes_vtab
  * changesOpen and released in changesCrsrFinalize
  */
 typedef struct crsql_Changes_cursor crsql_Changes_cursor;
-struct crsql_Changes_cursor
-{
+struct crsql_Changes_cursor {
   sqlite3_vtab_cursor base;
 
   crsql_Changes_vtab *pTab;

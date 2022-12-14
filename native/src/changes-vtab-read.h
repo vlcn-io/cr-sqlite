@@ -17,8 +17,8 @@
 #include "sqlite3ext.h"
 SQLITE_EXTENSION_INIT3
 
-#include "tableinfo.h"
 #include "changes-vtab-common.h"
+#include "tableinfo.h"
 
 char *crsql_changesQueryForTable(crsql_TableInfo *tableInfo);
 
@@ -27,13 +27,8 @@ char *crsql_changesQueryForTable(crsql_TableInfo *tableInfo);
 #define CID 2
 #define VRSN 3
 #define SITE_ID 4
-char *crsql_changesUnionQuery(
-    crsql_TableInfo **tableInfos,
-    int tableInfosLen);
-char *crsql_rowPatchDataQuery(
-    sqlite3 *db,
-    crsql_TableInfo *tblInfo,
-    const char * colName,
-    const char *pks);
+char *crsql_changesUnionQuery(crsql_TableInfo **tableInfos, int tableInfosLen);
+char *crsql_rowPatchDataQuery(sqlite3 *db, crsql_TableInfo *tblInfo,
+                              const char *colName, const char *pks);
 
 #endif

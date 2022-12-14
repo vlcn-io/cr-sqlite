@@ -78,7 +78,7 @@ vanilla: $(TARGET_SQLITE3_VANILLA)
 test: $(TARGET_TEST)
 	$(prefix)/test
 asan: $(TARGET_TEST_ASAN)
-	$(prefix)/test
+	$(TARGET_TEST_ASAN)
 correctness: $(TARGET_LOADABLE) FORCE
 	cd ../py/correctness && pytest
 valgrind: $(TARGET_TEST)

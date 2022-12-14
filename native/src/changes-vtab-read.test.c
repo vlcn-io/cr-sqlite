@@ -43,6 +43,11 @@ static void testChangesQueryForTable()
   sqlite3_free(query);
 
   printf("\t\e[0;32mSuccess\e[0m\n");
+
+  sqlite3_free(err);
+  crsql_freeTableInfo(tblInfo);
+  crsql_close(db);
+  assert(rc == SQLITE_OK);
 }
 
 static void testChangesUnionQuery()
@@ -69,6 +74,10 @@ static void testChangesUnionQuery()
   sqlite3_free(query);
 
   printf("\t\e[0;32mSuccess\e[0m\n");
+  sqlite3_free(err);
+  crsql_freeAllTableInfos(tblInfos, 2);
+  crsql_close(db);
+  assert(rc == SQLITE_OK);
 }
 
 static void testRowPatchDataQuery()
@@ -95,6 +104,10 @@ static void testRowPatchDataQuery()
   sqlite3_free(q);
 
   printf("\t\e[0;32mSuccess\e[0m\n");
+  sqlite3_free(err);
+  crsql_freeTableInfo(tblInfo);
+  crsql_close(db);
+  assert(rc == SQLITE_OK);
 }
 
 void crsqlChangesVtabReadTestSuite()

@@ -33,6 +33,8 @@ static void textNewExtData()
   assert(pExtData->dbVersion == -1);
   // statement used to determine schema version
   assert(pExtData->pPragmaSchemaVersionStmt != 0);
+  // statement used to determine data version
+  assert(pExtData->pPragmaDataVersionStmt != 0);
   // last schema version fetched -- none so -1
   assert(pExtData->pragmaSchemaVersion == -1);
   // same as above
@@ -45,12 +47,17 @@ static void textNewExtData()
   assert(pExtData->zpTableInfos == 0);
   assert(pExtData->tableInfosLen == 0);
 
+  // data version should have been fetched
+  assert(pExtData->pragmaDataVersion != -1);
+
   crsql_finalize(pExtData);
   crsql_freeExtData(pExtData);
   crsql_close(db);
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
+// valgrind will let us know if we failed to free something
+// mainly testing that we can finalize + free without error
 static void testFreeExtData()
 {
   printf("FreeExtData\n");
@@ -146,6 +153,68 @@ static void testFetchPragmaSchemaVersion()
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
+static void testFetchPragmaDataVersion()
+{
+  printf("FetchPragmaDataVersion\n");
+  remove("testFetchPragmaDataVersion.db");
+  sqlite3 *db1;
+  sqlite3 *db2;
+  int rc;
+  char *errmsg = 0;
+  rc = sqlite3_open("testFetchPragmaDataVersion.db", &db1);
+  assert(rc == SQLITE_OK);
+  rc = sqlite3_open("testFetchPragmaDataVersion.db", &db2);
+  assert(rc == SQLITE_OK);
+
+  rc = sqlite3_exec(db1, "CREATE TABLE fpdv (a)", 0, 0, &errmsg);
+  assert(rc == SQLITE_OK);
+
+  crsql_ExtData *pExtData1 = crsql_newExtData(db1);
+  crsql_ExtData *pExtData2 = crsql_newExtData(db2);
+
+  // should not change after init
+  rc = crsql_fetchPragmaDataVersion(db1, pExtData1);
+  assert(rc == 0);
+  rc = crsql_fetchPragmaDataVersion(db2, pExtData2);
+  assert(rc == 0);
+
+  // should not change if write was issued on its connection
+  rc = sqlite3_exec(db1, "INSERT INTO fpdv VALUES (1)", 0, 0, 0);
+  assert(rc == SQLITE_OK);
+  rc = crsql_fetchPragmaDataVersion(db1, pExtData1);
+  assert(rc == 0);
+
+  // should change if write was issued on another connection
+  rc = crsql_fetchPragmaDataVersion(db2, pExtData2);
+  assert(rc == 1);
+
+  // should not change after updating itself
+  rc = crsql_fetchPragmaDataVersion(db2, pExtData2);
+  assert(rc == 0);
+
+  // same test but in reverse direction
+  rc = sqlite3_exec(db2, "INSERT INTO fpdv VALUES (1)", 0, 0, 0);
+  assert(rc == SQLITE_OK);
+  rc = crsql_fetchPragmaDataVersion(db2, pExtData2);
+  assert(rc == 0);
+
+  rc = crsql_fetchPragmaDataVersion(db1, pExtData1);
+  assert(rc == 1);
+
+  // should not change after updating itself
+  rc = crsql_fetchPragmaDataVersion(db1, pExtData1);
+  assert(rc == 0);
+
+  crsql_finalize(pExtData1);
+  crsql_freeExtData(pExtData1);
+  crsql_close(db1);
+  crsql_finalize(pExtData2);
+  crsql_freeExtData(pExtData2);
+  crsql_close(db2);
+  remove("testFetchPragmaDataVersion.db");
+  printf("\t\e[0;32mSuccess\e[0m\n");
+}
+
 static void testRecreateDbVersionStmt()
 {
   printf("RecreateDbVersionStmt\n");
@@ -231,14 +300,6 @@ static void fetchDbVersionFromStorage()
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
-// getDbVersion hits a cache before storage.
-// cache shouldn't change behavior.
-static void getDbVersion()
-{
-  // this is tested in python integration tests due to the fact that it relies on a commit hook
-  // being installed.
-}
-
 void crsqlExtDataTestSuite()
 {
   printf("\e[47m\e[1;30mSuite: crsql_ExtData\e[0m\n");
@@ -248,5 +309,5 @@ void crsqlExtDataTestSuite()
   testFetchPragmaSchemaVersion();
   testRecreateDbVersionStmt();
   fetchDbVersionFromStorage();
-  getDbVersion();
+  testFetchPragmaDataVersion();
 }

@@ -1,5 +1,13 @@
 # @vlcn.io/wa-crsqlite
 
+## 0.5.2
+
+### Patch Changes
+
+- fix gh #108
+- Updated dependencies
+  - @vlcn.io/wa-sqlite@0.12.2
+
 ## 0.5.1
 
 ### Patch Changes

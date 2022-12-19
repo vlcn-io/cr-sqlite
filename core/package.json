@@ -27,7 +27,7 @@
     "rebuild-debug": "pnpm run build-debug",
     "test": "make test"
   },
-  "license": "MIT",
+  "license": "Apache 2",
   "keywords": [
     "sql",
     "sqlite",

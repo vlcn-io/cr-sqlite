@@ -17,6 +17,8 @@ This project implements [CRDTs](https://crdt.tech/) and [CRRs](https://hal.inria
 
 # Usage
 
+The full documentation site is available [here](https://vlcn.io/docs/getting-started).
+
 `crsqlite` exposes three APIs:
 
 - A function extension (`crsql_as_crr`) to upgrade existing tables to "crrs" or "conflict free replicated relations"

@@ -17,7 +17,7 @@ jobs:
         env:
           ENV: CI
         run: |
-          cd native/src
+          cd core/src
           make loadable
       - name: Upload dist as artifact
         uses: actions/upload-artifact@v2
@@ -35,7 +35,7 @@ jobs:
         env:
           ENV: CI
         run: |
-          cd native/src
+          cd core/src
           make loadable
       - name: Upload dist as artifact
         uses: actions/upload-artifact@v2
@@ -53,7 +53,7 @@ jobs:
         env:
           ENV: CI
         run: |
-          cd native/src
+          cd core/src
           make loadable
       - name: Upload dist as artifact
         uses: actions/upload-artifact@v2

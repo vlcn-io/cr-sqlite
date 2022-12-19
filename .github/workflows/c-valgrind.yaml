@@ -20,7 +20,7 @@ jobs:
 
       - name: Build Tests
         run: |
-          cd native
+          cd core
           make dist/test
 
       - name: Install valgrind
@@ -28,5 +28,5 @@ jobs:
 
       - name: Run Valgrind
         run: |
-          cd native
+          cd core
           valgrind dist/test

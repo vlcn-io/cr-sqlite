@@ -17,6 +17,8 @@ This project implements [CRDTs](https://crdt.tech/) and [CRRs](https://hal.inria
 
 # Usage
 
+The full documentation site is available [here](https://vlcn.io/docs/getting-started).
+
 `crsqlite` exposes three APIs:
 
 - A function extension (`crsql_as_crr`) to upgrade existing tables to "crrs" or "conflict free replicated relations"
@@ -134,7 +136,7 @@ Examples apps that use `cr-sqlite` and have a networking layer (albeit a dumb on
 
 Instructions on building a native library that can be loaded into SQLite in non-wasm environments.
 
-In the `native/src` directory of the project, run:
+In the `core/src` directory of the project, run:
 
 ```bash
 make loadable
@@ -152,7 +154,7 @@ This will create a shared library at `dist/crsqlite.[lib extension]`
 
 Instructions on building a `sqlite3` CLI that has `cr-sqlite` statically linked and pre-loaded.
 
-In the `native/src` directory of the project, run:
+In the `core/src` directory of the project, run:
 
 ```bash
 make sqlite3

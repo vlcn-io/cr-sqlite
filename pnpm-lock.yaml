@@ -15,6 +15,17 @@ importers:
       turbo: 1.6.3
       typescript: 4.9.3
 
+  core:
+    specifiers:
+      bindings: ^1.5.0
+      prebuild: ^7.2.2
+      prebuild-install: ^7.1.0
+    dependencies:
+      bindings: 1.5.0
+      prebuild-install: 7.1.1
+    devDependencies:
+      prebuild: 7.6.2
+
   js/browser/crsqlite:
     specifiers: {}
 
@@ -100,7 +111,7 @@ importers:
       sqlite3: ^5.1.2
       typescript: ^4.8.4
     dependencies:
-      '@vlcn.io/crsqlite': link:../../../native
+      '@vlcn.io/crsqlite': link:../../../core
       better-sqlite3: 8.0.1
       import-meta-resolve: 2.1.0
       sqlite: 4.1.2
@@ -186,7 +197,7 @@ importers:
       typescript: ^4.8.4
       vitest: ^0.25.0
     dependencies:
-      '@vlcn.io/crsqlite': link:../../native
+      '@vlcn.io/crsqlite': link:../../core
       '@vlcn.io/xplat-api': link:../xplat-api
       better-sqlite3: 8.0.1
       import-meta-resolve: 2.1.0
@@ -249,7 +260,7 @@ importers:
       ws: ^8.11.0
     dependencies:
       '@vlcn.io/client-server-common': link:../client-server-common
-      '@vlcn.io/crsqlite': link:../../../native
+      '@vlcn.io/crsqlite': link:../../../core
       better-sqlite3: 8.0.1
       cors: 2.8.5
       express: 4.18.2
@@ -370,17 +381,6 @@ importers:
       comlink: 4.3.1
     devDependencies:
       typescript: 4.9.3
-
-  native:
-    specifiers:
-      bindings: ^1.5.0
-      prebuild: ^7.2.2
-      prebuild-install: ^7.1.0
-    dependencies:
-      bindings: 1.5.0
-      prebuild-install: 7.1.1
-    devDependencies:
-      prebuild: 7.6.2
 
   py/correctness:
     specifiers: {}
@@ -8220,7 +8220,7 @@ packages:
     engines: {node: '>= 0.8'}
 
   /verror/1.10.0:
-    resolution: {integrity: sha1-OhBcoXBTr1XW4nDB+CiGguGNpAA=}
+    resolution: {integrity: sha512-ZZKSmDAEFOijERBLkmYfJ+vmk3w+7hOLYDNkRCuRuMJGEmqYNCNLyBBFwWKVMhfwaEF3WOd0Zlw86U/WC/+nYw==}
     engines: {'0': node >=0.6.0}
     dependencies:
       assert-plus: 1.0.0

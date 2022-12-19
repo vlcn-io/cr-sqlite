@@ -20,5 +20,5 @@ jobs:
 
       - name: Test
         run: |
-          cd native
+          cd core
           make test

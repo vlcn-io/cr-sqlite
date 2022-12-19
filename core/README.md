@@ -1,4 +1,4 @@
-# crsql/native
+# crsql/core
 
 The core `SQLite` extension which adds CRDT/CRR support.
 

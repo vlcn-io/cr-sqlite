@@ -23,7 +23,7 @@ jobs:
 
       - name: Make loadable
         run: |
-          cd native
+          cd core
           make loadable
 
       - uses: conda-incubator/setup-miniconda@v2

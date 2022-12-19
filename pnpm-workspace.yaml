@@ -20,5 +20,5 @@ packages:
   - "js/examples/peer-server"
   - "js/examples/node"
   - "js/examples/basic-browser-setup"
-  - "native"
+  - "core"
   - "py/correctness"

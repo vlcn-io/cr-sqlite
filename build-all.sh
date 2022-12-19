@@ -8,7 +8,7 @@ git submodule update --recursive
 pnpm install
 
 # make the native loadable extension
-cd native
+cd core
 make loadable
 
 # make npm packages

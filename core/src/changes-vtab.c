@@ -388,12 +388,20 @@ static int changesFilter(sqlite3_vtab_cursor *pVtabCursor, int idxNum,
   int i = 0;
   sqlite3_int64 versionBound = MIN_POSSIBLE_DB_VERSION;
   const char *requestorSiteId = "aa";
+  int siteIdType = SQLITE_BLOB;
   int requestorSiteIdLen = 1;
   if (idxNum & 2) {
     versionBound = sqlite3_value_int64(argv[i]);
     ++i;
   }
   if (idxNum & 4) {
+    siteIdType = sqlite3_value_type(argv[i]);
+    if (siteIdType != SQLITE_NULL && siteIdType != SQLITE_BLOB) {
+      pTabBase->zErrMsg = sqlite3_mprintf("site_id must be a blob or null");
+      sqlite3_finalize(pStmt);
+      return SQLITE_ERROR;
+    }
+
     requestorSiteIdLen = sqlite3_value_bytes(argv[i]);
     if (requestorSiteIdLen != 0) {
       requestorSiteId = (const char *)sqlite3_value_blob(argv[i]);
@@ -409,8 +417,12 @@ static int changesFilter(sqlite3_vtab_cursor *pVtabCursor, int idxNum,
   // 2. the version
   int j = 1;
   for (i = 0; i < pTab->pExtData->tableInfosLen; ++i) {
-    sqlite3_bind_blob(pStmt, j++, requestorSiteId, requestorSiteIdLen,
-                      SQLITE_STATIC);
+    if (siteIdType == SQLITE_NULL) {
+      sqlite3_bind_null(pStmt, j++);
+    } else {
+      sqlite3_bind_blob(pStmt, j++, requestorSiteId, requestorSiteIdLen,
+                        SQLITE_STATIC);
+    }
     sqlite3_bind_int64(pStmt, j++, versionBound);
   }
 
@@ -446,11 +458,12 @@ static int changesBestIndex(sqlite3_vtab *tab, sqlite3_index_info *pIdxInfo) {
         idxNum |= 2;
         break;
       case CHANGES_SINCE_VTAB_SITE_ID:
-        // TODO: we should only support `IS NOT`
         if (pConstraint->op != SQLITE_INDEX_CONSTRAINT_NE &&
             pConstraint->op != SQLITE_INDEX_CONSTRAINT_ISNOT &&
             pConstraint->op != SQLITE_INDEX_CONSTRAINT_EQ &&
-            pConstraint->op != SQLITE_INDEX_CONSTRAINT_IS) {
+            pConstraint->op != SQLITE_INDEX_CONSTRAINT_IS &&
+            pConstraint->op != SQLITE_INDEX_CONSTRAINT_ISNOTNULL &&
+            pConstraint->op != SQLITE_INDEX_CONSTRAINT_ISNULL) {
           tab->zErrMsg = sqlite3_mprintf(
               "crsql_changes.site_id only supports the IS, IS NOT, =, != "
               "operators");
@@ -462,7 +475,8 @@ static int changesBestIndex(sqlite3_vtab *tab, sqlite3_index_info *pIdxInfo) {
         idxNum |= 4;
 
         if (pConstraint->op == SQLITE_INDEX_CONSTRAINT_EQ ||
-            pConstraint->op == SQLITE_INDEX_CONSTRAINT_IS) {
+            pConstraint->op == SQLITE_INDEX_CONSTRAINT_IS ||
+            pConstraint->op == SQLITE_INDEX_CONSTRAINT_ISNULL) {
           idxNum |= 8;
         }
         break;

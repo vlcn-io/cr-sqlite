@@ -366,7 +366,7 @@ static int changesFilter(sqlite3_vtab_cursor *pVtabCursor, int idxNum,
   }
 
   char *zSql = crsql_changesUnionQuery(pTab->pExtData->zpTableInfos,
-                                       pTab->pExtData->tableInfosLen);
+                                       pTab->pExtData->tableInfosLen, idxNum);
 
   if (zSql == 0) {
     pTabBase->zErrMsg = sqlite3_mprintf(
@@ -448,17 +448,23 @@ static int changesBestIndex(sqlite3_vtab *tab, sqlite3_index_info *pIdxInfo) {
       case CHANGES_SINCE_VTAB_SITE_ID:
         // TODO: we should only support `IS NOT`
         if (pConstraint->op != SQLITE_INDEX_CONSTRAINT_NE &&
-            pConstraint->op != SQLITE_INDEX_CONSTRAINT_ISNOT) {
+            pConstraint->op != SQLITE_INDEX_CONSTRAINT_ISNOT &&
+            pConstraint->op != SQLITE_INDEX_CONSTRAINT_EQ &&
+            pConstraint->op != SQLITE_INDEX_CONSTRAINT_IS) {
           tab->zErrMsg = sqlite3_mprintf(
-              "crsql_changes.site_id only supports the not equal and "
-              "is not "
-              "operatosr. E.g., site_id IS NOT x");
+              "crsql_changes.site_id only supports the IS, IS NOT, =, != "
+              "operators");
           return SQLITE_CONSTRAINT;
         }
         requestorIdx = i;
         pIdxInfo->aConstraintUsage[i].argvIndex = 2;
         pIdxInfo->aConstraintUsage[i].omit = 1;
         idxNum |= 4;
+
+        if (pConstraint->op == SQLITE_INDEX_CONSTRAINT_EQ ||
+            pConstraint->op == SQLITE_INDEX_CONSTRAINT_IS) {
+          idxNum |= 8;
+        }
         break;
     }
   }

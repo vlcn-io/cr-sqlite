@@ -79,7 +79,7 @@ char *crsql_insertTriggerQuery(crsql_TableInfo *tableInfo, char *pkList,
   // Future improvement.
   if (tableInfo->nonPksLen == 0) {
     subTriggers[0] = sqlite3_mprintf(
-        "INSERT OR REPLACE INTO \"%s__crsql_clock\" (\
+        "INSERT INTO \"%s__crsql_clock\" (\
         %s,\
         __crsql_col_name,\
         __crsql_col_version,\
@@ -88,15 +88,20 @@ char *crsql_insertTriggerQuery(crsql_TableInfo *tableInfo, char *pkList,
       ) SELECT \
         %s,\
         %Q,\
-        __crsql_col_version + 1,\
+        1,\
         crsql_nextdbversion(),\
         NULL\
-      WHERE crsql_internal_sync_bit() = 0;\n",
-        tableInfo->tblName, pkList, pkNewList, PKS_ONLY_CID_SENTINEL);
+      WHERE crsql_internal_sync_bit() = 0 ON CONFLICT DO UPDATE SET\
+        __crsql_col_name = %Q,\
+        __crsql_col_version = __crsql_col_version + 1,\
+        __crsql_db_version = crsql_nextdbversion(),\
+        __crsql_site_id = NULL;\n",
+        tableInfo->tblName, pkList, pkNewList, PKS_ONLY_CID_SENTINEL,
+        PKS_ONLY_CID_SENTINEL);
   }
   for (int i = 0; i < tableInfo->nonPksLen; ++i) {
     subTriggers[i] = sqlite3_mprintf(
-        "INSERT OR REPLACE INTO \"%s__crsql_clock\" (\
+        "INSERT INTO \"%s__crsql_clock\" (\
         %s,\
         __crsql_col_name,\
         __crsql_col_version,\
@@ -105,11 +110,16 @@ char *crsql_insertTriggerQuery(crsql_TableInfo *tableInfo, char *pkList,
       ) SELECT \
         %s,\
         %Q,\
-        __crsql_col_version + 1,\
+        1,\
         crsql_nextdbversion(),\
         NULL\
-      WHERE crsql_internal_sync_bit() = 0;\n",
-        tableInfo->tblName, pkList, pkNewList, tableInfo->nonPks[i].name);
+      WHERE crsql_internal_sync_bit() = 0 ON CONFLICT DO UPDATE SET\
+        __crsql_col_name = %Q,\
+        __crsql_col_version = __crsql_col_version + 1,\
+        __crsql_db_version = crsql_nextdbversion(),\
+        __crsql_site_id = NULL;\n",
+        tableInfo->tblName, pkList, pkNewList, tableInfo->nonPks[i].name,
+        tableInfo->nonPks[i].name);
   }
 
   joinedSubTriggers = crsql_join(subTriggers, tableInfo->nonPksLen);
@@ -148,25 +158,25 @@ int crsql_createUpdateTrigger(sqlite3 *db, crsql_TableInfo *tableInfo,
     return rc;
   }
 
-  if (tableInfo->pksLen == 0) {
-    pkList = "\"rowid\"";
-    pkNewList = "NEW.\"rowid\"";
-  } else {
-    pkList = crsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, 0);
-    pkNewList =
-        crsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, "NEW.");
-  }
+  pkList = crsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, 0);
+  pkNewList = crsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, "NEW.");
 
   for (int i = 0; i < tableInfo->nonPksLen; ++i) {
     // updates are conditionally inserted on the new value not being
     // the same as the old value.
     subTriggers[i] = sqlite3_mprintf(
-        "INSERT OR REPLACE INTO \"%s__crsql_clock\" (\
+        "INSERT INTO \"%s__crsql_clock\" (\
         %s,\
         __crsql_col_name,\
-        __crsql_version,\
+        __crsql_col_version,\
+        __crsql_db_version,\
         __crsql_site_id\
-      ) SELECT %s, %Q, crsql_nextdbversion(), NULL WHERE crsql_internal_sync_bit() = 0 AND NEW.\"%w\" != OLD.\"%w\";\n",
+      ) SELECT %s, %Q, 1, crsql_nextdbversion(), NULL WHERE crsql_internal_sync_bit() = 0 AND NEW.\"%w\" != OLD.\"%w\"\
+      ON CONFLICT DO UPDATE SET\
+        __crsql_col_name = %Q,\
+        __crsql_col_version = __crsql_col_version + 1,\
+        __crsql_db_version = crsql_nextdbversion(),\
+        __crsql_site_id = NULL;\n",
         tableInfo->tblName, pkList, pkNewList, tableInfo->nonPks[i].name,
         tableInfo->nonPks[i].name, tableInfo->nonPks[i].name);
   }
@@ -190,10 +200,8 @@ int crsql_createUpdateTrigger(sqlite3 *db, crsql_TableInfo *tableInfo,
   rc = sqlite3_exec(db, zSql, 0, 0, err);
   sqlite3_free(zSql);
 
-  if (tableInfo->pksLen != 0) {
-    sqlite3_free(pkList);
-    sqlite3_free(pkNewList);
-  }
+  sqlite3_free(pkList);
+  sqlite3_free(pkNewList);
 
   return rc;
 }
@@ -216,18 +224,24 @@ char *crsql_deleteTriggerQuery(crsql_TableInfo *tableInfo) {
       "CREATE TRIGGER IF NOT EXISTS \"%s__crsql_dtrig\"\
       AFTER DELETE ON \"%s\"\
     BEGIN\
-      INSERT OR REPLACE INTO \"%s__crsql_clock\" (\
+      INSERT INTO \"%s__crsql_clock\" (\
         %s,\
         __crsql_col_name,\
-        __crsql_version,\
+        __crsql_col_version,\
+        __crsql_db_version,\
         __crsql_site_id\
       ) SELECT \
         %s,\
         %Q,\
+        1,\
         crsql_nextdbversion(),\
         NULL\
-      WHERE crsql_internal_sync_bit() = 0;\
-    END;",
+      WHERE crsql_internal_sync_bit() = 0 ON CONFLICT DO UPDATE SET\
+      __crsql_col_name = % Q,\
+      __crsql_col_version = __crsql_col_version + 1,\
+      __crsql_db_version = crsql_nextdbversion(),\
+      __crsql_site_id = NULL;\
+      END; ",
       tableInfo->tblName, tableInfo->tblName, tableInfo->tblName, pkList,
       pkOldList, DELETE_CID_SENTINEL);
 

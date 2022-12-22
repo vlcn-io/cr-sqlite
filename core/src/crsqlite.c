@@ -154,6 +154,11 @@ static void dbVersionFunc(sqlite3_context *context, int argc,
  * Return the next version of the database for use in inserts/updates/deletes
  *
  * `select crsql_nextdbversion()`
+ *
+ * Nit: this should be same as `crsql_db_version`
+ * If you change this behavior you need to change trigger behaviors
+ * as each invocation to `nextVersion` should return the same version
+ * when in the same transaction.
  */
 static void nextDbVersionFunc(sqlite3_context *context, int argc,
                               sqlite3_value **argv) {

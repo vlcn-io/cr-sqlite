@@ -144,7 +144,7 @@ int crsql_setWinnerClock(sqlite3 *db, crsql_TableInfo *tblInfo,
       VALUES (\
         %s,\
         %Q,\
-        MAX(__crsql_col_version, %lld),\
+        %lld,\
         MAX(crsql_nextdbversion(), %lld),\
         ?\
       )",
@@ -381,11 +381,10 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
   zSql = sqlite3_mprintf(
       "INSERT INTO \"%w\" (%s, \"%w\")\
       VALUES (%s, %s)\
-      ON CONFLICT (%s) DO UPDATE\
+      ON CONFLICT DO UPDATE\
       SET \"%w\" = %s",
       tblInfo->tblName, pkIdentifierList, insertColName, pkValsStr,
-      sanitizedInsertVal[0], pkIdentifierList, insertColName,
-      sanitizedInsertVal[0]);
+      sanitizedInsertVal[0], insertColName, sanitizedInsertVal[0]);
 
   sqlite3_free(sanitizedInsertVal[0]);
   sqlite3_free(sanitizedInsertVal);

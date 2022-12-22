@@ -628,7 +628,7 @@ static void testPullingOnlyLocalChanges() {
   sqlite3_finalize(pStmt);
 
   // now sync in some chnages from elsewhere
-
+  crsql_close(db);
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 

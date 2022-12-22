@@ -11,66 +11,61 @@
  * limitations under the License.
  */
 
-#include "crsqlite.h"
-
 #include "util.h"
-#include "consts.h"
-#include "tableinfo.h"
+
 #include <assert.h>
-#include <string.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "consts.h"
+#include "crsqlite.h"
+#include "tableinfo.h"
 
 #ifndef CHECK_OK
-#define CHECK_OK       \
-  if (rc != SQLITE_OK) \
-  {                    \
-    goto fail;         \
+#define CHECK_OK         \
+  if (rc != SQLITE_OK) { \
+    goto fail;           \
   }
 #endif
 
 int crsql_close(sqlite3 *db);
 
-static void testGetVersionUnionQuery()
-{
+static void testGetVersionUnionQuery() {
   int numRows_tc1 = 1;
   char *tableNames_tc1[] = {
       "tbl_name",
       "foo",
   };
   int numRows_tc2 = 3;
-  char *tableNames_tc2[] = {
-      "tbl_name",
-      "foo",
-      "bar",
-      "baz"};
+  char *tableNames_tc2[] = {"tbl_name", "foo", "bar", "baz"};
   char *query;
   printf("GetVersionUnionQuery\n");
 
-  query = crsql_getDbVersionUnionQuery(
-      numRows_tc1,
-      tableNames_tc1);
-  assert(strcmp(query, "SELECT max(version) as version FROM (SELECT max(__crsql_version) as version FROM \"foo\"  )") == 0);
+  query = crsql_getDbVersionUnionQuery(numRows_tc1, tableNames_tc1);
+  assert(strcmp(query,
+                "SELECT max(version) as version FROM (SELECT "
+                "max(__crsql_db_version) as version FROM \"foo\"  )") == 0);
   sqlite3_free(query);
 
-  query = crsql_getDbVersionUnionQuery(
-      numRows_tc2,
-      tableNames_tc2);
-  assert(strcmp(query, "SELECT max(version) as version FROM (SELECT max(__crsql_version) as version FROM \"foo\" UNION SELECT max(__crsql_version) as version FROM \"bar\" UNION SELECT max(__crsql_version) as version FROM \"baz\"  )") == 0);
+  query = crsql_getDbVersionUnionQuery(numRows_tc2, tableNames_tc2);
+  assert(strcmp(query,
+                "SELECT max(version) as version FROM (SELECT "
+                "max(__crsql_db_version) as version FROM \"foo\" UNION SELECT "
+                "max(__crsql_db_version) as version FROM \"bar\" UNION SELECT "
+                "max(__crsql_db_version) as version FROM \"baz\"  )") == 0);
   sqlite3_free(query);
 
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
-static void testDoesTableExist()
-{
+static void testDoesTableExist() {
   sqlite3 *db;
   int rc;
   printf("DoesTableExist\n");
 
   rc = sqlite3_open(":memory:", &db);
-  if (rc)
-  {
+  if (rc) {
     fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
     crsql_close(db);
     return;
@@ -84,14 +79,14 @@ static void testDoesTableExist()
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
-static void testGetCount()
-{
+static void testGetCount() {
   sqlite3 *db = 0;
   int rc = SQLITE_OK;
   printf("GetCount\n");
 
   rc = sqlite3_open(":memory:", &db);
-  sqlite3_exec(db, "CREATE TABLE foo (a); INSERT INTO foo VALUES (1);", 0, 0, 0);
+  sqlite3_exec(db, "CREATE TABLE foo (a); INSERT INTO foo VALUES (1);", 0, 0,
+               0);
   rc = crsql_getCount(db, "SELECT count(*) FROM foo");
 
   assert(rc == 1);
@@ -103,14 +98,10 @@ static void testGetCount()
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
-static void testJoinWith()
-{
+static void testJoinWith() {
   printf("JoinWith\n");
   char dest[13];
-  char *src[] = {
-      "one",
-      "two",
-      "four"};
+  char *src[] = {"one", "two", "four"};
 
   crsql_joinWith(dest, src, 3, ',');
 
@@ -118,8 +109,7 @@ static void testJoinWith()
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
-static void testGetIndexedCols()
-{
+static void testGetIndexedCols() {
   printf("GetIndexedCols\n");
 
   sqlite3 *db = 0;
@@ -132,23 +122,15 @@ static void testGetIndexedCols()
   sqlite3_exec(db, "CREATE TABLE foo (a);", 0, 0, 0);
   sqlite3_exec(db, "CREATE TABLE bar (a primary key);", 0, 0, 0);
 
-  rc = crsql_getIndexedCols(
-      db,
-      "sqlite_autoindex_foo_1",
-      &indexedCols,
-      &indexedColsLen,
-      &pErrMsg);
+  rc = crsql_getIndexedCols(db, "sqlite_autoindex_foo_1", &indexedCols,
+                            &indexedColsLen, &pErrMsg);
   CHECK_OK
 
   assert(indexedColsLen == 0);
   assert(indexedCols == 0);
 
-  rc = crsql_getIndexedCols(
-      db,
-      "sqlite_autoindex_bar_1",
-      &indexedCols,
-      &indexedColsLen,
-      &pErrMsg);
+  rc = crsql_getIndexedCols(db, "sqlite_autoindex_bar_1", &indexedCols,
+                            &indexedColsLen, &pErrMsg);
   CHECK_OK
 
   assert(indexedColsLen == 1);
@@ -167,20 +149,13 @@ fail:
   printf("bad return code: %d\n", rc);
 }
 
-static void testAsIdentifierListStr()
-{
+static void testAsIdentifierListStr() {
   printf("AsIdentifierListStr\n");
 
-  char *tc1[] = {
-      "one",
-      "two",
-      "three"};
+  char *tc1[] = {"one", "two", "three"};
   char *res;
 
-  res = crsql_asIdentifierListStr(
-      tc1,
-      3,
-      ',');
+  res = crsql_asIdentifierListStr(tc1, 3, ',');
 
   assert(strcmp(res, "\"one\",\"two\",\"three\"") == 0);
   assert(strlen(res) == 19);
@@ -189,20 +164,15 @@ static void testAsIdentifierListStr()
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
-static char *join2map(const char *in)
-{
+static char *join2map(const char *in) {
   return sqlite3_mprintf("foo %s bar", in);
 }
 
-static void testJoin2()
-{
+static void testJoin2() {
   printf("Join2\n");
   char *tc0[] = {};
-  char *tc1[] = {
-      "one"};
-  char *tc2[] = {
-      "one",
-      "two"};
+  char *tc1[] = {"one"};
+  char *tc2[] = {"one", "two"};
   char *result;
 
   result = crsql_join2(&join2map, tc0, 0, ", ");
@@ -219,8 +189,7 @@ static void testJoin2()
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
-void testSiteIdCmp()
-{
+void testSiteIdCmp() {
   printf("SiteIdCmp\n");
 
   char left[1] = {0x00};
@@ -251,15 +220,13 @@ void testSiteIdCmp()
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
-#define FREE_PARTS(L)         \
-  for (int i = 0; i < L; ++i) \
-  {                           \
-    sqlite3_free(parts[i]);   \
-  }                           \
+#define FREE_PARTS(L)           \
+  for (int i = 0; i < L; ++i) { \
+    sqlite3_free(parts[i]);     \
+  }                             \
   sqlite3_free(parts);
 
-void testSplitQuoteConcat()
-{
+void testSplitQuoteConcat() {
   // test NULL
   char **parts = crsql_splitQuoteConcat("NULL", 1);
   assert(strcmp(parts[0], "NULL") == 0);
@@ -372,8 +339,7 @@ void testSplitQuoteConcat()
   assert(parts == 0);
 }
 
-void crsqlUtilTestSuite()
-{
+void crsqlUtilTestSuite() {
   printf("\e[47m\e[1;30mSuite: crsql_util\e[0m\n");
 
   testGetVersionUnionQuery();

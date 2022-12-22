@@ -43,8 +43,8 @@ static int changesConnect(sqlite3 *db, void *pAux, int argc,
       // primary key as xUpdate requires a single column to be the primary key
       // if we use without rowid.
       "CREATE TABLE x([table] TEXT NOT NULL, [pk] TEXT NOT NULL, [cid] TEXT "
-      "NOT NULL, [val], [version] INTEGER NOT NULL, [clock] INTEGER NOT NULL, "
-      "[site_id] BLOB)");
+      "NOT NULL, [val], [col_version] INTEGER NOT NULL, [db_version] INTEGER "
+      "NOT NULL, [site_id] BLOB)");
   if (rc != SQLITE_OK) {
     *pzErr = sqlite3_mprintf("Could not define the table");
     return rc;

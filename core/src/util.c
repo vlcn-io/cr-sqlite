@@ -301,7 +301,7 @@ char *crsql_getDbVersionUnionQuery(int numRows, char **tableNames) {
 
   for (i = 0; i < numRows; ++i) {
     unionsArr[i] = sqlite3_mprintf(
-        "SELECT max(__crsql_version) as version FROM \"%w\" %s ",
+        "SELECT max(__crsql_db_version) as version FROM \"%w\" %s ",
         // the first result in tableNames is the column heading
         // so skip that
         tableNames[i + 1],

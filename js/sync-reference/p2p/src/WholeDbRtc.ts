@@ -4,7 +4,7 @@ import WDB, {
   SiteIDLocal,
   SiteIDWire,
   WholeDbReplicator,
-} from "@vlcn.io/replicator-wholedb";
+} from "./index.js";
 import { DB, DBAsync } from "@vlcn.io/xplat-api";
 import Peer, { DataConnection } from "peerjs";
 // @ts-ignore

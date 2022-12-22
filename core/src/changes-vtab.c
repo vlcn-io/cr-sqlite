@@ -43,8 +43,7 @@ static int changesConnect(sqlite3 *db, void *pAux, int argc,
       // primary key as xUpdate requires a single column to be the primary key
       // if we use without rowid.
       "CREATE TABLE x([table] TEXT NOT NULL, [pk] TEXT NOT NULL, [cid] TEXT "
-      "NOT NULL, [val], [version] INTEGER NOT NULL, [site_id] BLOB NOT "
-      "NULL)");
+      "NOT NULL, [val], [version] INTEGER NOT NULL, [site_id] BLOB)");
   if (rc != SQLITE_OK) {
     *pzErr = sqlite3_mprintf("Could not define the table");
     return rc;
@@ -396,8 +395,10 @@ static int changesFilter(sqlite3_vtab_cursor *pVtabCursor, int idxNum,
   }
   if (idxNum & 4) {
     siteIdType = sqlite3_value_type(argv[i]);
-    if (siteIdType != SQLITE_NULL && siteIdType != SQLITE_BLOB) {
-      pTabBase->zErrMsg = sqlite3_mprintf("site_id must be a blob or null");
+    if (siteIdType != SQLITE_NULL && siteIdType != SQLITE_BLOB &&
+        siteIdType != SQLITE3_TEXT) {
+      pTabBase->zErrMsg =
+          sqlite3_mprintf("site_id must be a blob, null or text");
       sqlite3_finalize(pStmt);
       return SQLITE_ERROR;
     }

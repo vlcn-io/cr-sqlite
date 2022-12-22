@@ -607,6 +607,26 @@ static void testPullingOnlyLocalChanges() {
   assert(count == 0);
   sqlite3_finalize(pStmt);
 
+  sqlite3_prepare_v2(db,
+                     "SELECT count(*) FROM crsql_changes WHERE site_id IS NULL",
+                     -1, &pStmt, 0);
+  rc = sqlite3_step(pStmt);
+  assert(rc == SQLITE_ROW);
+  count = sqlite3_column_int(pStmt, 0);
+  // we asked for changes that were not local
+  assert(count == 2);
+  sqlite3_finalize(pStmt);
+
+  sqlite3_prepare_v2(
+      db, "SELECT count(*) FROM crsql_changes WHERE site_id IS NOT NULL", -1,
+      &pStmt, 0);
+  rc = sqlite3_step(pStmt);
+  assert(rc == SQLITE_ROW);
+  count = sqlite3_column_int(pStmt, 0);
+  // we asked for changes that were not local
+  assert(count == 0);
+  sqlite3_finalize(pStmt);
+
   // now sync in some chnages from elsewhere
 
   printf("\t\e[0;32mSuccess\e[0m\n");

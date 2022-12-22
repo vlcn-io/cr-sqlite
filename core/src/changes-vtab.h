@@ -127,7 +127,7 @@ struct crsql_Changes_cursor {
   sqlite3_stmt *pChangesStmt;
   sqlite3_stmt *pRowStmt;
 
-  sqlite3_int64 version;
+  sqlite3_int64 dbVersion;
 };
 
 int crsql_changesTxCommit(sqlite3_vtab *pVTab);

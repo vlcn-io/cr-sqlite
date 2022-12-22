@@ -82,11 +82,13 @@ char *crsql_insertTriggerQuery(crsql_TableInfo *tableInfo, char *pkList,
         "INSERT OR REPLACE INTO \"%s__crsql_clock\" (\
         %s,\
         __crsql_col_name,\
-        __crsql_version,\
+        __crsql_col_version,\
+        __crsql_db_version,\
         __crsql_site_id\
       ) SELECT \
         %s,\
         %Q,\
+        __crsql_col_version + 1,\
         crsql_nextdbversion(),\
         NULL\
       WHERE crsql_internal_sync_bit() = 0;\n",
@@ -97,11 +99,13 @@ char *crsql_insertTriggerQuery(crsql_TableInfo *tableInfo, char *pkList,
         "INSERT OR REPLACE INTO \"%s__crsql_clock\" (\
         %s,\
         __crsql_col_name,\
-        __crsql_version,\
+        __crsql_col_version,\
+        __crsql_db_version,\
         __crsql_site_id\
       ) SELECT \
         %s,\
         %Q,\
+        __crsql_col_version + 1,\
         crsql_nextdbversion(),\
         NULL\
       WHERE crsql_internal_sync_bit() = 0;\n",

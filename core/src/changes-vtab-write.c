@@ -29,11 +29,11 @@
 int crsql_didCidWin(sqlite3 *db, const unsigned char *localSiteId,
                     const char *insertTbl, const char *pkWhereList,
                     const char *colName, const char *sanitizedInsertVal,
-                    sqlite3_int64 version, char **errmsg) {
+                    sqlite3_int64 colVersion, char **errmsg) {
   char *zSql = 0;
 
   zSql = sqlite3_mprintf(
-      "SELECT __crsql_version FROM \"%s__crsql_clock\" WHERE %s AND %Q = "
+      "SELECT __crsql_col_version FROM \"%s__crsql_clock\" WHERE %s AND %Q = "
       "__crsql_col_name",
       insertTbl, pkWhereList, colName);
 
@@ -63,15 +63,16 @@ int crsql_didCidWin(sqlite3 *db, const unsigned char *localSiteId,
   sqlite3_int64 localVersion = sqlite3_column_int64(pStmt, 0);
   sqlite3_finalize(pStmt);
 
-  if (version > localVersion) {
+  if (colVersion > localVersion) {
     return 1;
-  } else if (version < localVersion) {
+  } else if (colVersion < localVersion) {
     return 0;
   }
 
   // else -- versions are equal
   // - pull curr value
   // - compare for tie break
+  // TODO: pull bytes and memcmp instead of strcmp?
   zSql = sqlite3_mprintf("SELECT quote(\"%w\") FROM \"%w\" WHERE %s", colName,
                          insertTbl, pkWhereList);
   rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
@@ -133,19 +134,22 @@ int crsql_checkForLocalDelete(sqlite3 *db, const char *tblName,
 
 int crsql_setWinnerClock(sqlite3 *db, crsql_TableInfo *tblInfo,
                          const char *pkIdentifierList, const char *pkValsStr,
-                         const char *insertColName, sqlite3_int64 insertVrsn,
-                         const void *insertSiteId, int insertSiteIdLen) {
+                         const char *insertColName, sqlite3_int64 insertColVrsn,
+                         sqlite3_int64 insertDbVrsn, const void *insertSiteId,
+                         int insertSiteIdLen) {
   int rc = SQLITE_OK;
   char *zSql = sqlite3_mprintf(
       "INSERT OR REPLACE INTO \"%s__crsql_clock\" \
-      (%s, \"__crsql_col_name\", \"__crsql_version\", \"__crsql_site_id\")\
+      (%s, \"__crsql_col_name\", \"__crsql_col_version\", \"__crsql_db_version\", \"__crsql_site_id\")\
       VALUES (\
         %s,\
         %Q,\
+        MAX(__crsql_col_version, %lld),\
         MAX(crsql_nextdbversion(), %lld),\
         ?\
       )",
-      tblInfo->tblName, pkIdentifierList, pkValsStr, insertColName, insertVrsn);
+      tblInfo->tblName, pkIdentifierList, pkValsStr, insertColName,
+      insertColVrsn, insertDbVrsn);
 
   sqlite3_stmt *pStmt = 0;
   rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
@@ -175,12 +179,9 @@ int crsql_setWinnerClock(sqlite3 *db, crsql_TableInfo *tblInfo,
 
 int crsql_mergePkOnlyInsert(sqlite3 *db, crsql_TableInfo *tblInfo,
                             const char *pkValsStr, const char *pkIdentifiers,
-                            sqlite3_int64 remoteVersion,
+                            sqlite3_int64 remoteColVersion,
+                            sqlite3_int64 remoteDbVersion,
                             const void *remoteSiteId, int remoteSiteIdLen) {
-  // TODO: do we need to check that the row doesn't alrdy
-  // exist?
-  // if it exists we can skip the merge pks only bc we alrdy have this state
-
   char *zSql = sqlite3_mprintf("INSERT OR IGNORE INTO \"%s\" (%s) VALUES (%s)",
                                tblInfo->tblName, pkIdentifiers, pkValsStr);
   int rc = sqlite3_exec(db, SET_SYNC_BIT, 0, 0, 0);
@@ -198,14 +199,15 @@ int crsql_mergePkOnlyInsert(sqlite3 *db, crsql_TableInfo *tblInfo,
 
   // TODO: if insert was ignored, no reason to change clock
   return crsql_setWinnerClock(db, tblInfo, pkIdentifiers, pkValsStr,
-                              PKS_ONLY_CID_SENTINEL, remoteVersion,
-                              remoteSiteId, remoteSiteIdLen);
+                              PKS_ONLY_CID_SENTINEL, remoteColVersion,
+                              remoteDbVersion, remoteSiteId, remoteSiteIdLen);
 }
 
 int crsql_mergeDelete(sqlite3 *db, crsql_TableInfo *tblInfo,
                       const char *pkWhereList, const char *pkValsStr,
-                      const char *pkIdentifiers, sqlite3_int64 remoteVersion,
-                      const void *remoteSiteId, int remoteSiteIdLen) {
+                      const char *pkIdentifiers, sqlite3_int64 remoteColVersion,
+                      sqlite3_int64 remoteDbVersion, const void *remoteSiteId,
+                      int remoteSiteIdLen) {
   char *zSql = sqlite3_mprintf("DELETE FROM \"%s\" WHERE %s", tblInfo->tblName,
                                pkWhereList);
   int rc = sqlite3_exec(db, SET_SYNC_BIT, 0, 0, 0);
@@ -222,8 +224,8 @@ int crsql_mergeDelete(sqlite3 *db, crsql_TableInfo *tblInfo,
   }
 
   return crsql_setWinnerClock(db, tblInfo, pkIdentifiers, pkValsStr,
-                              DELETE_CID_SENTINEL, remoteVersion, remoteSiteId,
-                              remoteSiteIdLen);
+                              DELETE_CID_SENTINEL, remoteColVersion,
+                              remoteDbVersion, remoteSiteId, remoteSiteIdLen);
 }
 
 int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
@@ -270,8 +272,10 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
   // splitquoteconcat for the validation
   const unsigned char *insertVal =
       sqlite3_value_text(argv[2 + CHANGES_SINCE_VTAB_CVAL]);
-  sqlite3_int64 insertVrsn =
-      sqlite3_value_int64(argv[2 + CHANGES_SINCE_VTAB_VRSN]);
+  sqlite3_int64 insertColVrsn =
+      sqlite3_value_int64(argv[2 + CHANGES_SINCE_VTAB_COL_VRSN]);
+  sqlite3_int64 insertDbVrsn =
+      sqlite3_value_int64(argv[2 + CHANGES_SINCE_VTAB_DB_VRSN]);
 
   int insertSiteIdLen =
       sqlite3_value_bytes(argv[2 + CHANGES_SINCE_VTAB_SITE_ID]);
@@ -326,9 +330,9 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
   char *pkIdentifierList =
       crsql_asIdentifierList(tblInfo->pks, tblInfo->pksLen, 0);
   if (isDelete) {
-    rc =
-        crsql_mergeDelete(db, tblInfo, pkWhereList, pkValsStr, pkIdentifierList,
-                          insertVrsn, insertSiteId, insertSiteIdLen);
+    rc = crsql_mergeDelete(db, tblInfo, pkWhereList, pkValsStr,
+                           pkIdentifierList, insertColVrsn, insertDbVrsn,
+                           insertSiteId, insertSiteIdLen);
 
     sqlite3_free(pkWhereList);
     sqlite3_free(pkValsStr);
@@ -339,7 +343,8 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
   if (isPkOnly ||
       !crsql_columnExists(insertColName, tblInfo->nonPks, tblInfo->nonPksLen)) {
     rc = crsql_mergePkOnlyInsert(db, tblInfo, pkValsStr, pkIdentifierList,
-                                 insertVrsn, insertSiteId, insertSiteIdLen);
+                                 insertColVrsn, insertDbVrsn, insertSiteId,
+                                 insertSiteIdLen);
     sqlite3_free(pkWhereList);
     sqlite3_free(pkValsStr);
     sqlite3_free(pkIdentifierList);
@@ -356,9 +361,9 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
     return SQLITE_ERROR;
   }
 
-  int doesCidWin =
-      crsql_didCidWin(db, pTab->pExtData->siteId, tblInfo->tblName, pkWhereList,
-                      insertColName, sanitizedInsertVal[0], insertVrsn, errmsg);
+  int doesCidWin = crsql_didCidWin(
+      db, pTab->pExtData->siteId, tblInfo->tblName, pkWhereList, insertColName,
+      sanitizedInsertVal[0], insertColVrsn, errmsg);
   sqlite3_free(pkWhereList);
   if (doesCidWin == -1 || doesCidWin == 0) {
     sqlite3_free(pkValsStr);
@@ -406,8 +411,8 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
   }
 
   rc = crsql_setWinnerClock(db, tblInfo, pkIdentifierList, pkValsStr,
-                            insertColName, insertVrsn, insertSiteId,
-                            insertSiteIdLen);
+                            insertColName, insertColVrsn, insertDbVrsn,
+                            insertSiteId, insertSiteIdLen);
   sqlite3_free(pkIdentifierList);
   sqlite3_free(pkValsStr);
 
@@ -419,6 +424,6 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
   // the table.
   // Is it fine if we prevent anyone from using `rowid` on a vtab?
   // or must we convert to `without rowid`?
-  *pRowid = insertVrsn;
+  *pRowid = insertDbVrsn;
   return rc;
 }

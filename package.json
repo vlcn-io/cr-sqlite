@@ -13,7 +13,8 @@
   },
   "scripts": {
     "build": "./build-all.sh",
-    "test": "turbo run test"
+    "test": "turbo run test",
+    "deep-clean": "turbo run deep-clean"
   },
   "dependencies": {
     "detect-circular-deps": "^3.0.0"

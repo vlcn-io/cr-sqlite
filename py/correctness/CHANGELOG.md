@@ -1,5 +1,11 @@
 # @vlcn.io/py-correctness
 
+## 0.5.0
+
+### Minor Changes
+
+- breaking change -- fix version recording problem that prevented convergence in p2p cases
+
 ## 0.4.1
 
 ### Patch Changes

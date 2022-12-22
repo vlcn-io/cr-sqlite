@@ -105,7 +105,7 @@ export class DB {
     // excluding what the server has sent us
     const changes = await this.pullChangesetStmt.all(BigInt(seq[0]));
     changes.forEach((c) => {
-      c[6] = uuidStringify(c[5] as any);
+      c[6] = uuidStringify(c[6] as any);
       if (c[6] === this.origSiteId) {
         // do we really want to remap site id per session in client-server setup?
         // it enables copy-pasting of db files around ... but that it?
@@ -137,7 +137,7 @@ export default async function wrap(
   const [pullChangesetStmt, applyChangesetStmt, updatePeerTrackerStmt] =
     await Promise.all([
       db.prepare(
-        `SELECT "table", "pk", "cid", "val", "col_version", "db_version", "site_id" FROM crsql_changes WHERE version > ? AND site_id IS NULL`
+        `SELECT "table", "pk", "cid", "val", "col_version", "db_version", "site_id" FROM crsql_changes WHERE db_version > ? AND site_id IS NULL`
       ),
       db.prepare(
         `INSERT INTO crsql_changes ("table", "pk", "cid", "val", "col_version", "db_version", "site_id") VALUES (?, ?, ?, ?, ?, ?, ?)`

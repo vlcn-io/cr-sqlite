@@ -116,7 +116,7 @@ export default class ChangeStream {
       return;
     }
 
-    const seqEnd: [Version, number] = [changes[changes.length - 1][4], 0];
+    const seqEnd: [Version, number] = [changes[changes.length - 1][5], 0];
     this.#lastSeq = seqEnd;
     logger.debug("update last seq to", seqEnd);
 

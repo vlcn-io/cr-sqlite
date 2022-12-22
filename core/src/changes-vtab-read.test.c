@@ -98,7 +98,6 @@ static void testChangesUnionQuery() {
   sqlite3_free(query);
 
   query = crsql_changesUnionQuery(tblInfos, 2, 8);
-  printf("Q: %s!\n", query);
   assert(
       strcmp(
           query,

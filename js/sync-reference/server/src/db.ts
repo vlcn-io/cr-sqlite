@@ -100,6 +100,7 @@ class DB {
       // since BigInt doesn't serialize -- convert to string
       c[4] = c[4].toString();
       c[5] = c[5].toString();
+      c[6] = uuidStringify(c[6]);
     });
     return changes;
   }

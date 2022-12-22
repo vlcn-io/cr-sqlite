@@ -16,6 +16,7 @@ export type Changeset = [
   CID,
   any, // val,
   Version,
+  Version,
   SiteIDWire // site_id
 ];
 
@@ -68,7 +69,9 @@ test("failing example", () => {
     `SELECT "list", "text" FROM "todo" WHERE "list" = 'work'`
   );
 
-  let changesets = db1.execA("SELECT * FROM crsql_changes where version > -1");
+  let changesets = db1.execA(
+    "SELECT * FROM crsql_changes where db_version > -1"
+  );
 
   const db2 = sqlite.open(":memory:");
   db2.execMany([
@@ -81,7 +84,7 @@ test("failing example", () => {
   const siteid = db1.execA(`SELECT crsql_siteid()`)[0][0];
   db2.transaction(() => {
     for (const cs of changesets) {
-      db2.exec(`INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?)`, cs);
+      db2.exec(`INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?, ?)`, cs);
     }
   });
 
@@ -135,12 +138,14 @@ test("failing example", () => {
   // and complete things on other lists
   db1.exec(`UPDATE todo SET complete = 1 WHERE list = 'groceries'`);
 
-  let changesets1 = db1.execA("SELECT * FROM crsql_changes where version > ?", [
-    db1version,
-  ]);
-  let changesets2 = db2.execA("SELECT * FROM crsql_changes where version > ?", [
-    db2version,
-  ]);
+  let changesets1 = db1.execA(
+    "SELECT * FROM crsql_changes where db_version > ?",
+    [db1version]
+  );
+  let changesets2 = db2.execA(
+    "SELECT * FROM crsql_changes where db_version > ?",
+    [db2version]
+  );
 });
 
 test("failing two -- discord: https://discord.com/channels/989870439897653248/989870440585494530/1051181193644736663", () => {
@@ -155,10 +160,10 @@ test("failing two -- discord: https://discord.com/channels/989870439897653248/98
     `INSERT INTO __crsql_siteid VALUES(X'dc215665ff164407b63f423a469b7cb9');`,
     `CREATE TABLE IF NOT EXISTS "todos" ("id" text primary key, "title" text, "text" text, "completed" boolean);`,
     `INSERT INTO todos VALUES('xc2yf7z5qb','123','132',0);`,
-    `CREATE TABLE IF NOT EXISTS "todos__crsql_clock" ("id","__crsql_col_name" NOT NULL,"__crsql_version" NOT NULL,"__crsql_site_id",PRIMARY KEY ("id", "__crsql_col_name")    );`,
+    `CREATE TABLE IF NOT EXISTS "todos__crsql_clock" ("id","__crsql_col_name" NOT NULL,"__crsql_col_version" NOT NULL, "__crsql_db_version" NOT NULL,"__crsql_site_id",PRIMARY KEY ("id", "__crsql_col_name")    );`,
 
     // This is the duplicate entry:
-    `INSERT INTO todos__crsql_clock VALUES('xc2yf7z5qb','title',1,X'af6a922841304d14a443ddbcd36469bc');`,
+    `INSERT INTO todos__crsql_clock VALUES('xc2yf7z5qb','title',1,1,X'af6a922841304d14a443ddbcd36469bc');`,
   ]);
 
   const change = [
@@ -170,10 +175,11 @@ test("failing two -- discord: https://discord.com/channels/989870439897653248/98
     "todos",
     "'123'",
     1,
+    1,
   ];
 
   db.exec(
-    `INSERT INTO crsql_changes ("cid", "pk", "site_id", "table", "val", "version") VALUES (?,?,?,?,?,?)`,
+    `INSERT INTO crsql_changes ("cid", "pk", "site_id", "table", "val", "col_version", "db_version") VALUES (?,?,?,?,?,?,?)`,
     change
   );
 });
@@ -188,7 +194,7 @@ test("using sync api as async GH #104", async () => {
       let maxVersion = 0n;
       // console.log("inserting changesets in tx", changesets);
       const stmt = await db.prepare(
-        'INSERT INTO crsql_changes ("table", "pk", "cid", "val", "version", "site_id") VALUES (?, ?, ?, ?, ?, ?)'
+        'INSERT INTO crsql_changes ("table", "pk", "cid", "val", "col_version", "db_version", "site_id") VALUES (?, ?, ?, ?, ?, ?, ?)'
       );
       // TODO: may want to chunk
       try {
@@ -197,7 +203,7 @@ test("using sync api as async GH #104", async () => {
         // that'd preclude resetting tho.
         for (const cs of changesets) {
           // console.log("changeset", [cs[2], cs[3]]);
-          const v = BigInt(cs[4]);
+          const v = BigInt(cs[5]);
           maxVersion = v > maxVersion ? v : maxVersion;
           // cannot use same statement in parallel
           await stmt.run(
@@ -205,8 +211,9 @@ test("using sync api as async GH #104", async () => {
             cs[1],
             cs[2],
             cs[3],
+            BigInt(cs[4]),
             v,
-            cs[5] // ? uuidParse(cs[5]) : 0
+            cs[6] // ? uuidParse(cs[5]) : 0
           );
         }
       } catch (e) {
@@ -252,7 +259,7 @@ test("using sync api as async GH #104", async () => {
   );
 
   const changes: Changeset[] = await dbSource.execA<Changeset>(
-    `SELECT "table", "pk", "cid", "val", "version", "site_id" FROM crsql_changes`
+    `SELECT "table", "pk", "cid", "val", "col_version", "db_version", "site_id" FROM crsql_changes`
   );
 
   const dbTarget = sqlite.open();

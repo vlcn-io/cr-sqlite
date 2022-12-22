@@ -1,8 +1,8 @@
 import { DBAsync, DB as DBSync } from "@vlcn.io/xplat-api";
-import wdbr, { PokeProtocol } from "@vlcn.io/replicator-wholedb";
+import wdbr, { PokeProtocol } from "@vlcn.io/sync-p2p";
 // @ts-ignore
-import { v4 as uuidv4, stringify as uuidStringify, parse as uuidParse } from "uuid";
-import { Changeset } from "@vlcn.io/replicator-wholedb";
+import { v4 as uuidv4, stringify as uuidStringify } from "uuid";
+import { Changeset } from "@vlcn.io/sync-p2p";
 
 type DB = DBAsync | DBSync;
 
@@ -258,7 +258,7 @@ export const tests = {
     // TODO: check when version exceeds max and gets flipped to a string -- must be stored as int.
     // pk got encoded as decimal? wtf?
     const changeset: readonly Changeset[] = [
-      ["foo", 1, "b", "'foobar'", 1, uuidv4()],
+      ["foo", 1, "b", "'foobar'", 1, 1, uuidv4()],
     ];
 
     await changesReceived!(changeSender, changeset);
@@ -300,7 +300,7 @@ export const tests = {
     // TODO: check when version exceeds max and gets flipped to a string -- must be stored as int.
     // pk got encoded as decimal? wtf?
     const changeset: readonly Changeset[] = [
-      ["foo", 1, "b", "'foobar'", 1, uuidv4()],
+      ["foo", 1, "b", "'foobar'", 1, 1, uuidv4()],
     ];
 
     await changesReceived!(changeSender, changeset);
@@ -328,15 +328,13 @@ export const tests = {
       const r = await wdbr.install(await createSimpleSchema(db), db, protocol);
 
       const changeset: readonly Changeset[] = [
-        ["foo", 1, "b", "'foobar'", 1, changeSender],
+        ["foo", 1, "b", "'foobar'", 1, 1, changeSender],
       ];
 
       await changesReceived!(changeSender, changeset);
 
-      const rows = (
-        await db.execA<any>(
-          "select site_id, version from __crsql_wdbreplicator_peers"
-        )
+      const rows = await db.execA<any>(
+        "select site_id, version from __crsql_wdbreplicator_peers"
       );
       const row = rows[0];
 
@@ -346,10 +344,8 @@ export const tests = {
       r.dispose();
       db.close();
     },
-  
-  "applied changes surface the right site id": async () => {
 
-  },
+  "applied changes surface the right site id": async () => {},
 
   // TODO: test recording of site_id blob in `changes` vtab
 

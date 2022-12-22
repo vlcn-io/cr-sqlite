@@ -1,5 +1,5 @@
 {
-  "name": "@vlcn.io/replicator-wholedb",
+  "name": "@vlcn.io/sync-p2p",
   "type": "module",
   "version": "0.4.1",
   "files": [
@@ -28,6 +28,7 @@
   "dependencies": {
     "@types/uuid": "^8.3.4",
     "@vlcn.io/xplat-api": "workspace:*",
+    "peerjs": "^1.4.7",
     "uuid": "^9.0.0"
   },
   "jest": {

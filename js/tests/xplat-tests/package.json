@@ -22,7 +22,7 @@
     "directory": "https://github.com/vlcn-io/cr-sqlite/tree/main/js/test/xplat-tests"
   },
   "dependencies": {
-    "@vlcn.io/replicator-wholedb": "workspace:*",
+    "@vlcn.io/sync-p2p": "workspace:*",
     "@vlcn.io/xplat-api": "workspace:*",
     "@vlcn.io/rx-tbl": "workspace:*",
     "uuid": "^9.0.0"

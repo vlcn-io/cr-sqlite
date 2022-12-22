@@ -1,5 +1,11 @@
 # @vlcn.io/examples-peer-server
 
+## 0.5.1
+
+### Patch Changes
+
+- rebuild all
+
 ## 0.5.0
 
 ### Minor Changes

@@ -1,5 +1,11 @@
 # @vlcn.io/client-server-common
 
+## 0.2.1
+
+### Patch Changes
+
+- rebuild all
+
 ## 0.2.0
 
 ### Minor Changes

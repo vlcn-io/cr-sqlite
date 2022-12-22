@@ -1,5 +1,13 @@
 # @vlcn.io/replicator-wholedb
 
+## 0.5.1
+
+### Patch Changes
+
+- rebuild all
+- Updated dependencies
+  - @vlcn.io/xplat-api@0.5.1
+
 ## 0.5.0
 
 ### Minor Changes

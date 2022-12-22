@@ -1,5 +1,15 @@
 # @vlcn.io/todomvc
 
+## 0.6.1
+
+### Patch Changes
+
+- rebuild all
+- Updated dependencies
+  - @vlcn.io/wa-crsqlite@0.6.1
+  - @vlcn.io/rx-tbl@0.5.1
+  - @vlcn.io/sync-client@0.5.1
+
 ## 0.6.0
 
 ### Minor Changes

@@ -1,5 +1,14 @@
 # @vlcn.io/browser-tests
 
+## 0.5.1
+
+### Patch Changes
+
+- rebuild all
+- Updated dependencies
+  - @vlcn.io/wa-crsqlite@0.6.1
+  - @vlcn.io/xplat-tests@0.5.1
+
 ## 0.5.0
 
 ### Minor Changes

@@ -18,6 +18,20 @@
 #include "consts.h"
 #include "util.h"
 
+/**
+ * Extracts a where expression from the provided column names and list of `quote
+ * concatenated` column values.
+ *
+ * quote concated column values can be untrusted input as we validate those
+ * values.
+ *
+ * TODO: a future improvement would be to encode changesets into something like
+ * flat buffers so we can extract out individual values and bind them to the SQL
+ * statement. The values are currently represented on the wire in a text
+ * encoding that is not suitable for direct binding but rather for direct
+ * inclusion into the SQL string. We thus have to ensure we validate the
+ * provided string.
+ */
 char *crsql_extractWhereList(crsql_ColumnInfo *zColumnInfos, int columnInfosLen,
                              const char *quoteConcatedVals) {
   char **zzParts = 0;
@@ -48,9 +62,10 @@ char *crsql_extractWhereList(crsql_ColumnInfo *zColumnInfos, int columnInfosLen,
   return ret;
 }
 
-// parts must already be properly quoted and escaped for inclusion in a SQL
-// statement
-char *crsql_quotedValuesAsList(char **parts, int numParts) {
+/**
+ * Should only be called by `quoteConcatedValuesAsList`
+ */
+static char *crsql_quotedValuesAsList(char **parts, int numParts) {
   int len = 0;
   for (int i = 0; i < numParts; ++i) {
     len += strlen(parts[i]);

@@ -154,6 +154,11 @@ static void dbVersionFunc(sqlite3_context *context, int argc,
  * Return the next version of the database for use in inserts/updates/deletes
  *
  * `select crsql_nextdbversion()`
+ *
+ * Nit: this should be same as `crsql_db_version`
+ * If you change this behavior you need to change trigger behaviors
+ * as each invocation to `nextVersion` should return the same version
+ * when in the same transaction.
  */
 static void nextDbVersionFunc(sqlite3_context *context, int argc,
                               sqlite3_value **argv) {
@@ -197,7 +202,8 @@ int crsql_createClockTable(sqlite3 *db, crsql_TableInfo *tableInfo,
       "CREATE TABLE IF NOT EXISTS \"%s__crsql_clock\" (\
       %s,\
       \"__crsql_col_name\" NOT NULL,\
-      \"__crsql_version\" NOT NULL,\
+      \"__crsql_col_version\" NOT NULL,\
+      \"__crsql_db_version\" NOT NULL,\
       \"__crsql_site_id\",\
       PRIMARY KEY (%s, \"__crsql_col_name\")\
     )",
@@ -211,8 +217,8 @@ int crsql_createClockTable(sqlite3 *db, crsql_TableInfo *tableInfo,
   }
 
   zSql = sqlite3_mprintf(
-      "CREATE INDEX IF NOT EXISTS \"%s__crsql_clock_v_idx\" ON "
-      "\"%s__crsql_clock\" (\"__crsql_version\")",
+      "CREATE INDEX IF NOT EXISTS \"%s__crsql_clock_dbv_idx\" ON "
+      "\"%s__crsql_clock\" (\"__crsql_db_version\")",
       tableInfo->tblName, tableInfo->tblName);
   sqlite3_exec(db, zSql, 0, 0, err);
   sqlite3_free(zSql);

@@ -32,13 +32,14 @@ char *crsql_changesQueryForTable(crsql_TableInfo *tableInfo, int idxNum) {
       '%s' as tbl,\
       %z as pks,\
       __crsql_col_name as cid,\
-      __crsql_version as vrsn,\
+      __crsql_col_version as col_vrsn,\
+      __crsql_db_version as db_vrsn,\
       __crsql_site_id as site_id\
     FROM \"%s__crsql_clock\"\
     WHERE\
       site_id IS %s ?\
     AND\
-      vrsn > ?",
+      db_vrsn > ?",
       tableInfo->tblName, crsql_quoteConcat(tableInfo->pks, tableInfo->pksLen),
       tableInfo->tblName, (idxNum & 8) == 8 ? "" : "NOT");
 
@@ -88,7 +89,8 @@ char *crsql_changesUnionQuery(crsql_TableInfo **tableInfos, int tableInfosLen,
 
   // compose the final query
   return sqlite3_mprintf(
-      "SELECT tbl, pks, cid, vrsn, site_id FROM (%z) ORDER BY vrsn, tbl ASC",
+      "SELECT tbl, pks, cid, col_vrsn, db_vrsn, site_id FROM (%z) ORDER BY "
+      "db_vrsn, tbl ASC",
       unionsStr);
   // %z frees unionsStr https://www.sqlite.org/printf.html#percentz
 }
@@ -123,8 +125,8 @@ char *crsql_rowPatchDataQuery(sqlite3 *db, crsql_TableInfo *tblInfo,
     return 0;
   }
   // TODO: should we `quote([])` so it fatals on missing columns?
-  // we'd need something other than `%w` to escape [ in order to prevent
-  // injection then.
+  // we'd need something other than `%w` to escape [
+  // %w assumes and escapes \"
   char *zSql = sqlite3_mprintf("SELECT quote(\"%w\") FROM \"%w\" WHERE %z",
                                colName, tblInfo->tblName, pkWhereList);
 

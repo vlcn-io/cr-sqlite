@@ -43,7 +43,8 @@ static int changesConnect(sqlite3 *db, void *pAux, int argc,
       // primary key as xUpdate requires a single column to be the primary key
       // if we use without rowid.
       "CREATE TABLE x([table] TEXT NOT NULL, [pk] TEXT NOT NULL, [cid] TEXT "
-      "NOT NULL, [val], [version] INTEGER NOT NULL, [site_id] BLOB)");
+      "NOT NULL, [val], [col_version] INTEGER NOT NULL, [db_version] INTEGER "
+      "NOT NULL, [site_id] BLOB)");
   if (rc != SQLITE_OK) {
     *pzErr = sqlite3_mprintf("Could not define the table");
     return rc;
@@ -107,7 +108,7 @@ static int changesCrsrFinalize(crsql_Changes_cursor *crsr) {
   rc += sqlite3_finalize(crsr->pRowStmt);
   crsr->pRowStmt = 0;
 
-  crsr->version = MIN_POSSIBLE_DB_VERSION;
+  crsr->dbVersion = MIN_POSSIBLE_DB_VERSION;
 
   return rc;
 }
@@ -143,7 +144,7 @@ static int changesClose(sqlite3_vtab_cursor *cur) {
  */
 static int changesRowid(sqlite3_vtab_cursor *cur, sqlite_int64 *pRowid) {
   crsql_Changes_cursor *pCur = (crsql_Changes_cursor *)cur;
-  *pRowid = pCur->version;
+  *pRowid = pCur->dbVersion;
   return SQLITE_OK;
 }
 
@@ -199,8 +200,8 @@ static int changesNext(sqlite3_vtab_cursor *cur) {
   const char *tbl = (const char *)sqlite3_column_text(pCur->pChangesStmt, TBL);
   const char *pks = (const char *)sqlite3_column_text(pCur->pChangesStmt, PKS);
   const char *cid = (const char *)sqlite3_column_text(pCur->pChangesStmt, CID);
-  sqlite3_int64 vrsn = sqlite3_column_int64(pCur->pChangesStmt, VRSN);
-  pCur->version = vrsn;
+  sqlite3_int64 dbVersion = sqlite3_column_int64(pCur->pChangesStmt, DB_VRSN);
+  pCur->dbVersion = dbVersion;
 
   crsql_TableInfo *tblInfo =
       crsql_findTableInfo(pCur->pTab->pExtData->zpTableInfos,
@@ -311,8 +312,12 @@ static int changesColumn(
                              sqlite3_column_value(pCur->pChangesStmt, CID));
       }
       break;
-    case CHANGES_SINCE_VTAB_VRSN:
-      sqlite3_result_int64(ctx, pCur->version);
+    case CHANGES_SINCE_VTAB_COL_VRSN:
+      sqlite3_result_value(ctx,
+                           sqlite3_column_value(pCur->pChangesStmt, COL_VRSN));
+      break;
+    case CHANGES_SINCE_VTAB_DB_VRSN:
+      sqlite3_result_int64(ctx, pCur->dbVersion);
       break;
     case CHANGES_SINCE_VTAB_SITE_ID:
       if (sqlite3_column_type(pCur->pChangesStmt, SITE_ID) == SQLITE_NULL) {
@@ -439,7 +444,7 @@ static int changesBestIndex(sqlite3_vtab *tab, sqlite3_index_info *pIdxInfo) {
     const struct sqlite3_index_constraint *pConstraint =
         &pIdxInfo->aConstraint[i];
     switch (pConstraint->iColumn) {
-      case CHANGES_SINCE_VTAB_VRSN:
+      case CHANGES_SINCE_VTAB_DB_VRSN:
         if (pConstraint->op != SQLITE_INDEX_CONSTRAINT_GT) {
           tab->zErrMsg = sqlite3_mprintf(
               "crsql_changes.version only supports the greater than "

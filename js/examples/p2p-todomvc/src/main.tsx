@@ -7,7 +7,7 @@ import App from "./App";
 import { Ctx } from "./hooks";
 import sqliteWasm from "@vlcn.io/wa-crsqlite";
 import tblrx from "@vlcn.io/rx-tbl";
-import wdbRtc from "@vlcn.io/network-webrtc";
+import wdbRtc from "@vlcn.io/sync-p2p/dist/WholeDbRtc";
 
 // @ts-ignore
 import wasmUrl from "@vlcn.io/wa-crsqlite/wa-sqlite-async.wasm?url";
@@ -15,7 +15,7 @@ import wasmUrl from "@vlcn.io/wa-crsqlite/wa-sqlite-async.wasm?url";
 async function main() {
   const sqlite = await sqliteWasm(() => wasmUrl);
 
-  const db = await sqlite.open("p2p-wdb-todomvc-6");
+  const db = await sqlite.open("p2p-wdb-todomvc-7");
   (window as any).db = db;
 
   await db.exec(

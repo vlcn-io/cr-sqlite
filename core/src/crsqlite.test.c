@@ -19,6 +19,7 @@ SQLITE_EXTENSION_INIT1
 #include <stdlib.h>
 #include <string.h>
 
+#include "changes-vtab-common.h"
 #include "consts.h"
 #include "tableinfo.h"
 #include "util.h"
@@ -54,18 +55,22 @@ static int syncLeftToRight(sqlite3 *db1, sqlite3 *db2, sqlite3_int64 since) {
   }
 
   char *zSql = sqlite3_mprintf(
-      "SELECT * FROM crsql_changes WHERE version > %lld AND site_id IS NOT ?",
+      "SELECT * FROM crsql_changes WHERE db_version > %lld AND site_id IS NOT "
+      "?",
       since);
   rc += sqlite3_prepare_v2(db1, zSql, -1, &pStmtRead, 0);
+  assert(rc == SQLITE_OK);
   sqlite3_free(zSql);
   rc += sqlite3_bind_value(pStmtRead, 1, sqlite3_column_value(pStmt, 0));
+  assert(rc == SQLITE_OK);
   rc += sqlite3_prepare_v2(
-      db2, "INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?)", -1,
+      db2, "INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?, ?)", -1,
       &pStmtWrite, 0);
   assert(rc == SQLITE_OK);
+  // printf("err: %s\n", err);
 
   while (sqlite3_step(pStmtRead) == SQLITE_ROW) {
-    for (int i = 0; i < 6; ++i) {
+    for (int i = 0; i < 7; ++i) {
       sqlite3_bind_value(pStmtWrite, i + 1, sqlite3_column_value(pStmtRead, i));
     }
     sqlite3_step(pStmtWrite);
@@ -249,7 +254,6 @@ static void teste2e() {
 
   rc += sqlite3_exec(db1, "insert into foo values (1, 2.0e2);", 0, 0, &err);
   rc += sqlite3_exec(db2, "insert into foo values (2, X'1232');", 0, 0, &err);
-
   assert(rc == SQLITE_OK);
 
   syncLeftToRight(db1, db2, 0);
@@ -364,10 +368,14 @@ static void testSelectChangesAfterChangingColumnName() {
   // Columns that no long exist post-alter should not
   // be retained for replication
   while ((rc = sqlite3_step(pStmt)) == SQLITE_ROW) {
-    assert(strcmp("foo", (const char *)sqlite3_column_text(pStmt, 0)) == 0);
-    assert(strcmp("2", (const char *)sqlite3_column_text(pStmt, 1)) == 0);
-    assert(strcmp("c", (const char *)sqlite3_column_text(pStmt, 2)) == 0);
-    assert(strcmp("3", (const char *)sqlite3_column_text(pStmt, 3)) == 0);
+    assert(strcmp("foo", (const char *)sqlite3_column_text(
+                             pStmt, CHANGES_SINCE_VTAB_TBL)) == 0);
+    assert(strcmp("2", (const char *)sqlite3_column_text(
+                           pStmt, CHANGES_SINCE_VTAB_PK)) == 0);
+    assert(strcmp("c", (const char *)sqlite3_column_text(
+                           pStmt, CHANGES_SINCE_VTAB_CID)) == 0);
+    assert(strcmp("3", (const char *)sqlite3_column_text(
+                           pStmt, CHANGES_SINCE_VTAB_CVAL)) == 0);
     ++numRows;
   }
   sqlite3_finalize(pStmt);
@@ -402,12 +410,12 @@ static void testInsertChangesWithUnkownColumnNames() {
   rc +=
       sqlite3_prepare_v2(db1, "SELECT * FROM crsql_changes", -1, &pStmtRead, 0);
   rc += sqlite3_prepare_v2(
-      db2, "INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?)", -1,
+      db2, "INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?, ?)", -1,
       &pStmtWrite, 0);
   assert(rc == SQLITE_OK);
 
   while (sqlite3_step(pStmtRead) == SQLITE_ROW) {
-    for (int i = 0; i < 6; ++i) {
+    for (int i = 0; i < 7; ++i) {
       sqlite3_bind_value(pStmtWrite, i + 1, sqlite3_column_value(pStmtRead, i));
     }
 
@@ -499,7 +507,7 @@ static void testLamportCondition() {
   sqlite3_prepare_v2(db1, "SELECT c FROM hoot WHERE b = 1", -1, &pStmt, 0);
   rc = sqlite3_step(pStmt);
   assert(rc == SQLITE_ROW);
-  assert(sqlite3_column_int(pStmt, 0) == 33);
+  assert(sqlite3_column_int64(pStmt, 0) == 33);
   sqlite3_finalize(pStmt);
 
   rc = crsql_close(db1);

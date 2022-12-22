@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import wdbRtc from "@vlcn.io/network-webrtc";
+import { wdbRtc } from "@vlcn.io/sync-p2p";
 import { DB } from "@vlcn.io/wa-crsqlite";
 import tblrx from "@vlcn.io/rx-tbl";
 

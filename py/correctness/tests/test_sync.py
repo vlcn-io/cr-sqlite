@@ -50,7 +50,7 @@ def delete_data(c):
 
 def get_changes_since(c, version, requestor):
   return c.execute(
-    "SELECT * FROM crsql_changes WHERE version > {v} AND site_id != {r}".format(v=version, r=requestor)
+    "SELECT * FROM crsql_changes WHERE db_version > {v} AND site_id != {r}".format(v=version, r=requestor)
   ).fetchall()
 
 def apply_patches():
@@ -61,24 +61,26 @@ def test_changes_since():
 
   rows = get_changes_since(dbs[0], 0, -1)
   siteid = dbs[0].execute("select crsql_siteid()").fetchone()[0]
-  expected = [("component", "1", "content", "'wootwoot'", 1, siteid),
-    ("component", "1", "slide_id", "1", 1, siteid),
-    ("component", "1", "type", "'text'", 1, siteid),
-    ("component", "2", "content", "'toottoot'", 1, siteid),
-    ("component", "2", "slide_id", "1", 1, siteid),
-    ("component", "2", "type", "'text'", 1, siteid),
-    ("component", "3", "content", "'footfoot'", 1, siteid),
-    ("component", "3", "slide_id", "1", 1, siteid),
-    ("component", "3", "type", "'text'", 1, siteid),
-    ("deck", "1", "owner_id", "1", 1, siteid),
-    ("deck", "1", "title", "'Preso'", 1, siteid),
-    ("slide", "1", "deck_id", "1", 1, siteid),
-    ("slide", "1", "order", "0", 1, siteid),
-    ("slide", "2", "deck_id", "1", 1, siteid),
-    ("slide", "2", "order", "1", 1, siteid),
-    ("slide", "3", "deck_id", "1", 1, siteid),
-    ("slide", "3", "order", "2", 1, siteid),
-    ("user", "1", "name", "'Javi'", 1, siteid)]
+  expected = [
+    ("component", "1", "content", "'wootwoot'", 1, 1, siteid),
+    ("component", "1", "slide_id", "1", 1, 1, siteid),
+    ("component", "1", "type", "'text'", 1, 1, siteid),
+    ("component", "2", "content", "'toottoot'", 1, 1, siteid),
+    ("component", "2", "slide_id", "1", 1, 1, siteid),
+    ("component", "2", "type", "'text'", 1, 1, siteid),
+    ("component", "3", "content", "'footfoot'", 1, 1, siteid),
+    ("component", "3", "slide_id", "1", 1, 1, siteid),
+    ("component", "3", "type", "'text'", 1, 1, siteid),
+    ("deck", "1", "owner_id", "1", 1, 1, siteid),
+    ("deck", "1", "title", "'Preso'", 1, 1, siteid),
+    ("slide", "1", "deck_id", "1", 1, 1, siteid),
+    ("slide", "1", "order", "0", 1, 1, siteid),
+    ("slide", "2", "deck_id", "1", 1, 1, siteid),
+    ("slide", "2", "order", "1", 1, 1, siteid),
+    ("slide", "3", "deck_id", "1", 1, 1, siteid),
+    ("slide", "3", "order", "2", 1, 1, siteid),
+    ("user", "1", "name", "'Javi'", 1, 1, siteid),
+]
 
   assert(rows == expected)
 
@@ -86,7 +88,7 @@ def test_changes_since():
 
   rows = get_changes_since(dbs[0], 1, -1)
 
-  assert(rows == [('deck', '1', 'title', "'Presto'", 2, siteid), ('user', '1', 'name', "'Maestro'", 2, siteid)]);
+  assert(rows == [("deck", "1", "title", "'Presto'", 2, 2, siteid), ("user", "1", "name", "'Maestro'", 2, 2, siteid)]);
 
 def test_delete():
   db = connect(":memory:")
@@ -98,7 +100,7 @@ def test_delete():
   rows = get_changes_since(db, 1, -1)
   siteid = db.execute("select crsql_siteid()").fetchone()[0]
   # Deletes are marked with a sentinel id
-  assert(rows == [('component', '1', '__crsql_del', None, 2, siteid)]);
+  assert(rows == [('component', '1', '__crsql_del', None, 1, 2, siteid)]);
 
   db.execute("DELETE FROM component")
   db.execute("DELETE FROM deck")
@@ -106,35 +108,36 @@ def test_delete():
   db.execute("COMMIT")
 
   rows = get_changes_since(db, 0, -1)
+  pprint.pprint(rows)
   # TODO: we should have the network layer collapse these events or do it ourselves.
   # given we have past events that we're missing data for, they're now marked off as deletes
   # TODO: should deletes not get a proper version? Would be better for ordering and chunking replications
   assert(rows == [
-    ("component", "1", "__crsql_del", None, 1, siteid),
-    ("component", "1", "__crsql_del", None, 1, siteid),
-    ("component", "1", "__crsql_del", None, 1, siteid),
-    ("component", "2", "__crsql_del", None, 1, siteid),
-    ("component", "2", "__crsql_del", None, 1, siteid),
-    ("component", "2", "__crsql_del", None, 1, siteid),
-    ("component", "3", "__crsql_del", None, 1, siteid),
-    ("component", "3", "__crsql_del", None, 1, siteid),
-    ("component", "3", "__crsql_del", None, 1, siteid),
-    ("deck", "1", "__crsql_del", None, 1, siteid),
-    ("deck", "1", "__crsql_del", None, 1, siteid),
-    ("slide", "1", "__crsql_del", None, 1, siteid),
-    ("slide", "1", "__crsql_del", None, 1, siteid),
-    ("slide", "2", "__crsql_del", None, 1, siteid),
-    ("slide", "2", "__crsql_del", None, 1, siteid),
-    ("slide", "3", "__crsql_del", None, 1, siteid),
-    ("slide", "3", "__crsql_del", None, 1, siteid),
-    ("user", "1", "name", "'Javi'", 1, siteid),
-    ("component", "1", "__crsql_del", None, 2, siteid),
-    ("component", "2", "__crsql_del", None, 3, siteid),
-    ("component", "3", "__crsql_del", None, 3, siteid),
-    ("deck", "1", "__crsql_del", None, 3, siteid),
-    ("slide", "1", "__crsql_del", None, 3, siteid),
-    ("slide", "2", "__crsql_del", None, 3, siteid),
-    ("slide", "3", "__crsql_del", None, 3, siteid)]);
+    ("component", "1", "__crsql_del", None, 1, 1, siteid),
+    ("component", "1", "__crsql_del", None, 1, 1, siteid),
+    ("component", "1", "__crsql_del", None, 1, 1, siteid),
+    ("component", "2", "__crsql_del", None, 1, 1, siteid),
+    ("component", "2", "__crsql_del", None, 1, 1, siteid),
+    ("component", "2", "__crsql_del", None, 1, 1, siteid),
+    ("component", "3", "__crsql_del", None, 1, 1, siteid),
+    ("component", "3", "__crsql_del", None, 1, 1, siteid),
+    ("component", "3", "__crsql_del", None, 1, 1, siteid),
+    ("deck", "1", "__crsql_del", None, 1, 1, siteid),
+    ("deck", "1", "__crsql_del", None, 1, 1, siteid),
+    ("slide", "1", "__crsql_del", None, 1, 1, siteid),
+    ("slide", "1", "__crsql_del", None, 1, 1, siteid),
+    ("slide", "2", "__crsql_del", None, 1, 1, siteid),
+    ("slide", "2", "__crsql_del", None, 1, 1, siteid),
+    ("slide", "3", "__crsql_del", None, 1, 1, siteid),
+    ("slide", "3", "__crsql_del", None, 1, 1, siteid),
+    ("user", "1", "name", "'Javi'", 1, 1, siteid),
+    ("component", "1", "__crsql_del", None, 1, 2, siteid),
+    ("component", "2", "__crsql_del", None, 1, 3, siteid),
+    ("component", "3", "__crsql_del", None, 1, 3, siteid),
+    ("deck", "1", "__crsql_del", None, 1, 3, siteid),
+    ("slide", "1", "__crsql_del", None, 1, 3, siteid),
+    ("slide", "2", "__crsql_del", None, 1, 3, siteid),
+    ("slide", "3", "__crsql_del", None, 1, 3, siteid)]);
 
   # test insert
 
@@ -151,9 +154,6 @@ def test_merge():
   dbs[0].execute("UPDATE deck SET title = 'a' WHERE id = 1")
   dbs[1].execute("UPDATE deck SET title = 'b' WHERE id = 1")
   dbs[2].execute("UPDATE deck SET title = 'c' WHERE id = 1")
-
-  
-
 
   for c in dbs:
     close(c)

@@ -15,7 +15,8 @@ export type Changeset = [
   QuoteConcatedPKs,
   CID,
   any, // val,
-  Version,
+  Version, // col version
+  Version, // db version
   SiteIdWire // site_id
 ];
 

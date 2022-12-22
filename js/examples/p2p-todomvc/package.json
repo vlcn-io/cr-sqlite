@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@vlcn.io/wa-crsqlite": "workspace:*",
-    "@vlcn.io/network-webrtc": "workspace:*",
+    "@vlcn.io/sync-p2p": "workspace:*",
     "@vlcn.io/rx-tbl": "workspace:*",
     "comlink": "^4.3.1",
     "nanoid": "^4.0.0",

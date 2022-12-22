@@ -134,7 +134,7 @@ test("creating a new db", async () => {
   // check that we can insert into the table that should exist
   db.__db_for_tests.exec('INSERT INTO "foo" VALUES (1, 2)');
   const changeset = db.pullChangeset(randomUUID(), [0, 0]);
-  expect(changeset).toEqual([["foo", "1", "b", "2", "1", dbid]]);
+  expect(changeset).toEqual([["foo", "1", "b", "2", "1", "1", dbid]]);
 });
 
 afterAll(() => {

@@ -13,7 +13,7 @@ import App from "./App";
 async function main() {
   const sqlite = await sqliteWasm(() => wasmUrl);
 
-  const db = await sqlite.open("wdb-todomvc-1");
+  const db = await sqlite.open("wdb-todomvc-2");
   (window as any).db = db;
 
   await db.exec(

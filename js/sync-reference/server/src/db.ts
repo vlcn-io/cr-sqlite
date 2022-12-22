@@ -48,24 +48,24 @@ class DB {
       this.#applySchema(create.schemaName);
     }
     this.#pullChangesetStmt = this.#db.prepare(
-      `SELECT "table", "pk", "cid", "val", "version", "site_id" FROM crsql_changes WHERE version > ? AND site_id != ?`
+      `SELECT "table", "pk", "cid", "val", "col_version", "db_version", "site_id" FROM crsql_changes WHERE db_version > ? AND site_id != ?`
     );
     this.#pullChangesetStmt.raw(true);
 
     const applyChangesStmt = this.#db.prepare(
-      `INSERT INTO crsql_changes ("table", "pk", "cid", "val", "version", "site_id") VALUES (?, ?, ?, ?, ?, ?)`
+      `INSERT INTO crsql_changes ("table", "pk", "cid", "val", "col_version", "db_version", "site_id") VALUES (?, ?, ?, ?, ?, ?, ?)`
     );
 
     this.#applyChangesTx = this.#db.transaction((changes: Changeset[]) => {
       for (const cs of changes) {
-        const v = BigInt(cs[4]);
         applyChangesStmt.run(
           cs[0],
           cs[1],
           cs[2],
           cs[3],
-          v,
-          cs[5] ? uuidParse(cs[5]) : null
+          BigInt(cs[4]),
+          BigInt(cs[5]),
+          cs[6] ? uuidParse(cs[6]) : null
         );
       }
     });
@@ -96,9 +96,11 @@ class DB {
       // we mask the site ids of clients via the server site id
       // 1. for privacy
       // 2. to prevent looping during proxying
-      c[5] = this.siteId;
+      // c[6] = this.siteId;
       // since BigInt doesn't serialize -- convert to string
       c[4] = c[4].toString();
+      c[5] = c[5].toString();
+      c[6] = uuidStringify(c[6]);
     });
     return changes;
   }

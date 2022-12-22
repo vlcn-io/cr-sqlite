@@ -5,7 +5,6 @@ import {
   stringify as uuidStringify,
   v4 as uuidv4,
 } from "uuid";
-import tblrx from "@vlcn.io/rx-tbl";
 import { TblRx } from "@vlcn.io/rx-tbl/src/tblrx";
 import logger from "./logger";
 
@@ -62,7 +61,6 @@ export class DB {
     // write them then notify safely
     await this.db.transaction(async () => {
       for (const cs of changes) {
-        const v = BigInt(cs[4]);
         // have to run serially given wasm build
         // isn't actually multithreaded
         // TODO: can we optimize by creating 1 giant
@@ -73,8 +71,9 @@ export class DB {
           cs[1],
           cs[2],
           cs[3],
-          v,
-          cs[5] ? uuidParse(cs[5]) : null
+          BigInt(cs[4]),
+          BigInt(cs[5]),
+          cs[6] ? uuidParse(cs[6]) : null
         );
       }
 
@@ -104,17 +103,17 @@ export class DB {
     logger.info("Pulling changes since ", seq);
     // pull changes since we last sent the server changes,
     // excluding what the server has sent us
-    const changes = await this.pullChangesetStmt.all(
-      BigInt(seq[0]),
-      uuidParse(siteId)
-    );
+    const changes = await this.pullChangesetStmt.all(BigInt(seq[0]));
     changes.forEach((c) => {
-      c[5] = uuidStringify(c[5] as any);
-      if (c[5] === this.origSiteId) {
-        c[5] = this.siteId;
+      c[6] = uuidStringify(c[6] as any);
+      if (c[6] === this.origSiteId) {
+        // do we really want to remap site id per session in client-server setup?
+        // it enables copy-pasting of db files around ... but that it?
+        c[6] = this.siteId;
       }
       // since BigInt doesn't serialize -- convert to string
       c[4] = c[4].toString();
+      c[5] = c[5].toString();
     });
     return changes;
   }
@@ -138,10 +137,10 @@ export default async function wrap(
   const [pullChangesetStmt, applyChangesetStmt, updatePeerTrackerStmt] =
     await Promise.all([
       db.prepare(
-        `SELECT "table", "pk", "cid", "val", "version", "site_id" FROM crsql_changes WHERE version > ? AND site_id != ?`
+        `SELECT "table", "pk", "cid", "val", "col_version", "db_version", "site_id" FROM crsql_changes WHERE db_version > ? AND site_id IS NULL`
       ),
       db.prepare(
-        `INSERT INTO crsql_changes ("table", "pk", "cid", "val", "version", "site_id") VALUES (?, ?, ?, ?, ?, ?)`
+        `INSERT INTO crsql_changes ("table", "pk", "cid", "val", "col_version", "db_version", "site_id") VALUES (?, ?, ?, ?, ?, ?, ?)`
       ),
       db.prepare(
         `INSERT OR REPLACE INTO "__crsql_peers" ("site_id", "event", "version", "seq") VALUES (?, ?, ?, ?)`

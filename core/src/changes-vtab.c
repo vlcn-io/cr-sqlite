@@ -395,14 +395,6 @@ static int changesFilter(sqlite3_vtab_cursor *pVtabCursor, int idxNum,
   }
   if (idxNum & 4) {
     siteIdType = sqlite3_value_type(argv[i]);
-    if (siteIdType != SQLITE_NULL && siteIdType != SQLITE_BLOB &&
-        siteIdType != SQLITE3_TEXT) {
-      pTabBase->zErrMsg =
-          sqlite3_mprintf("site_id must be a blob, null or text");
-      sqlite3_finalize(pStmt);
-      return SQLITE_ERROR;
-    }
-
     requestorSiteIdLen = sqlite3_value_bytes(argv[i]);
     if (requestorSiteIdLen != 0) {
       requestorSiteId = (const char *)sqlite3_value_blob(argv[i]);

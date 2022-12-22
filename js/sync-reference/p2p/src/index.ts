@@ -6,5 +6,4 @@ export {
   SiteIDWire,
   WholeDbReplicator,
 } from "./WholeDbReplicator.js";
-export { default as wdbRtc } from "./WholeDbRtc.js";
 export default api;

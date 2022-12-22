@@ -8,7 +8,7 @@ import WDB, {
 import { DB, DBAsync } from "@vlcn.io/xplat-api";
 import Peer, { DataConnection } from "peerjs";
 // @ts-ignore
-import { parse as uuidParse, stringify as uuidStringify } from "uuid";
+import { stringify as uuidStringify } from "uuid";
 
 type Msg = PokeMsg | ChangesMsg | RequestChangesMsg;
 /**

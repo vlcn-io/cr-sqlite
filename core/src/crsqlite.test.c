@@ -507,7 +507,8 @@ static void testLamportCondition() {
   sqlite3_prepare_v2(db1, "SELECT c FROM hoot WHERE b = 1", -1, &pStmt, 0);
   rc = sqlite3_step(pStmt);
   assert(rc == SQLITE_ROW);
-  assert(sqlite3_column_int(pStmt, 0) == 33);
+  printf("c: %lld\n", sqlite3_column_int64(pStmt, 0));
+  assert(sqlite3_column_int64(pStmt, 0) == 33);
   sqlite3_finalize(pStmt);
 
   rc = crsql_close(db1);

@@ -92,12 +92,10 @@ char *crsql_insertTriggerQuery(crsql_TableInfo *tableInfo, char *pkList,
         crsql_nextdbversion(),\
         NULL\
       WHERE crsql_internal_sync_bit() = 0 ON CONFLICT DO UPDATE SET\
-        __crsql_col_name = %Q,\
         __crsql_col_version = __crsql_col_version + 1,\
         __crsql_db_version = crsql_nextdbversion(),\
         __crsql_site_id = NULL;\n",
-        tableInfo->tblName, pkList, pkNewList, PKS_ONLY_CID_SENTINEL,
-        PKS_ONLY_CID_SENTINEL);
+        tableInfo->tblName, pkList, pkNewList, PKS_ONLY_CID_SENTINEL);
   }
   for (int i = 0; i < tableInfo->nonPksLen; ++i) {
     subTriggers[i] = sqlite3_mprintf(
@@ -114,12 +112,10 @@ char *crsql_insertTriggerQuery(crsql_TableInfo *tableInfo, char *pkList,
         crsql_nextdbversion(),\
         NULL\
       WHERE crsql_internal_sync_bit() = 0 ON CONFLICT DO UPDATE SET\
-        __crsql_col_name = %Q,\
         __crsql_col_version = __crsql_col_version + 1,\
         __crsql_db_version = crsql_nextdbversion(),\
         __crsql_site_id = NULL;\n",
-        tableInfo->tblName, pkList, pkNewList, tableInfo->nonPks[i].name,
-        tableInfo->nonPks[i].name);
+        tableInfo->tblName, pkList, pkNewList, tableInfo->nonPks[i].name);
   }
 
   joinedSubTriggers = crsql_join(subTriggers, tableInfo->nonPksLen);
@@ -173,7 +169,6 @@ int crsql_createUpdateTrigger(sqlite3 *db, crsql_TableInfo *tableInfo,
         __crsql_site_id\
       ) SELECT %s, %Q, 1, crsql_nextdbversion(), NULL WHERE crsql_internal_sync_bit() = 0 AND NEW.\"%w\" != OLD.\"%w\"\
       ON CONFLICT DO UPDATE SET\
-        __crsql_col_name = %Q,\
         __crsql_col_version = __crsql_col_version + 1,\
         __crsql_db_version = crsql_nextdbversion(),\
         __crsql_site_id = NULL;\n",
@@ -237,7 +232,6 @@ char *crsql_deleteTriggerQuery(crsql_TableInfo *tableInfo) {
         crsql_nextdbversion(),\
         NULL\
       WHERE crsql_internal_sync_bit() = 0 ON CONFLICT DO UPDATE SET\
-      __crsql_col_name = % Q,\
       __crsql_col_version = __crsql_col_version + 1,\
       __crsql_db_version = crsql_nextdbversion(),\
       __crsql_site_id = NULL;\

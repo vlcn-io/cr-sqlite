@@ -44,13 +44,15 @@ int main(int argc, char *argv[]) {
 
   SUITE("util") crsqlUtilTestSuite();
   SUITE("tblinfo") crsqlTableInfoTestSuite();
-  SUITE("crsql") crsqlTestSuite();
   SUITE("triggers") crsqlTriggersTestSuite();
   SUITE("vtab") crsqlChangesVtabTestSuite();
   SUITE("vtabread") crsqlChangesVtabReadTestSuite();
   SUITE("vtabwrite") crsqlChangesVtabWriteTestSuite();
   SUITE("vtabcommon") crsqlChangesVtabCommonTestSuite();
   SUITE("extdata") crsqlExtDataTestSuite();
+  // integration tests should come at the end given fixing unit tests will
+  // likely fix integration tests
+  SUITE("crsql") crsqlTestSuite();
 
   sqlite3_shutdown();
 }

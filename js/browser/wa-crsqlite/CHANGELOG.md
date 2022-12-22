@@ -1,5 +1,17 @@
 # @vlcn.io/wa-crsqlite
 
+## 0.6.0
+
+### Minor Changes
+
+- breaking change -- fix version recording problem that prevented convergence in p2p cases
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/wa-sqlite@0.13.0
+  - @vlcn.io/xplat-api@0.5.0
+
 ## 0.5.2
 
 ### Patch Changes

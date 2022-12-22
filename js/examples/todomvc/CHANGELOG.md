@@ -1,5 +1,18 @@
 # @vlcn.io/todomvc
 
+## 0.6.0
+
+### Minor Changes
+
+- breaking change -- fix version recording problem that prevented convergence in p2p cases
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/sync-client@0.5.0
+  - @vlcn.io/wa-crsqlite@0.6.0
+  - @vlcn.io/rx-tbl@0.5.0
+
 ## 0.5.3
 
 ### Patch Changes

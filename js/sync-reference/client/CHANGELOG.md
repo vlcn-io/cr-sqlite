@@ -1,5 +1,18 @@
 # @vlcn.io/sync-client
 
+## 0.5.0
+
+### Minor Changes
+
+- breaking change -- fix version recording problem that prevented convergence in p2p cases
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/client-server-common@0.2.0
+  - @vlcn.io/rx-tbl@0.5.0
+  - @vlcn.io/xplat-api@0.5.0
+
 ## 0.4.2
 
 ### Patch Changes

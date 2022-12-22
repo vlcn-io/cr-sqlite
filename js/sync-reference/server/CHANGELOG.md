@@ -1,5 +1,17 @@
 # @vlcn.io/sync-server
 
+## 0.5.0
+
+### Minor Changes
+
+- breaking change -- fix version recording problem that prevented convergence in p2p cases
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/crsqlite@0.6.0
+  - @vlcn.io/client-server-common@0.2.0
+
 ## 0.4.3
 
 ### Patch Changes

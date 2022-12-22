@@ -1,5 +1,17 @@
 # @vlcn.io/browser-tests
 
+## 0.5.0
+
+### Minor Changes
+
+- breaking change -- fix version recording problem that prevented convergence in p2p cases
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/xplat-tests@0.5.0
+  - @vlcn.io/wa-crsqlite@0.6.0
+
 ## 0.4.2
 
 ### Patch Changes

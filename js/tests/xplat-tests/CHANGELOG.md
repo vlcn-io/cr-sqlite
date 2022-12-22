@@ -1,5 +1,18 @@
 # @vlcn.io/xplat-tests
 
+## 0.5.0
+
+### Minor Changes
+
+- breaking change -- fix version recording problem that prevented convergence in p2p cases
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/sync-p2p@0.5.0
+  - @vlcn.io/rx-tbl@0.5.0
+  - @vlcn.io/xplat-api@0.5.0
+
 ## 0.4.1
 
 ### Patch Changes

@@ -84,24 +84,6 @@ function shuffle<T>(array: T[]) {
   return array;
 }
 
-test("randomized inserts, updates, deletes then sync", () => {
-  fc.assert(
-    fc.property(
-      fc.oneof(fc.constant("round-trip"), fc.constant("pairwise")),
-      fc.shuffledSubarray(["modify", "delete", "reinsert", "create"], {
-        minLength: 4,
-      }),
-      fc.array(fc.tuple(fc.integer(), fc.string(), fc.boolean()), {
-        maxLength: 20,
-      }),
-      fc.array(fc.tuple(fc.integer(), fc.string(), fc.boolean()), {
-        maxLength: 500,
-      }),
-      randomizedTestCase
-    )
-  );
-});
-
 let todoId = 0;
 const randomizedTestCase = (
   mergeType: string,
@@ -199,20 +181,56 @@ const randomizedTestCase = (
   dbs.forEach((db) => db.close());
 };
 
+test("randomized inserts, updates, deletes then sync", () => {
+  fc.assert(
+    fc.property(
+      fc.oneof(fc.constant("round-trip"), fc.constant("pairwise")).noShrink(),
+      fc
+        .shuffledSubarray(["modify", "delete", "reinsert", "create"], {
+          minLength: 4,
+        })
+        .noShrink(),
+      fc
+        .array(fc.tuple(fc.integer(), fc.string(), fc.boolean()), {
+          maxLength: 20,
+        })
+        .noShrink(),
+      fc
+        .array(fc.tuple(fc.integer(), fc.string(), fc.boolean()), {
+          maxLength: 500,
+        })
+        .noShrink(),
+      randomizedTestCase
+    )
+  );
+});
+
 test("exact failure case", () => {
   randomizedTestCase(
     "pairwise",
-    ["modify", "create", "reinsert", "delete"],
+    ["create", "delete", "modify", "reinsert"],
     [
-      [1397064544, "=", true],
-      [2133506061, "~xC", true],
+      [-1840559893, "`^{ia0", true],
+      [-583230762, "AiV", true],
+      [1074837721, "l@DP)5", false],
+      [-1288003013, "(~8^zZ", false],
+      [-2095337014, '`Y^FZh"<M', false],
+      [835897636, "zLz~FG", true],
+      [-1154335901, "", false],
+      [2049618411, ">h39]<kE#", false],
+      [-53407480, "'n", true],
     ],
     [
-      [-645603168, ";_hy&nEy", false],
-      [-276822938, "T8j", false],
-      [-750807371, "", false],
-      [-1466217660, "3 va`Q", false],
-      [-597538612, "P@!GEZM", true],
+      [1291390942, "}3PO!allis", true],
+      [-2147483644, "51rG%\\{M", false],
+      [17, "", false],
+      [-2147483627, "t", true],
+      [-1098916073, "s-fLx\\-qE", true],
+      [-20, "${bt<u_h", false],
+      [-743568551, "Sz3.O", false],
+      [-2147483622, "6", false],
+      [1844712160, "ywa#`puz2", false],
+      [-21, "CJ", true],
     ]
   );
 });

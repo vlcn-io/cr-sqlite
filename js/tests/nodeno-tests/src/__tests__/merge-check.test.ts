@@ -1,13 +1,8 @@
-import { test, expect, beforeAll, afterAll } from "vitest";
+import { test, expect } from "vitest";
 import crsqlite, { DB } from "@vlcn.io/crsqlite-allinone";
 
 import fc, { integer } from "fast-check";
 import { nanoid } from "nanoid";
-
-let dbA: DB;
-let dbB: DB;
-let dbC: DB;
-let dbs: [DB, DB, DB];
 
 const table = "todo";
 
@@ -59,41 +54,6 @@ const sync = (left: DB, right: DB) => {
       stmt.finalize();
     }
   });
-};
-
-const syncAndAssertAll = (mergeType: "round-trip" | "pairwise") => {
-  if (mergeType === "round-trip") {
-    sync(dbA, dbB);
-    sync(dbB, dbC);
-    sync(dbC, dbB);
-    sync(dbB, dbA);
-  } else {
-    sync(dbA, dbB);
-    sync(dbA, dbC);
-    sync(dbB, dbC);
-    sync(dbB, dbA);
-    sync(dbC, dbB);
-    sync(dbC, dbA);
-  }
-
-  assertAll();
-};
-
-const assertAll = () => {
-  const [aTodos, bTodos, cTodos] = dbs.map((db) =>
-    all(db, [`SELECT * FROM "${table}" ORDER BY id DESC`, []])
-  );
-
-  try {
-    expect(aTodos).toEqual(bTodos);
-    expect(bTodos).toEqual(cTodos);
-  } catch (e) {
-    console.log("ASS ALL");
-    console.log(aTodos);
-    console.log(bTodos);
-    console.log(cTodos);
-    throw e;
-  }
 };
 
 function run(db: DB, q: [string, any[]]) {
@@ -149,11 +109,53 @@ const randomizedTestCase = (
   newCreates: [number, string, boolean][],
   todos: [number, string, boolean][]
 ) => {
+  let dbA: DB;
+  let dbB: DB;
+  let dbC: DB;
+  let dbs: [DB, DB, DB];
+
   dbs = [dbA, dbB, dbC] = [setupDb(), setupDb(), setupDb()];
+
   todos.forEach((todo) => {
     const insert = createInsert(++todoId, todo[0], todo[1], todo[2]);
     dbs.forEach((d) => run(d, insert));
   });
+
+  // TODO: add a `centralize` / `hub-spoke` merge type
+  const syncAndAssertAll = (mergeType: "round-trip" | "pairwise") => {
+    if (mergeType === "round-trip") {
+      sync(dbA, dbB);
+      sync(dbB, dbC);
+      sync(dbC, dbB);
+      sync(dbB, dbA);
+    } else {
+      sync(dbA, dbB);
+      sync(dbA, dbC);
+      sync(dbB, dbC);
+      sync(dbB, dbA);
+      sync(dbC, dbB);
+      sync(dbC, dbA);
+    }
+
+    assertAll();
+  };
+
+  const assertAll = () => {
+    const [aTodos, bTodos, cTodos] = dbs.map((db) =>
+      all(db, [`SELECT * FROM "${table}" ORDER BY id DESC`, []])
+    );
+
+    try {
+      expect(aTodos).toEqual(bTodos);
+      expect(bTodos).toEqual(cTodos);
+    } catch (e) {
+      console.log("ASS ALL");
+      console.log(aTodos);
+      console.log(bTodos);
+      console.log(cTodos);
+      throw e;
+    }
+  };
 
   syncAndAssertAll(mergeType as any);
 
@@ -197,11 +199,20 @@ const randomizedTestCase = (
   dbs.forEach((db) => db.close());
 };
 
-// test("exact failure case", () => {
-//   randomizedTestCase(
-//     "pairwise",
-//     ["modify", "reinsert", "delete", "create"],
-//     [],
-//     []
-//   );
-// });
+test("exact failure case", () => {
+  randomizedTestCase(
+    "pairwise",
+    ["modify", "create", "reinsert", "delete"],
+    [
+      [1397064544, "=", true],
+      [2133506061, "~xC", true],
+    ],
+    [
+      [-645603168, ";_hy&nEy", false],
+      [-276822938, "T8j", false],
+      [-750807371, "", false],
+      [-1466217660, "3 va`Q", false],
+      [-597538612, "P@!GEZM", true],
+    ]
+  );
+});

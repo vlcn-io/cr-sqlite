@@ -4,12 +4,10 @@ import * as SQLite from "@vlcn.io/wa-sqlite";
 import { IDBBatchAtomicVFS } from "@vlcn.io/wa-sqlite/src/examples/IDBBatchAtomicVFS.js";
 import { DBAsync, StmtAsync, UpdateType } from "@vlcn.io/xplat-api";
 import { SQLITE_UTF8 } from "@vlcn.io/wa-sqlite";
+import PromiseQueue from "./promiseQueue.js";
 
 let api: SQLite3 | null = null;
 type SQLiteAPI = ReturnType<typeof SQLite.Factory>;
-
-let queue: Promise<any> = Promise.resolve();
-let txQueue: Promise<any> = Promise.resolve();
 
 const isDebug = (globalThis as any).__vlcn_wa_crsqlite_dbg;
 function log(...data: any[]) {
@@ -30,6 +28,7 @@ function log(...data: any[]) {
  * string gets from cache.
  * undefined has no impact on cache and does not check cache.
  */
+const queue = new PromiseQueue();
 function serialize(
   cache: Map<string, Promise<any>>,
   key: string | null | undefined,
@@ -50,15 +49,7 @@ function serialize(
   }
 
   log("Enqueueing query ", key);
-  const res = queue.then(
-    () => {
-      return cb();
-    },
-    (e) => {
-      console.error(e);
-    }
-  );
-  queue = res;
+  const res = queue.add(cb);
 
   if (key) {
     cache.set(key, res);
@@ -68,16 +59,9 @@ function serialize(
   return res;
 }
 
+const txQueue = new PromiseQueue();
 function serializeTx(cb: () => any) {
-  const res = txQueue.then(
-    () => cb(),
-    (e) => {
-      console.error(e);
-    }
-  );
-  txQueue = res;
-
-  return res;
+  return txQueue.add(cb);
 }
 
 export class SQLite3 {

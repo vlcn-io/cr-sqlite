@@ -1,6 +1,6 @@
 {
   "name": "@vlcn.io/tsbuild-all",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "main": "lib/index.js",
   "type": "module",
   "devDependencies": {

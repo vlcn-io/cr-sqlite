@@ -1,5 +1,14 @@
 # @vlcn.io/crsqlite-allinone
 
+## 0.5.2
+
+### Patch Changes
+
+- cid winner selection bugfix
+- Updated dependencies
+  - @vlcn.io/crsqlite@0.6.2
+  - @vlcn.io/xplat-api@0.5.2
+
 ## 0.5.1
 
 ### Patch Changes

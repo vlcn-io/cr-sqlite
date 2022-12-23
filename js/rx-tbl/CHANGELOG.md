@@ -1,5 +1,13 @@
 # @vlcn.io/rx-tbl
 
+## 0.5.2
+
+### Patch Changes
+
+- cid winner selection bugfix
+- Updated dependencies
+  - @vlcn.io/xplat-api@0.5.2
+
 ## 0.5.1
 
 ### Patch Changes

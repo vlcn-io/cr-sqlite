@@ -1,5 +1,11 @@
 # @vlcn.io/client-server-common
 
+## 0.2.2
+
+### Patch Changes
+
+- cid winner selection bugfix
+
 ## 0.2.1
 
 ### Patch Changes

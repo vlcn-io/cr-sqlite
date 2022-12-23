@@ -1,5 +1,11 @@
 # @vlcn.io/xplat-api
 
+## 0.5.2
+
+### Patch Changes
+
+- cid winner selection bugfix
+
 ## 0.5.1
 
 ### Patch Changes

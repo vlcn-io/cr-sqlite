@@ -1,5 +1,14 @@
 # @vlcn.io/sync-server
 
+## 0.5.2
+
+### Patch Changes
+
+- cid winner selection bugfix
+- Updated dependencies
+  - @vlcn.io/crsqlite@0.6.2
+  - @vlcn.io/client-server-common@0.2.2
+
 ## 0.5.1
 
 ### Patch Changes

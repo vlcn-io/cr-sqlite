@@ -1,5 +1,11 @@
 # @vlcn.io/crsqlite
 
+## 0.6.2
+
+### Patch Changes
+
+- cid winner selection bugfix
+
 ## 0.6.1
 
 ### Patch Changes

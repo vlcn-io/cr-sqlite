@@ -1,5 +1,14 @@
 # @vlcn.io/wa-crsqlite
 
+## 0.6.2
+
+### Patch Changes
+
+- cid winner selection bugfix
+- Updated dependencies
+  - @vlcn.io/wa-sqlite@0.13.2
+  - @vlcn.io/xplat-api@0.5.2
+
 ## 0.6.1
 
 ### Patch Changes

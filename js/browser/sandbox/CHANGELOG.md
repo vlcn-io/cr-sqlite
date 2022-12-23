@@ -1,5 +1,13 @@
 # @vlcn.io/crsqlite-sandbox
 
+## 0.5.2
+
+### Patch Changes
+
+- cid winner selection bugfix
+- Updated dependencies
+  - @vlcn.io/wa-crsqlite@0.6.2
+
 ## 0.5.1
 
 ### Patch Changes

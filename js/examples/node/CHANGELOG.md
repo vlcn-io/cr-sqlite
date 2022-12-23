@@ -1,5 +1,13 @@
 # @vlcn.io/node-tests
 
+## 0.5.2
+
+### Patch Changes
+
+- cid winner selection bugfix
+- Updated dependencies
+  - @vlcn.io/crsqlite@0.6.2
+
 ## 0.5.1
 
 ### Patch Changes

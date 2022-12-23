@@ -1,7 +1,7 @@
 {
   "name": "@vlcn.io/xplat-api",
   "type": "module",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "files": [
     "dist"
   ],

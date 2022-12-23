@@ -1,5 +1,15 @@
 # @vlcn.io/xplat-tests
 
+## 0.5.2
+
+### Patch Changes
+
+- cid winner selection bugfix
+- Updated dependencies
+  - @vlcn.io/rx-tbl@0.5.2
+  - @vlcn.io/sync-p2p@0.5.2
+  - @vlcn.io/xplat-api@0.5.2
+
 ## 0.5.1
 
 ### Patch Changes

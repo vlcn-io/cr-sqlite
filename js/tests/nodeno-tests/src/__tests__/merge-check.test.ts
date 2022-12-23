@@ -23,6 +23,7 @@ export default function createInsert(
   text: string,
   completed: boolean
 ): [string, [string | number, string | number, string, number]] {
+  // TODO: add `order` to schema and test floats/doubles
   return [
     `INSERT INTO todo ("id", "listId", "text", "completed") VALUES (?, ?, ?, ?)`,
     [id, listId, text, completed ? 1 : 0],

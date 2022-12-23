@@ -44,6 +44,8 @@ int crsql_didCidWin(sqlite3 *db, const unsigned char *localSiteId,
 
   if (rc != SQLITE_OK) {
     sqlite3_finalize(pStmt);
+    *errmsg =
+        sqlite3_mprintf("Failed preparing stmt to select local column version");
     return -1;
   }
 
@@ -57,6 +59,8 @@ int crsql_didCidWin(sqlite3 *db, const unsigned char *localSiteId,
 
   if (rc != SQLITE_ROW) {
     sqlite3_finalize(pStmt);
+    *errmsg = sqlite3_mprintf(
+        "Bad return code (%d) when selecting local column version", rc);
     return -1;
   }
 
@@ -97,7 +101,7 @@ int crsql_didCidWin(sqlite3 *db, const unsigned char *localSiteId,
   int ret = strcmp(sanitizedInsertVal, localValue);
   sqlite3_finalize(pStmt);
 
-  return ret;
+  return ret > 0;
 }
 
 #define DELETED_LOCALLY -1

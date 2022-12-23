@@ -174,9 +174,24 @@ const char *crsql_safelyAdvanceThroughString(const char *in, int len) {
  * If no delim is found, returns a pointer to the end of the string.
  */
 const char *crsql_consumeDigitsToDelimiter(const char *in, char delim) {
+  int decimalCount = 0;
+  int exponentCount = 0;
   while (*in != '\0' && *in != delim) {
     if (*in < 48 || *in > 57) {
-      if (*in != '.' && *in != 'e') {
+      if (*in == '.') {
+        if (decimalCount > 0) {
+          return 0;
+        }
+        ++decimalCount;
+      } else if (*in == 'e') {
+        if (exponentCount > 0) {
+          return 0;
+        }
+        ++exponentCount;
+        if (*(in + 1) == '-' || *(in + 1) == '+') {
+          in += 1;
+        }
+      } else {
         return 0;
       }
     }
@@ -210,6 +225,9 @@ char **crsql_splitQuoteConcat(const char *in, int partsLen) {
       // scan till consumed NULL
       curr = crsql_safelyAdvanceThroughString(curr, 4);
     } else {
+      if (*curr == '-') {
+        curr += 1;
+      }
       // scan till we hit the delimiter, consuming the digits
       curr = crsql_consumeDigitsToDelimiter(curr, QC_DELIM);
     }

@@ -89,8 +89,6 @@ test("new tasks can be enqueued after an exception has been handled", async () =
   expect(numRun).toBe(4);
 });
 
-// this test works but it creates an unhandled rejection (as it should) which fails vite.
-// need to figure out how to expect or handle the unhandled rejection
 test("new tasks are all still serialized after an exception", async () => {
   // this is a bit hard to test.
   // we have to run all the things without awaiting so we can submit things

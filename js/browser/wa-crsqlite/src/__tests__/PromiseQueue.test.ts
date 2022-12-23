@@ -1,4 +1,4 @@
-import PromiseQueue from "../promiseQueue.js";
+import PromiseQueue from "../PromiseQueue.js";
 import { test, expect } from "vitest";
 
 const makeDelay = () => new Promise((resolve) => setTimeout(resolve, 0));

@@ -105,19 +105,46 @@ const randomizedTestCase = (
   });
 
   // TODO: add a `centralize` / `hub-spoke` merge type
-  const syncAndAssertAll = (mergeType: "round-trip" | "pairwise") => {
+  const syncAndAssertAll = (
+    mergeType: "round-trip" | "pairwise" | "centralized" | "loop"
+  ) => {
     if (mergeType === "round-trip") {
+      // sync state to peers like a messenger going up then back down
+      // a road.
+      // up: a -> b -> c
+      // back: c -> b -> a
       sync(dbA, dbB);
       sync(dbB, dbC);
       sync(dbC, dbB);
       sync(dbB, dbA);
-    } else {
+    } else if (mergeType === "pairwise") {
+      // sync state where each peer talks to every other peer.
+      // a <-> b
+      // a <-> c
+      // b <-> c
       sync(dbA, dbB);
       sync(dbA, dbC);
       sync(dbB, dbC);
       sync(dbB, dbA);
       sync(dbC, dbB);
       sync(dbC, dbA);
+    } else if (mergeType === "centralized") {
+      // B is our central server
+      // All changes go from A & C to B
+      // then from B back out to A & C
+      sync(dbA, dbB);
+      sync(dbC, dbB);
+      sync(dbB, dbA);
+      sync(dbB, dbC);
+    } else if (mergeType == "loop") {
+      // sync around peers in a circle
+      // a -> b -> c -> a -> b
+      sync(dbA, dbB);
+      sync(dbB, dbC);
+      sync(dbC, dbA);
+      sync(dbA, dbB);
+    } else {
+      throw new Error("unexpected merge type: " + mergeType);
     }
 
     assertAll();
@@ -185,7 +212,14 @@ const randomizedTestCase = (
 test("randomized inserts, updates, deletes then sync", () => {
   fc.assert(
     fc.property(
-      fc.oneof(fc.constant("round-trip"), fc.constant("pairwise")).noShrink(),
+      fc
+        .oneof(
+          fc.constant("round-trip"),
+          fc.constant("pairwise"),
+          fc.constant("centralized"),
+          fc.constant("loop")
+        )
+        .noShrink(),
       fc
         .shuffledSubarray(["modify", "delete", "reinsert", "create"], {
           minLength: 4,
@@ -203,35 +237,5 @@ test("randomized inserts, updates, deletes then sync", () => {
         .noShrink(),
       randomizedTestCase
     )
-  );
-});
-
-test("exact failure case", () => {
-  randomizedTestCase(
-    "pairwise",
-    ["create", "delete", "modify", "reinsert"],
-    [
-      [-1840559893, "`^{ia0", true],
-      [-583230762, "AiV", true],
-      [1074837721, "l@DP)5", false],
-      [-1288003013, "(~8^zZ", false],
-      [-2095337014, '`Y^FZh"<M', false],
-      [835897636, "zLz~FG", true],
-      [-1154335901, "", false],
-      [2049618411, ">h39]<kE#", false],
-      [-53407480, "'n", true],
-    ],
-    [
-      [1291390942, "}3PO!allis", true],
-      [-2147483644, "51rG%\\{M", false],
-      [17, "", false],
-      [-2147483627, "t", true],
-      [-1098916073, "s-fLx\\-qE", true],
-      [-20, "${bt<u_h", false],
-      [-743568551, "Sz3.O", false],
-      [-2147483622, "6", false],
-      [1844712160, "ywa#`puz2", false],
-      [-21, "CJ", true],
-    ]
   );
 });

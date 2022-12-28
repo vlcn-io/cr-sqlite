@@ -2,6 +2,15 @@ import * as Y from "yjs";
 import { DB, DBAsync, Stmt, StmtAsync } from "@vlcn.io/xplat-api";
 import { TblRx } from "@vlcn.io/rx-tbl";
 
+function bytesToHex(bytes: Uint8Array) {
+  for (var hex = [], i = 0; i < bytes.length; i++) {
+    var current = bytes[i] < 0 ? bytes[i] + 256 : bytes[i];
+    hex.push((current >>> 4).toString(16));
+    hex.push((current & 0xf).toString(16));
+  }
+  return hex.join("");
+}
+
 export interface YjsProvider {}
 
 /**
@@ -20,12 +29,14 @@ class Provider implements YjsProvider {
   #insertChangesStmt: Stmt | StmtAsync | null = null;
   #lastDbVersion = 0;
   #docid;
+  #myApplications;
 
   constructor(db: DB | DBAsync, rx: TblRx, docid: string, doc: Y.Doc) {
     this.#doc = doc;
     this.#db = db;
     this.#rx = rx;
     this.#docid = docid;
+    this.#myApplications = new Set<string>();
     // TODO: listen for DB updates to merge back into the doc
     // via tblrx.
     // What rows do we want?
@@ -38,12 +49,11 @@ class Provider implements YjsProvider {
         `SELECT ydoc.yval FROM
         ydoc__crsql_clock as clock JOIN ydoc ON
           ydoc.doc_id = clock.doc_id AND
-          ydoc.ysite = clock.ysite AND
-          ydoc.yclock = clock.yclock
+          ydoc.yhash = clock.yhash
       WHERE clock.doc_id = ? AND clock.db_version > ?`
       ),
       this.#db.prepare(
-        `INSERT INTO ydoc (doc_id, yclock, ysite, yval) VALUES (?, ?, ?, ?) RETURNING yclock, ysite`
+        `INSERT INTO ydoc (doc_id, yhash, yval) VALUES (?, ?, ?) RETURNING yhash`
       ),
     ]);
 
@@ -65,22 +75,59 @@ class Provider implements YjsProvider {
     this.#insertChangesStmt?.finalize();
   };
 
-  #docUpdated = (update: Uint8Array, origin: any) => {
+  #docUpdated = async (update: Uint8Array, origin: any) => {
     if (origin == this) {
       // change from our db, no need to save it to the db
       return;
     }
-    const decoded = Y.decodeUpdate(update);
+    const yhash = await crypto.subtle.digest("SHA-1", update);
+    this.#myApplications.add(bytesToHex(new Uint8Array(yhash)));
+    this.#capApplicationsSize();
+
+    // note: if someone did a transaction we'll receive many updates to apply at once in
+    // our observer.
+    //
+    // i.e., `decodeUpdate` will return many structs.
+    // if we want to use crsqlite replication this is a no go since we don't want
+    // to resync out own changes and grow.
+    // our change -> B
+    //    \--> C ---/\
+    // C would pass back on to B since we can't identity these structs.
+    // Well... you could with a hash. Given these updates should be immutable and append-only
+    // What if someone compacts their doc?
+    // Then you're screwed in all ways.
+    //
+    // we don't do the `yjs` level db thing bc it reconstructs the entire doc
+    // in order to compute diffs: https://github.com/yjs/y-leveldb/blob/74daedd13b6cc781ebf5c5158c4dd5e245926ba4/src/y-leveldb.js#L454
+    // rather than just computing diffs via a `SELECT * FROM doc WHERE clock > clockx AND doc_id = doc_idx`
 
     // write to db
     // note: we may want to debounce this? no need to save immediately after every keystroke.
   };
+
+  #capApplicationsSize() {
+    if (this.#myApplications.size >= 200) {
+      let i = 0;
+      for (const entry of this.#myApplications) {
+        if (i < 100) {
+          this.#myApplications.delete(entry);
+        } else {
+          break;
+        }
+      }
+    }
+  }
 
   #dbChanged = async (tbls: Set<string>) => {
     if (!tbls.has("ydoc")) {
       // nothing to do
       return;
     }
+
+    // wait.. we need rowids returned so those can be passed and we can ignore dbchanged
+    // if the changed things are rows we just wrote.
+    //
+    // other option is to create a `sync only` rx that only calls back on sync events.
 
     // TODO: wait tho.. we don't want to respond to our own changes
     // we only want to respond to sync event changes
@@ -105,10 +152,9 @@ export default async function create(
   await db.execMany([
     `CREATE TABLE IF NOT EXISTS ydoc (
       doc_id TEXT,
-      yclock INTEGER,
-      ysite INTEGER,
+      yhash BLOB,
       yval BLOB,
-      primary key (doc_id, ysite, yclock)
+      primary key (doc_id, yhash)
     ) STRICT;`,
     `SELECT crsql_as_crr('ydoc');`,
   ]);

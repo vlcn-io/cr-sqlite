@@ -118,13 +118,13 @@ int crsql_writeTrackedPeers(crsql_SeenPeers *a, crsql_ExtData *pExtData) {
 
     rc = sqlite3_step(pExtData->pTrackPeersStmt);
     if (rc != SQLITE_DONE) {
-      sqlite3_reset(pExtData->pTrackPeersStmt);
       sqlite3_clear_bindings(pExtData->pTrackPeersStmt);
+      sqlite3_reset(pExtData->pTrackPeersStmt);
       return rc;
     }
 
-    rc = sqlite3_reset(pExtData->pTrackPeersStmt);
-    rc += sqlite3_clear_bindings(pExtData->pTrackPeersStmt);
+    rc = sqlite3_clear_bindings(pExtData->pTrackPeersStmt);
+    rc += sqlite3_reset(pExtData->pTrackPeersStmt);
     if (rc != SQLITE_OK) {
       return rc;
     }

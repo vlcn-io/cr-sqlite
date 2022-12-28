@@ -177,6 +177,7 @@ static void assertWrittenPeers(sqlite3 *db, crsql_SeenPeer *zExpected,
 
   assert(compared == zExpectedLen);
   assert(rc == SQLITE_DONE);
+  sqlite3_finalize(pStmt);
 }
 
 static void testWriteTrackedPeersToDb() {
@@ -231,6 +232,7 @@ static void testWriteTrackedPeersToDb() {
   printf("\t\e[0;32mSuccess\e[0m\n");
   sqlite3_free(expected);
   crsql_freeSeenPeers(seen);
+  crsql_freeExtData(extData);
   crsql_close(db);
 }
 

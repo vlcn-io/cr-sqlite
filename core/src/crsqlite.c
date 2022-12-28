@@ -77,9 +77,9 @@ static int createSiteIdAndSiteIdTable(sqlite3 *db, unsigned char *ret) {
 static int initPeerTrackingTable(sqlite3 *db, char **pzErrMsg) {
   return sqlite3_exec(
       db,
-      "CREATE TABLE IF NOT EXISTS __crsql_tracked_peer (\"site_id\" "
+      "CREATE TABLE IF NOT EXISTS crsql_tracked_peers (\"site_id\" "
       "BLOB NOT NULL, \"clock\" INTEGER NOT NULL, \"tag\" INTEGER, PRIMARY "
-      "KEY (\"site_id\", \"clock\")) STRICT;",
+      "KEY (\"site_id\", \"tag\")) STRICT;",
       0, 0, pzErrMsg);
 }
 

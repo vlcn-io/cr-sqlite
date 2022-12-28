@@ -110,7 +110,7 @@ int crsql_writeTrackedPeers(crsql_SeenPeers *a, crsql_ExtData *pExtData) {
                            a->peers[i].siteIdLen, SQLITE_STATIC);
     rc += sqlite3_bind_int64(pExtData->pTrackPeersStmt, 2, a->peers[i].clock);
     // TODO: allow tagging of peer tracking for partial db replication
-    rc += sqlite3_bind_null(pExtData->pTrackPeersStmt, 3);
+    rc += sqlite3_bind_int(pExtData->pTrackPeersStmt, 3, 0);
     if (rc != SQLITE_OK) {
       sqlite3_clear_bindings(pExtData->pTrackPeersStmt);
       return rc;

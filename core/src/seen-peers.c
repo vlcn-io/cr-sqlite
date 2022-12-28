@@ -20,6 +20,7 @@
 
 #include "seen-peers.h"
 
+#include "ext-data.h"
 #include "util.h"
 
 // The assumption for using an array over a hash table is that we generally
@@ -65,7 +66,7 @@ int crsql_trackSeenPeer(crsql_SeenPeers *a, const unsigned char *siteId,
   // assign the peer
   // the provided `siteId` param is controlled by `sqlite` as an argument to the
   // insert statement and may not exist on transaction commit if many insert
-  // calls are made against or vtab
+  // calls are made against the vtab
   a->peers[a->len].siteId = sqlite3_malloc(siteIdLen * sizeof(char));
   memcpy(a->peers[a->len].siteId, siteId, siteIdLen);
 
@@ -91,4 +92,38 @@ void crsql_freeSeenPeers(crsql_SeenPeers *a) {
   }
   sqlite3_free(a->peers);
   sqlite3_free(a);
+}
+
+int crsql_writeTrackedPeers(crsql_SeenPeers *a, crsql_ExtData *pExtData) {
+  int rc = SQLITE_OK;
+  if (a->len == 0) {
+    return rc;
+  }
+
+  for (int i = 0; i < a->len; ++i) {
+    rc = sqlite3_bind_blob(pExtData->pTrackPeersStmt, 1, a->peers[i].siteId,
+                           a->peers[i].siteIdLen, SQLITE_STATIC);
+    rc += sqlite3_bind_int64(pExtData->pTrackPeersStmt, 2, a->peers[i].clock);
+    // TODO: allow tagging of peer tracking for partial db replication
+    rc += sqlite3_bind_null(pExtData->pTrackPeersStmt, 3);
+    if (rc != SQLITE_OK) {
+      sqlite3_clear_bindings(pExtData->pTrackPeersStmt);
+      return rc;
+    }
+
+    rc = sqlite3_step(pExtData->pTrackPeersStmt);
+    if (rc != SQLITE_DONE) {
+      sqlite3_reset(pExtData->pTrackPeersStmt);
+      sqlite3_clear_bindings(pExtData->pTrackPeersStmt);
+      return rc;
+    }
+
+    rc = sqlite3_reset(pExtData->pTrackPeersStmt);
+    rc += sqlite3_clear_bindings(pExtData->pTrackPeersStmt);
+    if (rc != SQLITE_OK) {
+      return rc;
+    }
+  }
+
+  return rc;
 }

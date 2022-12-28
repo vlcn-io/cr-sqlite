@@ -74,6 +74,15 @@ static int createSiteIdAndSiteIdTable(sqlite3 *db, unsigned char *ret) {
   return SQLITE_OK;
 }
 
+static int initPeerTrackingTable(sqlite3 *db, char **pzErrMsg) {
+  return sqlite3_exec(
+      db,
+      "CREATE TABLE IF NOT EXISTS __crsql_tracked_peer (\"site_id\" "
+      "BLOB NOT NULL, \"clock\" INTEGER NOT NULL, \"tag\" INTEGER, PRIMARY "
+      "KEY (\"site_id\", \"clock\")) STRICT;",
+      0, 0, pzErrMsg);
+}
+
 /**
  * Loads the siteId into memory. If a site id
  * cannot be found for the given database one is created
@@ -448,6 +457,11 @@ __declspec(dllexport)
   int rc = SQLITE_OK;
 
   SQLITE_EXTENSION_INIT2(pApi);
+
+  rc = initPeerTrackingTable(db, pzErrMsg);
+  if (rc != SQLITE_OK) {
+    return rc;
+  }
 
   crsql_ExtData *pExtData = crsql_newExtData(db);
   if (pExtData == 0) {

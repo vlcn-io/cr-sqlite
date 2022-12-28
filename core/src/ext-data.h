@@ -24,6 +24,7 @@ struct crsql_ExtData {
   // perma statement -- used to check db schema version
   sqlite3_stmt *pPragmaSchemaVersionStmt;
   sqlite3_stmt *pPragmaDataVersionStmt;
+  sqlite3_stmt *pTrackPeersStmt;
   int pragmaDataVersion;
 
   // this gets set at the start of each transaction on the first invocation

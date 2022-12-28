@@ -14,7 +14,6 @@
 #include "triggers.h"
 
 #include <stdint.h>
-#include <stdio.h>
 #include <string.h>
 
 #include "consts.h"

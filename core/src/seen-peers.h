@@ -18,6 +18,7 @@
 SQLITE_EXTENSION_INIT3
 
 #include <ctype.h>
+#include <stdlib.h>
 
 typedef struct crsql_SeenPeer crsql_SeenPeer;
 struct crsql_SeenPeer {

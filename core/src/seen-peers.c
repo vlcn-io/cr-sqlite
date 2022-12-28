@@ -17,8 +17,9 @@
  * This is so, at the end of the transaction, we can update clock tables
  * for the user making network layers simpler to build.
  */
-
 #include "seen-peers.h"
+
+#include <string.h>
 
 #include "ext-data.h"
 #include "util.h"
@@ -27,13 +28,23 @@
 // don't merge changes from many peers all at the same time.
 // TODO: maybe don't even allow this to be growable so we can exit
 // when we hit a use case with too many peers? Hard cap to 25?
-#define INITIAL_SIZE 5
-
 crsql_SeenPeers *crsql_newSeenPeers() {
-  crsql_SeenPeers *ret = sqlite3_malloc(sizeof ret);
-  ret->peers = malloc(INITIAL_SIZE * sizeof(crsql_SeenPeer));
+  crsql_SeenPeers *ret = sqlite3_malloc(sizeof *ret);
+  ret->peers =
+      sqlite3_malloc(CRSQL_SEEN_PEERS_INITIAL_SIZE * sizeof(crsql_SeenPeer));
+  memset(ret->peers, 0, CRSQL_SEEN_PEERS_INITIAL_SIZE * sizeof(crsql_SeenPeer));
   ret->len = 0;
-  ret->capacity = INITIAL_SIZE;
+  ret->capacity = CRSQL_SEEN_PEERS_INITIAL_SIZE;
+
+  return ret;
+}
+
+void crsql_freeSeenPeers(crsql_SeenPeers *a) {
+  for (int i = 0; i < a->len; ++i) {
+    sqlite3_free(a->peers[i].siteId);
+  }
+  sqlite3_free(a->peers);
+  sqlite3_free(a);
 }
 
 int crsql_trackSeenPeer(crsql_SeenPeers *a, const unsigned char *siteId,
@@ -55,12 +66,12 @@ int crsql_trackSeenPeer(crsql_SeenPeers *a, const unsigned char *siteId,
   // increase our size.
   if (a->len == a->capacity) {
     a->capacity *= 2;
-    crsql_SeenPeer *temp =
-        realloc(a->peers, a->capacity * sizeof(crsql_SeenPeer));
-    if (temp == 0) {
+    crsql_SeenPeer *reallocedPeers =
+        sqlite3_realloc(a->peers, a->capacity * sizeof(crsql_SeenPeer));
+    if (reallocedPeers == 0) {
       return SQLITE_ERROR;
     }
-    a->peers = temp;
+    a->peers = reallocedPeers;
   }
 
   // assign the peer
@@ -69,6 +80,8 @@ int crsql_trackSeenPeer(crsql_SeenPeers *a, const unsigned char *siteId,
   // calls are made against the vtab
   a->peers[a->len].siteId = sqlite3_malloc(siteIdLen * sizeof(char));
   memcpy(a->peers[a->len].siteId, siteId, siteIdLen);
+  a->peers[a->len].clock = clock;
+  a->peers[a->len].siteIdLen = siteIdLen;
 
   a->len += 1;
   return SQLITE_OK;
@@ -84,14 +97,6 @@ void crsql_resetSeenPeersForTx(crsql_SeenPeers *a) {
   // this structure is allocated once per connection and each connection must
   // only be used from one thread.
   a->len = 0;
-}
-
-void crsql_freeSeenPeers(crsql_SeenPeers *a) {
-  for (int i = 0; i < a->len; ++i) {
-    sqlite3_free(a->peers[i].siteId);
-  }
-  sqlite3_free(a->peers);
-  sqlite3_free(a);
 }
 
 int crsql_writeTrackedPeers(crsql_SeenPeers *a, crsql_ExtData *pExtData) {

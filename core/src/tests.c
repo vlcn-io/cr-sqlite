@@ -35,6 +35,7 @@ void crsqlChangesVtabTestSuite();
 void crsqlChangesVtabWriteTestSuite();
 void crsqlChangesVtabCommonTestSuite();
 void crsqlExtDataTestSuite();
+void crsqlSeenPeersTestSuite();
 
 int main(int argc, char *argv[]) {
   char *suite = "all";
@@ -50,6 +51,7 @@ int main(int argc, char *argv[]) {
   SUITE("vtabwrite") crsqlChangesVtabWriteTestSuite();
   SUITE("vtabcommon") crsqlChangesVtabCommonTestSuite();
   SUITE("extdata") crsqlExtDataTestSuite();
+  SUITE("seenpeers") crsqlSeenPeersTestSuite();
   // integration tests should come at the end given fixing unit tests will
   // likely fix integration tests
   SUITE("crsql") crsqlTestSuite();

@@ -537,11 +537,25 @@ static int changesApply(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
     return rc;
   } else {
     pVTab->zErrMsg = sqlite3_mprintf(
-        "Only INSERT statements are allowed against the crsql changes "
-        "table.");
+        "Only INSERT and SELECT statements are allowed against the crsql "
+        "changes table.");
     return SQLITE_MISUSE;
   }
 
+  return SQLITE_OK;
+}
+
+static int changesInsertBegin(sqlite3_vtab *pVTab) { return SQLITE_OK; }
+
+static int changesInsertCommit(sqlite3_vtab *pVTab) {
+  // record the maxes of each clock we saw
+  // from each peer in `pVTab`
+  //
+  // on commit, write those clocks into our peer tables iff they are greater
+  // than what we already have.
+  //
+  // ideally state vectors would be encoded and sent over the wire too..
+  // and we could update based on state vector instead
   return SQLITE_OK;
 }
 
@@ -560,9 +574,9 @@ sqlite3_module crsql_changesModule = {
     /* xColumn     */ changesColumn,
     /* xRowid      */ changesRowid,
     /* xUpdate     */ changesApply,
-    /* xBegin      */ 0,
+    /* xBegin      */ changesInsertBegin,
     /* xSync       */ 0,
-    /* xCommit     */ 0,
+    /* xCommit     */ changesInsertCommit,
     /* xRollback   */ 0,
     /* xFindMethod */ 0,
     /* xRename     */ 0,

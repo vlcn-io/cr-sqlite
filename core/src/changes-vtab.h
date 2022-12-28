@@ -67,23 +67,6 @@ extern sqlite3_module crsql_changesModule;
  * queries.
  *
  * Per-query data is kept on crsql_Changes_cursor
- *
- * All table infos are fetched on vtab initialization.
- * This creates the constraint that if the schema of a crr
- * is modified after the virtual table definition is loaded
- * then it will not be or not be correctly processed
- * by the virtual table.
- *
- * Given that, if a schema modification is made
- * to a crr table then the changes vtab needs to be
- * reloaded.
- *
- * The simpleset way to accomplish this is to close
- * and re-open the connection responsible for syncing.
- *
- * In practice this should generally not be a problem
- * as application startup would establish, migrated, etc. the schemas
- * after which a sync process would connect.
  */
 typedef struct crsql_Changes_vtab crsql_Changes_vtab;
 struct crsql_Changes_vtab {
@@ -129,7 +112,5 @@ struct crsql_Changes_cursor {
 
   sqlite3_int64 dbVersion;
 };
-
-int crsql_changesTxCommit(sqlite3_vtab *pVTab);
 
 #endif

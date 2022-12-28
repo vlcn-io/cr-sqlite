@@ -49,7 +49,8 @@ ext_files=src/crsqlite.c \
 	src/changes-vtab-common.c \
 	src/changes-vtab-write.c \
 	src/ext-data.c \
-	src/get-table.c
+	src/get-table.c \
+	src/seen-peers.c
 ext_headers=src/crsqlite.h \
 	src/util.h \
 	src/tableinfo.h \
@@ -58,7 +59,8 @@ ext_headers=src/crsqlite.h \
 	src/changes-vtab-read.h \
 	src/changes-vtab-common.h \
 	src/changes-vtab-write.h \
-	src/ext-data.h
+	src/ext-data.h \
+	src/seen-peers.h
 
 $(prefix):
 	mkdir -p $(prefix)
@@ -77,6 +79,8 @@ sqlite3: $(TARGET_SQLITE3)
 vanilla: $(TARGET_SQLITE3_VANILLA)
 test: $(TARGET_TEST)
 	$(prefix)/test
+# ASAN_OPTIONS=detect_leaks=1
+asan: CC=clang
 asan: $(TARGET_TEST_ASAN)
 	$(TARGET_TEST_ASAN)
 correctness: $(TARGET_LOADABLE) FORCE
@@ -140,7 +144,7 @@ $(TARGET_TEST): $(prefix) $(TARGET_SQLITE3_EXTRA_C) src/tests.c src/*.test.c $(e
 	-o $@
 
 $(TARGET_TEST_ASAN): $(prefix) $(TARGET_SQLITE3_EXTRA_C) src/tests.c src/*.test.c $(ext_files)
-	clang -fsanitize=address -O1 -fno-omit-frame-pointer -Wall \
+	$(CC) -fsanitize=address -g -fno-omit-frame-pointer -Wall \
 	$(DEFINE_SQLITE_PATH) \
 	-DSQLITE_THREADSAFE=0 -DSQLITE_OMIT_LOAD_EXTENSION=1 \
 	-DSQLITE_ENABLE_NORMALIZE \

@@ -19,5 +19,6 @@ packages:
   - "js/examples/peer-server"
   - "js/examples/node"
   - "js/examples/basic-browser-setup"
+  - "js/yjs-provider"
   - "core"
   - "py/correctness"

@@ -1,0 +1,28 @@
+{
+  "name": "@vlcn.io/yjs-provider",
+  "type": "module",
+  "version": "0.0.1",
+  "files": [
+    "dist"
+  ],
+  "main": "dist/yjs-provider.js",
+  "sideEffects": false,
+  "devDependencies": {
+    "typescript": "^4.8.4"
+  },
+  "scripts": {
+    "build": "tsc --build",
+    "watch": "tsc --build --watch",
+    "deep-clean": "rm -rf ./dist || true && rm tsconfig.tsbuildinfo || true"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:vlcn-io/cr-sqlite.git",
+    "directory": "https://github.com/vlcn-io/cr-sqlite/tree/main/js/yjs-provider"
+  },
+  "dependencies": {
+    "@vlcn.io/xplat-api": "workspace:*",
+    "@vlcn.io/rx-tbl": "workspace:*",
+    "yjs": "^13.5.43"
+  }
+}

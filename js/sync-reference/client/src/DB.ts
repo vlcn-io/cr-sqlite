@@ -5,7 +5,7 @@ import {
   stringify as uuidStringify,
   v4 as uuidv4,
 } from "uuid";
-import { TblRx } from "@vlcn.io/rx-tbl/src/tblrx";
+import { TblRx } from "@vlcn.io/rx-tbl";
 import logger from "./logger";
 
 export const SEND = 0 as const;

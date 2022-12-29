@@ -11,19 +11,20 @@
  * limitations under the License.
  */
 
-#include "crsqlite.h"
 #include "tableinfo.h"
-#include "util.h"
-#include "consts.h"
+
 #include <assert.h>
-#include <string.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-int crsql_close(sqlite3* db);
+#include "consts.h"
+#include "crsqlite.h"
+#include "util.h"
 
-static void testGetTableInfo()
-{
+int crsql_close(sqlite3 *db);
+
+static void testGetTableInfo() {
   printf("GetTableInfo\n");
   sqlite3 *db = 0;
   crsql_TableInfo *tableInfo = 0;
@@ -35,8 +36,7 @@ static void testGetTableInfo()
   sqlite3_exec(db, "CREATE TABLE foo (a INT NOT NULL, b)", 0, 0, 0);
   rc = crsql_getTableInfo(db, "foo", &tableInfo, &errMsg);
 
-  if (rc != SQLITE_OK)
-  {
+  if (rc != SQLITE_OK) {
     printf("err: %s %d\n", errMsg, rc);
     sqlite3_free(errMsg);
     crsql_close(db);
@@ -65,8 +65,7 @@ static void testGetTableInfo()
 
   sqlite3_exec(db, "CREATE TABLE bar (a PRIMARY KEY, b)", 0, 0, 0);
   rc = crsql_getTableInfo(db, "bar", &tableInfo, &errMsg);
-  if (rc != SQLITE_OK)
-  {
+  if (rc != SQLITE_OK) {
     printf("err: %s %d\n", errMsg, rc);
     sqlite3_free(errMsg);
     crsql_close(db);
@@ -90,8 +89,7 @@ static void testGetTableInfo()
   crsql_close(db);
 }
 
-static void testAsIdentifierList()
-{
+static void testAsIdentifierList() {
   printf("AsIdentifierList\n");
 
   crsql_ColumnInfo tc1[3];
@@ -123,7 +121,7 @@ static void testAsIdentifierList()
 static void testFindTableInfo() {
   printf("FindTableInfo\n");
 
-  crsql_TableInfo** tblInfos = sqlite3_malloc(3 * sizeof(crsql_TableInfo*));
+  crsql_TableInfo **tblInfos = sqlite3_malloc(3 * sizeof(crsql_TableInfo *));
   for (int i = 0; i < 3; ++i) {
     tblInfos[i] = sqlite3_malloc(sizeof(crsql_TableInfo));
     tblInfos[i]->tblName = sqlite3_mprintf("%d", i);
@@ -155,7 +153,9 @@ static void testQuoteConcat() {
 
   char *quoted = crsql_quoteConcat(colInfos, len);
 
-  assert(strcmp(quoted, "quote(\"a\") || '|' || quote(\"b\") || '|' || quote(\"c\")") == 0);
+  assert(strcmp(quoted,
+                "quote(\"a\") || '|' || quote(\"b\") || '|' || quote(\"c\")") ==
+         0);
 
   sqlite3_free(quoted);
   printf("\t\e[0;32mSuccess\e[0m\n");
@@ -180,7 +180,7 @@ static void testIsTableCompatible() {
   assert(rc == SQLITE_OK);
   rc = crsql_isTableCompatible(db, "bar", &errmsg);
   assert(rc == 1);
-  
+
   // pks + other non unique indices
   rc = sqlite3_exec(db, "CREATE TABLE baz (a primary key, b)", 0, 0, 0);
   rc += sqlite3_exec(db, "CREATE INDEX bar_i ON baz (b)", 0, 0, 0);
@@ -197,32 +197,52 @@ static void testIsTableCompatible() {
   sqlite3_free(errmsg);
 
   // not null and no dflt
-  rc = sqlite3_exec(db, "CREATE TABLE buzz (a primary key, b NOT NULL)", 0, 0, 0);
+  rc = sqlite3_exec(db, "CREATE TABLE buzz (a primary key, b NOT NULL)", 0, 0,
+                    0);
   assert(rc == SQLITE_OK);
   rc = crsql_isTableCompatible(db, "buzz", &errmsg);
   assert(rc == 0);
   sqlite3_free(errmsg);
 
   // not null and dflt
-  rc = sqlite3_exec(db, "CREATE TABLE boom (a primary key, b NOT NULL DEFAULT 1)", 0, 0, 0);
+  rc = sqlite3_exec(
+      db, "CREATE TABLE boom (a primary key, b NOT NULL DEFAULT 1)", 0, 0, 0);
   assert(rc == SQLITE_OK);
   rc = crsql_isTableCompatible(db, "boom", &errmsg);
   assert(rc == 1);
 
   // fk constraint
-  rc = sqlite3_exec(db, "CREATE TABLE zoom (a primary key, b, FOREIGN KEY(b) REFERENCES foo(a))", 0, 0, 0);
+  rc = sqlite3_exec(
+      db,
+      "CREATE TABLE zoom (a primary key, b, FOREIGN KEY(b) REFERENCES foo(a))",
+      0, 0, 0);
   assert(rc == SQLITE_OK);
   rc = crsql_isTableCompatible(db, "zoom", &errmsg);
   assert(rc == 0);
   sqlite3_free(errmsg);
 
   // strict mode should be ok
-  rc = sqlite3_exec(db, "CREATE TABLE atable (\"id\" TEXT PRIMARY KEY) STRICT", 0, 0, 0);
+  rc = sqlite3_exec(db, "CREATE TABLE atable (\"id\" TEXT PRIMARY KEY) STRICT",
+                    0, 0, 0);
   assert(rc == SQLITE_OK);
   rc = crsql_isTableCompatible(db, "atable", &errmsg);
   assert(rc == 1);
 
-  rc = sqlite3_exec(db, "CREATE TABLE atable2 (\"id\" TEXT PRIMARY KEY, x TEXT) STRICT;", 0, 0, 0);
+  rc = sqlite3_exec(
+      db, "CREATE TABLE atable2 (\"id\" TEXT PRIMARY KEY, x TEXT) STRICT;", 0,
+      0, 0);
+  assert(rc == SQLITE_OK);
+  rc = crsql_isTableCompatible(db, "atable2", &errmsg);
+  assert(rc == 1);
+
+  rc = sqlite3_exec(db,
+                    "CREATE TABLE ydoc (\
+      doc_id TEXT,\
+      yhash BLOB,\
+      yval BLOB,\
+      primary key (doc_id, yhash)\
+    ) STRICT;",
+                    0, 0, 0);
   assert(rc == SQLITE_OK);
   rc = crsql_isTableCompatible(db, "atable2", &errmsg);
   assert(rc == 1);

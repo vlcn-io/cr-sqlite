@@ -40,9 +40,11 @@ async function main() {
   // create doc
   const ydoc = new Y.Doc();
   // connect to crsqlite
-  const crsqlYjs = CrsqlYjs(db, rx, "test-doc", ydoc);
+  const crsqlYjs = await CrsqlYjs(db, rx, "test-doc", ydoc);
   // then interact with it
   const ytext = ydoc.getText("text");
+  ytext.insert(0, "Hello ");
+  console.log(ytext.toJSON());
 
   window.onbeforeunload = () => {
     return crsqlYjs.dispose().then(() => db.close());

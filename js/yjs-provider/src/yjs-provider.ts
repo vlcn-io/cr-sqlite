@@ -30,6 +30,7 @@ class Provider implements YjsProvider {
   #lastDbVersion = 0;
   #docid;
   #myApplications;
+  #inflightInsert: Promise<any> | null = null;
 
   constructor(db: DB | DBAsync, rx: TblRx, docid: string, doc: Y.Doc) {
     this.#doc = doc;
@@ -46,11 +47,11 @@ class Provider implements YjsProvider {
   async init() {
     [this.#getChangesStmt, this.#insertChangesStmt] = await Promise.all([
       this.#db.prepare(
-        `SELECT ydoc.yval FROM
+        `SELECT ydoc.yval, clock.__crsql_db_version FROM
         ydoc__crsql_clock as clock JOIN ydoc ON
           ydoc.doc_id = clock.doc_id AND
           ydoc.yhash = clock.yhash
-      WHERE clock.doc_id = ? AND clock.db_version > ?`
+      WHERE clock.doc_id = ? AND clock.__crsql_db_version > ?`
       ),
       this.#db.prepare(
         `INSERT INTO ydoc (doc_id, yhash, yval) VALUES (?, ?, ?) RETURNING rowid`
@@ -88,11 +89,16 @@ class Provider implements YjsProvider {
 
     // write to db
     // note: we may want to debounce this? no need to save immediately after every keystroke.
+    // need to promise quuee this...
+    // so we can serialize the db notification after the insert.
+    // db notification cb makes it back to us before the insert
+    // returns :(
     const insertRet = await this.#insertChangesStmt!.get(
       this.#docid,
-      yhash,
+      new Uint8Array(yhash),
       update
     );
+    console.log("insert ret");
     console.log(insertRet);
 
     this.#myApplications.add(BigInt(insertRet[0]));
@@ -116,7 +122,7 @@ class Provider implements YjsProvider {
     if (!this.#shouldProcessDbChange(notif)) {
       return;
     }
-    console.log("processing db change");
+    console.log("processing db change from ", this.#lastDbVersion);
 
     const changes = await this.#getChangesStmt!.all(
       this.#docid,
@@ -124,7 +130,19 @@ class Provider implements YjsProvider {
     );
 
     // merge the changes into the doc
-    Y.transact(this.#doc, () => {}, this, false);
+    Y.transact(
+      this.#doc,
+      () => {
+        for (const c of changes) {
+          Y.applyUpdate(this.#doc, c[0]);
+          if (c[1] > this.#lastDbVersion) {
+            this.#lastDbVersion = c[1];
+          }
+        }
+      },
+      this,
+      false
+    );
   };
 
   #shouldProcessDbChange(notif: Map<string, Set<bigint>> | null) {
@@ -143,6 +161,7 @@ class Provider implements YjsProvider {
     // did the update contain a rid that we did not write?
     for (const rid of rowids) {
       if (!this.#myApplications.has(rid)) {
+        console.log("did not have ", rid);
         return true;
       }
     }

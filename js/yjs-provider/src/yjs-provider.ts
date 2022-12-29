@@ -2,7 +2,9 @@ import * as Y from "yjs";
 import { DB, DBAsync, Stmt, StmtAsync, PromiseQueue } from "@vlcn.io/xplat-api";
 import { TblRx } from "@vlcn.io/rx-tbl";
 
-export interface YjsProvider {}
+export interface YjsProvider {
+  dispose(): void;
+}
 
 /**
  * This is a super simple `yjs` provider for `crsqlite` to test the waters.

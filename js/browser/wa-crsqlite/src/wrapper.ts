@@ -111,6 +111,7 @@ function computeCacheKey(
 }
 
 export class DB implements DBAsync {
+  _tag = "async" as const;
   private cache = new Map<string, Promise<any>>();
   #updateHooks: Set<
     (type: UpdateType, dbName: string, tblName: string, rowid: bigint) => void
@@ -311,6 +312,7 @@ export class DB implements DBAsync {
 
 // TOOD: maybe lazily reset only if stmt is reused
 class Stmt implements StmtAsync {
+  _tag = "async" as const;
   // TOOD: use mode in get/all!
   private mode: "a" | "o" = "o";
   constructor(

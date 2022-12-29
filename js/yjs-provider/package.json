@@ -21,8 +21,10 @@
     "directory": "https://github.com/vlcn-io/cr-sqlite/tree/main/js/yjs-provider"
   },
   "dependencies": {
-    "@vlcn.io/xplat-api": "workspace:*",
+    "@types/throttle-debounce": "^5.0.0",
     "@vlcn.io/rx-tbl": "workspace:*",
+    "@vlcn.io/xplat-api": "workspace:*",
+    "throttle-debounce": "^5.0.0",
     "yjs": "^13.5.43"
   }
 }

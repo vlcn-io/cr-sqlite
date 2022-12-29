@@ -6,6 +6,7 @@ export const updateType = {
 };
 
 export interface DB {
+  _tag: "sync";
   execMany(sql: string[]): void;
   exec(sql: string, bind?: unknown[]): void;
   execO<T extends {}>(sql: string, bind?: unknown[]): T[];
@@ -27,6 +28,7 @@ export interface DB {
 }
 
 export type DBAsync = {
+  _tag: "async";
   execMany(sql: string[]): Promise<void>;
   exec(sql: string, bind?: unknown[]): Promise<void>;
   execO<T extends {}>(sql: string, bind?: unknown[]): Promise<T[]>;
@@ -48,6 +50,7 @@ export type DBAsync = {
 };
 
 export interface Stmt {
+  _tag: "sync";
   run(...bindArgs: any[]): void;
   get(...bindArgs: any[]): any;
   all(...bindArgs: any[]): any[];
@@ -58,6 +61,7 @@ export interface Stmt {
 }
 
 export interface StmtAsync {
+  _tag: "async";
   run(...bindArgs: any[]): Promise<void>;
   get(...bindArgs: any[]): Promise<any>;
   all(...bindArgs: any[]): Promise<any[]>;

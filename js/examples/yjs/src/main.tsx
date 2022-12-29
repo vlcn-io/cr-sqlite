@@ -27,10 +27,11 @@ async function main() {
   //   // the schema to apply to the db if it does not exist
   //   // TODO: validate that the opened db has the desired schema and version of that schema?
   //   create: {
-  //     schemaName: "todo-mvc",
+  //     schemaName: "yjs-example",
   //   },
   //   rx,
   // });
+
   const ctx: Ctx = {
     db,
     // sync,
@@ -41,13 +42,12 @@ async function main() {
   const ydoc = new Y.Doc();
   // connect to crsqlite
   const crsqlYjs = await CrsqlYjs(db, rx, "test-doc", ydoc);
-  // then interact with it
   const ytext = ydoc.getText("text");
-  ytext.insert(0, "Hello ");
   console.log(ytext.toJSON());
 
   window.onbeforeunload = () => {
-    return crsqlYjs.dispose().then(() => db.close());
+    crsqlYjs.dispose();
+    return db.close();
   };
   startApp(ctx);
 }
@@ -59,5 +59,3 @@ function startApp(ctx: Ctx) {
 }
 
 main();
-
-console.log("hello world!");

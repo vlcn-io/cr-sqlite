@@ -4,12 +4,11 @@ import { createRoot } from "react-dom/client";
 import sqliteWasm from "@vlcn.io/wa-crsqlite";
 import startSync from "@vlcn.io/sync-client";
 import tblrx from "@vlcn.io/rx-tbl";
-import * as Y from "yjs";
 import { Ctx } from "./ctx";
-import CrsqlYjs from "@vlcn.io/yjs-provider";
 
 // @ts-ignore
 import wasmUrl from "@vlcn.io/wa-crsqlite/wa-sqlite-async.wasm?url";
+import App from "./App";
 
 async function main() {
   const sqlite = await sqliteWasm(() => wasmUrl);
@@ -38,15 +37,7 @@ async function main() {
     rx,
   };
 
-  // create doc
-  const ydoc = new Y.Doc();
-  // connect to crsqlite
-  const crsqlYjs = await CrsqlYjs(db, rx, "test-doc", ydoc);
-  const ytext = ydoc.getText("text");
-  console.log(ytext.toJSON());
-
   window.onbeforeunload = () => {
-    crsqlYjs.dispose();
     return db.close();
   };
   startApp(ctx);
@@ -54,8 +45,8 @@ async function main() {
 
 function startApp(ctx: Ctx) {
   (window as any).ctx = ctx;
-  // const root = createRoot(document.getElementById("container")!);
-  // root.render(<App ctx={ctx} />);
+  const root = createRoot(document.getElementById("container")!);
+  root.render(<App ctx={ctx} />);
 }
 
 main();

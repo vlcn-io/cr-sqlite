@@ -17,6 +17,10 @@
     "deep-clean": "turbo run deep-clean"
   },
   "dependencies": {
-    "detect-circular-deps": "^3.0.0"
+    "detect-circular-deps": "^3.0.0",
+    "yjs": "^13.5.43"
+  },
+  "overrides": {
+    "yjs": "13.5.43"
   }
 }

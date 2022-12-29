@@ -49,6 +49,21 @@ export default class CrSqliteProvider {
   #connected = false;
   #dispoables = new Set<() => void>();
 
+  awareness = {
+    localState: null,
+    setLocalState(s: any) {
+      this.localState = s;
+    },
+    getLocalState() {
+      return this.localState;
+    },
+    on() {},
+    off() {},
+    getStates() {
+      return [];
+    },
+  };
+
   #statusObservers = new Set<(s: { status: ConnStatus }) => void>();
   #syncObservers = new Set<(s: boolean) => void>();
 

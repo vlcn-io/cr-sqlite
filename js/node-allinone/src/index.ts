@@ -12,6 +12,7 @@ const api = {
 };
 
 export class DB implements IDB {
+  _tag = "sync" as const;
   private db: Database;
   private open: boolean;
   constructor(private filename: string) {

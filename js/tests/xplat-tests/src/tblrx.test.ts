@@ -17,7 +17,7 @@ export const tests = {
     const db = await dbProvider();
     await createSimpleSchema(db);
     const rx = tblrx(db);
-    let notified = new Set<string>();
+    let notified = new Map<string, Set<bigint>>();
     rx.on((tbls) => {
       notified = tbls;
     });
@@ -38,7 +38,7 @@ export const tests = {
     const db = await dbProvider();
     await createSimpleSchema(db);
     const rx = tblrx(db);
-    let notified = new Set<string>();
+    let notified = new Map<string, Set<bigint>>();
     rx.on((tbls) => {
       notified = tbls;
     });
@@ -96,7 +96,7 @@ export const tests = {
 
     let notified = false;
     // tbls must always be a set
-    rx.on((tbls: Set<string>) => {
+    rx.on((tbls: Map<string, Set<bigint>>) => {
       notified = true;
     });
   },
@@ -108,7 +108,7 @@ export const tests = {
     const db = await dbProvider();
     await createSimpleSchema(db);
     const rx = await tblrx(db);
-    let notified = new Set<string>();
+    let notified = new Map<string, Set<bigint>>();
     rx.on((tbls) => {
       notified = tbls;
     });

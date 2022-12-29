@@ -36,7 +36,7 @@ class Provider implements YjsProvider {
     this.#db = db;
     this.#rx = rx;
     this.#docid = docid;
-    this.#myApplications = new Set<string>();
+    this.#myApplications = new Set<bigint>();
     // TODO: listen for DB updates to merge back into the doc
     // via tblrx.
     // What rows do we want?
@@ -53,7 +53,7 @@ class Provider implements YjsProvider {
       WHERE clock.doc_id = ? AND clock.db_version > ?`
       ),
       this.#db.prepare(
-        `INSERT INTO ydoc (doc_id, yhash, yval) VALUES (?, ?, ?) RETURNING yhash`
+        `INSERT INTO ydoc (doc_id, yhash, yval) VALUES (?, ?, ?) RETURNING rowid`
       ),
     ]);
 
@@ -63,7 +63,7 @@ class Provider implements YjsProvider {
     this.#rx.on(this.#dbChanged);
 
     // populate doc
-    await this.#dbChanged(new Set(["ydoc"]));
+    await this.#dbChanged(null);
 
     // now listen to doc to write changes back to db on doc change.
     this.#doc.on("update", this.#docUpdated);
@@ -80,36 +80,30 @@ class Provider implements YjsProvider {
       // change from our db, no need to save it to the db
       return;
     }
+    console.log("processing doc update");
     const yhash = await crypto.subtle.digest("SHA-1", update);
-    this.#myApplications.add(bytesToHex(new Uint8Array(yhash)));
-    this.#capApplicationsSize();
 
-    // note: if someone did a transaction we'll receive many updates to apply at once in
-    // our observer.
-    //
-    // i.e., `decodeUpdate` will return many structs.
-    // if we want to use crsqlite replication this is a no go since we don't want
-    // to resync out own changes and grow.
-    // our change -> B
-    //    \--> C ---/\
-    // C would pass back on to B since we can't identity these structs.
-    // Well... you could with a hash. Given these updates should be immutable and append-only
-    // What if someone compacts their doc?
-    // Then you're screwed in all ways.
-    //
-    // we don't do the `yjs` level db thing bc it reconstructs the entire doc
-    // in order to compute diffs: https://github.com/yjs/y-leveldb/blob/74daedd13b6cc781ebf5c5158c4dd5e245926ba4/src/y-leveldb.js#L454
-    // rather than just computing diffs via a `SELECT * FROM doc WHERE clock > clockx AND doc_id = doc_idx`
+    // q: will we get a notification before we get
+    // a return value? lol maybe
 
     // write to db
     // note: we may want to debounce this? no need to save immediately after every keystroke.
+    const insertRet = await this.#insertChangesStmt!.get(
+      this.#docid,
+      yhash,
+      update
+    );
+    console.log(insertRet);
+
+    this.#myApplications.add(BigInt(insertRet[0]));
+    this.#capApplicationsSize();
   };
 
   #capApplicationsSize() {
-    if (this.#myApplications.size >= 200) {
+    if (this.#myApplications.size >= 100) {
       let i = 0;
       for (const entry of this.#myApplications) {
-        if (i < 100) {
+        if (i < 50) {
           this.#myApplications.delete(entry);
         } else {
           break;
@@ -118,28 +112,43 @@ class Provider implements YjsProvider {
     }
   }
 
-  #dbChanged = async (tbls: Set<string>) => {
-    if (!tbls.has("ydoc")) {
-      // nothing to do
+  #dbChanged = async (notif: Map<string, Set<bigint>> | null) => {
+    if (!this.#shouldProcessDbChange(notif)) {
       return;
     }
+    console.log("processing db change");
 
-    // wait.. we need rowids returned so those can be passed and we can ignore dbchanged
-    // if the changed things are rows we just wrote.
-    //
-    // other option is to create a `sync only` rx that only calls back on sync events.
-
-    // TODO: wait tho.. we don't want to respond to our own changes
-    // we only want to respond to sync event changes
-    // we could `returning rowid` to understand what rowid we created
-    // and exclude rx callbacks of those rowids...
-
-    const getChangesStmt = this.#getChangesStmt!;
-    const changes = await getChangesStmt.all(this.#docid, this.#lastDbVersion);
+    const changes = await this.#getChangesStmt!.all(
+      this.#docid,
+      this.#lastDbVersion
+    );
 
     // merge the changes into the doc
     Y.transact(this.#doc, () => {}, this, false);
   };
+
+  #shouldProcessDbChange(notif: Map<string, Set<bigint>> | null) {
+    console.log(notif);
+    if (notif == null) {
+      return true;
+    }
+
+    const rowids = notif.get("ydoc");
+    if (rowids == null) {
+      // our table did not change
+      // nothing to do
+      return false;
+    }
+
+    // did the update contain a rid that we did not write?
+    for (const rid of rowids) {
+      if (!this.#myApplications.has(rid)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
 }
 
 export default async function create(

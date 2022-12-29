@@ -188,6 +188,41 @@ importers:
       '@types/uuid': 8.3.4
       vite: 3.2.4
 
+  js/examples/yjs:
+    specifiers:
+      '@types/react': ^18.0.25
+      '@types/react-dom': ^18.0.8
+      '@types/uuid': ^8.3.4
+      '@types/ws': ^8.5.3
+      '@vlcn.io/rx-tbl': workspace:*
+      '@vlcn.io/sync-client': workspace:*
+      '@vlcn.io/wa-crsqlite': workspace:*
+      '@vlcn.io/yjs-provider': workspace:*
+      nanoid: ^4.0.0
+      react: ^18.2.0
+      react-dom: ^18.2.0
+      uuid: ^9.0.0
+      vite: ^3.2.2
+      ws: ^8.11.0
+      yjs: ^13.5.43
+    dependencies:
+      '@types/ws': 8.5.3
+      '@vlcn.io/rx-tbl': link:../../rx-tbl
+      '@vlcn.io/sync-client': link:../../sync-reference/client
+      '@vlcn.io/wa-crsqlite': link:../../browser/wa-crsqlite
+      '@vlcn.io/yjs-provider': link:../../yjs-provider
+      nanoid: 4.0.0
+      react: 18.2.0
+      react-dom: 18.2.0_react@18.2.0
+      uuid: 9.0.0
+      ws: 8.11.0
+      yjs: 13.5.43
+    devDependencies:
+      '@types/react': 18.0.25
+      '@types/react-dom': 18.0.9
+      '@types/uuid': 8.3.4
+      vite: 3.2.4
+
   js/node-allinone:
     specifiers:
       '@types/jest': ^29.2.2

@@ -14,13 +14,11 @@
  * doesn't get hammered by large inserts or updates.
  */
 
-// exist (select 1 from pragma_function_list where name = 'crsql_tbl_rx')
-
 import { DB, DBAsync } from "@vlcn.io/xplat-api";
 
 export class TblRx {
-  #listeners = new Set<(tbls: Set<string>) => void>();
-  #pendingNotification: Set<string> | null = null;
+  #listeners = new Set<(tbls: Map<string, Set<bigint>>) => void>();
+  #pendingNotification: Map<string, Set<bigint>> | null = null;
   #bc = new BroadcastChannel("@vlcn.io/rx-tbl");
 
   constructor(private readonly db: DB | DBAsync) {
@@ -33,46 +31,51 @@ export class TblRx {
       if (tblName.indexOf("__crsql") !== -1) {
         return;
       }
-      this.#preNotify(tblName);
+      this.#preNotify(tblName, rowid);
     });
   }
 
-  #notifyListeners(tbls: Set<string>) {
+  #notifyListeners(notif: Map<string, Set<bigint>>) {
     for (const l of this.#listeners) {
       try {
         // one listener shouldn't kill all others.
         // e.g., like one thread death doesn't kill all other threads.
-        l(tbls);
+        l(notif);
       } catch (e) {
         console.error(e);
       }
     }
   }
 
-  #preNotify(tbl: string) {
+  #preNotify(tbl: string, rowid: bigint) {
     if (this.#pendingNotification != null) {
-      this.#pendingNotification.add(tbl);
+      let existing = this.#pendingNotification.get(tbl);
+      if (existing == null) {
+        existing = new Set();
+        this.#pendingNotification.set(tbl, existing);
+      }
+      existing.add(BigInt(rowid));
       return;
     }
 
-    this.#pendingNotification = new Set();
-    this.#pendingNotification.add(tbl);
+    this.#pendingNotification = new Map();
+    this.#pendingNotification.set(tbl, new Set([rowid]));
     queueMicrotask(() => {
-      const tbls = this.#pendingNotification!;
+      const notif = this.#pendingNotification!;
       this.#pendingNotification = null;
-      this.#notifyListeners(tbls);
-      this.#bc.postMessage(tbls);
+      this.#notifyListeners(notif);
+      this.#bc.postMessage(notif);
     });
   }
 
-  on(cb: (tbls: Set<string>) => void) {
+  on(cb: (tbls: Map<string, Set<bigint>>) => void) {
     this.#listeners.add(cb);
     return () => {
       this.off(cb);
     };
   }
 
-  off(cb: (tbls: Set<string>) => void) {
+  off(cb: (tbls: Map<string, Set<bigint>>) => void) {
     this.#listeners.delete(cb);
   }
 

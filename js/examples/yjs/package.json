@@ -1,0 +1,33 @@
+{
+  "name": "@vlcn.io/yjs-example",
+  "private": true,
+  "type": "module",
+  "version": "0.0.1",
+  "sideEffects": false,
+  "scripts": {
+    "start": "vite",
+    "build": "vite build",
+    "tsc": "tsc --noEmit",
+    "preview": "vite preview",
+    "test:unit": "vitest"
+  },
+  "dependencies": {
+    "@types/ws": "^8.5.3",
+    "@vlcn.io/rx-tbl": "workspace:*",
+    "@vlcn.io/sync-client": "workspace:*",
+    "@vlcn.io/wa-crsqlite": "workspace:*",
+    "@vlcn.io/yjs-provider": "workspace:*",
+    "nanoid": "^4.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "uuid": "^9.0.0",
+    "ws": "^8.11.0",
+    "yjs": "^13.5.43"
+  },
+  "devDependencies": {
+    "@types/react": "^18.0.25",
+    "@types/react-dom": "^18.0.8",
+    "@types/uuid": "^8.3.4",
+    "vite": "^3.2.2"
+  }
+}

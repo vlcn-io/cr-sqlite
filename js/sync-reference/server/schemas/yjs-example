@@ -1,0 +1,13 @@
+BEGIN;
+
+CREATE TABLE IF NOT EXISTS ydoc (
+  doc_id TEXT,
+  yhash BLOB,
+  yval BLOB,
+  primary key (doc_id, yhash)
+) STRICT;
+
+SELECT
+  crsql_as_crr('ydoc');
+
+COMMIT;

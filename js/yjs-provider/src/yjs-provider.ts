@@ -277,7 +277,6 @@ export default class CrSqliteProvider {
       // change from our db, no need to save it to the db
       return;
     }
-    console.log("processing doc update");
     const yhash = await crypto.subtle.digest("SHA-1", update);
 
     // write to db
@@ -326,7 +325,6 @@ export default class CrSqliteProvider {
   }
 
   #shouldProcessDbChange(notif: Map<string, Set<bigint>> | null) {
-    console.log(notif);
     if (notif == null) {
       return true;
     }

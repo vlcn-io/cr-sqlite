@@ -5,5 +5,5 @@ import startSync from "@vlcn.io/sync-client";
 export type Ctx = {
   db: DB;
   rx: TblRx;
-  // sync: Awaited<ReturnType<typeof startSync>>;
+  sync: Awaited<ReturnType<typeof startSync>>;
 };

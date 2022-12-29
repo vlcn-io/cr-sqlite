@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 /**
  * A simple reference implementation for a sync server.
  */
@@ -10,8 +11,16 @@ import { Connection } from "../connection.js";
 import logger from "../logger.js";
 import { nanoid } from "nanoid";
 import contextStore from "../contextStore.js";
+import yargs from "yargs/yargs";
+import { hideBin } from "yargs/helpers";
+import { configure } from "../config.js";
 
-const port = 8080;
+const argv = yargs(hideBin(process.argv)).argv;
+
+console.log(argv);
+configure(argv as any);
+
+const port = process.env.PORT || 8080;
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

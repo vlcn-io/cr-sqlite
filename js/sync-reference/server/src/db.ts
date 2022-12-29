@@ -38,6 +38,7 @@ class DB {
     create?: { schemaName: string }
   ) {
     this.#db = new SQLiteDB(dbPath);
+    this.#db.pragma("journal_mode = WAL");
 
     if (create) {
       this.#bootstrapSiteId();

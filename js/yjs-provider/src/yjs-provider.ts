@@ -23,7 +23,6 @@ class Provider implements YjsProvider {
   #lastDbVersion = 0;
   #docid;
   #myApplications;
-  #inflightInsert: Promise<any> | null = null;
   #q;
 
   constructor(db: DB | DBAsync, rx: TblRx, docid: string, doc: Y.Doc) {

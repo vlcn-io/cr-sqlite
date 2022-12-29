@@ -9,12 +9,14 @@
   "main": "dist/xplat-api.js",
   "sideEffects": false,
   "devDependencies": {
-    "typescript": "^4.8.4"
+    "typescript": "^4.8.4",
+    "vitest": "^0.26.2"
   },
   "scripts": {
     "build": "tsc --build",
     "watch": "tsc --build --watch",
-    "deep-clean": "rm -rf ./dist || true && rm tsconfig.tsbuildinfo || true"
+    "deep-clean": "rm -rf ./dist || true && rm tsconfig.tsbuildinfo || true",
+    "test": "vitest --run"
   },
   "repository": {
     "type": "git",

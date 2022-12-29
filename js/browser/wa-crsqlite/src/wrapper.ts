@@ -2,9 +2,13 @@ import SQLiteAsyncESMFactory from "@vlcn.io/wa-sqlite/dist/wa-sqlite-async.mjs";
 import * as SQLite from "@vlcn.io/wa-sqlite";
 // @ts-ignore
 import { IDBBatchAtomicVFS } from "@vlcn.io/wa-sqlite/src/examples/IDBBatchAtomicVFS.js";
-import { DBAsync, StmtAsync, UpdateType } from "@vlcn.io/xplat-api";
+import {
+  DBAsync,
+  StmtAsync,
+  UpdateType,
+  PromiseQueue,
+} from "@vlcn.io/xplat-api";
 import { SQLITE_UTF8 } from "@vlcn.io/wa-sqlite";
-import PromiseQueue from "./PromiseQueue.js";
 
 let api: SQLite3 | null = null;
 type SQLiteAPI = ReturnType<typeof SQLite.Factory>;

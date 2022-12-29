@@ -67,4 +67,6 @@ export interface StmtAsync {
   finalize(): void;
 }
 
+export { default as PromiseQueue } from "./PromiseQueue.js";
+
 export const version = 1;

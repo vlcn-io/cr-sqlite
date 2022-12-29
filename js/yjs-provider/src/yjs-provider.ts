@@ -1,15 +1,6 @@
 import * as Y from "yjs";
-import { DB, DBAsync, Stmt, StmtAsync } from "@vlcn.io/xplat-api";
+import { DB, DBAsync, Stmt, StmtAsync, PromiseQueue } from "@vlcn.io/xplat-api";
 import { TblRx } from "@vlcn.io/rx-tbl";
-
-function bytesToHex(bytes: Uint8Array) {
-  for (var hex = [], i = 0; i < bytes.length; i++) {
-    var current = bytes[i] < 0 ? bytes[i] + 256 : bytes[i];
-    hex.push((current >>> 4).toString(16));
-    hex.push((current & 0xf).toString(16));
-  }
-  return hex.join("");
-}
 
 export interface YjsProvider {}
 
@@ -31,6 +22,7 @@ class Provider implements YjsProvider {
   #docid;
   #myApplications;
   #inflightInsert: Promise<any> | null = null;
+  #q;
 
   constructor(db: DB | DBAsync, rx: TblRx, docid: string, doc: Y.Doc) {
     this.#doc = doc;
@@ -38,6 +30,7 @@ class Provider implements YjsProvider {
     this.#rx = rx;
     this.#docid = docid;
     this.#myApplications = new Set<bigint>();
+    this.#q = new PromiseQueue();
     // TODO: listen for DB updates to merge back into the doc
     // via tblrx.
     // What rows do we want?
@@ -61,7 +54,9 @@ class Provider implements YjsProvider {
     // observe before populating doc in case changes
     // come in while populating doc, those updates will be queued
     // to be applied.
-    this.#rx.on(this.#dbChanged);
+    this.#rx.on((notif: Map<string, Set<bigint>>) =>
+      this.#q.add(() => this.#dbChanged(notif))
+    );
 
     // populate doc
     await this.#dbChanged(null);
@@ -93,16 +88,15 @@ class Provider implements YjsProvider {
     // so we can serialize the db notification after the insert.
     // db notification cb makes it back to us before the insert
     // returns :(
-    const insertRet = await this.#insertChangesStmt!.get(
-      this.#docid,
-      new Uint8Array(yhash),
-      update
-    );
-    console.log("insert ret");
-    console.log(insertRet);
-
-    this.#myApplications.add(BigInt(insertRet[0]));
-    this.#capApplicationsSize();
+    this.#q.add(async () => {
+      const insertRet = await this.#insertChangesStmt!.get(
+        this.#docid,
+        new Uint8Array(yhash),
+        update
+      );
+      this.#myApplications.add(BigInt(insertRet[0]));
+      this.#capApplicationsSize();
+    });
   };
 
   #capApplicationsSize() {

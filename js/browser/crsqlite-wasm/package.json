@@ -22,5 +22,8 @@
   "dependencies": {
     "@vlcn.io/xplat-api": "workspace:*",
     "comlink": "^4.3.1"
+  },
+  "scripts": {
+    "deep-clean": "rm -rf ./dist; rm src/sqlite3.js; rm ./tsconfig.tsbuildinfo"
   }
 }

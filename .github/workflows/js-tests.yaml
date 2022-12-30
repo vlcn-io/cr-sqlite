@@ -20,6 +20,11 @@ jobs:
         with:
           submodules: true
 
+      - uses: cachix/install-nix-action@v18
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+      - run: nix-env -i wabt -f '<nixpkgs>'
+
       - name: Install pnpm
         uses: pnpm/action-setup@v2
 

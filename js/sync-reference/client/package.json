@@ -1,14 +1,13 @@
 {
   "name": "@vlcn.io/sync-client",
   "type": "module",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "files": [
     "dist",
     "src"
   ],
   "module": "dist/index.js",
   "main": "dist/index.js",
-  "sideEffects": false,
   "devDependencies": {
     "@types/uuid": "^8.3.4",
     "typescript": "^4.9.3"

@@ -1,5 +1,14 @@
 # @vlcn.io/wa-crsqlite
 
+## 0.6.3
+
+### Patch Changes
+
+- deploy table validation fix
+- Updated dependencies
+  - @vlcn.io/wa-sqlite@0.13.3
+  - @vlcn.io/xplat-api@0.5.3
+
 ## 0.6.2
 
 ### Patch Changes

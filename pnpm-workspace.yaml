@@ -1,5 +1,5 @@
 packages:
-  - "js/browser/crsqlite"
+  - "js/browser/crsqlite-wasm"
   - "js/browser/sandbox"
   - "js/browser/wa-crsqlite"
   - "js/browser/wa-sqlite"

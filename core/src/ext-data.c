@@ -41,7 +41,8 @@ crsql_ExtData *crsql_newExtData(sqlite3 *db) {
   rc = sqlite3_prepare_v3(
       db,
       "INSERT INTO crsql_tracked_peers (\"site_id\", \"clock\", "
-      "\"tag\") VALUES (?, ?, ?) ON CONFLICT DO UPDATE SET \"clock\" = "
+      "\"tag\", \"event\") VALUES (?, ?, ?, ?) ON CONFLICT DO UPDATE SET "
+      "\"clock\" = "
       "MAX(\"clock\", EXCLUDED.\"clock\")",
       -1, SQLITE_PREPARE_PERSISTENT, &(pExtData->pTrackPeersStmt), 0);
   if (rc != SQLITE_OK) {

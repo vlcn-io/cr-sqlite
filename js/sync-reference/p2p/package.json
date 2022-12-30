@@ -1,14 +1,13 @@
 {
   "name": "@vlcn.io/sync-p2p",
   "type": "module",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "files": [
     "dist",
     "src"
   ],
   "module": "dist/index.js",
   "main": "dist/index.js",
-  "sideEffects": false,
   "devDependencies": {
     "@types/jest": "^29.2.2",
     "jest": "^29.2.2",

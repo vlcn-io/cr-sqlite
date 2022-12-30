@@ -1,12 +1,11 @@
 {
   "name": "@vlcn.io/node-examples",
   "type": "module",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "files": [
     "dist"
   ],
   "module": "dist/index.js",
-  "sideEffects": false,
   "devDependencies": {
     "@types/jest": "^29.2.2",
     "@types/node": "^18.11.9",

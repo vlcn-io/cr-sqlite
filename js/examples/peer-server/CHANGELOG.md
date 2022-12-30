@@ -1,5 +1,11 @@
 # @vlcn.io/examples-peer-server
 
+## 0.5.3
+
+### Patch Changes
+
+- deploy table validation fix
+
 ## 0.5.2
 
 ### Patch Changes

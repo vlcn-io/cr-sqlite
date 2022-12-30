@@ -9,8 +9,11 @@ export default defineConfig({
       input: {
         index: resolve(__dirname, "index.html"),
         mainThread: resolve(__dirname, "main-thread.html"),
+        mainThreadOfficial: resolve(__dirname, "main-thread-official.html"),
         onWorker: resolve(__dirname, "on-worker.html"),
+        onWorkerOfficial: resolve(__dirname, "on-worker-official.html"),
         sharedWorker: resolve(__dirname, "shared-worker.html"),
+        comlinkedOfficial: resolve(__dirname, "comlinked-official.html"),
       },
     },
   },

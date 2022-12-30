@@ -1,5 +1,13 @@
 # @vlcn.io/replicator-wholedb
 
+## 0.5.3
+
+### Patch Changes
+
+- deploy table validation fix
+- Updated dependencies
+  - @vlcn.io/xplat-api@0.5.3
+
 ## 0.5.2
 
 ### Patch Changes

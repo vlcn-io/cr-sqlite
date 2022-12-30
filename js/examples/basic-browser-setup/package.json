@@ -5,7 +5,6 @@
   "version": "0.5.3",
   "scripts": {
     "start": "vite",
-    "build": "vite build",
     "tsc": "tsc --noEmit",
     "preview": "vite preview",
     "test:unit": "vitest",

@@ -23,9 +23,7 @@ jobs:
       - uses: cachix/install-nix-action@v18
         with:
           nix_path: nixpkgs=channel:nixos-unstable
-
-      - name: Install wabt
-        run: nix-shell -p wabt
+      - run: nix-env -i wabt -f '<nixpkgs>'
 
       - name: Install pnpm
         uses: pnpm/action-setup@v2

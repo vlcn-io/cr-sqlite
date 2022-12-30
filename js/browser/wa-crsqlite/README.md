@@ -10,7 +10,7 @@ and includes the `crsqlite` extension.
 
 Forked from https://github.com/rhashimoto/wa-sqlite/
 
-To be used until the official SQLite build is up to the task.
+You can also use [crsqlite-wasm](https://github.com/vlcn-io/cr-sqlite/tree/main/js/browser/crsqlite-wasm) which is based on the official SQLite distribution and has a MIT compatible license.
 
 # Examples
 

@@ -20,8 +20,12 @@ jobs:
         with:
           submodules: true
 
+      - uses: cachix/install-nix-action@v18
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+
       - name: Install wabt
-        run: sudo apt install -y wabt
+        run: nix-shell -p wabt
 
       - name: Install pnpm
         uses: pnpm/action-setup@v2

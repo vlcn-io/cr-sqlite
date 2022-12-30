@@ -5,7 +5,7 @@ mkdir -p dist
 # Setup sqlite
 cd ../../../deps/sqlite
 
-./configure
+./configure --enable-all
 make sqlite3.c
 
 # Setup emsdk

@@ -13,11 +13,8 @@ export class SQLite3 {
     if (filename == null || filename === ":memory:") {
       return new DB(new this.baseSqlite3.oo1.DB(), this.baseSqlite3);
     } else {
-      // wasmfs:
-      // return new DB(new this.baseSqlite3.oo1.DB(filename));
-      // opfsvfs:
       return new DB(
-        new this.baseSqlite3.opfs.OpfsDb(filename, mode),
+        new this.baseSqlite3.oo1.DB(filename, mode, "opfs"),
         this.baseSqlite3
       );
     }

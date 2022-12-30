@@ -6,7 +6,6 @@
     "dist"
   ],
   "module": "dist/index.js",
-  "sideEffects": false,
   "devDependencies": {
     "@types/jest": "^29.2.2",
     "@types/node": "^18.11.9",

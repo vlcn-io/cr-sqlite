@@ -7,7 +7,6 @@
   ],
   "module": "dist/index.js",
   "main": "dist/index.js",
-  "sideEffects": false,
   "devDependencies": {
     "typescript": "^4.8.4"
   },

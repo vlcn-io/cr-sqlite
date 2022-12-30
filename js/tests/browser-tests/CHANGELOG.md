@@ -1,5 +1,14 @@
 # @vlcn.io/browser-tests
 
+## 0.5.3
+
+### Patch Changes
+
+- deploy table validation fix
+- Updated dependencies
+  - @vlcn.io/wa-crsqlite@0.6.3
+  - @vlcn.io/xplat-tests@0.5.3
+
 ## 0.5.2
 
 ### Patch Changes

@@ -1,5 +1,14 @@
 # @vlcn.io/sync-server
 
+## 0.5.5
+
+### Patch Changes
+
+- deploy table validation fix
+- Updated dependencies
+  - @vlcn.io/crsqlite@0.6.3
+  - @vlcn.io/client-server-common@0.2.3
+
 ## 0.5.2
 
 ### Patch Changes

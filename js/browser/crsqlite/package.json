@@ -1,7 +1,7 @@
 {
   "name": "@vlcn.io/crsqlite-wasm",
   "type": "module",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "repository": {
     "type": "git",
     "url": "git@github.com:vlcn-io/cr-sqlite.git",

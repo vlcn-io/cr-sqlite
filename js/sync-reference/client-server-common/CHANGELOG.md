@@ -1,5 +1,11 @@
 # @vlcn.io/client-server-common
 
+## 0.2.3
+
+### Patch Changes
+
+- deploy table validation fix
+
 ## 0.2.2
 
 ### Patch Changes

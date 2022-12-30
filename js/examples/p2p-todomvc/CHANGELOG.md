@@ -1,5 +1,15 @@
 # @vlcn.io/crsqlite-p2p-todomvc
 
+## 0.6.3
+
+### Patch Changes
+
+- deploy table validation fix
+- Updated dependencies
+  - @vlcn.io/wa-crsqlite@0.6.3
+  - @vlcn.io/rx-tbl@0.5.3
+  - @vlcn.io/sync-p2p@0.5.3
+
 ## 0.6.2
 
 ### Patch Changes

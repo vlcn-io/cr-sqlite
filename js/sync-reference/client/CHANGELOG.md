@@ -1,5 +1,15 @@
 # @vlcn.io/sync-client
 
+## 0.5.3
+
+### Patch Changes
+
+- deploy table validation fix
+- Updated dependencies
+  - @vlcn.io/rx-tbl@0.5.3
+  - @vlcn.io/client-server-common@0.2.3
+  - @vlcn.io/xplat-api@0.5.3
+
 ## 0.5.2
 
 ### Patch Changes

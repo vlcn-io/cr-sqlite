@@ -1,5 +1,11 @@
 # @vlcn.io/crsqlite
 
+## 0.6.3
+
+### Patch Changes
+
+- deploy table validation fix
+
 ## 0.6.2
 
 ### Patch Changes

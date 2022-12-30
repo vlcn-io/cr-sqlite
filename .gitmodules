@@ -4,3 +4,6 @@
 [submodule "deps/wa-sqlite"]
 	path = js/browser/wa-sqlite
 	url = git@github.com:vlcn-io/wa-sqlite.git
+[submodule "deps/sqlite"]
+	path = deps/sqlite
+	url = git@github.com:vlcn-io/sqlite.git

@@ -1,13 +1,12 @@
 {
   "name": "@vlcn.io/yjs-example",
-  "private": true,
-  "type": "module",
+  "description": "",
   "version": "0.0.1",
-  "sideEffects": false,
+  "main": "index.js",
   "scripts": {
     "start": "vite",
     "build": "vite build",
-    "tsc": "tsc --noEmit",
+    "tsc": "tsc",
     "preview": "vite preview",
     "test:unit": "vitest"
   },
@@ -32,15 +31,13 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "uuid": "^9.0.0",
-    "ws": "^8.11.0"
-  },
-  "peerDependencies": {
+    "ws": "^8.11.0",
     "yjs": "^13.5.43"
   },
   "devDependencies": {
     "@types/react": "^18.0.25",
     "@types/react-dom": "^18.0.8",
     "@types/uuid": "^8.3.4",
-    "vite": "^3.2.2"
+    "vite": "^4.0.3"
   }
 }

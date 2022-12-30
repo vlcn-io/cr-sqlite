@@ -13,7 +13,9 @@
     "deep-clean": "rm -rf ./dist || true && rm tsconfig.tsbuildinfo || true"
   },
   "dependencies": {
+    "@types/uuid": "^8.3.4",
     "@vlcn.io/wa-crsqlite": "workspace:*",
+    "@vlcn.io/crsqlite-wasm": "workspace:*",
     "comlink": "^4.3.1",
     "uuid": "^9.0.0"
   },

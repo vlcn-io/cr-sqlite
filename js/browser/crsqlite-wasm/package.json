@@ -6,5 +6,9 @@
     "type": "git",
     "url": "git@github.com:vlcn-io/cr-sqlite.git",
     "directory": "https://github.com/vlcn-io/cr-sqlite/tree/main/js/browser/crsqlite"
+  },
+  "dependencies": {
+    "@vlcn.io/xplat-api": "workspace:*",
+    "comlink": "^4.3.1"
   }
 }

@@ -19,5 +19,5 @@ cd ../sqlite/ext/wasm
 make crsqlite-extra
 make dist
 
-cp jswasm/sqlite3.wasm jswasm/sqlite3-opfs-async-proxy.js ../../../../js/browser/crsqlite/dist
-cp jswasm/sqlite3.js ../../../../js/browser/crsqlite/src
+cp jswasm/sqlite3.wasm jswasm/sqlite3-opfs-async-proxy.js ../../../../js/browser/crsqlite-wasm/dist
+cp jswasm/sqlite3.js ../../../../js/browser/crsqlite-wasm/src

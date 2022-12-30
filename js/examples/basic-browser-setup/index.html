@@ -1,4 +1,47 @@
-<a href="main-thread.html">Main Thread</a><br />
-<a href="on-worker.html">Worker Thread (with persistence)</a><br />
-<!-- <a href="comlink.html">Comlink Worker (query worker from main thread)</a><br /> -->
-<a href="shared-worker.html">Shared Worker Exploration (does not work -- used for development purposes)</a><br />
+<h1><a href="https://sqlite.org/wasm/doc/trunk/index.md">Official SQLite WASM Build</a></h1>
+<ul>
+  <li><a href="main-thread-official.html">Main Thread (in memory)</a></li>
+  <li><a href="on-worker-official.html">On Worker (with persistence)</a></li>
+  <li><a href="comlinked-official.html"></a></li>
+</ul>
+<h1>WA-SQLite</h1>
+<ul>
+  <li><a href="main-thread.html">Main Thread (with persistence)</a></li>
+  <li><a href="on-worker.html">Worker Thread (with persistence)</a></li>
+  <!-- <a href="comlink.html">Comlink Worker (query worker from main thread)</a><br /> -->
+  <li><a href="shared-worker.html">Shared Worker Exploration (does not work -- used for development purposes)</a></li>
+</ul>
+
+<p>
+  What's the difference between the two?
+</p>
+
+<h2>Official Build:</h2>
+Pros:
+<ul>
+  <li>Permissive license (public domain)</li>
+  <li>Fastest</li>
+  <li>Supported by the SQLite team</li>
+</ul>
+Cons:
+<ul>
+  <li>Poor support for concurrent access to same DB file</li>
+  <li>Requires COOP & COEP headers</li>
+</ul>
+Neutral:
+<ul>
+  <li>Must run in a worker for persistence but worker comms can be abstracted over.</li>
+</ul>
+
+<h2>wa-sqlite Build:</h2>
+Pros:
+<ul>
+  <li>Can persist on main thread</li>
+  <li>Does not require COOP & COEP headers</li>
+  <li>Supports high concurrent access to same DB file</li>
+</ul>
+Cons:
+<ul>
+  <li>GPLv3 License</li>
+  <li>Slower</li>
+</ul>

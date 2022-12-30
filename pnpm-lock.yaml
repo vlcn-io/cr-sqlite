@@ -26,8 +26,13 @@ importers:
     devDependencies:
       prebuild: 7.6.2
 
-  js/browser/crsqlite:
-    specifiers: {}
+  js/browser/crsqlite-wasm:
+    specifiers:
+      '@vlcn.io/xplat-api': workspace:*
+      comlink: ^4.3.1
+    dependencies:
+      '@vlcn.io/xplat-api': link:../../xplat-api
+      comlink: 4.3.1
 
   js/browser/sandbox:
     specifiers:
@@ -90,11 +95,15 @@ importers:
 
   js/examples/basic-browser-setup:
     specifiers:
+      '@types/uuid': ^8.3.4
+      '@vlcn.io/crsqlite-wasm': workspace:*
       '@vlcn.io/wa-crsqlite': workspace:*
       comlink: ^4.3.1
       uuid: ^9.0.0
       vite: ^3.2.2
     dependencies:
+      '@types/uuid': 8.3.4
+      '@vlcn.io/crsqlite-wasm': link:../../browser/crsqlite-wasm
       '@vlcn.io/wa-crsqlite': link:../../browser/wa-crsqlite
       comlink: 4.3.1
       uuid: 9.0.0

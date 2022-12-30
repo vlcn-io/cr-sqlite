@@ -15,7 +15,7 @@ make loadable
 cd ../js/browser/wa-crsqlite
 bash ./build.sh
 
-cd ../crsqlite
+cd ../crsqlite-wasm
 bash ./build.sh
 
 cd ../../tsbuild-all

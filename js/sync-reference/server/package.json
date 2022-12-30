@@ -1,7 +1,7 @@
 {
   "name": "@vlcn.io/sync-server",
   "type": "module",
-  "version": "0.5.4",
+  "version": "0.5.5",
   "files": [
     "dist",
     "src"

@@ -21,10 +21,10 @@ async function main() {
     localDb: db,
     // the id of the database to persist into on the server.
     // if a db with that id does not exist it can be created for you
-    remoteDbId: "a0436f45-82bf-412d-886d-bbdedf6b9986",
-    uri: `ws://${window.location.hostname}${
-      window.location.hostname === "localhost" ? ":8080" : ""
-    }/sync`,
+    remoteDbId: "22d78dc6-fe02-4003-bbba-2d7fbb9bfa40",
+    uri: `ws${window.location.protocol === "https:" ? "s" : ""}://${
+      window.location.hostname
+    }${window.location.hostname === "localhost" ? ":8080" : ""}/sync`,
     // the schema to apply to the db if it does not exist
     // TODO: validate that the opened db has the desired schema and version of that schema?
     create: {

@@ -79,7 +79,8 @@ export class Connection {
           from: this.#site,
           req: contextStore.get().reqId,
         });
-        this.#establishPromise!.then(() => {
+        // #establishPromise will not exist if we failed during the establish phase
+        this.#establishPromise?.then(() => {
           this.#onMsg(data);
         });
         return;
@@ -148,6 +149,7 @@ export class Connection {
       (e) => {
         logger.error(e.message);
         this.close("DB_OPEN_FAIL");
+        this.#establishPromise = undefined;
       }
     );
   }

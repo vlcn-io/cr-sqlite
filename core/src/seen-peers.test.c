@@ -112,7 +112,7 @@ static void testReset() {
   crsql_trackSeenPeer(seen, (const unsigned char *)"blob1", 6, 100);
   crsql_trackSeenPeer(seen, (const unsigned char *)"blob2", 6, 200);
 
-  crsql_resetSeenPeersForTx(seen);
+  crsql_resetSeenPeers(seen);
   assert(seen->len == 0);
 
   crsql_trackSeenPeer(seen, (const unsigned char *)"blob1", 6, 1);
@@ -211,7 +211,7 @@ static void testWriteTrackedPeersToDb() {
   assertWrittenPeers(db, expected, 2);
 
   // we can't run the clocks backwards
-  crsql_resetSeenPeersForTx(seen);
+  crsql_resetSeenPeers(seen);
   crsql_trackSeenPeer(seen, expected[0].siteId, expected[0].siteIdLen, 1);
   crsql_trackSeenPeer(seen, expected[1].siteId, expected[1].siteIdLen, 2);
   assert(crsql_writeTrackedPeers(seen, extData) == SQLITE_OK);

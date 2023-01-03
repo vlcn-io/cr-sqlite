@@ -41,7 +41,7 @@ struct crsql_SeenPeers {
 crsql_SeenPeers *crsql_newSeenPeers();
 int crsql_trackSeenPeer(crsql_SeenPeers *a, const unsigned char *siteId,
                         int siteIdLen, sqlite3_int64 clock);
-void crsql_resetSeenPeersForTx(crsql_SeenPeers *a);
+void crsql_resetSeenPeers(crsql_SeenPeers *a);
 void crsql_freeSeenPeers(crsql_SeenPeers *a);
 int crsql_writeTrackedPeers(crsql_SeenPeers *a, crsql_ExtData *pExtData);
 

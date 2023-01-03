@@ -510,6 +510,14 @@ static void testLamportCondition() {
   assert(sqlite3_column_int64(pStmt, 0) == 33);
   sqlite3_finalize(pStmt);
 
+  sqlite3_prepare_v2(db1, "SELECT count(*) FROM crsql_tracked_peers", -1,
+                     &pStmt, 0);
+  rc = sqlite3_step(pStmt);
+  assert(rc == SQLITE_ROW);
+  int count = sqlite3_column_int(pStmt, 0);
+  printf("count: %d", count);
+  sqlite3_finalize(pStmt);
+
   rc = crsql_close(db1);
   assert(rc == SQLITE_OK);
   rc += crsql_close(db2);

@@ -11,7 +11,7 @@
     "typescript": "^4.8.4"
   },
   "scripts": {
-    "tsc": "tsc",
+    "tsc": "tsc --build",
     "watch": "tsc --watch",
     "deep-clean": "rm -rf ./dist || true && rm tsconfig.tsbuildinfo || true"
   },

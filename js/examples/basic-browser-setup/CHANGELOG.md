@@ -1,5 +1,12 @@
 # @vlcn.io/crsqlite-examples
 
+## 0.5.4
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/crsqlite-wasm@0.5.4
+
 ## 0.5.3
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @vlcn.io/crsqlite-wasm
 
+## 0.5.4
+
+### Patch Changes
+
+- re-enable the official sqlite build with crsqlite
+
 ## 0.5.3
 
 ### Patch Changes

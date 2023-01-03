@@ -1,7 +1,7 @@
 {
   "name": "@vlcn.io/crsqlite-wasm",
   "type": "module",
-  "version": "0.5.3",
+  "version": "0.5.5",
   "files": [
     "dist"
   ],
@@ -22,5 +22,9 @@
   "dependencies": {
     "@vlcn.io/xplat-api": "workspace:*",
     "comlink": "^4.3.1"
+  },
+  "scripts": {
+    "deep-clean": "rm -rf ./dist; rm src/sqlite3.js; rm ./tsconfig.tsbuildinfo",
+    "build": "tsc --build"
   }
 }

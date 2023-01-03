@@ -40,6 +40,8 @@ TARGET_TEST=$(prefix)/test
 TARGET_FUZZ=$(prefix)/fuzz
 TARGET_TEST_ASAN=$(prefix)/test-asan
 
+
+# js/browser/wa-sqlite/Makefile, deps/sqlite/GNUMakefile, core/binding.gyp, core/Makefile
 ext_files=src/crsqlite.c \
 	src/util.c \
 	src/tableinfo.c \

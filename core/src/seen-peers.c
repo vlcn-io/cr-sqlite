@@ -87,7 +87,7 @@ int crsql_trackSeenPeer(crsql_SeenPeers *a, const unsigned char *siteId,
   return SQLITE_OK;
 }
 
-void crsql_resetSeenPeersForTx(crsql_SeenPeers *a) {
+void crsql_resetSeenPeers(crsql_SeenPeers *a) {
   // free the inner allocations since we'll overwrite those
   for (int i = 0; i < a->len; ++i) {
     sqlite3_free(a->peers[i].siteId);

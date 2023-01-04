@@ -73,6 +73,7 @@
         './src/changes-vtab-write.c',
         './src/ext-data.c',
         './src/get-table.c',
+        './src/seen-peers.c',
       ],
       'include_dirs': [
         './src',

@@ -20,6 +20,7 @@
 #include "consts.h"
 #include "crsqlite.h"
 #include "ext-data.h"
+#include "seen-peers.h"
 #include "tableinfo.h"
 #include "util.h"
 
@@ -294,6 +295,9 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
   crsql_TableInfo *tblInfo = crsql_findTableInfo(pTab->pExtData->zpTableInfos,
                                                  pTab->pExtData->tableInfosLen,
                                                  (const char *)insertTbl);
+
+  crsql_trackSeenPeer(pTab->pSeenPeers, insertSiteId, insertSiteIdLen,
+                      insertDbVrsn);
   if (tblInfo == 0) {
     *errmsg = sqlite3_mprintf(
         "crsql - could not find the schema information for table %s",

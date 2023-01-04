@@ -2,7 +2,7 @@ packages:
   - "js/browser/crsqlite-wasm"
   - "js/browser/sandbox"
   - "js/browser/wa-crsqlite"
-  - "js/browser/wa-sqlite"
+  - "deps/wa-sqlite"
   - "js/sync-reference/p2p"
   - "js/sync-reference/server"
   - "js/sync-reference/client"

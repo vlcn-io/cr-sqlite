@@ -548,6 +548,10 @@ static int changesApply(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
   return SQLITE_OK;
 }
 
+// We must define a `begin` method. Not defining it causes `commit` to never be
+// invoked.
+static int changesInsertBegin(sqlite3_vtab *pVTab) { return SQLITE_OK; }
+
 static int changesInsertCommit(sqlite3_vtab *pVTab) {
   crsql_Changes_vtab *crsqlTab = (crsql_Changes_vtab *)pVTab;
 
@@ -571,7 +575,7 @@ sqlite3_module crsql_changesModule = {
     /* xColumn     */ changesColumn,
     /* xRowid      */ changesRowid,
     /* xUpdate     */ changesApply,
-    /* xBegin      */ 0,
+    /* xBegin      */ changesInsertBegin,
     /* xSync       */ 0,
     /* xCommit     */ changesInsertCommit,
     /* xRollback   */ 0,

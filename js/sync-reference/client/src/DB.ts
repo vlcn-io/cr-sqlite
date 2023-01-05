@@ -1,10 +1,9 @@
-import { Changeset, SiteIdWire, Version } from "@vlcn.io/client-server-common";
-import { DB as DBSync, DBAsync, Stmt, StmtAsync } from "@vlcn.io/xplat-api";
 import {
-  parse as uuidParse,
-  stringify as uuidStringify,
-  v4 as uuidv4,
-} from "uuid";
+  Changeset,
+  randomUuidBytes,
+  Version,
+} from "@vlcn.io/client-server-common";
+import { DB as DBSync, DBAsync, Stmt, StmtAsync } from "@vlcn.io/xplat-api";
 import { TblRx } from "@vlcn.io/rx-tbl/src/tblrx";
 import logger from "./logger";
 
@@ -17,34 +16,26 @@ type VersionEvent = typeof RECEIVE | typeof SEND;
  * by the network layer.
  */
 export class DB {
-  private readonly siteIdAsBlob: Uint8Array;
-
   constructor(
     private readonly db: DBSync | DBAsync,
-    public readonly siteId: SiteIdWire,
+    public readonly siteId: Uint8Array,
     private readonly rx: TblRx,
     private readonly pullChangesetStmt: Stmt | StmtAsync,
     private readonly applyChangesetStmt: Stmt | StmtAsync,
     private readonly updatePeerTrackerStmt: Stmt | StmtAsync
-  ) {
-    this.siteIdAsBlob = new Uint8Array(uuidParse(this.siteId));
-    if (!this.siteId) {
-      throw new Error(`Unable to fetch site id from the local db`);
-    }
-  }
+  ) {}
 
   onUpdate(cb: () => void) {
     return this.rx.on(cb);
   }
 
   async seqIdFor(
-    siteId: SiteIdWire,
+    siteId: Uint8Array,
     event: VersionEvent
   ): Promise<[Version, number]> {
-    const parsed = uuidParse(siteId);
     const rows = await this.db.execA(
       "SELECT version, seq FROM crsql_tracked_peers WHERE site_id = ? AND event = ?",
-      [parsed, event]
+      [siteId, event]
     );
     if (rows.length == 0) {
       // never seen the site before
@@ -58,12 +49,11 @@ export class DB {
 
   // TODO: track seq monotonicity
   async applyChangeset(
-    from: SiteIdWire,
+    from: Uint8Array,
     changes: Changeset[],
     seqEnd: [Version, number]
   ) {
     // write them then notify safely
-    const fromBin = uuidParse(from);
     await this.db.transaction(async () => {
       for (const cs of changes) {
         // have to run serially given wasm build
@@ -78,7 +68,7 @@ export class DB {
           cs[3],
           cs[4],
           cs[5],
-          fromBin
+          from
         );
       }
 
@@ -88,13 +78,12 @@ export class DB {
   }
 
   async updatePeerTracker(
-    from: SiteIdWire,
+    fromBin: Uint8Array,
     event: VersionEvent,
     seqEnd: [Version, number]
   ) {
-    console.log(from);
     await this.updatePeerTrackerStmt.run(
-      uuidParse(from),
+      fromBin,
       event,
       BigInt(seqEnd[0]),
       seqEnd[1]
@@ -149,7 +138,7 @@ export default async function wrap(
     // a client a new uuid on every session.
     // and the requirements that imposes on the server and
     // breaking ties
-    uuidv4(),
+    randomUuidBytes(),
     rx,
     pullChangesetStmt,
     applyChangesetStmt,

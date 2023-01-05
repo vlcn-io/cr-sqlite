@@ -1,7 +1,6 @@
 import * as encoding from "lib0/encoding";
 import * as decoding from "lib0/decoding";
 
-export type SiteIdWire = string;
 export type CID = string;
 export type QuoteConcatedPKs = string;
 export type TableName = string;
@@ -29,7 +28,7 @@ export type Changeset = [
 
 export type ChangesReceivedMsg = Readonly<{
   _tag: "receive";
-  from: SiteIdWire;
+  from: Uint8Array;
   /**
    * seqStart must always be equal to
    * seqEnd from the prior message that was sent (or the change request msg if first change).
@@ -65,8 +64,8 @@ export type ChangesAckedMsg = Readonly<{
 
 export type EstablishConnectionMsg = Readonly<{
   _tag: "establish";
-  from: SiteIdWire;
-  to: SiteIdWire;
+  from: Uint8Array;
+  to: Uint8Array;
   seqStart: [Version, number];
   // if the db doesn't exist the user can create it
   // with the provided schema name.
@@ -102,8 +101,8 @@ export function encodeMsg(msg: Msg): Uint8Array {
       encoding.writeVarInt(encoder, msg.seqEnd[1]);
       return encoding.toUint8Array(encoder);
     case "establish":
-      encoding.writeVarString(encoder, msg.from);
-      encoding.writeVarString(encoder, msg.to);
+      encoding.writeUint8Array(encoder, msg.from);
+      encoding.writeUint8Array(encoder, msg.to);
       encoding.writeBigInt64(encoder, msg.seqStart[0]);
       encoding.writeVarInt(encoder, msg.seqStart[1]);
       if (msg.create) {
@@ -111,7 +110,7 @@ export function encodeMsg(msg: Msg): Uint8Array {
       }
       return encoding.toUint8Array(encoder);
     case "receive":
-      encoding.writeVarString(encoder, msg.from);
+      encoding.writeUint8Array(encoder, msg.from);
       encoding.writeBigInt64(encoder, msg.seqStart[0]);
       encoding.writeVarInt(encoder, msg.seqStart[1]);
       encoding.writeBigInt64(encoder, msg.seqEnd[0]);
@@ -147,8 +146,8 @@ export function decodeMsg(msg: Uint8Array): Msg {
     case 1:
       return {
         _tag: "establish",
-        from: decoding.readVarString(decoder),
-        to: decoding.readVarString(decoder),
+        from: decoding.readUint8Array(decoder, 16),
+        to: decoding.readUint8Array(decoder, 16),
         seqStart: [
           decoding.readBigInt64(decoder),
           decoding.readVarInt(decoder),
@@ -160,7 +159,7 @@ export function decodeMsg(msg: Uint8Array): Msg {
     case 2:
       return {
         _tag: "receive",
-        from: decoding.readVarString(decoder),
+        from: decoding.readUint8Array(decoder, 16),
         seqStart: [
           decoding.readBigInt64(decoder),
           decoding.readVarInt(decoder),
@@ -186,4 +185,16 @@ export function decodeMsg(msg: Uint8Array): Msg {
   }
 
   throw new Error(`Unexpected msg type ${type}`);
+}
+
+export function randomUuidBytes(): Uint8Array {
+  return hexToBytes(crypto.randomUUID().replaceAll("-", ""));
+}
+
+function hexToBytes(hex: string) {
+  const ret = new Uint8Array(16);
+  for (let c = 0; c < hex.length; c += 2) {
+    ret[c / 2] = parseInt(hex.substring(c, c + 2), 16);
+  }
+  return ret;
 }

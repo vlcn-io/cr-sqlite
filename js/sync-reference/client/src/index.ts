@@ -8,8 +8,8 @@
 import wrapDb, { DB, RECEIVE } from "./DB.js";
 import {
   ChangesReceivedMsg,
+  decodeMsg,
   Msg,
-  SiteIdWire,
   Version,
 } from "@vlcn.io/client-server-common";
 import { DB as DBSync, DBAsync } from "@vlcn.io/xplat-api";
@@ -20,7 +20,7 @@ import logger from "./logger.js";
 type ReplicatorArgs = {
   localDb: DBSync | DBAsync;
   uri: string;
-  remoteDbId: SiteIdWire;
+  remoteDbId: Uint8Array;
   rx: TblRx;
   create?: {
     schemaName: string;
@@ -47,7 +47,7 @@ class Replicator {
   }: {
     localDb: DB;
     uri: string;
-    remoteDbId: SiteIdWire;
+    remoteDbId: Uint8Array;
     create?: {
       schemaName: string;
     };
@@ -95,19 +95,19 @@ class Replicator {
     });
   };
 
-  #handleMessage = (e: MessageEvent) => {
+  #handleMessage = (e: MessageEvent<Uint8Array>) => {
     logger.info("Received message", e);
 
     let msg: Msg | null = null;
     try {
-      msg = JSON.parse(e.data);
+      msg = decodeMsg(e.data);
     } catch (err) {
-      logger.error("Failed to parse ", e.data);
+      logger.error("Failed to parse msg");
       throw e;
     }
 
     if (msg == null) {
-      logger.error("Message decoded to null", e.data);
+      logger.error("Message decoded to null");
       throw new Error("Message decoded to null");
     }
 
@@ -144,7 +144,10 @@ class Replicator {
     }
 
     const start = data.seqStart;
-    if (start[0] > expected[0] || (start[0] > expected[0] && start[1] != expected[1])) {
+    if (
+      start[0] > expected[0] ||
+      (start[0] > expected[0] && start[1] != expected[1])
+    ) {
       logger.error("out of order delivery from server", start, expected);
       this.#ws?.close();
     }
@@ -193,11 +196,11 @@ export default async function startSyncWith(
   args: ReplicatorArgs
 ): Promise<Replicator> {
   const wrapped = await wrapDb(args.localDb, args.rx);
-  if (wrapped.siteId === args.remoteDbId) {
-    throw new Error(
-      `Attempting to sync to self? Site ids match? ${wrapped.siteId}`
-    );
-  }
+  // if (wrapped.siteId === args.remoteDbId) {
+  //   throw new Error(
+  //     `Attempting to sync to self? Site ids match? ${wrapped.siteId}`
+  //   );
+  // }
 
   const r = new Replicator({
     ...args,

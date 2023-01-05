@@ -1,6 +1,6 @@
 import {
   ChangesAckedMsg,
-  SiteIdWire,
+  encodeMsg,
   Version,
 } from "@vlcn.io/client-server-common";
 import { DB, RECEIVE, SEND } from "./DB.js";
@@ -18,8 +18,6 @@ const maxOutstandingAcks = 10;
  * - Listening to the local db for changes
  * - Generating changesets from those changes
  * - Encoding them in the expected format
- *
- * TODO: can we merge this implementation and the server implementation?
  */
 export default class ChangeStream {
   #started: boolean = false;
@@ -27,12 +25,12 @@ export default class ChangeStream {
   #disposers: (() => void)[] = [];
   #outstandingAcks = 0;
   #blockedSend: boolean = false;
-  #lastSeq: [Version, number] = [0, 0];
+  #lastSeq: [Version, number] = [0n, 0];
 
   constructor(
     private readonly db: DB,
     private readonly ws: WebSocket,
-    private readonly remoteDbId: SiteIdWire,
+    private readonly remoteDbId: Uint8Array,
     private readonly create?: {
       schemaName: string;
     }
@@ -49,7 +47,7 @@ export default class ChangeStream {
     // send the establish message
 
     // send establish meessage
-    let seqStart: [Version, number] = [0, 0];
+    let seqStart: [Version, number] = [0n, 0];
     [this.#lastSeq, seqStart] = await Promise.all([
       this.db.seqIdFor(this.remoteDbId, SEND),
       this.db.seqIdFor(this.remoteDbId, RECEIVE),
@@ -57,7 +55,7 @@ export default class ChangeStream {
 
     logger.info("asking server to establish the connection");
     this.ws.send(
-      JSON.stringify({
+      encodeMsg({
         _tag: "establish",
         from: this.db.siteId,
         to: this.remoteDbId,
@@ -111,7 +109,7 @@ export default class ChangeStream {
     const startSeq = this.#lastSeq;
     // TODO: allow chunking of the changeset pulling to handle very large
     // transactions
-    const changes = await this.db.pullChangeset(this.remoteDbId, startSeq);
+    const changes = await this.db.pullChangeset(startSeq);
     if (changes.length == 0) {
       return;
     }
@@ -123,7 +121,7 @@ export default class ChangeStream {
     this.#outstandingAcks += 1;
     logger.info("Syncing to server. num changes: ", changes.length);
     this.ws.send(
-      JSON.stringify({
+      encodeMsg({
         _tag: "receive",
         changes,
         from: this.db.siteId,

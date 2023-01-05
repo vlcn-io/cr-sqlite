@@ -9,7 +9,6 @@
   "module": "dist/index.js",
   "main": "dist/index.js",
   "devDependencies": {
-    "@types/uuid": "^8.3.4",
     "typescript": "^4.9.3"
   },
   "scripts": {
@@ -26,7 +25,6 @@
   "dependencies": {
     "@vlcn.io/client-server-common": "workspace:*",
     "@vlcn.io/rx-tbl": "workspace:*",
-    "@vlcn.io/xplat-api": "workspace:*",
-    "uuid": "^9.0.0"
+    "@vlcn.io/xplat-api": "workspace:*"
   }
 }

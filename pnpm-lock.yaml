@@ -246,15 +246,19 @@ importers:
 
   js/sync-reference/client-server-common:
     specifiers:
+      '@types/uuid': ^8.3.4
       fast-check: ^3.4.0
       lib0: ^0.2.58
       typescript: ^4.9.3
+      uuid: ^9.0.0
       vitest: ^0.26.3
     dependencies:
       lib0: 0.2.58
     devDependencies:
+      '@types/uuid': 8.3.4
       fast-check: 3.4.0
       typescript: 4.9.3
+      uuid: 9.0.0
       vitest: 0.26.3
 
   js/sync-reference/p2p:
@@ -8264,7 +8268,6 @@ packages:
   /uuid/9.0.0:
     resolution: {integrity: sha512-MXcSTerfPa4uqyzStbRoTgt5XIe3x5+42+q1sDuy3R5MDk66URdLMOZe5aPX/SQd+kuYAh0FdP/pO28IkQyTeg==}
     hasBin: true
-    dev: false
 
   /v8-to-istanbul/9.0.1:
     resolution: {integrity: sha512-74Y4LqY74kLE6IFyIjPtkSTWzUZmj8tdHT9Ii/26dvQ6K9Dl2NbEfj0XgU2sHCtKgt5VupqhlO/5aWuqS+IY1w==}

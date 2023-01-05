@@ -1,6 +1,7 @@
 import { test, expect } from "vitest";
 import fc from "fast-check";
-import { encodeMsg, decodeMsg } from "../index.js";
+import { encodeMsg, decodeMsg, randomUuidBytes } from "../index.js";
+import { stringify as uuidStringify, parse as uuidParse } from "uuid";
 
 test("encoded, decode pairing ack", () => {
   fc.assert(
@@ -16,8 +17,8 @@ test("encoded, decode pairing ack", () => {
 test("encoded, decode pairing establish", () => {
   fc.assert(
     fc.property(
-      fc.string(),
-      fc.string(),
+      fc.uint8Array({ minLength: 16, maxLength: 16 }),
+      fc.uint8Array({ minLength: 16, maxLength: 16 }),
       fc.tuple(fc.bigIntN(64), fc.integer()),
       fc.option(fc.string()),
       (from, to, seqStart, create) => {
@@ -43,7 +44,7 @@ test("encoded, decode pairing establish", () => {
 test("encoded, decode pairing receive", () => {
   fc.assert(
     fc.property(
-      fc.string(),
+      fc.uint8Array({ minLength: 16, maxLength: 16 }),
       fc.tuple(fc.bigIntN(64), fc.integer()),
       fc.tuple(fc.bigIntN(64), fc.integer()),
       fc.array(
@@ -87,12 +88,11 @@ test("encoded, decode pairing request", () => {
   );
 });
 
-test("fail case", () => {
-  const msg = {
-    _tag: "request",
-    seqStart: [9223372036854775807n, 0],
-  } as const;
-  const encoded = encodeMsg(msg);
-  const decoded = decodeMsg(encoded);
-  expect(decoded).toEqual(msg);
+test("uuid byte generation", () => {
+  const uuid = randomUuidBytes();
+  const uuidString = uuidStringify(uuid);
+  // console.log(uuid);
+  // console.log(uuidString);
+  // console.log(uuidParse(uuidString));
+  expect(uuidParse(uuidString)).toEqual(uuid);
 });

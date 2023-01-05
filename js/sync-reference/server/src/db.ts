@@ -1,4 +1,4 @@
-import { Changeset, SiteIdWire, Version } from "@vlcn.io/client-server-common";
+import { Changeset, Version } from "@vlcn.io/client-server-common";
 import { resolve } from "import-meta-resolve";
 import * as fs from "fs";
 import {
@@ -14,10 +14,12 @@ import config from "./config.js";
 import logger from "./logger.js";
 import contextStore from "./contextStore.js";
 
+type SiteIdStr = string;
+
 const modulePath = await resolve("@vlcn.io/crsqlite", import.meta.url);
 
-const activeDBs = new Map<SiteIdWire, WeakRef<DB>>();
-const finalizationRegistry = new FinalizationRegistry((siteId: SiteIdWire) => {
+const activeDBs = new Map<SiteIdStr, WeakRef<DB>>();
+const finalizationRegistry = new FinalizationRegistry((siteId: SiteIdStr) => {
   const ref = activeDBs.get(siteId);
   const db = ref?.deref();
   if (db) {
@@ -28,12 +30,12 @@ const finalizationRegistry = new FinalizationRegistry((siteId: SiteIdWire) => {
 
 class DB {
   #db: Database;
-  #listeners = new Set<(source: SiteIdWire) => void>();
+  #listeners = new Set<(source: SiteIdStr) => void>();
   #applyChangesTx;
   #pullChangesetStmt;
 
   constructor(
-    public readonly siteId: SiteIdWire,
+    public readonly siteId: Uint8Array,
     dbPath: string,
     create?: { schemaName: string }
   ) {
@@ -57,28 +59,30 @@ class DB {
       `INSERT INTO crsql_changes ("table", "pk", "cid", "val", "col_version", "db_version", "site_id") VALUES (?, ?, ?, ?, ?, ?, ?)`
     );
 
-    this.#applyChangesTx = this.#db.transaction((changes: Changeset[]) => {
-      for (const cs of changes) {
-        applyChangesStmt.run(
-          cs[0],
-          cs[1],
-          cs[2],
-          cs[3],
-          BigInt(cs[4]),
-          BigInt(cs[5]),
-          cs[6] ? uuidParse(cs[6]) : null
-        );
+    this.#applyChangesTx = this.#db.transaction(
+      (from: Uint8Array, changes: readonly Changeset[]) => {
+        for (const cs of changes) {
+          applyChangesStmt.run(
+            cs[0],
+            cs[1],
+            cs[2],
+            cs[3],
+            BigInt(cs[4]),
+            BigInt(cs[5]),
+            from
+          );
+        }
       }
-    });
+    );
   }
 
   get __db_for_tests(): any {
     return this.#db;
   }
 
-  applyChangeset(from: SiteIdWire, changes: Changeset[]) {
+  applyChangeset(from: Uint8Array, changes: readonly Changeset[]) {
     // write them then notify safely
-    this.#applyChangesTx(changes);
+    this.#applyChangesTx(from, changes);
 
     // queue this so we can finish acking before firing off more changes
     // to connected clients
@@ -87,12 +91,12 @@ class DB {
     });
   }
 
-  pullChangeset(requestor: SiteIdWire, since: [Version, number]): Changeset[] {
+  pullChangeset(
+    requestor: Uint8Array,
+    since: readonly [Version, number]
+  ): Changeset[] {
     // pull changes since the client last saw changes, excluding what the client itself sent us
-    const changes = this.#pullChangesetStmt.all(
-      BigInt(since[0]),
-      uuidParse(requestor)
-    );
+    const changes = this.#pullChangesetStmt.all(BigInt(since[0]), requestor);
     changes.forEach((c) => {
       // we mask the site ids of clients via the server site id
       // 1. for privacy
@@ -106,10 +110,11 @@ class DB {
     return changes;
   }
 
-  #notifyListeners(source: SiteIdWire) {
+  #notifyListeners(source: Uint8Array) {
+    const siteIdStr = uuidStringify(source);
     for (const l of this.#listeners) {
       try {
-        l(source);
+        l(siteIdStr);
       } catch (e: any) {
         logger.error(e.message);
       }
@@ -130,7 +135,7 @@ class DB {
     this.#db.exec(contents);
   }
 
-  onChanged(cb: (source: SiteIdWire) => void) {
+  onChanged(cb: (source: SiteIdStr) => void) {
     this.#listeners.add(cb);
     return () => this.#listeners.delete(cb);
   }
@@ -139,7 +144,7 @@ class DB {
     // new db and the user provided a site id
     this.#db.exec(`CREATE TABLE "__crsql_siteid" (site_id)`);
     const stmt = this.#db.prepare(`INSERT INTO "__crsql_siteid" VALUES (?)`);
-    stmt.run(uuidParse(this.siteId));
+    stmt.run(this.siteId);
   }
 
   close() {
@@ -165,11 +170,12 @@ export type DBType = DB;
 // Note: creating the DB should be an _explicit_ operation
 // requested by the end user and requires a schema for the db to use.
 export default async function dbFactory(
-  desiredDb: SiteIdWire,
+  desiredDb: Uint8Array,
   create?: { schemaName: string }
 ): Promise<DB> {
   let isNew = false;
-  if (!uuidValidate(desiredDb)) {
+  const dsiredDbStr = uuidStringify(desiredDb);
+  if (!uuidValidate(dsiredDbStr)) {
     logger.error("invalid uuid", {
       event: "dbFactory.invalidUuid",
       desiredDb,
@@ -195,18 +201,18 @@ export default async function dbFactory(
     }
   }
 
-  const existing = activeDBs.get(desiredDb);
+  const existing = activeDBs.get(dsiredDbStr);
   if (existing) {
-    logger.info(`db ${desiredDb} found in cache`);
+    logger.info(`db ${dsiredDbStr} found in cache`);
     const deref = existing.deref();
     if (deref) {
       return deref;
     } else {
-      activeDBs.delete(desiredDb);
+      activeDBs.delete(dsiredDbStr);
     }
   }
 
-  const dbPath = path.join(config.get.dbDir, desiredDb);
+  const dbPath = path.join(config.get.dbDir, dsiredDbStr);
   try {
     await fs.promises.access(dbPath, fs.constants.F_OK);
   } catch (e) {
@@ -225,8 +231,8 @@ export default async function dbFactory(
   // do not pass create arg if the db already exists.
   const ret = new DB(desiredDb, dbPath, isNew ? create : undefined);
   const ref = new WeakRef(ret);
-  activeDBs.set(desiredDb, ref);
-  finalizationRegistry.register(ret, desiredDb);
+  activeDBs.set(dsiredDbStr, ref);
+  finalizationRegistry.register(ret, dsiredDbStr);
 
   return ret;
 }

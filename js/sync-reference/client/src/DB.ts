@@ -16,6 +16,7 @@ type VersionEvent = typeof RECEIVE | typeof SEND;
  * by the network layer.
  */
 export class DB {
+  private dispoables: (() => void)[] = [];
   constructor(
     private readonly db: DBSync | DBAsync,
     public readonly siteId: Uint8Array,
@@ -26,7 +27,9 @@ export class DB {
   ) {}
 
   onUpdate(cb: () => void) {
-    return this.rx.on(cb);
+    const ret = this.rx.on(cb);
+    this.dispoables.push(ret);
+    return ret;
   }
 
   async seqIdFor(
@@ -43,15 +46,14 @@ export class DB {
     }
     const row = rows[0];
 
-    // handle possible bigint return
-    return [row[0].toString(), row[1]];
+    return [BigInt(row[0]), row[1]];
   }
 
   // TODO: track seq monotonicity
   async applyChangeset(
     from: Uint8Array,
-    changes: Changeset[],
-    seqEnd: [Version, number]
+    changes: readonly Changeset[],
+    seqEnd: readonly [Version, number]
   ) {
     // write them then notify safely
     await this.db.transaction(async () => {
@@ -80,7 +82,7 @@ export class DB {
   async updatePeerTracker(
     fromBin: Uint8Array,
     event: VersionEvent,
-    seqEnd: [Version, number]
+    seqEnd: readonly [Version, number]
   ) {
     await this.updatePeerTrackerStmt.run(
       fromBin,
@@ -109,6 +111,7 @@ export class DB {
   }
 
   dispose() {
+    this.dispoables.forEach((d) => d());
     this.pullChangesetStmt.finalize();
     this.applyChangesetStmt.finalize();
   }

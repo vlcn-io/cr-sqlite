@@ -47,9 +47,9 @@ export type ChangesReceivedMsg = Readonly<{
    * is for future use when we allow breaking
    * apart large transactions into many messages.
    */
-  seqStart: [Version, number];
-  seqEnd: [Version, number];
-  changes: Changeset[];
+  seqStart: readonly [Version, number];
+  seqEnd: readonly [Version, number];
+  changes: readonly Changeset[];
 }>;
 
 export type ChangesRequestedMsg = Readonly<{
@@ -59,7 +59,7 @@ export type ChangesRequestedMsg = Readonly<{
 
 export type ChangesAckedMsg = Readonly<{
   _tag: "ack";
-  seqEnd: [Version, number];
+  seqEnd: readonly [Version, number];
 }>;
 
 export type EstablishConnectionMsg = Readonly<{

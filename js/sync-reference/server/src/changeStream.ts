@@ -8,11 +8,10 @@ import logger from "./logger.js";
 import {
   ChangesAckedMsg,
   ChangesRequestedMsg,
-  SiteIdWire,
   Version,
 } from "@vlcn.io/client-server-common";
 import contextStore from "./contextStore.js";
-
+type SiteIdStr = string;
 // change stream:
 // 1. sends the requested changes up till now
 // 2. records `endSeq`
@@ -25,7 +24,7 @@ export default class ChangeStream {
   #disposables: (() => void)[] = [];
   #outstandingAcks = 0;
   #blockedSend: boolean = false;
-  #lastSeq: [Version, number] = [0, 0];
+  #lastSeq: readonly [Version, number] = [0n, 0];
 
   constructor(
     private readonly db: DBType,
@@ -80,7 +79,7 @@ export default class ChangeStream {
     }
   }
 
-  #dbChanged = (source: SiteIdWire | null) => {
+  #dbChanged = (source: SiteIdStr | null) => {
     if (this.#closed) {
       // events could have been queued
       logger.warn("receive db change event on closed connection", {
@@ -98,7 +97,7 @@ export default class ChangeStream {
       );
     }
 
-    if (source == this.connection.site) {
+    if (source == this.connection.siteStr) {
       logger.info(
         `not syncing self sourced changes to Peer: ${this.connection.site}`
       );

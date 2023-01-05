@@ -9,6 +9,7 @@ import wrapDb, { DB, RECEIVE } from "./DB.js";
 import {
   ChangesReceivedMsg,
   decodeMsg,
+  encodeMsg,
   Msg,
   Version,
 } from "@vlcn.io/client-server-common";
@@ -37,7 +38,7 @@ class Replicator {
   #started = false;
   #changeStream: ChangeStream | null = null;
   #uri: string;
-  #expectedSeq?: [Version, number];
+  #expectedSeq?: readonly [Version, number];
 
   constructor({
     localDb,
@@ -157,7 +158,7 @@ class Replicator {
     this.#expectedSeq = data.seqEnd;
 
     this.#ws?.send(
-      JSON.stringify({
+      encodeMsg({
         _tag: "ack",
         seqEnd: data.seqEnd,
       })
@@ -171,8 +172,12 @@ class Replicator {
       // then we should restart the connection
       // via some amount of retries
       // and backoff
+      this.#stop();
+
+      // TODO: schedule a reconnect
+    } else {
+      this.#stop();
     }
-    this.#stop();
   };
 
   #stop() {
@@ -196,12 +201,6 @@ export default async function startSyncWith(
   args: ReplicatorArgs
 ): Promise<Replicator> {
   const wrapped = await wrapDb(args.localDb, args.rx);
-  // if (wrapped.siteId === args.remoteDbId) {
-  //   throw new Error(
-  //     `Attempting to sync to self? Site ids match? ${wrapped.siteId}`
-  //   );
-  // }
-
   const r = new Replicator({
     ...args,
     localDb: wrapped,

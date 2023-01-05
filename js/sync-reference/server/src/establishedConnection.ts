@@ -6,14 +6,13 @@ import {
   ChangesReceivedMsg,
   ChangesRequestedMsg,
   Msg,
-  SiteIdWire,
   Version,
 } from "@vlcn.io/client-server-common";
 import logger from "./logger.js";
 
 export class EstablishedConnection {
   #changeStream?: ChangeStream;
-  #expectedSeq?: [Version, number];
+  #expectedSeq?: readonly [Version, number];
 
   constructor(
     private readonly connection: Connection,
@@ -29,8 +28,12 @@ export class EstablishedConnection {
      */
   }
 
-  get site(): SiteIdWire {
+  get site(): Uint8Array {
     return this.connection.site;
+  }
+
+  get siteStr(): string {
+    return this.connection.siteStr;
   }
 
   processMsg(data: Msg) {

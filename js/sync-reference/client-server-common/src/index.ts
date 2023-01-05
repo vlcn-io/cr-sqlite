@@ -27,7 +27,7 @@ export type Changeset = [
   // is disallowed in p2p topologies.
 ];
 
-export type ChangesReceivedMsg = {
+export type ChangesReceivedMsg = Readonly<{
   _tag: "receive";
   from: SiteIdWire;
   /**
@@ -51,19 +51,19 @@ export type ChangesReceivedMsg = {
   seqStart: [Version, number];
   seqEnd: [Version, number];
   changes: Changeset[];
-};
+}>;
 
-export type ChangesRequestedMsg = {
+export type ChangesRequestedMsg = Readonly<{
   _tag: "request";
-  seqStart: [Version, number];
-};
+  seqStart: readonly [Version, number];
+}>;
 
-export type ChangesAckedMsg = {
+export type ChangesAckedMsg = Readonly<{
   _tag: "ack";
   seqEnd: [Version, number];
-};
+}>;
 
-export type EstablishConnectionMsg = {
+export type EstablishConnectionMsg = Readonly<{
   _tag: "establish";
   from: SiteIdWire;
   to: SiteIdWire;
@@ -75,7 +75,7 @@ export type EstablishConnectionMsg = {
   create?: {
     schemaName: string;
   };
-};
+}>;
 
 type MsgType = Msg["_tag"];
 

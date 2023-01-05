@@ -158,7 +158,8 @@ static void assertWrittenPeers(sqlite3 *db, crsql_SeenPeer *zExpected,
                                int zExpectedLen) {
   sqlite3_stmt *pStmt;
   int rc = sqlite3_prepare_v2(
-      db, "SELECT site_id, clock, tag FROM crsql_tracked_peers", -1, &pStmt, 0);
+      db, "SELECT site_id, version, tag FROM crsql_tracked_peers", -1, &pStmt,
+      0);
   assert(rc == SQLITE_OK);
 
   int compared = 0;

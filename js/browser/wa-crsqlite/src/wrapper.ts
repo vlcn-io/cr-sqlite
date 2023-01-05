@@ -111,6 +111,7 @@ export class DB implements DBAsync {
   #updateHooks: Set<
     (type: UpdateType, dbName: string, tblName: string, rowid: bigint) => void
   > | null = null;
+  #closed = false;
   constructor(public api: SQLiteAPI, public db: number) {}
 
   execMany(sql: string[]): Promise<any> {
@@ -121,9 +122,16 @@ export class DB implements DBAsync {
 
   exec(sql: string, bind?: SQLiteCompatibleType[]): Promise<void> {
     // TODO: either? since not returning?
+    this.#assertOpen();
     return serialize(this.cache, computeCacheKey(sql, "a", bind), () =>
       this.statements(sql, false, bind)
     );
+  }
+
+  #assertOpen() {
+    if (this.#closed) {
+      throw new Error("The DB is closed");
+    }
   }
 
   onUpdate(
@@ -171,6 +179,7 @@ export class DB implements DBAsync {
     sql: string,
     bind?: SQLiteCompatibleType[]
   ): Promise<T[]> {
+    this.#assertOpen();
     return serialize(this.cache, computeCacheKey(sql, "o", bind), () =>
       this.statements(sql, true, bind)
     );
@@ -183,12 +192,14 @@ export class DB implements DBAsync {
     sql: string,
     bind?: SQLiteCompatibleType[]
   ): Promise<T[]> {
+    this.#assertOpen();
     return serialize(this.cache, computeCacheKey(sql, "a", bind), () =>
       this.statements(sql, false, bind)
     );
   }
 
   prepare(sql: string): Promise<StmtAsync> {
+    this.#assertOpen();
     return serialize(this.cache, undefined, async () => {
       const str = this.api.str_new(this.db, sql);
       const prepared = await this.api.prepare_v2(
@@ -205,12 +216,14 @@ export class DB implements DBAsync {
   }
 
   close(): Promise<any> {
+    this.#closed = true;
     return this.exec("SELECT crsql_finalize()").then(() => {
       return serialize(this.cache, undefined, () => this.api.close(this.db));
     });
   }
 
   createFunction(name: string, fn: (...args: any) => unknown, opts?: {}): void {
+    this.#assertOpen();
     this.api.create_function(
       this.db,
       name,
@@ -232,11 +245,13 @@ export class DB implements DBAsync {
   }
 
   async savepoint(cb: () => Promise<void>): Promise<void> {
+    this.#assertOpen();
     await this.exec("SAVPOINT");
     await cb();
   }
 
   transaction(cb: () => Promise<void>): Promise<void> {
+    this.#assertOpen();
     return serializeTx(async () => {
       await this.exec("BEGIN");
       try {

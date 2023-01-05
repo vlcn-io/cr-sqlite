@@ -23,5 +23,7 @@
     "url": "git@github.com:vlcn-io/cr-sqlite.git",
     "directory": "https://github.com/vlcn-io/cr-sqlite/tree/main/js/sync-reference/client-server-common"
   },
-  "dependencies": {}
+  "dependencies": {
+    "lib0": "^0.2.58"
+  }
 }

@@ -78,7 +78,8 @@ static int initPeerTrackingTable(sqlite3 *db, char **pzErrMsg) {
   return sqlite3_exec(
       db,
       "CREATE TABLE IF NOT EXISTS crsql_tracked_peers (\"site_id\" "
-      "BLOB NOT NULL, \"clock\" INTEGER NOT NULL, \"tag\" INTEGER, \"event\" "
+      "BLOB NOT NULL, \"version\" INTEGER NOT NULL, \"seq\" INTEGER DEFAULT 0, "
+      "\"tag\" INTEGER, \"event\" "
       "INTEGER, PRIMARY "
       "KEY (\"site_id\", \"tag\", \"event\")) STRICT;",
       0, 0, pzErrMsg);

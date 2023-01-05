@@ -40,10 +40,10 @@ crsql_ExtData *crsql_newExtData(sqlite3 *db) {
   pExtData->pTrackPeersStmt = 0;
   rc = sqlite3_prepare_v3(
       db,
-      "INSERT INTO crsql_tracked_peers (\"site_id\", \"clock\", "
+      "INSERT INTO crsql_tracked_peers (\"site_id\", \"version\", "
       "\"tag\", \"event\") VALUES (?, ?, ?, ?) ON CONFLICT DO UPDATE SET "
-      "\"clock\" = "
-      "MAX(\"clock\", EXCLUDED.\"clock\")",
+      "\"version\" = "
+      "MAX(\"version\", EXCLUDED.\"version\")",
       -1, SQLITE_PREPARE_PERSISTENT, &(pExtData->pTrackPeersStmt), 0);
   if (rc != SQLITE_OK) {
     sqlite3_finalize(pExtData->pPragmaDataVersionStmt);

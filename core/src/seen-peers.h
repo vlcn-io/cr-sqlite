@@ -23,6 +23,8 @@ SQLITE_EXTENSION_INIT3
 #include "ext-data.h"
 
 #define CRSQL_SEEN_PEERS_INITIAL_SIZE 5
+#define CRSQL_SEEN_PEERS_RECV 0
+#define CRSQL_SEEN_PEERS_SEND 1
 
 typedef struct crsql_SeenPeer crsql_SeenPeer;
 struct crsql_SeenPeer {

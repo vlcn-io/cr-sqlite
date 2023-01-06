@@ -2,6 +2,11 @@ import { test, expect } from "vitest";
 import fc from "fast-check";
 import { encodeMsg, decodeMsg, randomUuidBytes } from "../index.js";
 import { stringify as uuidStringify, parse as uuidParse } from "uuid";
+import * as crypto from "node:crypto";
+
+if (typeof global.crypto === "undefined") {
+  (global as any).crypto = crypto;
+}
 
 test("encoded, decode pairing ack", () => {
   fc.assert(

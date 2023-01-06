@@ -41,6 +41,7 @@ class DB {
   ) {
     this.#db = new SQLiteDB(dbPath);
     this.#db.pragma("journal_mode = WAL");
+    this.#db.pragma("synchronous = NORMAL");
 
     if (create) {
       this.#bootstrapSiteId();
@@ -51,7 +52,7 @@ class DB {
       this.#applySchema(create.schemaName);
     }
     this.#pullChangesetStmt = this.#db.prepare(
-      `SELECT "table", "pk", "cid", "val", "col_version", "db_version", "site_id" FROM crsql_changes WHERE db_version > ? AND site_id != ?`
+      `SELECT "table", "pk", "cid", "val", "col_version", "db_version" FROM crsql_changes WHERE db_version > ? AND site_id != ?`
     );
     this.#pullChangesetStmt.raw(true);
 
@@ -62,15 +63,7 @@ class DB {
     this.#applyChangesTx = this.#db.transaction(
       (from: Uint8Array, changes: readonly Changeset[]) => {
         for (const cs of changes) {
-          applyChangesStmt.run(
-            cs[0],
-            cs[1],
-            cs[2],
-            cs[3],
-            BigInt(cs[4]),
-            BigInt(cs[5]),
-            from
-          );
+          applyChangesStmt.run(cs[0], cs[1], cs[2], cs[3], cs[4], cs[5], from);
         }
       }
     );
@@ -98,14 +91,8 @@ class DB {
     // pull changes since the client last saw changes, excluding what the client itself sent us
     const changes = this.#pullChangesetStmt.all(BigInt(since[0]), requestor);
     changes.forEach((c) => {
-      // we mask the site ids of clients via the server site id
-      // 1. for privacy
-      // 2. to prevent looping during proxying
-      // c[6] = this.siteId;
-      // since BigInt doesn't serialize -- convert to string
-      c[4] = c[4].toString();
-      c[5] = c[5].toString();
-      c[6] = uuidStringify(c[6]);
+      c[4] = BigInt(c[4]);
+      c[5] = BigInt(c[5]);
     });
     return changes;
   }

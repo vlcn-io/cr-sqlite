@@ -216,8 +216,8 @@ export class DB implements DBAsync {
   }
 
   close(): Promise<any> {
-    this.#closed = true;
     return this.exec("SELECT crsql_finalize()").then(() => {
+      this.#closed = true;
       return serialize(this.cache, undefined, () => this.api.close(this.db));
     });
   }

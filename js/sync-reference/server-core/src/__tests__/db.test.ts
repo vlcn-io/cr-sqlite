@@ -43,7 +43,7 @@ test("opening an existing db", async () => {
   const siteid = db.__db_for_tests
     .prepare("SELECT crsql_siteid() as sid")
     .get().sid;
-  expect(db.siteId).toBe(uuidStringify(siteid));
+  expect(db.siteId).toEqual(new Uint8Array(siteid));
 });
 
 test("dangerous schema names are not allowed", async () => {
@@ -131,12 +131,12 @@ test("creating a new db", async () => {
   const siteid = db.__db_for_tests
     .prepare("SELECT crsql_siteid() as sid")
     .get().sid;
-  expect(db.siteId).toBe(uuidStringify(siteid));
+  expect(db.siteId).toEqual(new Uint8Array(siteid));
 
   // check that we can insert into the table that should exist
   db.__db_for_tests.exec('INSERT INTO "foo" VALUES (1, 2)');
   const changeset = db.pullChangeset(randomUuidBytes(), [0n, 0]);
-  expect(changeset).toEqual([["foo", "1", "b", "2", "1", "1", dbid]]);
+  expect(changeset).toEqual([["foo", "1", "b", "2", 1n, 1n]]);
 });
 
 afterAll(() => {

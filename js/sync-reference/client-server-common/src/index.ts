@@ -220,7 +220,11 @@ export function randomUuidBytes(): Uint8Array {
   return hexToBytes(crypto.randomUUID().replaceAll("-", ""));
 }
 
-function hexToBytes(hex: string) {
+export function uuidStrToBytes(uuid: string): Uint8Array {
+  return hexToBytes(uuid.replaceAll("-", ""));
+}
+
+export function hexToBytes(hex: string) {
   const ret = new Uint8Array(16);
   for (let c = 0; c < hex.length; c += 2) {
     ret[c / 2] = parseInt(hex.substring(c, c + 2), 16);

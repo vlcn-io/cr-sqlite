@@ -7,7 +7,7 @@
     "src"
   ],
   "bin": {
-    "vlcn-ref-server": "./dist/bin/main.js"
+    "vlcn-websocket": "./dist/bin/main.js"
   },
   "module": "dist/index.js",
   "main": "dist/index.js",

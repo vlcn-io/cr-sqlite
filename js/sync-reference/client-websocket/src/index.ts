@@ -1,4 +1,4 @@
-import { Socket } from "@vlcn.io/client-server-common";
+import { Socket, uuidStrToBytes } from "@vlcn.io/client-server-common";
 import {
   ReplicatorArgs,
   default as createReplicator,
@@ -59,6 +59,8 @@ class WebSocketWrapper implements Socket {
     this.onmessage = undefined;
   }
 }
+
+export { uuidStrToBytes } from "@vlcn.io/client-server-common";
 
 export default async function startSyncWith(
   uri: string,

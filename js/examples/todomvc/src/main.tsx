@@ -2,7 +2,7 @@ import * as React from "react";
 import { createRoot } from "react-dom/client";
 
 import sqliteWasm from "@vlcn.io/wa-crsqlite";
-import startSync from "@vlcn.io/sync-client";
+import startSync, { uuidStrToBytes } from "@vlcn.io/client-websocket";
 import tblrx from "@vlcn.io/rx-tbl";
 
 // @ts-ignore
@@ -26,12 +26,11 @@ async function main() {
   };
 
   const rx = tblrx(db);
-  const sync = await startSync({
+  const sync = await startSync(`ws://${window.location.hostname}:8080/sync`, {
     localDb: db,
     // the id of the database to persist into on the server.
     // if a db with that id does not exist it can be created for you
-    remoteDbId: "a0a36bfc-12da-4582-ae2e-928eaca0dc08",
-    uri: `ws://${window.location.hostname}:8080/sync`,
+    remoteDbId: uuidStrToBytes("a0a36bfc-12da-4582-ae2e-928eaca0dc08"),
     // the schema to apply to the db if it does not exist
     // TODO: validate that the opened db has the desired schema and version of that schema?
     create: {

@@ -260,11 +260,13 @@ importers:
   js/sync-reference/client-websocket:
     specifiers:
       '@vlcn.io/client-core': workspace:*
+      '@vlcn.io/client-server-common': workspace:*
       '@vlcn.io/rx-tbl': workspace:*
       '@vlcn.io/xplat-api': workspace:*
       typescript: ^4.9.3
     dependencies:
       '@vlcn.io/client-core': link:../client-core
+      '@vlcn.io/client-server-common': link:../client-server-common
       '@vlcn.io/rx-tbl': link:../../rx-tbl
       '@vlcn.io/xplat-api': link:../../xplat-api
     devDependencies:

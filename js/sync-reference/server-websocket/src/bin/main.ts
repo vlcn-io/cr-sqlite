@@ -5,7 +5,7 @@
 // @ts-ignore
 import express from "express";
 import { IncomingMessage } from "node:http";
-import { WebSocketServer } from "ws";
+import { WebSocketServer, WebSocket } from "ws";
 import * as http from "http";
 import { Connection, logger, contextStore } from "@vlcn.io/server-core";
 import { nanoid } from "nanoid";

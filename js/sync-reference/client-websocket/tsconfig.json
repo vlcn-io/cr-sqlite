@@ -6,6 +6,7 @@
   },
   "include": ["./src/"],
   "references": [
+    { "path": "../client-core" },
     { "path": "../client-server-common" },
     { "path": "../../xplat-api" },
     { "path": "../../rx-tbl" }

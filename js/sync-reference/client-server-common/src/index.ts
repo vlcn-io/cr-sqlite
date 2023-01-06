@@ -32,12 +32,12 @@ export type Changeset = [
  * they like. E.g., via WebSockets, Socket.io, Rest, GraphQL, other
  */
 export interface Socket {
-  onclose?: (code: number, reason: ArrayBuffer) => void;
-  onmessage?: (data: ArrayBuffer) => void;
-  onopen?: () => void;
+  onclose?: (code: number, reason: any) => void;
+  onmessage?: (data: Uint8Array) => void;
 
-  send(data: ArrayBuffer): void;
-  closeForError(): void;
+  send(data: Uint8Array): void;
+  closeForError(code?: number, data?: any): void;
+  removeAllListeners(): void;
 }
 
 export type ChangesReceivedMsg = Readonly<{

@@ -1,7 +1,6 @@
 // After an `establishedConnection` has received a `requestChanges` event
 // we start a change stream for that client.
 
-import config from "../../server-websocket/src/config.js";
 import { DBType } from "./db.js";
 import { EstablishedConnection } from "./establishedConnection.js";
 import logger from "./logger.js";
@@ -28,7 +27,8 @@ export default class ChangeStream {
 
   constructor(
     private readonly db: DBType,
-    private readonly connection: EstablishedConnection
+    private readonly connection: EstablishedConnection,
+    private readonly maxOutstandingAcks: number = 5
   ) {
     connection.onClosed = this.#connClosed;
   }
@@ -72,7 +72,7 @@ export default class ChangeStream {
     // We just droped below threshold and had previously blocked a send.
     // Can send now.
     if (
-      this.#outstandingAcks == config.get.maxOutstandingAcks - 1 &&
+      this.#outstandingAcks == this.maxOutstandingAcks - 1 &&
       this.#blockedSend
     ) {
       this.#dbChanged(null);
@@ -104,7 +104,7 @@ export default class ChangeStream {
       return;
     }
 
-    if (this.#outstandingAcks == config.get.maxOutstandingAcks) {
+    if (this.#outstandingAcks == this.maxOutstandingAcks) {
       this.#blockedSend = true;
       logger.warn("too many outstanding acks", {
         event: "ChangeStream.#dbChange.tooManyOutstandingAcks",

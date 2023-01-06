@@ -11,6 +11,7 @@ import {
   decodeMsg,
   encodeMsg,
   Msg,
+  Socket,
   Version,
 } from "@vlcn.io/client-server-common";
 import { DB as DBSync, DBAsync } from "@vlcn.io/xplat-api";
@@ -29,7 +30,7 @@ type ReplicatorArgs = {
 };
 
 class Replicator {
-  #ws: WebSocket | null = null;
+  #ws: Socket | null = null;
   #localDb;
   #remoteDbId;
   #create?: {
@@ -59,7 +60,7 @@ class Replicator {
     this.#uri = uri;
   }
 
-  start() {
+  start(socket: Socket) {
     logger.info("starting replicator");
     if (this.#started) {
       throw new Error(
@@ -69,9 +70,9 @@ class Replicator {
       );
     }
     this.#started = true;
-    this.#ws = new WebSocket(this.#uri);
+    this.#ws = socket;
 
-    this.#ws.onopen = this.#opened;
+    this.#opened;
     this.#ws.onmessage = this.#handleMessage;
     this.#ws.onclose = this.#handleClose;
     // TODO: ping/pong to detect undetectable close events
@@ -96,15 +97,15 @@ class Replicator {
     });
   };
 
-  #handleMessage = (e: MessageEvent<Uint8Array>) => {
-    logger.info("Received message", e);
+  #handleMessage = (data: Uint8Array) => {
+    logger.info("Received message");
 
     let msg: Msg | null = null;
     try {
-      msg = decodeMsg(e.data);
+      msg = decodeMsg(data);
     } catch (err) {
       logger.error("Failed to parse msg");
-      throw e;
+      throw err;
     }
 
     if (msg == null) {
@@ -116,13 +117,13 @@ class Replicator {
       case "ack":
         if (!this.#changeStream) {
           logger.error("received an ack with no allocated change stream");
-          this.#ws?.close();
+          this.#ws?.closeForError();
         }
         this.#changeStream?.processAck(msg);
         return;
       case "establish":
         logger.error("unexpected establish message");
-        this.#ws?.close();
+        this.#ws?.closeForError();
         return;
       case "receive":
         this.#applyChanges(msg);
@@ -140,7 +141,7 @@ class Replicator {
       logger.error(
         "received changes but did not allocated an expected seq number"
       );
-      this.#ws?.close();
+      this.#ws?.closeForError();
       return;
     }
 
@@ -150,7 +151,7 @@ class Replicator {
       (start[0] > expected[0] && start[1] != expected[1])
     ) {
       logger.error("out of order delivery from server", start, expected);
-      this.#ws?.close();
+      this.#ws?.closeForError();
     }
 
     logger.debug("applying changes from server. Len: ", data.changes.length);
@@ -165,8 +166,8 @@ class Replicator {
     );
   }
 
-  #handleClose = (e: Event) => {
-    logger.info("Received close", e);
+  #handleClose = (code: number, reason: any) => {
+    logger.info("Received close", code, reason);
     if (this.#started) {
       // if the close is not due to us stopping
       // then we should restart the connection
@@ -186,7 +187,7 @@ class Replicator {
     this.#changeStream?.stop();
     this.#changeStream = null;
     if (this.#ws != null) {
-      this.#ws.close();
+      this.#ws.closeForError();
       this.#ws = null;
     }
   }
@@ -198,14 +199,15 @@ class Replicator {
 }
 
 export default async function startSyncWith(
-  args: ReplicatorArgs
+  args: ReplicatorArgs,
+  socket: Socket
 ): Promise<Replicator> {
   const wrapped = await wrapDb(args.localDb, args.rx);
   const r = new Replicator({
     ...args,
     localDb: wrapped,
   });
-  r.start();
+  r.start(socket);
 
   return r;
 }

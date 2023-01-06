@@ -29,15 +29,15 @@ export class Connection {
   #siteStr?: string;
 
   constructor(private readonly ws: Socket) {
-    ws.on("close", () => {
+    ws.onclose = () => {
       logger.info("ws connection closed", {
         event: "Connection.closed",
         req: contextStore.get().reqId,
       });
       this.#closed();
-    });
+    };
 
-    ws.on("message", this.#onMsg);
+    ws.onmessage = this.#onMsg;
   }
 
   send(msg: Msg) {
@@ -169,7 +169,7 @@ export class Connection {
       event: "Connection.close",
       req: contextStore.get().reqId,
     });
-    this.ws.close(
+    this.ws.closeForError(
       connectionCode[code],
       data ? JSON.stringify(data) : undefined
     );

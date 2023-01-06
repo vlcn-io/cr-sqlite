@@ -5,7 +5,7 @@
     "rootDir": "./src",
     "allowSyntheticDefaultImports": true
   },
-  "include": ["./src/", "../server-websocket/src/config.ts"],
+  "include": ["./src/"],
   "references": [
     { "path": "../../node-allinone" },
     { "path": "../client-server-common" }

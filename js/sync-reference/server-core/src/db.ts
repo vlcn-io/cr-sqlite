@@ -10,7 +10,6 @@ import {
 import { Database } from "better-sqlite3";
 import SQLiteDB from "better-sqlite3";
 import * as path from "path";
-import config from "../../server-websocket/src/config.js";
 import logger from "./logger.js";
 import contextStore from "./contextStore.js";
 

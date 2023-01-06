@@ -1,6 +1,7 @@
 import {
   ChangesAckedMsg,
   encodeMsg,
+  Socket,
   Version,
 } from "@vlcn.io/client-server-common";
 import { DB, RECEIVE, SEND } from "./DB.js";
@@ -29,7 +30,7 @@ export default class ChangeStream {
 
   constructor(
     private readonly db: DB,
-    private readonly ws: WebSocket,
+    private readonly ws: Socket,
     private readonly remoteDbId: Uint8Array,
     private readonly create?: {
       schemaName: string;

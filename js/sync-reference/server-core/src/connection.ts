@@ -2,6 +2,7 @@ import dbFactory from "./db.js";
 import { EstablishedConnection } from "./establishedConnection.js";
 import logger from "./logger.js";
 import {
+  Config,
   decodeMsg,
   encodeMsg,
   EstablishConnectionMsg,
@@ -28,7 +29,7 @@ export class Connection {
   #establishPromise?: Promise<void>;
   #siteStr?: string;
 
-  constructor(private readonly ws: Socket) {
+  constructor(private readonly config: Config, private readonly ws: Socket) {
     ws.onclose = () => {
       logger.info("ws connection closed", {
         event: "Connection.closed",
@@ -141,7 +142,7 @@ export class Connection {
 
     this.#site = msg.from;
     this.#siteStr = uuidStringify(msg.from);
-    this.#establishPromise = dbFactory(msg.to, msg.create).then(
+    this.#establishPromise = dbFactory(this.config, msg.to, msg.create).then(
       (db) => {
         this.#establishedConnection = new EstablishedConnection(this, db);
         this.#establishedConnection.processMsg({

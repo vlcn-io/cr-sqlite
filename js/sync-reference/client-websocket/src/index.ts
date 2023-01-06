@@ -7,6 +7,8 @@ import {
 
 class WebSocketWrapper implements Socket {
   private ws: WebSocket | null = null;
+  private backoff: number = 5000;
+  private reconnecting: boolean = false;
 
   constructor(
     private readonly uri: string,
@@ -14,11 +16,14 @@ class WebSocketWrapper implements Socket {
   ) {}
 
   start() {
+    if (this.reconnecting) {
+      return;
+    }
     const ws = (this.ws = new WebSocket(this.uri));
     ws.onerror = (e: Event) => {
-      // TODO: retry connection
       this.replicator.stop();
       console.log("closed for error");
+      this.#reconnect();
     };
 
     ws.onopen = async () => {
@@ -27,7 +32,7 @@ class WebSocketWrapper implements Socket {
           this.onclose(e.code, e.reason);
         }
         if (e.code === 1006) {
-          // abnormal close, retry
+          this.#reconnect();
         }
       };
 
@@ -50,11 +55,9 @@ class WebSocketWrapper implements Socket {
   }
 
   closeForError(code?: number | undefined, data?: any): void {
-    // TODO: retry connection if we've closed due to an error.
-    // Exponential backoff.
-    // Stop trying after too many closeForErrors
     this.ws?.close(code, data);
     console.log("closed for error 2");
+    this.#reconnect();
   }
 
   close(code?: number | undefined, data?: any): void {
@@ -64,6 +67,21 @@ class WebSocketWrapper implements Socket {
   removeAllListeners(): void {
     this.onclose = undefined;
     this.onmessage = undefined;
+  }
+
+  #reconnect() {
+    if (this.reconnecting) {
+      return;
+    }
+    console.log("reconnecting");
+
+    this.reconnecting = true;
+    const backoff = this.backoff;
+    this.backoff = Math.min(60000, backoff * 2);
+    setTimeout(() => {
+      this.reconnecting = false;
+      this.start();
+    }, backoff);
   }
 }
 

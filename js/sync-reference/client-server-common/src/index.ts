@@ -26,6 +26,12 @@ export type Changeset = [
   // is disallowed in p2p topologies.
 ];
 
+export type Config = {
+  readonly dbDir: string;
+  readonly schemaDir: string;
+  readonly maxOutstandingAcks: number;
+};
+
 /**
  * Socket abstraction. Exposes the methods required by
  * the sync layer and allows users to implement the socket however

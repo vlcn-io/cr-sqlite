@@ -1,8 +1,4 @@
-type Config = {
-  readonly dbDir: string;
-  readonly schemaDir: string;
-  readonly maxOutstandingAcks: number;
-};
+import { Config } from "@vlcn.io/client-server-common";
 
 let config: Config = Object.freeze({
   dbDir: "./dbs",

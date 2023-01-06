@@ -1,7 +1,5 @@
 import { test, expect, beforeAll, afterAll } from "vitest";
 import { resolve } from "import-meta-resolve";
-import { configure } from "../../../server-websocket/src/config.js";
-import config from "../../../server-websocket/src/config.js";
 import SQLiteDB from "better-sqlite3";
 import {
   validate as uuidValidate,
@@ -13,28 +11,31 @@ import fs from "node:fs";
 import { randomUUID } from "node:crypto";
 import dbFactory from "../db.js";
 import path from "node:path";
-const modulePath = await resolve("@vlcn.io/crsqlite", import.meta.url);
+import { randomUuidBytes } from "@vlcn.io/client-server-common";
 
-configure({
-  dbDir: "./dbs/test",
-  schemaDir: "./schemas/test",
-});
+const config = {
+  dbDir: "./dbs",
+  schemaDir: "./schemas",
+  maxOutstandingAcks: 10,
+};
 
-let existingDbId = randomUUID();
+let existingDbId = randomUuidBytes();
+let existingDbIdStr = uuidStringify(existingDbId);
+
 // create persistent db(s)
 beforeAll(() => {
-  fs.mkdirSync(config.get.dbDir);
+  fs.mkdirSync(config.dbDir);
 
-  const db = new SQLiteDB(path.join(config.get.dbDir, existingDbId));
+  const db = new SQLiteDB(path.join(config.dbDir, existingDbIdStr));
   db.exec(`CREATE TABLE "__crsql_siteid" (site_id)`);
   const stmt = db.prepare(`INSERT INTO "__crsql_siteid" VALUES (?)`);
-  stmt.run(uuidParse(existingDbId));
+  stmt.run(existingDbId);
   db.close();
 });
 
 test("opening an existing db", async () => {
   // pass a bogus schema name -- if the db exists we should never try to apply the schema.
-  const db = await dbFactory(existingDbId, {
+  const db = await dbFactory(config, existingDbId, {
     schemaName: "does-not-exist",
   });
 
@@ -48,84 +49,85 @@ test("opening an existing db", async () => {
 test("dangerous schema names are not allowed", async () => {
   expect(
     async () =>
-      await dbFactory(randomUUID(), {
+      await dbFactory(config, randomUuidBytes(), {
         schemaName: ".",
       })
   ).rejects.toThrow();
 
   expect(
     async () =>
-      await dbFactory(randomUUID(), {
+      await dbFactory(config, randomUuidBytes(), {
         schemaName: "..",
       })
   ).rejects.toThrow();
 
   expect(
     async () =>
-      await dbFactory(randomUUID(), {
+      await dbFactory(config, randomUuidBytes(), {
         schemaName: "../",
       })
   ).rejects.toThrow();
 
   expect(
     async () =>
-      await dbFactory(randomUUID(), {
+      await dbFactory(config, randomUuidBytes(), {
         schemaName: "sdf/s",
       })
   ).rejects.toThrow();
 
   expect(
     async () =>
-      await dbFactory(randomUUID(), {
+      await dbFactory(config, randomUuidBytes(), {
         schemaName: "~",
       })
   ).rejects.toThrow();
 
   expect(
     async () =>
-      await dbFactory(randomUUID(), {
+      await dbFactory(config, randomUuidBytes(), {
         schemaName: "/foo",
       })
   ).rejects.toThrow();
 });
 
 test("dangerous db names are not allowed", () => {
+  const encoder = new TextEncoder();
   expect(
     async () =>
-      await dbFactory(".", {
+      await dbFactory(config, encoder.encode("."), {
         schemaName: "foo",
       })
   ).rejects.toThrow();
 
   expect(
     async () =>
-      await dbFactory("/sd", {
+      await dbFactory(config, encoder.encode("/sd"), {
         schemaName: "foo",
       })
   ).rejects.toThrow();
 
   expect(
     async () =>
-      await dbFactory("..", {
+      await dbFactory(config, encoder.encode(".."), {
         schemaName: "foo",
       })
   ).rejects.toThrow();
 
   expect(
     async () =>
-      await dbFactory("~", {
+      await dbFactory(config, encoder.encode("~"), {
         schemaName: "foo",
       })
   ).rejects.toThrow();
 });
 
 test("creating a new db", async () => {
-  let dbid = randomUUID();
-  const db = await dbFactory(dbid, {
+  let dbid = randomUuidBytes();
+  const db = await dbFactory(config, dbid, {
     schemaName: "test-one",
   });
 
-  expect(db.siteId).toBe(dbid);
+  expect(db.siteId).toEqual(dbid);
   const siteid = db.__db_for_tests
     .prepare("SELECT crsql_siteid() as sid")
     .get().sid;
@@ -133,11 +135,11 @@ test("creating a new db", async () => {
 
   // check that we can insert into the table that should exist
   db.__db_for_tests.exec('INSERT INTO "foo" VALUES (1, 2)');
-  const changeset = db.pullChangeset(randomUUID(), [0, 0]);
+  const changeset = db.pullChangeset(randomUuidBytes(), [0n, 0]);
   expect(changeset).toEqual([["foo", "1", "b", "2", "1", "1", dbid]]);
 });
 
 afterAll(() => {
   // clean up created dbs
-  fs.rmSync(config.get.dbDir, { recursive: true });
+  fs.rmSync(config.dbDir, { recursive: true });
 });

@@ -1,4 +1,4 @@
-import { Changeset, Version } from "@vlcn.io/client-server-common";
+import { Changeset, Config, Version } from "@vlcn.io/client-server-common";
 import { resolve } from "import-meta-resolve";
 import * as fs from "fs";
 import {
@@ -34,6 +34,7 @@ class DB {
   #pullChangesetStmt;
 
   constructor(
+    private readonly config: Config,
     public readonly siteId: Uint8Array,
     dbPath: string,
     create?: { schemaName: string }
@@ -114,7 +115,7 @@ class DB {
   // 2. no sync till clients upgrade
   #applySchema(schemaName: string) {
     // TODO: make this promise based
-    const schemaPath = path.join(config.get.schemaDir, schemaName);
+    const schemaPath = path.join(this.config.schemaDir, schemaName);
     const contents = fs.readFileSync(schemaPath, {
       encoding: "utf8",
     });
@@ -156,6 +157,7 @@ export type DBType = DB;
 // Note: creating the DB should be an _explicit_ operation
 // requested by the end user and requires a schema for the db to use.
 export default async function dbFactory(
+  config: Config,
   desiredDb: Uint8Array,
   create?: { schemaName: string }
 ): Promise<DB> {
@@ -198,7 +200,7 @@ export default async function dbFactory(
     }
   }
 
-  const dbPath = path.join(config.get.dbDir, dsiredDbStr);
+  const dbPath = path.join(config.dbDir, dsiredDbStr);
   try {
     await fs.promises.access(dbPath, fs.constants.F_OK);
   } catch (e) {
@@ -215,7 +217,7 @@ export default async function dbFactory(
   }
 
   // do not pass create arg if the db already exists.
-  const ret = new DB(desiredDb, dbPath, isNew ? create : undefined);
+  const ret = new DB(config, desiredDb, dbPath, isNew ? create : undefined);
   const ref = new WeakRef(ret);
   activeDBs.set(dsiredDbStr, ref);
   finalizationRegistry.register(ret, dsiredDbStr);

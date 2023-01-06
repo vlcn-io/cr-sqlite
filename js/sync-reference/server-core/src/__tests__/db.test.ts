@@ -13,6 +13,12 @@ import dbFactory from "../db.js";
 import path from "node:path";
 import { randomUuidBytes } from "@vlcn.io/client-server-common";
 
+import * as crypto from "node:crypto";
+
+if (typeof global.crypto === "undefined") {
+  (global as any).crypto = crypto;
+}
+
 const config = {
   dbDir: "./dbs",
   schemaDir: "./schemas",

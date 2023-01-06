@@ -18,12 +18,16 @@ class WebSocketWrapper implements Socket {
     ws.onerror = (e: Event) => {
       // TODO: retry connection
       this.replicator.stop();
+      console.log("closed for error");
     };
 
     ws.onopen = async () => {
       ws.onclose = (e: CloseEvent) => {
         if (this.onclose) {
           this.onclose(e.code, e.reason);
+        }
+        if (e.code === 1006) {
+          // abnormal close, retry
         }
       };
 
@@ -50,6 +54,7 @@ class WebSocketWrapper implements Socket {
     // Exponential backoff.
     // Stop trying after too many closeForErrors
     this.ws?.close(code, data);
+    console.log("closed for error 2");
   }
 
   close(code?: number | undefined, data?: any): void {

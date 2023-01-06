@@ -1,4 +1,3 @@
-import { RawData, WebSocket } from "ws";
 import dbFactory from "./db.js";
 import { EstablishedConnection } from "./establishedConnection.js";
 import logger from "./logger.js";
@@ -7,6 +6,7 @@ import {
   encodeMsg,
   EstablishConnectionMsg,
   Msg,
+  Socket,
 } from "@vlcn.io/client-server-common";
 import { stringify as uuidStringify } from "uuid";
 import contextStore from "./contextStore.js";
@@ -28,7 +28,7 @@ export class Connection {
   #establishPromise?: Promise<void>;
   #siteStr?: string;
 
-  constructor(private readonly ws: WebSocket) {
+  constructor(private readonly ws: Socket) {
     ws.on("close", () => {
       logger.info("ws connection closed", {
         event: "Connection.closed",
@@ -44,7 +44,7 @@ export class Connection {
     this.ws.send(encodeMsg(msg));
   }
 
-  #onMsg = (data: RawData) => {
+  #onMsg = (data: ArrayBuffer) => {
     logger.info(`receive msg`, {
       event: "Connection.#onMsg",
       req: contextStore.get().reqId,

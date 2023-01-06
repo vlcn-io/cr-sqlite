@@ -1,7 +1,7 @@
 // After an `establishedConnection` has received a `requestChanges` event
 // we start a change stream for that client.
 
-import config from "./config.js";
+import config from "../../server-websocket/src/config.js";
 import { DBType } from "./db.js";
 import { EstablishedConnection } from "./establishedConnection.js";
 import logger from "./logger.js";

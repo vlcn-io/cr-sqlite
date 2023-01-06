@@ -1,7 +1,7 @@
 import { test, expect, beforeAll, afterAll } from "vitest";
 import { resolve } from "import-meta-resolve";
-import { configure } from "../config.js";
-import config from "../config.js";
+import { configure } from "../../../server-websocket/src/config.js";
+import config from "../../../server-websocket/src/config.js";
 import SQLiteDB from "better-sqlite3";
 import {
   validate as uuidValidate,

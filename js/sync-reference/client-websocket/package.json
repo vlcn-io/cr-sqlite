@@ -1,5 +1,5 @@
 {
-  "name": "@vlcn.io/sync-client",
+  "name": "@vlcn.io/client-websocket",
   "type": "module",
   "version": "0.5.3",
   "files": [
@@ -23,7 +23,7 @@
     "directory": "https://github.com/vlcn-io/cr-sqlite/tree/main/js/sync-client"
   },
   "dependencies": {
-    "@vlcn.io/client-server-common": "workspace:*",
+    "@vlcn.io/client-core": "workspace:*",
     "@vlcn.io/rx-tbl": "workspace:*",
     "@vlcn.io/xplat-api": "workspace:*"
   }

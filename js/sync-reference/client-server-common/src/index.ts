@@ -26,6 +26,20 @@ export type Changeset = [
   // is disallowed in p2p topologies.
 ];
 
+/**
+ * Socket abstraction. Exposes the methods required by
+ * the sync layer and allows users to implement the socket however
+ * they like. E.g., via WebSockets, Socket.io, Rest, GraphQL, other
+ */
+export interface Socket {
+  onclose?: (code: number, reason: ArrayBuffer) => void;
+  onmessage?: (data: ArrayBuffer) => void;
+  onopen?: () => void;
+
+  send(data: ArrayBuffer): void;
+  closeForError(): void;
+}
+
 export type ChangesReceivedMsg = Readonly<{
   _tag: "receive";
   from: Uint8Array;

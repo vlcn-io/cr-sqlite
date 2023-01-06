@@ -1,8 +1,4 @@
 #!/usr/bin/env node
-/**
- * A simple reference implementation for a sync server.
- */
-// @ts-ignore
 import express from "express";
 import { IncomingMessage } from "node:http";
 import { WebSocketServer, WebSocket } from "ws";

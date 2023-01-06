@@ -38,11 +38,20 @@ export type Config = {
  * they like. E.g., via WebSockets, Socket.io, Rest, GraphQL, other
  */
 export interface Socket {
+  /**
+   * Sync layers will register an `onclose` handler in order
+   * to clean themselves up when the underlying socket closes.
+   */
   onclose?: (code: number, reason: any) => void;
+  /**
+   * Sync layers will register an `onmessage` handler in order
+   * to receive messages from the socket implementation.
+   */
   onmessage?: (data: Uint8Array) => void;
 
   send(data: Uint8Array): void;
   closeForError(code?: number, data?: any): void;
+  close(code?: number, data?: any): void;
   removeAllListeners(): void;
 }
 

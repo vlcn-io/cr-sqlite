@@ -229,15 +229,19 @@ importers:
 
   js/sync-reference/client-core:
     specifiers:
+      '@types/throttle-debounce': ^5.0.0
       '@vlcn.io/client-server-common': workspace:*
       '@vlcn.io/rx-tbl': workspace:*
       '@vlcn.io/xplat-api': workspace:*
+      throttle-debounce: ^5.0.0
       typescript: ^4.9.3
     dependencies:
       '@vlcn.io/client-server-common': link:../client-server-common
       '@vlcn.io/rx-tbl': link:../../rx-tbl
       '@vlcn.io/xplat-api': link:../../xplat-api
+      throttle-debounce: 5.0.0
     devDependencies:
+      '@types/throttle-debounce': 5.0.0
       typescript: 4.9.3
 
   js/sync-reference/client-server-common:
@@ -1724,6 +1728,10 @@ packages:
 
   /@types/stack-utils/2.0.1:
     resolution: {integrity: sha512-Hl219/BT5fLAaz6NDkSuhzasy49dwQS/DSdu4MdggFB8zcXv7vflBI3xp7FEmkmdDkBUI2bPUNeMttp2knYdxw==}
+    dev: true
+
+  /@types/throttle-debounce/5.0.0:
+    resolution: {integrity: sha512-Pb7k35iCGFcGPECoNE4DYp3Oyf2xcTd3FbFQxXUI9hEYKUl6YX+KLf7HrBmgVcD05nl50LIH6i+80js4iYmWbw==}
     dev: true
 
   /@types/uuid/8.3.4:
@@ -7906,6 +7914,11 @@ packages:
 
   /text-hex/1.0.0:
     resolution: {integrity: sha512-uuVGNWzgJ4yhRaNSiubPY7OjISw4sw4E5Uv0wbjp+OzcbmVU/rsT8ujgcXJhn9ypzsgr5vlzpPqP+MBBKcGvbg==}
+    dev: false
+
+  /throttle-debounce/5.0.0:
+    resolution: {integrity: sha512-2iQTSgkkc1Zyk0MeVrt/3BvuOXYPl/R8Z0U2xxo9rjwNciaHDG3R+Lm6dh4EeUci49DanvBnuqI6jshoQQRGEg==}
+    engines: {node: '>=12.22'}
     dev: false
 
   /throttleit/1.0.0:

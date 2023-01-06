@@ -6,8 +6,10 @@ import {
 } from "@vlcn.io/client-server-common";
 import { DB, RECEIVE, SEND } from "./DB.js";
 import logger from "./logger.js";
+import { throttle } from "throttle-debounce";
 
 const maxOutstandingAcks = 10;
+
 /**
  * Handles the details of tracking a stream of changes we're shipping to the server.
  * Ensures:
@@ -69,6 +71,11 @@ export default class ChangeStream {
     this.#localDbChanged();
   }
 
+  /**
+   * We expect the server to acknolwedge each message we send.
+   * We do not persist send events to the `crsql_tracked_peers` table until we receive an ack from the server
+   * indicating that the server did indeed persist a prior message.
+   */
   async processAck(msg: ChangesAckedMsg) {
     logger.info("Received ack");
     this.#outstandingAcks -= 1;
@@ -87,8 +94,10 @@ export default class ChangeStream {
     }
   }
 
-  // TODO: should we throttle to ~50ms?
-  #localDbChanged = async () => {
+  // TODO: make the throttle configurable
+  // TODO: go back to temp trigger model
+  // such that we do not perform a query in response to sync events.
+  #localDbChanged = throttle(25, async () => {
     logger.info("received local db change event");
     if (this.#closed) {
       console.warn("Reciving db change event on closed connection");
@@ -130,7 +139,7 @@ export default class ChangeStream {
         seqEnd,
       })
     );
-  };
+  });
 
   stop() {
     logger.info("stopping change stream");

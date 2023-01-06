@@ -26,6 +26,10 @@ export default class WebSocketWrapper implements Socket {
     this.ws.close(code, data);
   }
 
+  close(code?: number | undefined, data?: any): void {
+    this.ws.close(code, data);
+  }
+
   removeAllListeners(): void {
     this.onclose = undefined;
     this.onmessage = undefined;

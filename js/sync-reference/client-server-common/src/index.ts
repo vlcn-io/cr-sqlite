@@ -5,7 +5,7 @@ export type CID = string;
 export type QuoteConcatedPKs = string;
 export type TableName = string;
 export type Version = bigint;
-export type Val = string;
+export type Val = string | null;
 
 export type Msg =
   | ChangesReceivedMsg
@@ -149,7 +149,12 @@ export function encodeMsg(msg: Msg): Uint8Array {
         encoding.writeVarString(encoder, change[0]);
         encoding.writeVarString(encoder, change[1]);
         encoding.writeVarString(encoder, change[2]);
-        encoding.writeVarString(encoder, change[3]);
+        if (change[3] === null) {
+          encoding.writeUint8(encoder, 0);
+        } else {
+          encoding.writeUint8(encoder, 1);
+          encoding.writeVarString(encoder, change[3]);
+        }
         encoding.writeBigInt64(encoder, change[4]);
         encoding.writeBigInt64(encoder, change[5]);
       }
@@ -198,7 +203,13 @@ export function decodeMsg(msg: Uint8Array): Msg {
           decoding.readVarString(decoder),
           decoding.readVarString(decoder),
           decoding.readVarString(decoder),
-          decoding.readVarString(decoder),
+          (() => {
+            const present = decoding.readUint8(decoder);
+            if (present == 1) {
+              return decoding.readVarString(decoder);
+            }
+            return null;
+          })(),
           decoding.readBigInt64(decoder),
           decoding.readBigInt64(decoder),
         ]),

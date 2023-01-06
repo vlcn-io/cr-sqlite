@@ -129,9 +129,13 @@ class DB {
 
   #bootstrapSiteId() {
     // new db and the user provided a site id
-    this.#db.exec(`CREATE TABLE "__crsql_siteid" (site_id)`);
-    const stmt = this.#db.prepare(`INSERT INTO "__crsql_siteid" VALUES (?)`);
-    stmt.run(this.siteId);
+    try {
+      this.#db.exec(`CREATE TABLE "__crsql_siteid" (site_id)`);
+      const stmt = this.#db.prepare(`INSERT INTO "__crsql_siteid" VALUES (?)`);
+      stmt.run(this.siteId);
+    } catch (e: any) {
+      logger.error(e.message);
+    }
   }
 
   close() {

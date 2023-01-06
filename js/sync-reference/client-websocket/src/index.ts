@@ -27,10 +27,12 @@ class WebSocketWrapper implements Socket {
         }
       };
 
-      ws.onmessage = (e: MessageEvent<Uint8Array>) => {
-        if (this.onmessage) {
-          this.onmessage(new Uint8Array(e.data));
-        }
+      ws.onmessage = (e: MessageEvent<Blob>) => {
+        e.data.arrayBuffer().then((b) => {
+          if (this.onmessage) {
+            this?.onmessage(new Uint8Array(b));
+          }
+        });
       };
       await this.replicator.start(this);
     };

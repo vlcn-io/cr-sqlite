@@ -134,7 +134,9 @@ export default async function wrap(
         `INSERT INTO crsql_changes ("table", "pk", "cid", "val", "col_version", "db_version", "site_id") VALUES (?, ?, ?, ?, ?, ?, ?)`
       ),
       db.prepare(
-        `INSERT OR REPLACE INTO "crsql_tracked_peers" ("site_id", "event", "version", "seq", "tag") VALUES (?, ?, MAX("version", ?), ?, 0)`
+        `INSERT INTO "crsql_tracked_peers" ("site_id", "event", "version", "seq", "tag") VALUES (?, ?, ?, ?, 0) ON CONFLICT DO UPDATE SET
+          "version" = MAX("version", excluded."version"),
+          "seq" = excluded."seq"`
       ),
     ]);
 

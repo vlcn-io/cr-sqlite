@@ -171,7 +171,6 @@ importers:
       '@types/react': ^18.0.25
       '@types/react-dom': ^18.0.8
       '@types/uuid': ^8.3.4
-      '@types/ws': ^8.5.3
       '@vlcn.io/client-websocket': workspace:*
       '@vlcn.io/rx-tbl': workspace:*
       '@vlcn.io/server-websocket': workspace:*
@@ -179,24 +178,19 @@ importers:
       nanoid: ^4.0.0
       react: ^18.2.0
       react-dom: ^18.2.0
-      uuid: ^9.0.0
       vite: ^3.2.2
-      ws: ^8.11.0
     dependencies:
-      '@types/ws': 8.5.3
       '@vlcn.io/client-websocket': link:../../sync-reference/client-websocket
       '@vlcn.io/rx-tbl': link:../../rx-tbl
+      '@vlcn.io/server-websocket': link:../../sync-reference/server-websocket
       '@vlcn.io/wa-crsqlite': link:../../browser/wa-crsqlite
       nanoid: 4.0.0
       react: 18.2.0
       react-dom: 18.2.0_react@18.2.0
-      uuid: 9.0.0
-      ws: 8.11.0
     devDependencies:
       '@types/react': 18.0.25
       '@types/react-dom': 18.0.9
       '@types/uuid': 8.3.4
-      '@vlcn.io/server-websocket': link:../../sync-reference/server-websocket
       vite: 3.2.4
 
   js/node-allinone:
@@ -336,6 +330,7 @@ importers:
       '@types/uuid': ^8.3.4
       '@types/ws': ^8.5.3
       '@types/yargs': ^17.0.18
+      '@vlcn.io/client-server-common': workspace:*
       '@vlcn.io/crsqlite': workspace:*
       '@vlcn.io/server-core': workspace:*
       better-sqlite3: ^8.0.1
@@ -351,6 +346,7 @@ importers:
       yargs: ^17.6.2
     dependencies:
       '@types/yargs': 17.0.18
+      '@vlcn.io/client-server-common': link:../client-server-common
       '@vlcn.io/crsqlite': link:../../../core
       '@vlcn.io/server-core': link:../server-core
       better-sqlite3: 8.0.1
@@ -1660,6 +1656,7 @@ packages:
 
   /@types/node/18.11.9:
     resolution: {integrity: sha512-CRpX21/kGdzjOpFsZSkcrXMGIBWMGNIHXXBVFSH+ggkftxg+XYP20TESbh+zFvFj3EQOl5byk0HTRn1IL6hbqg==}
+    dev: true
 
   /@types/normalize-package-data/2.4.1:
     resolution: {integrity: sha512-Gj7cI7z+98M282Tqmp2K5EIsoouUEzbBJhQQzDE3jSIRk6r9gsz0oUokqIUR4u1R3dMHo0pDHM7sNOHyhulypw==}
@@ -1749,6 +1746,7 @@ packages:
     resolution: {integrity: sha512-6YOoWjruKj1uLf3INHH7D3qTXwFfEsg1kf3c0uDdSBJwfa/llkwIjrAGV7j7mVgGNbzTQ3HiHKKDXl6bJPD97w==}
     dependencies:
       '@types/node': 18.11.9
+    dev: true
 
   /@types/yargs-parser/21.0.0:
     resolution: {integrity: sha512-iO9ZQHkZxHn4mSakYV0vFHAVDyEOIJQrV2uZ06HxEPcx+mt8swXoZHIbaaJ2crJYFfErySgktuTZ3BeLz+XmFA==}

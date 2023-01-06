@@ -35,6 +35,7 @@
   "dependencies": {
     "@types/yargs": "^17.0.18",
     "@vlcn.io/server-core": "workspace:*",
+    "@vlcn.io/client-server-common": "workspace:*",
     "@vlcn.io/crsqlite": "workspace:*",
     "better-sqlite3": "^8.0.1",
     "cors": "^2.8.5",

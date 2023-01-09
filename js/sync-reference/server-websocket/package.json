@@ -1,5 +1,5 @@
 {
-  "name": "@vlcn.io/sync-server",
+  "name": "@vlcn.io/server-websocket",
   "type": "module",
   "version": "0.5.6",
   "files": [
@@ -7,7 +7,7 @@
     "src"
   ],
   "bin": {
-    "vlcn-ref-server": "./dist/bin/main.js"
+    "vlcn-websocket": "./dist/bin/main.js"
   },
   "module": "dist/index.js",
   "main": "dist/index.js",
@@ -23,17 +23,17 @@
   "scripts": {
     "build": "tsc --build",
     "watch": "tsc --build --watch",
-    "test": "vitest run",
     "deep-clean": "rm -rf ./dist || true && rm tsconfig.tsbuildinfo || true",
     "start": "pnpm build && node dist/bin/main.js"
   },
   "repository": {
     "type": "git",
     "url": "git@github.com:vlcn-io/cr-sqlite.git",
-    "directory": "https://github.com/vlcn-io/cr-sqlite/tree/main/js/sync-reference/server"
+    "directory": "https://github.com/vlcn-io/cr-sqlite/tree/main/js/sync-reference/server-websocket"
   },
   "dependencies": {
     "@types/yargs": "^17.0.18",
+    "@vlcn.io/server-core": "workspace:*",
     "@vlcn.io/client-server-common": "workspace:*",
     "@vlcn.io/crsqlite": "workspace:*",
     "better-sqlite3": "^8.0.1",

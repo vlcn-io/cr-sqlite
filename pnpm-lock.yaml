@@ -171,26 +171,22 @@ importers:
       '@types/react': ^18.0.25
       '@types/react-dom': ^18.0.8
       '@types/uuid': ^8.3.4
-      '@types/ws': ^8.5.3
+      '@vlcn.io/client-websocket': workspace:*
       '@vlcn.io/rx-tbl': workspace:*
-      '@vlcn.io/sync-client': workspace:*
+      '@vlcn.io/server-websocket': workspace:*
       '@vlcn.io/wa-crsqlite': workspace:*
       nanoid: ^4.0.0
       react: ^18.2.0
       react-dom: ^18.2.0
-      uuid: ^9.0.0
       vite: ^3.2.2
-      ws: ^8.11.0
     dependencies:
-      '@types/ws': 8.5.3
+      '@vlcn.io/client-websocket': link:../../sync-reference/client-websocket
       '@vlcn.io/rx-tbl': link:../../rx-tbl
-      '@vlcn.io/sync-client': link:../../sync-reference/client
+      '@vlcn.io/server-websocket': link:../../sync-reference/server-websocket
       '@vlcn.io/wa-crsqlite': link:../../browser/wa-crsqlite
       nanoid: 4.0.0
       react: 18.2.0
       react-dom: 18.2.0_react@18.2.0
-      uuid: 9.0.0
-      ws: 8.11.0
     devDependencies:
       '@types/react': 18.0.25
       '@types/react-dom': 18.0.9
@@ -227,26 +223,52 @@ importers:
     devDependencies:
       typescript: 4.9.3
 
-  js/sync-reference/client:
+  js/sync-reference/client-core:
     specifiers:
-      '@types/uuid': ^8.3.4
+      '@types/throttle-debounce': ^5.0.0
       '@vlcn.io/client-server-common': workspace:*
       '@vlcn.io/rx-tbl': workspace:*
       '@vlcn.io/xplat-api': workspace:*
+      throttle-debounce: ^5.0.0
       typescript: ^4.9.3
-      uuid: ^9.0.0
     dependencies:
       '@vlcn.io/client-server-common': link:../client-server-common
       '@vlcn.io/rx-tbl': link:../../rx-tbl
       '@vlcn.io/xplat-api': link:../../xplat-api
-      uuid: 9.0.0
+      throttle-debounce: 5.0.0
     devDependencies:
-      '@types/uuid': 8.3.4
+      '@types/throttle-debounce': 5.0.0
       typescript: 4.9.3
 
   js/sync-reference/client-server-common:
     specifiers:
+      '@types/uuid': ^8.3.4
+      fast-check: ^3.4.0
+      lib0: ^0.2.58
       typescript: ^4.9.3
+      uuid: ^9.0.0
+      vitest: ^0.26.3
+    dependencies:
+      lib0: 0.2.58
+    devDependencies:
+      '@types/uuid': 8.3.4
+      fast-check: 3.4.0
+      typescript: 4.9.3
+      uuid: 9.0.0
+      vitest: 0.26.3
+
+  js/sync-reference/client-websocket:
+    specifiers:
+      '@vlcn.io/client-core': workspace:*
+      '@vlcn.io/client-server-common': workspace:*
+      '@vlcn.io/rx-tbl': workspace:*
+      '@vlcn.io/xplat-api': workspace:*
+      typescript: ^4.9.3
+    dependencies:
+      '@vlcn.io/client-core': link:../client-core
+      '@vlcn.io/client-server-common': link:../client-server-common
+      '@vlcn.io/rx-tbl': link:../../rx-tbl
+      '@vlcn.io/xplat-api': link:../../xplat-api
     devDependencies:
       typescript: 4.9.3
 
@@ -269,7 +291,38 @@ importers:
       jest: 29.3.1
       typescript: 4.9.3
 
-  js/sync-reference/server:
+  js/sync-reference/server-core:
+    specifiers:
+      '@types/better-sqlite3': ^7.6.2
+      '@types/node': ^18.11.9
+      '@types/uuid': ^8.3.4
+      '@vlcn.io/client-server-common': workspace:*
+      '@vlcn.io/crsqlite': workspace:*
+      better-sqlite3: ^8.0.1
+      import-meta-resolve: ^2.1.0
+      nanoid: ^4.0.0
+      typescript: ^4.9.3
+      uuid: ^9.0.0
+      vitest: ^0.25.2
+      winston: ^3.8.2
+      yargs: ^17.6.2
+    dependencies:
+      '@vlcn.io/client-server-common': link:../client-server-common
+      '@vlcn.io/crsqlite': link:../../../core
+      better-sqlite3: 8.0.1
+      import-meta-resolve: 2.1.0
+      nanoid: 4.0.0
+      uuid: 9.0.0
+      winston: 3.8.2
+      yargs: 17.6.2
+    devDependencies:
+      '@types/better-sqlite3': 7.6.2
+      '@types/node': 18.11.9
+      '@types/uuid': 8.3.4
+      typescript: 4.9.3
+      vitest: 0.25.2
+
+  js/sync-reference/server-websocket:
     specifiers:
       '@types/better-sqlite3': ^7.6.2
       '@types/express': ^4.17.14
@@ -279,6 +332,7 @@ importers:
       '@types/yargs': ^17.0.18
       '@vlcn.io/client-server-common': workspace:*
       '@vlcn.io/crsqlite': workspace:*
+      '@vlcn.io/server-core': workspace:*
       better-sqlite3: ^8.0.1
       cors: ^2.8.5
       express: ^4.18.2
@@ -294,6 +348,7 @@ importers:
       '@types/yargs': 17.0.18
       '@vlcn.io/client-server-common': link:../client-server-common
       '@vlcn.io/crsqlite': link:../../../core
+      '@vlcn.io/server-core': link:../server-core
       better-sqlite3: 8.0.1
       cors: 2.8.5
       express: 4.18.2
@@ -1207,7 +1262,7 @@ packages:
       '@types/istanbul-lib-coverage': 2.0.4
       '@types/istanbul-reports': 3.0.1
       '@types/node': 18.11.9
-      '@types/yargs': 17.0.13
+      '@types/yargs': 17.0.18
       chalk: 4.1.2
     dev: true
 
@@ -1601,6 +1656,7 @@ packages:
 
   /@types/node/18.11.9:
     resolution: {integrity: sha512-CRpX21/kGdzjOpFsZSkcrXMGIBWMGNIHXXBVFSH+ggkftxg+XYP20TESbh+zFvFj3EQOl5byk0HTRn1IL6hbqg==}
+    dev: true
 
   /@types/normalize-package-data/2.4.1:
     resolution: {integrity: sha512-Gj7cI7z+98M282Tqmp2K5EIsoouUEzbBJhQQzDE3jSIRk6r9gsz0oUokqIUR4u1R3dMHo0pDHM7sNOHyhulypw==}
@@ -1673,6 +1729,10 @@ packages:
     resolution: {integrity: sha512-Hl219/BT5fLAaz6NDkSuhzasy49dwQS/DSdu4MdggFB8zcXv7vflBI3xp7FEmkmdDkBUI2bPUNeMttp2knYdxw==}
     dev: true
 
+  /@types/throttle-debounce/5.0.0:
+    resolution: {integrity: sha512-Pb7k35iCGFcGPECoNE4DYp3Oyf2xcTd3FbFQxXUI9hEYKUl6YX+KLf7HrBmgVcD05nl50LIH6i+80js4iYmWbw==}
+    dev: true
+
   /@types/uuid/8.3.4:
     resolution: {integrity: sha512-c/I8ZRb51j+pYGAu5CrFMRxqZ2ke4y2grEBO5AUjgSkSk+qT2Ea+OdWElz/OiMf5MNpn2b17kuVBwZLQJXzihw==}
 
@@ -1686,21 +1746,15 @@ packages:
     resolution: {integrity: sha512-6YOoWjruKj1uLf3INHH7D3qTXwFfEsg1kf3c0uDdSBJwfa/llkwIjrAGV7j7mVgGNbzTQ3HiHKKDXl6bJPD97w==}
     dependencies:
       '@types/node': 18.11.9
+    dev: true
 
   /@types/yargs-parser/21.0.0:
     resolution: {integrity: sha512-iO9ZQHkZxHn4mSakYV0vFHAVDyEOIJQrV2uZ06HxEPcx+mt8swXoZHIbaaJ2crJYFfErySgktuTZ3BeLz+XmFA==}
-
-  /@types/yargs/17.0.13:
-    resolution: {integrity: sha512-9sWaruZk2JGxIQU+IhI1fhPYRcQ0UuTNuKuCW9bR5fp7qi2Llf7WDzNa17Cy7TKnh3cdxDOiyTu6gaLS0eDatg==}
-    dependencies:
-      '@types/yargs-parser': 21.0.0
-    dev: true
 
   /@types/yargs/17.0.18:
     resolution: {integrity: sha512-eIJR1UER6ur3EpKM3d+2Pgd+ET+k6Kn9B4ZItX0oPjjVI5PrfaRjKyLT5UYendDpLuoiJMNJvovLQbEXqhsPaw==}
     dependencies:
       '@types/yargs-parser': 21.0.0
-    dev: false
 
   /@types/yauzl/2.10.0:
     resolution: {integrity: sha512-Cn6WYCm0tXv8p6k+A8PvbDG763EDpBoTzHdA+Q/MF6H3sapGjCm9NzoaJncJS9tUKSuCoDs9XHxYYsQDgxR6kw==}
@@ -3810,7 +3864,6 @@ packages:
     engines: {node: '>=8.0.0'}
     dependencies:
       pure-rand: 5.0.5
-    dev: false
 
   /fast-deep-equal/3.1.3:
     resolution: {integrity: sha512-f3qQ9oQy9j2AhBe/H9VC91wLmKBCCU/gDOnKNAYG5hswO7BLKj09Hc5HYNz9cGI++xlpDCIgDaitVs03ATR84Q==}
@@ -4827,6 +4880,10 @@ packages:
     engines: {node: '>=0.10.0'}
     dev: false
 
+  /isomorphic.js/0.2.5:
+    resolution: {integrity: sha512-PIeMbHqMt4DnUP3MA/Flc0HElYjMXArsw1qwJZcm9sqR8mq3l8NYizFMty0pWwE/tzIGH3EKK5+jes5mAr85yw==}
+    dev: false
+
   /isstream/0.1.2:
     resolution: {integrity: sha512-Yljz7ffyPbrLpLngrMtZ7NduUgVvi6wG9RJ9IUcyCd59YQ911PBJphODUcbOVbqYfxe1wuYf/LJ8PauMRwsM/g==}
     dev: true
@@ -5629,6 +5686,13 @@ packages:
     resolution: {integrity: sha512-qsda+H8jTaUaN/x5vzW2rzc+8Rw4TAQ/4KjB46IwK5VH+IlVeeeje/EoZRpiXvIqjFgK84QffqPztGI3VBLG1A==}
     engines: {node: '>=6'}
     dev: true
+
+  /lib0/0.2.58:
+    resolution: {integrity: sha512-6ovqPaYfOKU7GkkVxz/wjMR0zsqmNsISLvH+h9Lx5YNtWDZey69aYsTGXaSVpUPpJ+ZFtIvcZHsTGL3MbwOM8A==}
+    engines: {node: '>=14'}
+    dependencies:
+      isomorphic.js: 0.2.5
+    dev: false
 
   /lines-and-columns/1.2.4:
     resolution: {integrity: sha512-7ylylesZQ/PV29jhEDl3Ufjo6ZX7gCqJr5F7PKrqc93v7fzSymt1BpwEU8nAUXs8qzzvqhbjhK5QZg6Mt/HkBg==}
@@ -6850,7 +6914,6 @@ packages:
 
   /pure-rand/5.0.5:
     resolution: {integrity: sha512-BwQpbqxSCBJVpamI6ydzcKqyFmnd5msMWUGvzXLm1aXvusbbgkbOto/EUPM00hjveJEaJtdbhUjKSzWRhQVkaw==}
-    dev: false
 
   /qjobs/1.2.0:
     resolution: {integrity: sha512-8YOJEHtxpySA3fFDyCRxA+UUV+fA+rTWnuWvylOK/NCjhY+b4ocCtmu8TtsWb+mYeU+GCHf/S66KZF/AsteKHg==}
@@ -7853,6 +7916,11 @@ packages:
     resolution: {integrity: sha512-uuVGNWzgJ4yhRaNSiubPY7OjISw4sw4E5Uv0wbjp+OzcbmVU/rsT8ujgcXJhn9ypzsgr5vlzpPqP+MBBKcGvbg==}
     dev: false
 
+  /throttle-debounce/5.0.0:
+    resolution: {integrity: sha512-2iQTSgkkc1Zyk0MeVrt/3BvuOXYPl/R8Z0U2xxo9rjwNciaHDG3R+Lm6dh4EeUci49DanvBnuqI6jshoQQRGEg==}
+    engines: {node: '>=12.22'}
+    dev: false
+
   /throttleit/1.0.0:
     resolution: {integrity: sha512-rkTVqu6IjfQ/6+uNuuc3sZek4CEYxTJom3IktzgdSxcZqdARuebbA/f4QmAxMQIxqq9ZLEUkSYqvuk1I6VKq4g==}
     dev: true
@@ -8248,7 +8316,6 @@ packages:
   /uuid/9.0.0:
     resolution: {integrity: sha512-MXcSTerfPa4uqyzStbRoTgt5XIe3x5+42+q1sDuy3R5MDk66URdLMOZe5aPX/SQd+kuYAh0FdP/pO28IkQyTeg==}
     hasBin: true
-    dev: false
 
   /v8-to-istanbul/9.0.1:
     resolution: {integrity: sha512-74Y4LqY74kLE6IFyIjPtkSTWzUZmj8tdHT9Ii/26dvQ6K9Dl2NbEfj0XgU2sHCtKgt5VupqhlO/5aWuqS+IY1w==}
@@ -8281,6 +8348,27 @@ packages:
 
   /vite-node/0.26.2_@types+node@18.11.9:
     resolution: {integrity: sha512-4M/zlatItZAyvrQG+82zQBhgDjRZRhVJYFW4T9wcAKh7eMmSiPOVSeI5zsV9UzHXgCcIDKX0o0r3s4OxExTHqg==}
+    engines: {node: '>=v14.16.0'}
+    hasBin: true
+    dependencies:
+      debug: 4.3.4
+      mlly: 1.0.0
+      pathe: 0.2.0
+      source-map: 0.6.1
+      source-map-support: 0.5.21
+      vite: 3.2.4_@types+node@18.11.9
+    transitivePeerDependencies:
+      - '@types/node'
+      - less
+      - sass
+      - stylus
+      - sugarss
+      - supports-color
+      - terser
+    dev: true
+
+  /vite-node/0.26.3_@types+node@18.11.9:
+    resolution: {integrity: sha512-Te2bq0Bfvq6XiO718I+1EinMjpNYKws6SNHKOmVbILAQimKoZKDd+IZLlkaYcBXPpK3HFe2U80k8Zw+m3w/a2w==}
     engines: {node: '>=v14.16.0'}
     hasBin: true
     dependencies:
@@ -8449,6 +8537,52 @@ packages:
       tinyspy: 1.0.2
       vite: 3.2.4_@types+node@18.11.9
       vite-node: 0.26.2_@types+node@18.11.9
+    transitivePeerDependencies:
+      - less
+      - sass
+      - stylus
+      - sugarss
+      - supports-color
+      - terser
+    dev: true
+
+  /vitest/0.26.3:
+    resolution: {integrity: sha512-FmHxU9aUCxTi23keF3vxb/Qp0lYXaaJ+jRLGOUmMS3qVTOJvgGE+f1VArupA6pEhaG2Ans4X+zV9dqM5WISMbg==}
+    engines: {node: '>=v14.16.0'}
+    hasBin: true
+    peerDependencies:
+      '@edge-runtime/vm': '*'
+      '@vitest/browser': '*'
+      '@vitest/ui': '*'
+      happy-dom: '*'
+      jsdom: '*'
+    peerDependenciesMeta:
+      '@edge-runtime/vm':
+        optional: true
+      '@vitest/browser':
+        optional: true
+      '@vitest/ui':
+        optional: true
+      happy-dom:
+        optional: true
+      jsdom:
+        optional: true
+    dependencies:
+      '@types/chai': 4.3.4
+      '@types/chai-subset': 1.3.3
+      '@types/node': 18.11.9
+      acorn: 8.8.1
+      acorn-walk: 8.2.0
+      chai: 4.3.7
+      debug: 4.3.4
+      local-pkg: 0.4.2
+      source-map: 0.6.1
+      strip-literal: 1.0.0
+      tinybench: 2.3.1
+      tinypool: 0.3.0
+      tinyspy: 1.0.2
+      vite: 3.2.4_@types+node@18.11.9
+      vite-node: 0.26.3_@types+node@18.11.9
     transitivePeerDependencies:
       - less
       - sass

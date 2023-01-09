@@ -1,12 +1,15 @@
 import {
   ChangesAckedMsg,
-  SiteIdWire,
+  encodeMsg,
+  Socket,
   Version,
 } from "@vlcn.io/client-server-common";
 import { DB, RECEIVE, SEND } from "./DB.js";
 import logger from "./logger.js";
+import { throttle } from "throttle-debounce";
 
 const maxOutstandingAcks = 10;
+
 /**
  * Handles the details of tracking a stream of changes we're shipping to the server.
  * Ensures:
@@ -18,8 +21,6 @@ const maxOutstandingAcks = 10;
  * - Listening to the local db for changes
  * - Generating changesets from those changes
  * - Encoding them in the expected format
- *
- * TODO: can we merge this implementation and the server implementation?
  */
 export default class ChangeStream {
   #started: boolean = false;
@@ -27,12 +28,12 @@ export default class ChangeStream {
   #disposers: (() => void)[] = [];
   #outstandingAcks = 0;
   #blockedSend: boolean = false;
-  #lastSeq: [Version, number] = [0, 0];
+  #lastSeq: [Version, number] = [0n, 0];
 
   constructor(
     private readonly db: DB,
-    private readonly ws: WebSocket,
-    private readonly remoteDbId: SiteIdWire,
+    private readonly ws: Socket,
+    private readonly remoteDbId: Uint8Array,
     private readonly create?: {
       schemaName: string;
     }
@@ -49,7 +50,7 @@ export default class ChangeStream {
     // send the establish message
 
     // send establish meessage
-    let seqStart: [Version, number] = [0, 0];
+    let seqStart: [Version, number] = [0n, 0];
     [this.#lastSeq, seqStart] = await Promise.all([
       this.db.seqIdFor(this.remoteDbId, SEND),
       this.db.seqIdFor(this.remoteDbId, RECEIVE),
@@ -57,7 +58,7 @@ export default class ChangeStream {
 
     logger.info("asking server to establish the connection");
     this.ws.send(
-      JSON.stringify({
+      encodeMsg({
         _tag: "establish",
         from: this.db.siteId,
         to: this.remoteDbId,
@@ -70,6 +71,11 @@ export default class ChangeStream {
     this.#localDbChanged();
   }
 
+  /**
+   * We expect the server to acknolwedge each message we send.
+   * We do not persist send events to the `crsql_tracked_peers` table until we receive an ack from the server
+   * indicating that the server did indeed persist a prior message.
+   */
   async processAck(msg: ChangesAckedMsg) {
     logger.info("Received ack");
     this.#outstandingAcks -= 1;
@@ -88,8 +94,10 @@ export default class ChangeStream {
     }
   }
 
-  // TODO: should we throttle to ~50ms?
-  #localDbChanged = async () => {
+  // TODO: make the throttle configurable
+  // TODO: go back to temp trigger model
+  // such that we do not perform a query in response to sync events.
+  #localDbChanged = throttle(25, async () => {
     logger.info("received local db change event");
     if (this.#closed) {
       console.warn("Reciving db change event on closed connection");
@@ -111,7 +119,7 @@ export default class ChangeStream {
     const startSeq = this.#lastSeq;
     // TODO: allow chunking of the changeset pulling to handle very large
     // transactions
-    const changes = await this.db.pullChangeset(this.remoteDbId, startSeq);
+    const changes = await this.db.pullChangeset(startSeq);
     if (changes.length == 0) {
       return;
     }
@@ -123,7 +131,7 @@ export default class ChangeStream {
     this.#outstandingAcks += 1;
     logger.info("Syncing to server. num changes: ", changes.length);
     this.ws.send(
-      JSON.stringify({
+      encodeMsg({
         _tag: "receive",
         changes,
         from: this.db.siteId,
@@ -131,7 +139,7 @@ export default class ChangeStream {
         seqEnd,
       })
     );
-  };
+  });
 
   stop() {
     logger.info("stopping change stream");

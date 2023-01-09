@@ -1,18 +1,16 @@
 // After an `establishedConnection` has received a `requestChanges` event
 // we start a change stream for that client.
 
-import config from "./config.js";
 import { DBType } from "./db.js";
 import { EstablishedConnection } from "./establishedConnection.js";
 import logger from "./logger.js";
 import {
   ChangesAckedMsg,
   ChangesRequestedMsg,
-  SiteIdWire,
   Version,
 } from "@vlcn.io/client-server-common";
 import contextStore from "./contextStore.js";
-
+type SiteIdStr = string;
 // change stream:
 // 1. sends the requested changes up till now
 // 2. records `endSeq`
@@ -25,11 +23,12 @@ export default class ChangeStream {
   #disposables: (() => void)[] = [];
   #outstandingAcks = 0;
   #blockedSend: boolean = false;
-  #lastSeq: [Version, number] = [0, 0];
+  #lastSeq: readonly [Version, number] = [0n, 0];
 
   constructor(
     private readonly db: DBType,
-    private readonly connection: EstablishedConnection
+    private readonly connection: EstablishedConnection,
+    private readonly maxOutstandingAcks: number = 5
   ) {
     connection.onClosed = this.#connClosed;
   }
@@ -73,14 +72,14 @@ export default class ChangeStream {
     // We just droped below threshold and had previously blocked a send.
     // Can send now.
     if (
-      this.#outstandingAcks == config.get.maxOutstandingAcks - 1 &&
+      this.#outstandingAcks == this.maxOutstandingAcks - 1 &&
       this.#blockedSend
     ) {
       this.#dbChanged(null);
     }
   }
 
-  #dbChanged = (source: SiteIdWire | null) => {
+  #dbChanged = (source: SiteIdStr | null) => {
     if (this.#closed) {
       // events could have been queued
       logger.warn("receive db change event on closed connection", {
@@ -98,14 +97,14 @@ export default class ChangeStream {
       );
     }
 
-    if (source == this.connection.site) {
+    if (source == this.connection.siteStr) {
       logger.info(
         `not syncing self sourced changes to Peer: ${this.connection.site}`
       );
       return;
     }
 
-    if (this.#outstandingAcks == config.get.maxOutstandingAcks) {
+    if (this.#outstandingAcks == this.maxOutstandingAcks) {
       this.#blockedSend = true;
       logger.warn("too many outstanding acks", {
         event: "ChangeStream.#dbChange.tooManyOutstandingAcks",

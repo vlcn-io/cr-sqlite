@@ -1,12 +1,15 @@
-import { RawData, WebSocket } from "ws";
 import dbFactory from "./db.js";
 import { EstablishedConnection } from "./establishedConnection.js";
 import logger from "./logger.js";
 import {
+  Config,
+  decodeMsg,
+  encodeMsg,
   EstablishConnectionMsg,
   Msg,
-  SiteIdWire,
+  Socket,
 } from "@vlcn.io/client-server-common";
+import { stringify as uuidStringify } from "uuid";
 import contextStore from "./contextStore.js";
 
 const connectionCode = {
@@ -21,34 +24,35 @@ const connectionCode = {
 export type ConnectionCodeKey = keyof typeof connectionCode;
 
 export class Connection {
-  #site?: SiteIdWire;
+  #site?: Uint8Array;
   #establishedConnection?: EstablishedConnection;
   #establishPromise?: Promise<void>;
+  #siteStr?: string;
 
-  constructor(private readonly ws: WebSocket) {
-    ws.on("close", () => {
+  constructor(private readonly config: Config, private readonly ws: Socket) {
+    ws.onclose = () => {
       logger.info("ws connection closed", {
         event: "Connection.closed",
         req: contextStore.get().reqId,
       });
       this.#closed();
-    });
+    };
 
-    ws.on("message", this.#onMsg);
+    ws.onmessage = this.#onMsg;
   }
 
   send(msg: Msg) {
-    this.ws.send(JSON.stringify(msg));
+    this.ws.send(encodeMsg(msg));
   }
 
-  #onMsg = (data: RawData) => {
+  #onMsg = (data: ArrayBuffer) => {
     logger.info(`receive msg`, {
       event: "Connection.#onMsg",
       req: contextStore.get().reqId,
     });
     let decoded: null | Msg;
     try {
-      decoded = JSON.parse(data.toString()) as Msg;
+      decoded = decodeMsg(new Uint8Array(data as any));
     } catch (e) {
       logger.error("decode failure", {
         event: "Connection.#onMsg.decodeFailure",
@@ -137,7 +141,8 @@ export class Connection {
     });
 
     this.#site = msg.from;
-    this.#establishPromise = dbFactory(msg.to, msg.create).then(
+    this.#siteStr = uuidStringify(msg.from);
+    this.#establishPromise = dbFactory(this.config, msg.to, msg.create).then(
       (db) => {
         this.#establishedConnection = new EstablishedConnection(this, db);
         this.#establishedConnection.processMsg({
@@ -156,12 +161,16 @@ export class Connection {
     return this.#site!;
   }
 
+  get siteStr() {
+    return this.#siteStr!;
+  }
+
   close(code: ConnectionCodeKey, data?: Object) {
     logger.info("requested to close ws connection", {
       event: "Connection.close",
       req: contextStore.get().reqId,
     });
-    this.ws.close(
+    this.ws.closeForError(
       connectionCode[code],
       data ? JSON.stringify(data) : undefined
     );

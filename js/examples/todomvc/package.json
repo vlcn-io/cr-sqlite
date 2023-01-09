@@ -8,18 +8,17 @@
     "build": "vite build",
     "tsc": "tsc --noEmit",
     "preview": "vite preview",
-    "test:unit": "vitest"
+    "test:unit": "vitest",
+    "websocket": "vlcn-websocket --dbDir=./server-dbs --schemaDir=./schemas"
   },
   "dependencies": {
-    "@types/ws": "^8.5.3",
     "@vlcn.io/rx-tbl": "workspace:*",
-    "@vlcn.io/sync-client": "workspace:*",
+    "@vlcn.io/client-websocket": "workspace:*",
     "@vlcn.io/wa-crsqlite": "workspace:*",
     "nanoid": "^4.0.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "uuid": "^9.0.0",
-    "ws": "^8.11.0"
+    "@vlcn.io/server-websocket": "workspace:*"
   },
   "devDependencies": {
     "@types/react": "^18.0.25",

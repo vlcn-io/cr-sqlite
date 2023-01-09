@@ -1,5 +1,5 @@
 {
-  "name": "@vlcn.io/sync-client",
+  "name": "@vlcn.io/client-websocket",
   "type": "module",
   "version": "0.5.3",
   "files": [
@@ -9,7 +9,6 @@
   "module": "dist/index.js",
   "main": "dist/index.js",
   "devDependencies": {
-    "@types/uuid": "^8.3.4",
     "typescript": "^4.9.3"
   },
   "scripts": {
@@ -21,12 +20,12 @@
   "repository": {
     "type": "git",
     "url": "git@github.com:vlcn-io/cr-sqlite.git",
-    "directory": "https://github.com/vlcn-io/cr-sqlite/tree/main/js/sync-client"
+    "directory": "https://github.com/vlcn-io/cr-sqlite/tree/main/js/sync-reference/client-websocket"
   },
   "dependencies": {
+    "@vlcn.io/client-core": "workspace:*",
     "@vlcn.io/client-server-common": "workspace:*",
     "@vlcn.io/rx-tbl": "workspace:*",
-    "@vlcn.io/xplat-api": "workspace:*",
-    "uuid": "^9.0.0"
+    "@vlcn.io/xplat-api": "workspace:*"
   }
 }

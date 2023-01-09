@@ -1,19 +1,14 @@
 #!/usr/bin/env node
-/**
- * A simple reference implementation for a sync server.
- */
-// @ts-ignore
 import express from "express";
 import { IncomingMessage } from "node:http";
-import { WebSocketServer } from "ws";
+import { WebSocketServer, WebSocket } from "ws";
 import * as http from "http";
-import { Connection } from "../connection.js";
-import logger from "../logger.js";
+import { Connection, logger, contextStore } from "@vlcn.io/server-core";
 import { nanoid } from "nanoid";
-import contextStore from "../contextStore.js";
 import yargs from "yargs/yargs";
 import { hideBin } from "yargs/helpers";
-import { configure } from "../config.js";
+import config, { configure } from "../config.js";
+import WebSocketWrapper from "../WebSocketWrapper.js";
 
 const argv = yargs(hideBin(process.argv)).argv;
 
@@ -31,13 +26,13 @@ const server = http.createServer(app);
 
 const wss = new WebSocketServer({ noServer: true });
 
-wss.on("connection", (ws, request) => {
+wss.on("connection", (ws: WebSocket, request) => {
   logger.info("info", `established ws connection`, {
     event: "main.establish",
     req: contextStore.get().reqId,
   });
 
-  new Connection(ws);
+  new Connection(config.get, new WebSocketWrapper(ws));
 });
 
 function authenticate(req: IncomingMessage, cb: (err: any) => void) {

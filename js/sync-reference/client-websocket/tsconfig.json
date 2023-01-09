@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig-template.json",
+  "compilerOptions": {
+    "outDir": "./dist/",
+    "rootDir": "./src"
+  },
+  "include": ["./src/"],
+  "references": [
+    { "path": "../client-core" },
+    { "path": "../client-server-common" },
+    { "path": "../../xplat-api" },
+    { "path": "../../rx-tbl" }
+  ]
+}

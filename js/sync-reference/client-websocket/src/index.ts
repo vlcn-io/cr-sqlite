@@ -5,9 +5,10 @@ import {
   Replicator,
 } from "@vlcn.io/client-core";
 
+const defaultBackoff = 5000;
 class WebSocketWrapper implements Socket {
   private ws: WebSocket | null = null;
-  private backoff: number = 5000;
+  private backoff: number = defaultBackoff;
   private reconnecting: boolean = false;
 
   constructor(
@@ -27,6 +28,7 @@ class WebSocketWrapper implements Socket {
     };
 
     ws.onopen = async () => {
+      this.backoff = defaultBackoff;
       ws.onclose = (e: CloseEvent) => {
         if (this.onclose) {
           this.onclose(e.code, e.reason);

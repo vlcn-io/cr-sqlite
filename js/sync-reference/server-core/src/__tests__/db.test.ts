@@ -8,7 +8,6 @@ import {
 } from "uuid";
 
 import fs from "node:fs";
-import { randomUUID } from "node:crypto";
 import dbFactory from "../db.js";
 import path from "node:path";
 import { randomUuidBytes } from "@vlcn.io/client-server-common";

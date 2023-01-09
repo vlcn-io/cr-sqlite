@@ -286,9 +286,10 @@ export class DB implements DBAsync {
       }
     }
 
-    if (results.length > 1) {
-      throw new Error("We currently only support 1 statement per query.");
-    }
+    // we'll only return results for first stmt
+    // if (results.length > 1) {
+    //   throw new Error("We currently only support 1 statement per query.");
+    // }
     const returning = results[0];
     if (returning == null) return null;
 
@@ -414,7 +415,7 @@ export default async function initWasm(
     return api;
   }
 
-  const module = await SQLiteAsyncESMFactory({
+  const wasmModule = await SQLiteAsyncESMFactory({
     locateFile(file: string) {
       if (locateWasm) {
         return locateWasm(file);
@@ -422,7 +423,7 @@ export default async function initWasm(
       return new URL(file, import.meta.url).href;
     },
   });
-  const sqlite3 = SQLite.Factory(module);
+  const sqlite3 = SQLite.Factory(wasmModule);
   sqlite3.vfs_register(
     new IDBBatchAtomicVFS("idb-batch-atomic", { durability: "relaxed" })
   );

@@ -1,5 +1,19 @@
 # @vlcn.io/todomvc
 
+## 0.7.0
+
+### Minor Changes
+
+- seen peers, binary encoding for network layer, retry on disconnect for server, auto-track peers
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/wa-crsqlite@0.7.0
+  - @vlcn.io/rx-tbl@0.6.0
+  - @vlcn.io/client-websocket@0.6.0
+  - @vlcn.io/server-websocket@0.6.0
+
 ## 0.6.3
 
 ### Patch Changes

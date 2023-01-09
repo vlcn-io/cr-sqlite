@@ -1,5 +1,11 @@
 # @vlcn.io/py-correctness
 
+## 0.6.0
+
+### Minor Changes
+
+- seen peers, binary encoding for network layer, retry on disconnect for server, auto-track peers
+
 ## 0.5.3
 
 ### Patch Changes

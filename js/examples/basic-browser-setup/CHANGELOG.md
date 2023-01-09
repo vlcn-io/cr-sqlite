@@ -1,5 +1,17 @@
 # @vlcn.io/crsqlite-examples
 
+## 0.6.0
+
+### Minor Changes
+
+- seen peers, binary encoding for network layer, retry on disconnect for server, auto-track peers
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/crsqlite-wasm@0.6.0
+  - @vlcn.io/wa-crsqlite@0.7.0
+
 ## 0.5.4
 
 ### Patch Changes

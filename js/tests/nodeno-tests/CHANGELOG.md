@@ -1,5 +1,19 @@
 # @vlcn.io/nodeno-tests
 
+## 0.6.0
+
+### Minor Changes
+
+- seen peers, binary encoding for network layer, retry on disconnect for server, auto-track peers
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/crsqlite-allinone@0.6.0
+  - @vlcn.io/rx-tbl@0.6.0
+  - @vlcn.io/xplat-tests@0.6.0
+  - @vlcn.io/xplat-api@0.6.0
+
 ## 0.5.3
 
 ### Patch Changes

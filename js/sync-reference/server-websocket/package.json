@@ -1,7 +1,7 @@
 {
   "name": "@vlcn.io/server-websocket",
   "type": "module",
-  "version": "0.5.6",
+  "version": "0.6.0",
   "files": [
     "dist",
     "src"

@@ -53,8 +53,8 @@ export class Connection {
     let decoded: null | Msg;
     try {
       decoded = decodeMsg(new Uint8Array(data as any));
-    } catch (e) {
-      logger.error("decode failure", {
+    } catch (e: any) {
+      logger.error("decode failure " + e.message, {
         event: "Connection.#onMsg.decodeFailure",
         req: contextStore.get().reqId,
       });
@@ -152,6 +152,7 @@ export class Connection {
       },
       (e) => {
         logger.error(e.message);
+        this.#establishPromise = undefined;
         this.close("DB_OPEN_FAIL");
       }
     );

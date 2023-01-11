@@ -56,6 +56,12 @@ export default class ChangeStream {
       this.db.seqIdFor(this.remoteDbId, RECEIVE),
     ]);
 
+    if (!this.#started) {
+      // someone stopped us while we were pulling seq numbers
+      this.stop();
+      return;
+    }
+
     logger.info("asking server to establish the connection");
     this.ws.send(
       encodeMsg({
@@ -130,6 +136,7 @@ export default class ChangeStream {
 
     this.#outstandingAcks += 1;
     logger.info("Syncing to server. num changes: ", changes.length);
+
     this.ws.send(
       encodeMsg({
         _tag: "receive",
@@ -146,5 +153,6 @@ export default class ChangeStream {
     this.#started = false;
     this.#closed = true;
     this.#disposers.forEach((d) => d());
+    this.#disposers = [];
   }
 }

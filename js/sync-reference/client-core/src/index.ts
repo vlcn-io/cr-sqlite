@@ -45,6 +45,8 @@ export type ReplicatorArgs = {
   create?: {
     schemaName: string;
   };
+
+  accessToken?: string;
 };
 
 /**

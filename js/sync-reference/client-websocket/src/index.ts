@@ -13,14 +13,18 @@ class WebSocketWrapper implements Socket {
 
   constructor(
     private readonly uri: string,
-    private readonly replicator: Replicator
+    private readonly replicator: Replicator,
+    private readonly accessToken?: string
   ) {}
 
   start() {
     if (this.reconnecting) {
       return;
     }
-    const ws = (this.ws = new WebSocket(this.uri));
+    const ws = (this.ws = new WebSocket(
+      this.uri,
+      this.accessToken ? ["access_token", this.accessToken] : undefined
+    ));
     ws.onerror = (e: Event) => {
       this.replicator.stop();
       console.log("closed for error");
@@ -94,7 +98,7 @@ export default async function startSyncWith(
   args: ReplicatorArgs
 ): Promise<Replicator> {
   const replicator = await createReplicator(args);
-  const wrapper = new WebSocketWrapper(uri, replicator);
+  const wrapper = new WebSocketWrapper(uri, replicator, args.accessToken);
   wrapper.start();
   return replicator;
 }

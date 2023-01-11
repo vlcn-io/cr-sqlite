@@ -22,8 +22,8 @@ app.use(express.urlencoded({ extended: true }));
 if ((argv as any).static) {
   app.use(express.static((argv as any).static));
 }
-const server = http.createServer(app);
 
+const server = http.createServer(app);
 const wss = new WebSocketServer({ noServer: true });
 
 wss.on("connection", (ws: WebSocket, request) => {

@@ -1,5 +1,14 @@
 # @vlcn.io/todomvc
 
+## 0.7.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/wa-crsqlite@0.7.1
+  - @vlcn.io/client-websocket@0.6.1
+  - @vlcn.io/server-websocket@0.6.1
+
 ## 0.7.0
 
 ### Minor Changes

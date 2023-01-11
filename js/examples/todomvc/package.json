@@ -2,7 +2,7 @@
   "name": "@vlcn.io/todomvc",
   "private": true,
   "type": "module",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "scripts": {
     "start": "vite",
     "build": "vite build",

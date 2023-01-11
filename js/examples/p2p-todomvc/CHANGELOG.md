@@ -1,5 +1,12 @@
 # @vlcn.io/crsqlite-p2p-todomvc
 
+## 0.7.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/wa-crsqlite@0.7.1
+
 ## 0.7.0
 
 ### Minor Changes

@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "packageManager": "pnpm@7.9.0",
   "engines": {
-    "node": ">=18",
+    "node": ">=19",
     "pnpm": ">=7"
   },
   "devDependencies": {

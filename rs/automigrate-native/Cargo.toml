@@ -12,3 +12,6 @@ crate-type = ["cdylib", "staticlib"]
 
 [dependencies]
 crsql_automigrate_core = {path="../automigrate-core"}
+
+[features]
+omit_load_extension = ["crsql_automigrate_core/omit_load_extension"]

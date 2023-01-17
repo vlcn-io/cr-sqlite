@@ -22,3 +22,6 @@ panic = "abort"
 
 [build]
 target = "wasm32-unknown-emscripten"
+
+[features]
+omit_load_extension = ["crsql_automigrate_core/omit_load_extension", "sqlite_web/omit_load_extension"]

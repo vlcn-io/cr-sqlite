@@ -98,10 +98,10 @@ ubsan: clean $(TARGET_TEST)
 fuzz: $(TARGET_FUZZ)
 	$(prefix)/fuzz
 
-rs_lib_dbg = ../rs/automigrate-native/target/debug/libcrsql_automigrate_native.a
+rs_lib_dbg_static = ../rs/automigrate-native/target/debug/libcrsql_automigrate_native.a
 
-$(rs_lib_dbg):
-	cd ../rs/automigrate-native && cargo build
+$(rs_lib_dbg_static):
+	cd ../rs/automigrate-native && cargo build --features omit_load_extension
 
 # Build the loadable extension.
 $(TARGET_LOADABLE): $(prefix) $(ext_files)
@@ -120,7 +120,7 @@ $(TARGET_SQLITE3): $(prefix) $(TARGET_SQLITE3_EXTRA_C) src/sqlite/shell.c $(ext_
 	-DSQLITE_OMIT_LOAD_EXTENSION=1 \
 	-DSQLITE_EXTRA_INIT=core_init \
 	-I./src/ -I./src/sqlite \
-	$(TARGET_SQLITE3_EXTRA_C) src/sqlite/shell.c $(ext_files) $(rs_lib_dbg) \
+	$(TARGET_SQLITE3_EXTRA_C) src/sqlite/shell.c $(ext_files) $(rs_lib_dbg_static) \
 	-o $@
 
 # Build a normal SQLite CLI that does not include cr-sqlite.
@@ -139,7 +139,7 @@ $(TARGET_SQLITE3_EXTRA_C): src/sqlite/sqlite3.c src/core_init.c
 	cat src/sqlite/sqlite3.c src/core_init.c > $@
 
 # run tests
-$(TARGET_TEST): $(prefix) $(TARGET_SQLITE3_EXTRA_C) src/tests.c src/*.test.c $(ext_files) $(rs_lib_dbg)
+$(TARGET_TEST): $(prefix) $(TARGET_SQLITE3_EXTRA_C) src/tests.c src/*.test.c $(ext_files) $(rs_lib_dbg_static)
 	$(CC) -g -Wall \
 	$(DEFINE_SQLITE_PATH) \
 	-DSQLITE_THREADSAFE=0 \
@@ -148,7 +148,7 @@ $(TARGET_TEST): $(prefix) $(TARGET_SQLITE3_EXTRA_C) src/tests.c src/*.test.c $(e
 	-DSQLITE_EXTRA_INIT=core_init \
 	-DUNIT_TEST=1 \
 	-I./src/ -I./src/sqlite \
-	$(TARGET_SQLITE3_EXTRA_C) src/tests.c src/*.test.c $(ext_files) $(rs_lib_dbg) \
+	$(TARGET_SQLITE3_EXTRA_C) src/tests.c src/*.test.c $(ext_files) $(rs_lib_dbg_static) \
 	$(LDLIBS) -o $@
 
 $(TARGET_TEST_ASAN): $(prefix) $(TARGET_SQLITE3_EXTRA_C) src/tests.c src/*.test.c $(ext_files)
@@ -160,7 +160,7 @@ $(TARGET_TEST_ASAN): $(prefix) $(TARGET_SQLITE3_EXTRA_C) src/tests.c src/*.test.
 	-DSQLITE_EXTRA_INIT=core_init \
 	-DUNIT_TEST=1 \
 	-I./src/ -I./src/sqlite \
-	$(TARGET_SQLITE3_EXTRA_C) src/tests.c src/*.test.c $(ext_files) $(rs_lib_dbg) \
+	$(TARGET_SQLITE3_EXTRA_C) src/tests.c src/*.test.c $(ext_files) $(rs_lib_dbg_static) \
 	$(LDLIBS) \
 	-o $@
 
@@ -172,7 +172,7 @@ $(TARGET_FUZZ): $(prefix) $(TARGET_SQLITE3_EXTRA_C) src/fuzzer.cc $(ext_files)
 	-DSQLITE_OMIT_LOAD_EXTENSION=1 \
 	-DSQLITE_EXTRA_INIT=core_init \
 	-I./src/ -I./src/sqlite \
-	$(TARGET_SQLITE3_EXTRA_C) src/fuzzer.cc $(ext_files) $(rs_lib_dbg) \
+	$(TARGET_SQLITE3_EXTRA_C) src/fuzzer.cc $(ext_files) $(rs_lib_dbg_static) \
 	-o $@
 
 .PHONY: all clean format \

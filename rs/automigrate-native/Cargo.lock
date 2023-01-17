@@ -67,7 +67,6 @@ name = "crsql_automigrate_core"
 version = "0.1.0"
 dependencies = [
  "sqlite_nostd",
- "sqlite_web",
 ]
 
 [[package]]
@@ -247,13 +246,6 @@ dependencies = [
  "num-traits",
  "sqlite3_allocator",
  "sqlite3_capi",
-]
-
-[[package]]
-name = "sqlite_web"
-version = "0.1.0"
-dependencies = [
- "sqlite_nostd",
 ]
 
 [[package]]

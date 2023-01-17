@@ -101,7 +101,7 @@ fuzz: $(TARGET_FUZZ)
 rs_lib_dbg_static = ../rs/automigrate-native/target/debug/libcrsql_automigrate_native.a
 
 $(rs_lib_dbg_static):
-	cd ../rs/automigrate-native && cargo build --features omit_load_extension
+	cd ../rs/automigrate-native && cargo build --features omit_load_extension 
 
 # Build the loadable extension.
 $(TARGET_LOADABLE): $(prefix) $(ext_files)

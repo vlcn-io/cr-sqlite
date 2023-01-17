@@ -8,7 +8,9 @@ license = "Apache 2"
 
 [lib]
 name = "crsql_automigrate_native"
-crate-type = ["cdylib", "staticlib"]
+crate-type = ["staticlib"]
+
+# "cdylib" <-- only enable cdylib if omit_load_extension is not enabled
 
 [dependencies]
 crsql_automigrate_core = {path="../automigrate-core"}

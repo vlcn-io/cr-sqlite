@@ -8,5 +8,5 @@
 	path = deps/sqlite
 	url = git@github.com:vlcn-io/sqlite.git
 [submodule "deps/sqlite-no_std"]
-	path = deps/sqlite-no_std
+	path = deps/sqlite-rs-embedded
 	url = https://github.com/vlcn-io/sqlite-no_std

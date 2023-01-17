@@ -12,7 +12,6 @@
  */
 
 #include "crsqlite.h"
-SQLITE_EXTENSION_INIT1
 
 #include <assert.h>
 #include <stdio.h>

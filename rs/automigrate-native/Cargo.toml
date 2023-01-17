@@ -1,0 +1,14 @@
+[package]
+name = "crsql_automigrate_native"
+version = "0.1.0"
+edition = "2021"
+authors = ["Matt Wonlaw"]
+keywords = ["sqlite", "cr-sqlite"]
+license = "Apache 2"
+
+[lib]
+name = "crsql_automigrate_native"
+crate-type = ["cdylib"]
+
+[dependencies]
+crsql_automigrate_core = {path="../automigrate-core"}

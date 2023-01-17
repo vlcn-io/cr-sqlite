@@ -31,7 +31,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v3
         with:
-          node-version: 18.x
+          node-version: 19.x
 
       - name: Windows build tools
         if: runner.os == 'Windows'

@@ -40,7 +40,7 @@ crsql_SeenPeers *crsql_newSeenPeers() {
 }
 
 void crsql_freeSeenPeers(crsql_SeenPeers *a) {
-  for (int i = 0; i < a->len; ++i) {
+  for (size_t i = 0; i < a->len; ++i) {
     sqlite3_free(a->peers[i].siteId);
   }
   sqlite3_free(a->peers);
@@ -51,7 +51,7 @@ int crsql_trackSeenPeer(crsql_SeenPeers *a, const unsigned char *siteId,
                         int siteIdLen, sqlite3_int64 clock) {
   // Have we already tacked this peer?
   // If so, take the max of clock values and return.
-  for (int i = 0; i < a->len; ++i) {
+  for (size_t i = 0; i < a->len; ++i) {
     if (crsql_siteIdCmp(siteId, siteIdLen, a->peers[i].siteId,
                         a->peers[i].siteIdLen) == 0) {
       if (a->peers[i].clock < clock) {
@@ -89,7 +89,7 @@ int crsql_trackSeenPeer(crsql_SeenPeers *a, const unsigned char *siteId,
 
 void crsql_resetSeenPeers(crsql_SeenPeers *a) {
   // free the inner allocations since we'll overwrite those
-  for (int i = 0; i < a->len; ++i) {
+  for (size_t i = 0; i < a->len; ++i) {
     sqlite3_free(a->peers[i].siteId);
   }
 
@@ -105,7 +105,7 @@ int crsql_writeTrackedPeers(crsql_SeenPeers *a, crsql_ExtData *pExtData) {
     return rc;
   }
 
-  for (int i = 0; i < a->len; ++i) {
+  for (size_t i = 0; i < a->len; ++i) {
     rc = sqlite3_bind_blob(pExtData->pTrackPeersStmt, 1, a->peers[i].siteId,
                            a->peers[i].siteIdLen, SQLITE_STATIC);
     rc += sqlite3_bind_int64(pExtData->pTrackPeersStmt, 2, a->peers[i].clock);

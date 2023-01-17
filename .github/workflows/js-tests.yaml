@@ -20,6 +20,11 @@ jobs:
         with:
           submodules: true
 
+      - name: Rust Nightly
+        run: |
+          rustup default nightly
+          rustup update
+
       - uses: cachix/install-nix-action@v18
         with:
           nix_path: nixpkgs=channel:nixos-unstable

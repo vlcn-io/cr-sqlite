@@ -21,6 +21,11 @@ jobs:
         with:
           submodules: true
 
+      - name: Rust Nightly
+        run: |
+          rustup default nightly
+          rustup update
+
       - name: Make loadable
         run: |
           cd core

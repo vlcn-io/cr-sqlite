@@ -18,6 +18,11 @@ jobs:
         with:
           submodules: true
 
+      - name: Rust Nightly
+        run: |
+          rustup default nightly
+          rustup update
+
       - name: Test
         run: |
           cd core

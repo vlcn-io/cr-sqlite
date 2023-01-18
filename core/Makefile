@@ -102,6 +102,8 @@ rs_lib_prefix = lib
 ifeq ($(OS),Windows_NT)
 	rs_lib_suffix = lib
 	rs_lib_prefix =
+	# or target specific selection? https://github.com/rust-lang/rust/issues/101134
+	LDLIBS += -lmsvcrt
 endif
 
 rs_lib_dbg_static = ../rs/automigrate-native/target/debug/$(rs_lib_prefix)crsql_automigrate_native.$(rs_lib_suffix)
@@ -122,12 +124,11 @@ $(TARGET_SQLITE3): $(prefix) $(TARGET_SQLITE3_EXTRA_C) src/sqlite/shell.c $(ext_
 	$(CC) -g \
 	$(DEFINE_SQLITE_PATH) \
 	-DSQLITE_THREADSAFE=0 \
-	-DSQLITE_ENABLE_NORMALIZE \
 	-DSQLITE_OMIT_LOAD_EXTENSION=1 \
 	-DSQLITE_EXTRA_INIT=core_init \
 	-I./src/ -I./src/sqlite \
 	$(TARGET_SQLITE3_EXTRA_C) src/sqlite/shell.c $(ext_files) $(rs_lib_dbg_static) \
-	-o $@
+	$(LDLIBS) -o $@
 
 # Build a normal SQLite CLI that does not include cr-sqlite.
 # cr-sqlite can be laoded in via `load_extension`
@@ -136,7 +137,6 @@ $(TARGET_SQLITE3_VANILLA): $(prefix) src/sqlite/shell.c
 	$(CC) -g \
 	$(DEFINE_SQLITE_PATH) \
 	-DSQLITE_THREADSAFE=0 \
-	-DSQLITE_ENABLE_NORMALIZE \
 	-I./src/ -I./src/sqlite \
 	src/sqlite/sqlite3.c src/sqlite/shell.c \
 	-o $@
@@ -149,7 +149,6 @@ $(TARGET_TEST): $(prefix) $(TARGET_SQLITE3_EXTRA_C) src/tests.c src/*.test.c $(e
 	$(CC) -g -Wall \
 	$(DEFINE_SQLITE_PATH) \
 	-DSQLITE_THREADSAFE=0 \
-	-DSQLITE_ENABLE_NORMALIZE \
 	-DSQLITE_OMIT_LOAD_EXTENSION=1 \
 	-DSQLITE_EXTRA_INIT=core_init \
 	-DUNIT_TEST=1 \
@@ -161,25 +160,22 @@ $(TARGET_TEST_ASAN): $(prefix) $(TARGET_SQLITE3_EXTRA_C) src/tests.c src/*.test.
 	$(CC) -fsanitize=address -g -fno-omit-frame-pointer -Wall \
 	$(DEFINE_SQLITE_PATH) \
 	-DSQLITE_THREADSAFE=0 \
-	-DSQLITE_ENABLE_NORMALIZE \
 	-DSQLITE_OMIT_LOAD_EXTENSION=1 \
 	-DSQLITE_EXTRA_INIT=core_init \
 	-DUNIT_TEST=1 \
 	-I./src/ -I./src/sqlite \
 	$(TARGET_SQLITE3_EXTRA_C) src/tests.c src/*.test.c $(ext_files) $(rs_lib_dbg_static) \
-	$(LDLIBS) \
-	-o $@
+	$(LDLIBS) -o $@
 
 $(TARGET_FUZZ): $(prefix) $(TARGET_SQLITE3_EXTRA_C) src/fuzzer.cc $(ext_files)
 	clang -fsanitize=fuzzer \
 	$(DEFINE_SQLITE_PATH) \
 	-DSQLITE_THREADSAFE=0 \
-	-DSQLITE_ENABLE_NORMALIZE \
 	-DSQLITE_OMIT_LOAD_EXTENSION=1 \
 	-DSQLITE_EXTRA_INIT=core_init \
 	-I./src/ -I./src/sqlite \
 	$(TARGET_SQLITE3_EXTRA_C) src/fuzzer.cc $(ext_files) $(rs_lib_dbg_static) \
-	-o $@
+	$(LDLIBS) -o $@
 
 .PHONY: all clean format \
 	test \

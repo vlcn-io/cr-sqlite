@@ -1,3 +1,5 @@
+https://users.rust-lang.org/t/unresolved-external-symbol-s-when-trying-to-link-a-no-std-binary-to-a-windows-dll/54306
+
 todo:
 
 - let server in client-server sync receive out of order events?

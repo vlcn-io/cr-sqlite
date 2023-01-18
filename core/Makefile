@@ -70,7 +70,6 @@ $(prefix):
 clean:
 	rm -rf $(prefix)
 
-FORCE: ;
 
 FORMAT_FILES=$(ext_files) $(ext_headers) ./src/core_init.c
 format: $(FORMAT_FILES)
@@ -98,12 +97,15 @@ ubsan: clean $(TARGET_TEST)
 fuzz: $(TARGET_FUZZ)
 	$(prefix)/fuzz
 
-rs_lib_dbg_static = ../rs/automigrate-native/target/debug/libcrsql_automigrate_native.a
+rs_lib_ext = a
+ifeq ($(OS),Windows_NT)
+	rs_lib_ext = lib
+endif
+
+rs_lib_dbg_static = ../rs/automigrate-native/target/debug/libcrsql_automigrate_native.$(rs_lib_ext)
 
 $(rs_lib_dbg_static): FORCE
 	cd ../rs/automigrate-native && cargo build --features omit_load_extension 
-
-FORCE: ;
 
 # Build the loadable extension.
 $(TARGET_LOADABLE): $(prefix) $(ext_files)
@@ -184,3 +186,5 @@ $(TARGET_FUZZ): $(prefix) $(TARGET_SQLITE3_EXTRA_C) src/fuzzer.cc $(ext_files)
 	correctness \
 	valgrind \
 	ubsan analyzer fuzz asan
+
+FORCE: ;

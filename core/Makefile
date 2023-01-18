@@ -105,7 +105,7 @@ endif
 rs_lib_dbg_static = ../rs/automigrate-native/target/debug/libcrsql_automigrate_native.$(rs_lib_ext)
 
 $(rs_lib_dbg_static): FORCE
-	cd ../rs/automigrate-native && cargo build --features omit_load_extension 
+	cd ../rs/automigrate-native && cargo build --features omit_load_extension && ls target/debug/
 
 # Build the loadable extension.
 $(TARGET_LOADABLE): $(prefix) $(ext_files)

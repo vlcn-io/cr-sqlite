@@ -193,6 +193,7 @@ static int columnsAreSame(sqlite3_stmt *pStmt1, sqlite3_stmt *pStmt2, int c) {
 
   // should be unreachable
   assert(0);
+  return 0;
 }
 
 static int stmtsReturnSameResults(sqlite3_stmt *pStmt1, sqlite3_stmt *pStmt2) {

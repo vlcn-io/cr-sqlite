@@ -97,15 +97,17 @@ ubsan: clean $(TARGET_TEST)
 fuzz: $(TARGET_FUZZ)
 	$(prefix)/fuzz
 
-rs_lib_ext = a
+rs_lib_suffix = a
+rs_lib_prefix = lib
 ifeq ($(OS),Windows_NT)
-	rs_lib_ext = lib
+	rs_lib_suffix = lib
+	rs_lib_prefix =
 endif
 
-rs_lib_dbg_static = ../rs/automigrate-native/target/debug/libcrsql_automigrate_native.$(rs_lib_ext)
+rs_lib_dbg_static = ../rs/automigrate-native/target/debug/$(rs_lib_prefix)crsql_automigrate_native.$(rs_lib_suffix)
 
 $(rs_lib_dbg_static): FORCE
-	cd ../rs/automigrate-native && cargo build --features omit_load_extension && ls target/debug/
+	cd ../rs/automigrate-native && cargo build --features omit_load_extension
 
 # Build the loadable extension.
 $(TARGET_LOADABLE): $(prefix) $(ext_files)

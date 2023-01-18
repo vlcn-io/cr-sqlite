@@ -14,6 +14,13 @@ crate-type = ["staticlib"]
 
 [dependencies]
 crsql_automigrate_core = {path="../automigrate-core"}
+sqlite_nostd = {path="../../deps/sqlite-rs-embedded/sqlite_nostd"}
 
 [features]
-omit_load_extension = ["crsql_automigrate_core/omit_load_extension"]
+omit_load_extension = ["crsql_automigrate_core/omit_load_extension", "sqlite_nostd/omit_load_extension"]
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"

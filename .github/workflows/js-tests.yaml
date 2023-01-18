@@ -25,6 +25,10 @@ jobs:
           rustup default nightly
           rustup update
 
+      - name: Rustup Target
+        if: runner.os == 'Linux'
+        run: rustup component add rust-src --toolchain nightly-x86_64-unknown-linux-gnu
+
       - uses: cachix/install-nix-action@v18
         with:
           nix_path: nixpkgs=channel:nixos-unstable

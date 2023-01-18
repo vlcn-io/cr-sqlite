@@ -22,11 +22,16 @@ pub extern "C" fn crsql_automigrate(
 
     let schema = args[0].text();
 
-    // if let db = sqlite::open(sqlite::strlit!(":memory:")) {
-    // } else {
-    //     ctx.result_error("failed to open in-memory db");
-    //     return;
-    // }
+    // let schema_version = pull_schema_version(schema);
+    let db = sqlite::open(sqlite::strlit!(":memory:"));
+    if !db.is_ok() {
+        ctx.result_error(
+            "failed to open the in-memory db required to calculate schema modifications",
+        );
+        return;
+    }
+    // let db = db.unwrap();
+
     /*
      * The automigrate algorithm:
      * 1. Pull the supplied schema version of the input string
@@ -46,6 +51,10 @@ pub extern "C" fn crsql_automigrate(
      */
     ctx.result_text_owned(String::from("ello mate!"));
 }
+
+// fn pull_schema_version(schema: &str) {
+//     // pull first line
+// }
 
 #[no_mangle]
 pub extern "C" fn sqlite3_crsqlautomigrate_init(

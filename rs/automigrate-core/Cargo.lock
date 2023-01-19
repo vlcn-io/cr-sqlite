@@ -70,14 +70,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "crsql_automigrate_web"
-version = "0.1.0"
-dependencies = [
- "crsql_automigrate_core",
- "sqlite_web",
-]
-
-[[package]]
 name = "either"
 version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -247,13 +239,6 @@ dependencies = [
  "num-traits",
  "sqlite3_allocator",
  "sqlite3_capi",
-]
-
-[[package]]
-name = "sqlite_web"
-version = "0.1.0"
-dependencies = [
- "sqlite_nostd",
 ]
 
 [[package]]

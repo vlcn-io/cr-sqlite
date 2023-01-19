@@ -8,7 +8,19 @@ license = "Apache 2"
 
 [lib]
 name = "crsql_automigrate_native"
-crate-type = ["cdylib"]
+crate-type = ["staticlib"]
+
+# "cdylib" <-- only enable cdylib if omit_load_extension is not enabled
 
 [dependencies]
 crsql_automigrate_core = {path="../automigrate-core"}
+sqlite_nostd = {path="../../deps/sqlite-rs-embedded/sqlite_nostd"}
+
+[features]
+omit_load_extension = ["crsql_automigrate_core/omit_load_extension", "sqlite_nostd/omit_load_extension"]
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"

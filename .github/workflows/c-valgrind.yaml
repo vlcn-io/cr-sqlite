@@ -16,7 +16,12 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          submodules: false
+          submodules: true
+
+      - name: Rust Nightly
+        run: |
+          rustup default nightly
+          rustup update
 
       - name: Build Tests
         run: |

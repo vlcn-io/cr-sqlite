@@ -16,7 +16,16 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          submodules: false
+          submodules: true
+
+      - name: Rust Nightly
+        run: |
+          rustup default nightly
+          rustup update
+
+      - name: Windows rust toolchain
+        if: runner.os == 'Windows'
+        run: rustup component add rust-src --toolchain nightly-x86_64-pc-windows-msvc
 
       - name: Test
         run: |

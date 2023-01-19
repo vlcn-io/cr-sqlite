@@ -20,6 +20,19 @@ jobs:
         with:
           submodules: true
 
+      - name: Rust Nightly
+        run: |
+          rustup default nightly
+          rustup update
+
+      - name: Rustup Target - Linux
+        if: runner.os == 'Linux'
+        run: rustup component add rust-src --toolchain nightly-x86_64-unknown-linux-gnu
+
+      - name: Rustup Target - Mac
+        if: runner.os == 'macOS'
+        run: rustup component add rust-src --toolchain nightly-x86_64-apple-darwin
+
       - uses: cachix/install-nix-action@v18
         with:
           nix_path: nixpkgs=channel:nixos-unstable

@@ -19,7 +19,12 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          submodules: false # python just needs the loadable extension
+          submodules: true
+
+      - name: Rust Nightly
+        run: |
+          rustup default nightly
+          rustup update
 
       - name: Make loadable
         run: |

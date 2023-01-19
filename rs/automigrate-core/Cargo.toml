@@ -12,7 +12,6 @@ crate-type = ["rlib"]
 
 [dependencies]
 sqlite_nostd = { path="../../deps/sqlite-rs-embedded/sqlite_nostd"}
-sqlite_web = { path="../../deps/sqlite-rs-embedded/sqlite_web"}
 
 [profile.dev]
 panic = "abort"
@@ -22,3 +21,6 @@ panic = "abort"
 
 [build]
 target = "wasm32-unknown-emscripten"
+
+[features]
+omit_load_extension = ["sqlite_nostd/omit_load_extension"]

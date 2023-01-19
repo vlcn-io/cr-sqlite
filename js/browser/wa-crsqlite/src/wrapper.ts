@@ -352,8 +352,19 @@ class Stmt implements StmtAsync {
       async () => {
         this.bind(bindArgs);
         let ret: any = null;
+        let columnNames =
+          this.mode === "o" ? this.api.column_names(this.base) : null;
         if ((await this.api.step(this.base)) == SQLite.SQLITE_ROW) {
-          ret = this.api.row(this.base);
+          const row = this.api.row(this.base);
+          if (columnNames != null) {
+            const o: { [key: string]: any } = {};
+            for (let i = 0; i < columnNames.length; ++i) {
+              o[columnNames[i]] = row[i];
+            }
+            ret = o;
+          } else {
+            ret = row;
+          }
         }
         await this.api.reset(this.base);
         return ret;
@@ -368,8 +379,19 @@ class Stmt implements StmtAsync {
       async () => {
         this.bind(bindArgs);
         const ret: any[] = [];
+        let columnNames =
+          this.mode === "o" ? this.api.column_names(this.base) : null;
         while ((await this.api.step(this.base)) == SQLite.SQLITE_ROW) {
-          ret.push(this.api.row(this.base));
+          if (columnNames != null) {
+            const row: { [key: string]: any } = {};
+            for (let i = 0; i < columnNames.length; ++i) {
+              row[columnNames[i]] = this.api.column(this.base, i);
+            }
+            ret.push(row);
+          } else {
+            ret.push(this.api.row(this.base));
+            continue;
+          }
         }
         await this.api.reset(this.base);
         return ret;

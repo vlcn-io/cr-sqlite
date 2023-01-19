@@ -22,7 +22,8 @@ const FETCHING: QueryData<any> = Object.freeze({
 // TODO: two useQuery variants?
 // ony for async db and one for sync db?
 
-const log = console.log.bind(console);
+// const log = console.log.bind(console);
+const log = (...args: any) => {};
 
 export function useAsyncQuery<T extends {}>(
   ctx: CtxAsync,
@@ -58,9 +59,9 @@ class AsyncResultStateMachine<T extends {}> {
   private pendingPreparePromise: Promise<StmtAsync | null> | null = null;
   private stmt: StmtAsync | null = null;
   private queriedTables: string[] | null = null;
-  private data: T[] | null = null;
+  private data: QueryData<T> | null = null;
   private reactInternals: null | (() => void) = null;
-  private error?: Error;
+  private error?: QueryData<T>;
   private disposed: boolean = false;
 
   constructor(
@@ -131,7 +132,9 @@ class AsyncResultStateMachine<T extends {}> {
    * - underlying db state
    */
   getSnapshot = (rebind: boolean = false): QueryData<T> => {
+    log("get snapshot");
     if (this.disposed) {
+      log("disposed");
       return {
         loading: false,
         data: EMPTY_ARRAY,
@@ -139,14 +142,12 @@ class AsyncResultStateMachine<T extends {}> {
       };
     }
     if (this.data != null) {
-      return { loading: false, data: this.data, error: this.error };
+      log("data");
+      return this.data;
     }
     if (this.error != null) {
-      return {
-        loading: false,
-        error: this.error,
-        data: this.data || EMPTY_ARRAY,
-      };
+      log("error");
+      return this.error;
     }
 
     if (this.pendingPreparePromise == null) {
@@ -158,6 +159,7 @@ class AsyncResultStateMachine<T extends {}> {
       this.fetch(rebind);
     }
 
+    log("fetching");
     return FETCHING;
   };
 
@@ -209,20 +211,31 @@ class AsyncResultStateMachine<T extends {}> {
         stmt.bind(this.bindings || []);
       }
 
-      fetchPromise = stmt.all().then(
-        (data) => {
-          if (this.pendingFetchPromise !== fetchPromise) {
-            return;
-          }
+      fetchPromise = stmt
+        .raw(false)
+        .all()
+        .then(
+          (data) => {
+            if (this.pendingFetchPromise !== fetchPromise) {
+              return;
+            }
 
-          this.data = data;
-          this.reactInternals!();
-        },
-        (error) => {
-          this.error = error;
-          this.reactInternals!();
-        }
-      );
+            this.data = {
+              loading: false,
+              data,
+              error: undefined,
+            };
+            this.reactInternals!();
+          },
+          (error: Error) => {
+            this.error = {
+              loading: false,
+              data: this.data?.data || EMPTY_ARRAY,
+              error,
+            };
+            this.reactInternals!();
+          }
+        );
       this.pendingFetchPromise = fetchPromise;
       return fetchPromise;
     };

@@ -1,8 +1,9 @@
 import sqliteWasm from "@vlcn.io/wa-crsqlite";
 import wasmUrl from "@vlcn.io/wa-crsqlite/wa-sqlite-async.wasm?url";
 
-sqliteWasm((file) => wasmUrl).then(async (sqlite3) => {
-  const db = await sqlite3.open("example-db", "c");
+sqliteWasm(() => wasmUrl).then(async (sqlite3) => {
+  console.log(sqlite3);
+  const db = await sqlite3.open("example-db-2");
 
   await db.execMany([
     "CREATE TABLE IF NOT EXISTS baz (a, b);",

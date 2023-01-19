@@ -63,7 +63,7 @@ export interface StmtAsync {
   all(...bindArgs: any[]): Promise<any[]>;
   iterate<T>(...bindArgs: any[]): AsyncIterator<T>;
   raw(isRaw?: boolean): this;
-  bind(args: any[]): this;
+  bind(args: readonly any[]): this;
   finalize(): void;
 }
 

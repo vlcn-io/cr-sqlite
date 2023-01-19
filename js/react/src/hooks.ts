@@ -38,8 +38,12 @@ export function useAsyncQuery<T extends {}>(
     },
     []
   );
-
-  // effects for query and binding changes
+  useEffect(() => {
+    stateMachine.current?.respondToBindingsChange(bindings || EMPTY_ARRAY);
+  }, bindings || EMPTY_ARRAY);
+  useEffect(() => {
+    stateMachine.current?.respondToQueryChange(query);
+  }, [query]);
 
   return useSyncExternalStore<QueryData<T>>(
     stateMachine.current.subscribeReactInternals,
@@ -55,11 +59,12 @@ class AsyncResultStateMachine<T extends {}> {
   private data: T[] | null = null;
   private reactInternals: null | (() => void) = null;
   private error?: Error;
+  private disposed: boolean = false;
 
   constructor(
     private ctx: CtxAsync,
     private query: string,
-    private bindings: [] | undefined
+    private bindings: readonly any[] | undefined
   ) {}
 
   subscribeReactInternals = (internals: () => void): (() => void) => {
@@ -68,6 +73,9 @@ class AsyncResultStateMachine<T extends {}> {
   };
 
   respondToQueryChange = (query: string): void => {
+    if (this.disposed) {
+      return;
+    }
     this.query = query;
     // cancel prep and fetch if in-flight
     this.pendingPreparePromise = null;
@@ -78,7 +86,10 @@ class AsyncResultStateMachine<T extends {}> {
     this.getSnapshot(true);
   };
 
-  respondToBindingsChange = (bindings: []): void => {
+  respondToBindingsChange = (bindings: readonly any[]): void => {
+    if (this.disposed) {
+      return;
+    }
     this.bindings = bindings;
     // cancel fetch if in-flight. We do not need to re-prepare for binding changes.
     this.pendingFetchPromise = null;
@@ -88,6 +99,9 @@ class AsyncResultStateMachine<T extends {}> {
   };
 
   private respondToDatabaseChange = (changedTbls: Set<string> | null) => {
+    if (this.disposed) {
+      return;
+    }
     if (changedTbls != null) {
       if (
         this.queriedTables == null ||
@@ -115,6 +129,13 @@ class AsyncResultStateMachine<T extends {}> {
    * - underlying db state
    */
   getSnapshot(rebind: boolean = false): QueryData<T> {
+    if (this.disposed) {
+      return {
+        loading: false,
+        data: EMPTY_ARRAY,
+        error: new Error("useAsyncQuery was disposed"),
+      };
+    }
     if (this.data != null) {
       return { loading: false, data: this.data, error: this.error };
     }
@@ -225,6 +246,7 @@ class AsyncResultStateMachine<T extends {}> {
   }
 
   dispose() {
+    this.disposed = true;
     this.stmt?.finalize();
     this.stmt = null;
     this.ctx.rx.off(this.respondToDatabaseChange);

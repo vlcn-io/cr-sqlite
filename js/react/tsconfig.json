@@ -6,5 +6,5 @@
     "allowSyntheticDefaultImports": true
   },
   "include": ["./src/"],
-  "references": [{ "path": "../xplat-api" }]
+  "references": [{ "path": "../xplat-api" }, { "path": "../rx-tbl" }]
 }

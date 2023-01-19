@@ -1,67 +1,245 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
 import { TblRx } from "@vlcn.io/rx-tbl";
-import { DB, DBAsync } from "@vlcn.io/xplat-api";
+import { DBAsync, StmtAsync } from "@vlcn.io/xplat-api";
 
 export type QueryData<T> = {
-  loading: boolean;
-  error?: Error;
-  data: T[];
+  readonly loading: boolean;
+  readonly error?: Error;
+  readonly data: readonly T[];
 };
 
-export type Ctx = {
-  db: DB | DBAsync;
-  rx: TblRx;
+export type CtxAsync = {
+  readonly db: DBAsync;
+  readonly rx: TblRx;
 };
+
+const EMPTY_ARRAY: readonly any[] = Object.freeze([]);
+const FETCHING: QueryData<any> = Object.freeze({
+  loading: true,
+  data: EMPTY_ARRAY,
+});
 
 // TODO: two useQuery variants?
 // ony for async db and one for sync db?
 
-// export function useQuery<T extends {}>(
-//   ctx: Ctx,
-//   query: string,
-//   bindings?: []
-// ): QueryData<T> {
-//   const [state, setState] = useState<QueryData<T>>({
-//     data: [],
-//     loading: true,
-//   });
-//   useEffect(() => {
-//     let isMounted = true;
-//     const runQuery = (changedTbls: Set<string> | null) => {
-//       if (!isMounted) {
-//         return;
-//       }
+export function useAsyncQuery<T extends {}>(
+  ctx: CtxAsync,
+  query: string,
+  bindings?: []
+): QueryData<T> {
+  const stateMachine = useRef<AsyncResultStateMachine<T> | null>(null);
+  if (stateMachine.current == null) {
+    stateMachine.current = new AsyncResultStateMachine(ctx, query, bindings);
+  }
 
-//       // TODO: determine tables by:
-//       // 1. preparing the query
-//       // 2. calling `used_tables` on the prepared statement
-//       if (changedTbls != null) {
-//         if (!tables.some((t) => changedTbls.has(t))) {
-//           return;
-//         }
-//       }
+  useEffect(
+    () => () => {
+      stateMachine.current?.dispose();
+    },
+    []
+  );
 
-//       ctx.db.execO<T>(query).then((data) => {
-//         if (!isMounted) {
-//           return;
-//         }
-//         setState({
-//           data,
-//           loading: false,
-//         });
-//       });
-//     };
+  // effects for query and binding changes
 
-//     const disposer = ctx.rx.on(runQuery);
+  return useSyncExternalStore<QueryData<T>>(
+    stateMachine.current.subscribeReactInternals,
+    stateMachine.current.getSnapshot
+  );
+}
 
-//     // initial kickoff to get initial data.
-//     runQuery(null);
+class AsyncResultStateMachine<T extends {}> {
+  private pendingFetchPromise: Promise<any> | null = null;
+  private pendingPreparePromise: Promise<StmtAsync | null> | null = null;
+  private stmt: StmtAsync | null = null;
+  private queriedTables: string[] | null = null;
+  private data: T[] | null = null;
+  private reactInternals: null | (() => void) = null;
+  private error?: Error;
 
-//     return () => {
-//       isMounted = false;
-//       disposer();
-//     };
-//   }, [query, ...(bindings || [])]);
+  constructor(
+    private ctx: CtxAsync,
+    private query: string,
+    private bindings: [] | undefined
+  ) {}
 
-//   return state;
-// }
+  subscribeReactInternals = (internals: () => void): (() => void) => {
+    this.reactInternals = internals;
+    return this.ctx.rx.on(this.respondToDatabaseChange);
+  };
+
+  respondToQueryChange = (query: string): void => {
+    this.query = query;
+    // cancel prep and fetch if in-flight
+    this.pendingPreparePromise = null;
+    this.pendingFetchPromise = null;
+    this.queriedTables = null;
+    this.error = undefined;
+    this.data = null;
+    this.getSnapshot(true);
+  };
+
+  respondToBindingsChange = (bindings: []): void => {
+    this.bindings = bindings;
+    // cancel fetch if in-flight. We do not need to re-prepare for binding changes.
+    this.pendingFetchPromise = null;
+    this.error = undefined;
+    this.data = null;
+    this.getSnapshot(true);
+  };
+
+  private respondToDatabaseChange = (changedTbls: Set<string> | null) => {
+    if (changedTbls != null) {
+      if (
+        this.queriedTables == null ||
+        !this.queriedTables.some((t) => changedTbls.has(t))
+      ) {
+        return;
+      }
+    }
+
+    this.pendingFetchPromise = null;
+    this.error = undefined;
+    this.data = null;
+    this.getSnapshot();
+  };
+
+  /**
+   * The entrypoint to the state machine.
+   * Any time something happens (db change, query change, bindings change) we call back
+   * into `getSnapshot` to compute what the new state should be.
+   *
+   * getSnapshot must be memoized and not re-issue queries if one is already in flight for
+   * the current set of:
+   * - query string
+   * - bindings
+   * - underlying db state
+   */
+  getSnapshot(rebind: boolean = false): QueryData<T> {
+    if (this.data != null) {
+      return { loading: false, data: this.data, error: this.error };
+    }
+    if (this.error != null) {
+      return {
+        loading: false,
+        error: this.error,
+        data: this.data || EMPTY_ARRAY,
+      };
+    }
+
+    if (this.pendingPreparePromise == null) {
+      // start preparing the statement
+      this.prepare();
+    }
+    if (this.pendingFetchPromise == null) {
+      // start fetching the data
+      this.fetch(rebind);
+    }
+
+    return FETCHING;
+  }
+
+  private prepare() {
+    this.queriedTables = null;
+    this.error = undefined;
+    this.data = null;
+    this.pendingFetchPromise = null;
+    if (this.stmt) {
+      this.stmt.finalize();
+    }
+    this.stmt = null;
+
+    const preparePromise = this.prepareAndGetUsedTables().then(
+      ([stmt, queriedTables]) => {
+        // Someone called in with a new query before we finished preparing the original query
+        if (this.pendingPreparePromise !== preparePromise) {
+          stmt.finalize();
+          return null;
+        }
+
+        this.stmt = stmt;
+        this.queriedTables = queriedTables;
+        return stmt;
+      }
+    );
+    this.pendingPreparePromise = preparePromise;
+  }
+
+  private fetch(rebind: boolean) {
+    this.error = undefined;
+    this.data = null;
+
+    let fetchPromise: Promise<any> | null = null;
+
+    const fetchInternal = () => {
+      if (fetchPromise != null && this.pendingFetchPromise !== fetchPromise) {
+        return;
+      }
+      const stmt = this.stmt;
+      if (stmt == null) {
+        return;
+      }
+
+      if (rebind) {
+        stmt.bind(this.bindings || []);
+      }
+
+      fetchPromise = stmt.all().then(
+        (data) => {
+          if (this.pendingFetchPromise !== fetchPromise) {
+            return;
+          }
+
+          this.data = data;
+          this.reactInternals!();
+        },
+        (error) => {
+          this.error = error;
+          this.reactInternals!();
+        }
+      );
+      this.pendingFetchPromise = fetchPromise;
+      return fetchPromise;
+    };
+
+    if (this.stmt == null) {
+      // chain after prepare promise
+      fetchPromise = this.pendingPreparePromise!.then((stmt) => {
+        if (stmt == null) {
+          return;
+        }
+
+        return fetchInternal();
+      });
+      this.pendingFetchPromise = fetchPromise;
+    } else {
+      fetchInternal();
+      return;
+    }
+  }
+
+  private prepareAndGetUsedTables(): Promise<[StmtAsync, string[]]> {
+    return Promise.all([
+      this.ctx.db.prepare(this.query),
+      usedTables(this.ctx.db, this.query),
+    ]);
+  }
+
+  dispose() {
+    this.stmt?.finalize();
+    this.stmt = null;
+    this.ctx.rx.off(this.respondToDatabaseChange);
+  }
+}
+
+function usedTables(db: DBAsync, query: string): Promise<string[]> {
+  return db
+    .execA(
+      `SELECT name FROM tables_used('${query.replaceAll(
+        "'",
+        "''"
+      )}') WHERE type = 'table' AND schema = 'main';`
+    )
+    .then((rows) => {
+      return rows.map((r) => r[0]);
+    });
+}

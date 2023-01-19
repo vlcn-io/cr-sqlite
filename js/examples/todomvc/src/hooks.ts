@@ -30,7 +30,7 @@ export function useQuery<T extends {}>(
         }
       }
 
-      ctx.db.execO<T>(query).then((data) => {
+      ctx.db.execO<T>(query, bindings).then((data) => {
         if (!isMounted) {
           return;
         }

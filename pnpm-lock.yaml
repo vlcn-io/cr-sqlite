@@ -216,12 +216,18 @@ importers:
 
   js/react:
     specifiers:
+      '@types/react': ^18.0.25
+      '@vlcn.io/rx-tbl': workspace:*
       '@vlcn.io/xplat-api': workspace:*
+      react: ^18
       typescript: ^4.8.4
       vitest: ^0.26.2
     dependencies:
+      '@vlcn.io/rx-tbl': link:../rx-tbl
       '@vlcn.io/xplat-api': link:../xplat-api
     devDependencies:
+      '@types/react': 18.0.25
+      react: 18.2.0
       typescript: 4.9.3
       vitest: 0.26.3
 

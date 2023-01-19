@@ -7,7 +7,7 @@ sqliteWasm({
   locateWasm: () => wasmUrl,
   locateProxy: () => proxyUrl,
 }).then((sqlite3) => {
-  const db = sqlite3.open("example-db", "c");
+  const db = sqlite3.open("example-db-2", "c");
 
   db.execMany([
     "CREATE TABLE IF NOT EXISTS baz (a, b);",

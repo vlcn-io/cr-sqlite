@@ -6,15 +6,15 @@ import wasmUrl from "@vlcn.io/wa-crsqlite/wa-sqlite-async.wasm?url";
 async function run() {
   const sqlite = await sqliteWasm(() => wasmUrl);
 
-  const db = await sqlite.open(":memory:");
+  const db = await sqlite.open("main-thread-persist");
 
   // @ts-ignore
   window.db = db;
   let rows: any[] = [];
 
-  await db.exec("CREATE TABLE foo (a primary key, b);");
+  await db.exec("CREATE TABLE IF NOT EXISTS foo (a primary key, b);");
   await db.exec("SELECT crsql_as_crr('foo');");
-  await db.exec("INSERT INTO foo VALUES (1, 2);");
+  await db.exec("INSERT OR IGNORE INTO foo VALUES (1, 2);");
   rows = await db.execA("select crsql_dbversion();");
   console.log("DB Version: ", rows[0][0]);
   rows = await db.execA("select crsql_siteid();");

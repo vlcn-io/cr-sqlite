@@ -214,6 +214,17 @@ importers:
       typescript: 4.9.3
       vitest: 0.25.2
 
+  js/react:
+    specifiers:
+      '@vlcn.io/xplat-api': workspace:*
+      typescript: ^4.8.4
+      vitest: ^0.26.2
+    dependencies:
+      '@vlcn.io/xplat-api': link:../xplat-api
+    devDependencies:
+      typescript: 4.9.3
+      vitest: 0.26.3
+
   js/rx-tbl:
     specifiers:
       '@vlcn.io/xplat-api': workspace:*

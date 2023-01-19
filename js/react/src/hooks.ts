@@ -22,6 +22,8 @@ const FETCHING: QueryData<any> = Object.freeze({
 // TODO: two useQuery variants?
 // ony for async db and one for sync db?
 
+const log = console.log.bind(console);
+
 export function useAsyncQuery<T extends {}>(
   ctx: CtxAsync,
   query: string,
@@ -128,7 +130,7 @@ class AsyncResultStateMachine<T extends {}> {
    * - bindings
    * - underlying db state
    */
-  getSnapshot(rebind: boolean = false): QueryData<T> {
+  getSnapshot = (rebind: boolean = false): QueryData<T> => {
     if (this.disposed) {
       return {
         loading: false,
@@ -157,9 +159,10 @@ class AsyncResultStateMachine<T extends {}> {
     }
 
     return FETCHING;
-  }
+  };
 
   private prepare() {
+    log("hooks - Preparing");
     this.queriedTables = null;
     this.error = undefined;
     this.data = null;
@@ -186,12 +189,14 @@ class AsyncResultStateMachine<T extends {}> {
   }
 
   private fetch(rebind: boolean) {
+    log("hooks - Fetching");
     this.error = undefined;
     this.data = null;
 
     let fetchPromise: Promise<any> | null = null;
 
     const fetchInternal = () => {
+      log("hooks - Fetching (internal)");
       if (fetchPromise != null && this.pendingFetchPromise !== fetchPromise) {
         return;
       }

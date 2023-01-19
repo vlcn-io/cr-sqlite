@@ -172,6 +172,7 @@ importers:
       '@types/react-dom': ^18.0.8
       '@types/uuid': ^8.3.4
       '@vlcn.io/client-websocket': workspace:*
+      '@vlcn.io/react': workspace:*
       '@vlcn.io/rx-tbl': workspace:*
       '@vlcn.io/server-websocket': workspace:*
       '@vlcn.io/wa-crsqlite': workspace:*
@@ -181,6 +182,7 @@ importers:
       vite: ^3.2.2
     dependencies:
       '@vlcn.io/client-websocket': link:../../sync-reference/client-websocket
+      '@vlcn.io/react': link:../../react
       '@vlcn.io/rx-tbl': link:../../rx-tbl
       '@vlcn.io/server-websocket': link:../../sync-reference/server-websocket
       '@vlcn.io/wa-crsqlite': link:../../browser/wa-crsqlite

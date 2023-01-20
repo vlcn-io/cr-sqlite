@@ -31,8 +31,25 @@ jobs:
         if: runner.os == 'macOS'
         run: rustup component add rust-src --toolchain nightly-x86_64-apple-darwin
 
-      - name: Setup WABT
-        uses: chiefbiiko/setup-wabt@1.0.0
+      - name: Setup WABT - Liunx
+        if: runner.os == 'Linux'
+        run: |
+          curl -L https://github.com/WebAssembly/wabt/releases/download/1.0.32/wabt-1.0.32-ubuntu.tar.gz | tar -xz -C ~
+          echo "$HOME/wabt-1.0.32/bin" >> $GITHUB_PATH
+
+      - name: Setup WABT - Mac
+        if: runner.os == 'macOS'
+        run: |
+          curl -L https://github.com/WebAssembly/wabt/releases/download/1.0.32/wabt-1.0.32-macos-12.tar.gz | tar -xz -C ~
+          echo "$HOME/wabt-1.0.32/bin" >> $GITHUB_PATH
+
+      - name: Setup WABT - Windows
+        if: runner.os == 'Windows'
+        run: |
+          curl https://github.com/WebAssembly/wabt/releases/download/1.0.32/wabt-1.0.32-windows.tar.gz > ~/wabt.tar.gz
+          ls ~
+          cd ~ && tar -zxf wabt.tar.gz
+          echo "$HOME/wabt-1.0.32/bin" >> $GITHUB_PATH
 
       - name: Install pnpm
         uses: pnpm/action-setup@v2

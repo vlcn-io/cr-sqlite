@@ -75,6 +75,7 @@ class AsyncResultStateMachine<T extends {}> {
     return this.ctx.rx.on(this.respondToDatabaseChange);
   };
 
+  // TODO: warn the user if query changes too much
   respondToQueryChange = (query: string): void => {
     if (this.disposed) {
       return;
@@ -89,6 +90,7 @@ class AsyncResultStateMachine<T extends {}> {
     this.getSnapshot(true);
   };
 
+  // TODO: warn the user if bindings change too much
   respondToBindingsChange = (bindings: readonly any[]): void => {
     if (this.disposed) {
       return;

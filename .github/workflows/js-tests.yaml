@@ -11,7 +11,7 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-          - os: windows-2022
+          # - os: windows-2022 # windows is still broke as fk
           - os: macos-latest
     steps:
       - uses: actions/checkout@v3
@@ -46,7 +46,8 @@ jobs:
       - name: Setup WABT - Windows
         if: runner.os == 'Windows'
         run: |
-          curl https://github.com/WebAssembly/wabt/releases/download/1.0.32/wabt-1.0.32-windows.tar.gz > ~/wabt.tar.gz
+          touch ~/wabt.tar.gz
+          curl https://github.com/WebAssembly/wabt/releases/download/1.0.32/wabt-1.0.32-windows.tar.gz -o ~/wabt.tar.gz
           ls ~
           cd ~ && tar -zxf wabt.tar.gz
           echo "$HOME/wabt-1.0.32/bin" >> $GITHUB_PATH

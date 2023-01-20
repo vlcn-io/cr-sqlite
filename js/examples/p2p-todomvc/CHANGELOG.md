@@ -1,5 +1,15 @@
 # @vlcn.io/crsqlite-p2p-todomvc
 
+## 0.7.2-next.0
+
+### Patch Changes
+
+- hooks, fixes to support examples, auto-determine tables queried
+- Updated dependencies
+  - @vlcn.io/wa-crsqlite@0.7.2-next.0
+  - @vlcn.io/rx-tbl@0.6.1-next.0
+  - @vlcn.io/sync-p2p@0.6.1-next.0
+
 ## 0.7.1
 
 ### Patch Changes

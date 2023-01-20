@@ -1,7 +1,7 @@
 {
   "name": "@vlcn.io/server-core",
   "type": "module",
-  "version": "0.6.1",
+  "version": "0.6.2-next.0",
   "files": [
     "dist",
     "src"

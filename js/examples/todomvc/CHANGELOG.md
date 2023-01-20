@@ -1,5 +1,17 @@
 # @vlcn.io/todomvc
 
+## 0.7.2-next.0
+
+### Patch Changes
+
+- hooks, fixes to support examples, auto-determine tables queried
+- Updated dependencies
+  - @vlcn.io/wa-crsqlite@0.7.2-next.0
+  - @vlcn.io/react@0.7.2-next.0
+  - @vlcn.io/rx-tbl@0.6.1-next.0
+  - @vlcn.io/client-websocket@0.6.2-next.0
+  - @vlcn.io/server-websocket@0.6.2-next.0
+
 ## 0.7.1
 
 ### Patch Changes

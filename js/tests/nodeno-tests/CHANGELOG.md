@@ -1,5 +1,16 @@
 # @vlcn.io/nodeno-tests
 
+## 0.6.1-next.0
+
+### Patch Changes
+
+- hooks, fixes to support examples, auto-determine tables queried
+- Updated dependencies
+  - @vlcn.io/crsqlite-allinone@0.6.1-next.0
+  - @vlcn.io/rx-tbl@0.6.1-next.0
+  - @vlcn.io/xplat-tests@0.6.1-next.0
+  - @vlcn.io/xplat-api@0.6.1-next.0
+
 ## 0.6.0
 
 ### Minor Changes

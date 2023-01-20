@@ -1,5 +1,13 @@
 # @vlcn.io/node-tests
 
+## 0.6.1-next.0
+
+### Patch Changes
+
+- hooks, fixes to support examples, auto-determine tables queried
+- Updated dependencies
+  - @vlcn.io/crsqlite@0.7.1-next.0
+
 ## 0.6.0
 
 ### Minor Changes

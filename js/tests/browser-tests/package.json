@@ -1,7 +1,7 @@
 {
   "name": "@vlcn.io/browser-tests",
   "private": true,
-  "version": "0.6.1",
+  "version": "0.6.2-next.0",
   "type": "module",
   "scripts": {
     "test": "pnpm cypress run --component"

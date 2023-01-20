@@ -1,5 +1,11 @@
 # @vlcn.io/tsbuild-all
 
+## 0.6.1-next.0
+
+### Patch Changes
+
+- hooks, fixes to support examples, auto-determine tables queried
+
 ## 0.6.0
 
 ### Minor Changes

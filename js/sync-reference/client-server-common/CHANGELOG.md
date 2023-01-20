@@ -1,5 +1,11 @@
 # @vlcn.io/client-server-common
 
+## 0.3.2-next.0
+
+### Patch Changes
+
+- hooks, fixes to support examples, auto-determine tables queried
+
 ## 0.3.1
 
 ### Patch Changes

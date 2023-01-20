@@ -1,5 +1,16 @@
 # @vlcn.io/sync-client
 
+## 0.6.2-next.0
+
+### Patch Changes
+
+- hooks, fixes to support examples, auto-determine tables queried
+- Updated dependencies
+  - @vlcn.io/rx-tbl@0.6.1-next.0
+  - @vlcn.io/client-core@0.6.2-next.0
+  - @vlcn.io/client-server-common@0.3.2-next.0
+  - @vlcn.io/xplat-api@0.6.1-next.0
+
 ## 0.6.1
 
 ### Patch Changes

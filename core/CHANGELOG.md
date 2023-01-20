@@ -1,5 +1,11 @@
 # @vlcn.io/crsqlite
 
+## 0.7.1-next.0
+
+### Patch Changes
+
+- hooks, fixes to support examples, auto-determine tables queried
+
 ## 0.7.0
 
 ### Minor Changes

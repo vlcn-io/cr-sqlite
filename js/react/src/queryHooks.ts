@@ -1,16 +1,11 @@
 import { useEffect, useRef, useSyncExternalStore } from "react";
-import { TblRx } from "@vlcn.io/rx-tbl";
 import { DBAsync, StmtAsync } from "@vlcn.io/xplat-api";
+import { CtxAsync } from "./context.js";
 
 export type QueryData<T> = {
   readonly loading: boolean;
   readonly error?: Error;
   readonly data: readonly T[];
-};
-
-export type CtxAsync = {
-  readonly db: DBAsync;
-  readonly rx: TblRx;
 };
 
 const EMPTY_ARRAY: readonly any[] = Object.freeze([]);

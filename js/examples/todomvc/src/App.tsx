@@ -117,7 +117,7 @@ function Footer({
   setFilter,
 }: {
   remaining: number;
-  todos: Todo[];
+  todos: readonly Todo[];
   clearCompleted: () => void;
   todoList: TodoList;
   ctx: Ctx;
@@ -208,7 +208,7 @@ export default function App({ ctx }: { ctx: Ctx }) {
   };
   let toggleAllCheck;
 
-  const allTodos: Todo[] = useAsyncQuery<Todo>(
+  const allTodos: readonly Todo[] = useAsyncQuery<Todo>(
     ctx,
     "SELECT * FROM todo ORDER BY id DESC"
   ).data;

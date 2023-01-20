@@ -24,7 +24,11 @@ export class DB {
     private readonly pullChangesetStmt: Stmt | StmtAsync,
     private readonly applyChangesetStmt: Stmt | StmtAsync,
     private readonly updatePeerTrackerStmt: Stmt | StmtAsync
-  ) {}
+  ) {
+    this.pullChangesetStmt.raw(true);
+    this.applyChangesetStmt.raw(true);
+    this.updatePeerTrackerStmt.raw(true);
+  }
 
   onUpdate(cb: () => void) {
     const ret = this.rx.on(cb);

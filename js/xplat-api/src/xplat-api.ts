@@ -31,7 +31,7 @@ export type DBAsync = {
   exec(sql: string, bind?: unknown[]): Promise<void>;
   execO<T extends {}>(sql: string, bind?: unknown[]): Promise<T[]>;
   execA<T extends any[]>(sql: string, bind?: unknown[]): Promise<T[]>;
-  close(): void;
+  close(): Promise<void>;
   onUpdate(
     cb: (
       type: UpdateType,

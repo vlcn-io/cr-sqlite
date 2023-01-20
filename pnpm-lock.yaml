@@ -172,6 +172,7 @@ importers:
       '@types/react-dom': ^18.0.8
       '@types/uuid': ^8.3.4
       '@vlcn.io/client-websocket': workspace:*
+      '@vlcn.io/react': workspace:*
       '@vlcn.io/rx-tbl': workspace:*
       '@vlcn.io/server-websocket': workspace:*
       '@vlcn.io/wa-crsqlite': workspace:*
@@ -181,6 +182,7 @@ importers:
       vite: ^3.2.2
     dependencies:
       '@vlcn.io/client-websocket': link:../../sync-reference/client-websocket
+      '@vlcn.io/react': link:../../react
       '@vlcn.io/rx-tbl': link:../../rx-tbl
       '@vlcn.io/server-websocket': link:../../sync-reference/server-websocket
       '@vlcn.io/wa-crsqlite': link:../../browser/wa-crsqlite
@@ -213,6 +215,23 @@ importers:
       '@types/jest': 29.2.3
       typescript: 4.9.3
       vitest: 0.25.2
+
+  js/react:
+    specifiers:
+      '@types/react': ^18.0.25
+      '@vlcn.io/rx-tbl': workspace:*
+      '@vlcn.io/xplat-api': workspace:*
+      react: ^18
+      typescript: ^4.8.4
+      vitest: ^0.26.2
+    dependencies:
+      '@vlcn.io/rx-tbl': link:../rx-tbl
+      '@vlcn.io/xplat-api': link:../xplat-api
+    devDependencies:
+      '@types/react': 18.0.25
+      react: 18.2.0
+      typescript: 4.9.3
+      vitest: 0.26.3
 
   js/rx-tbl:
     specifiers:

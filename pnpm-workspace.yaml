@@ -3,6 +3,7 @@ packages:
   - "js/browser/sandbox"
   - "js/browser/wa-crsqlite"
   - "deps/wa-sqlite"
+  - "js/react"
   - "js/sync-reference/p2p"
   - "js/sync-reference/server-core"
   - "js/sync-reference/server-websocket"

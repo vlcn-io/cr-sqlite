@@ -1,5 +1,5 @@
 import * as React from "react";
-import { useQuery } from "./hooks.js";
+import { useAsyncQuery } from "@vlcn.io/react";
 import { useState, useCallback, memo } from "react";
 import { nanoid } from "nanoid";
 import { Ctx } from "./ctx.js";
@@ -208,9 +208,8 @@ export default function App({ ctx }: { ctx: Ctx }) {
   };
   let toggleAllCheck;
 
-  const allTodos: Todo[] = useQuery<Todo>(
+  const allTodos: Todo[] = useAsyncQuery<Todo>(
     ctx,
-    ["todo"],
     "SELECT * FROM todo ORDER BY id DESC"
   ).data;
   const completeTodos = allTodos.filter((t) => t.completed);

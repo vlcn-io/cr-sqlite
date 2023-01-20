@@ -15,6 +15,7 @@
     { "path": "../browser/wa-crsqlite" },
     { "path": "../browser/crsqlite-wasm" },
     { "path": "../rx-tbl" },
+    { "path": "../react" },
     { "path": "../sync-reference/server-websocket" },
     { "path": "../sync-reference/server-core" },
     { "path": "../sync-reference/client-websocket" },

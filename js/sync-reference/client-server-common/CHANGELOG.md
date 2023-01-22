@@ -1,5 +1,12 @@
 # @vlcn.io/client-server-common
 
+## 0.3.2
+
+### Patch Changes
+
+- 519bcfc2a: hooks, fixes to support examples, auto-determine tables queried
+- hooks package, used_tables query, web only target for wa-sqlite
+
 ## 0.3.2-next.0
 
 ### Patch Changes

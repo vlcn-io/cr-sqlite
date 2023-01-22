@@ -1,5 +1,16 @@
 # @vlcn.io/server-core
 
+## 0.6.2
+
+### Patch Changes
+
+- 519bcfc2a: hooks, fixes to support examples, auto-determine tables queried
+- hooks package, used_tables query, web only target for wa-sqlite
+- Updated dependencies [519bcfc2a]
+- Updated dependencies
+  - @vlcn.io/crsqlite@0.7.1
+  - @vlcn.io/client-server-common@0.3.2
+
 ## 0.6.2-next.0
 
 ### Patch Changes

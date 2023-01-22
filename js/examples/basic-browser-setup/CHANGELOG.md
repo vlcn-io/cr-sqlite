@@ -1,5 +1,16 @@
 # @vlcn.io/crsqlite-examples
 
+## 0.6.2
+
+### Patch Changes
+
+- 519bcfc2a: hooks, fixes to support examples, auto-determine tables queried
+- hooks package, used_tables query, web only target for wa-sqlite
+- Updated dependencies [519bcfc2a]
+- Updated dependencies
+  - @vlcn.io/crsqlite-wasm@0.6.1
+  - @vlcn.io/wa-crsqlite@0.7.2
+
 ## 0.6.2-next.0
 
 ### Patch Changes

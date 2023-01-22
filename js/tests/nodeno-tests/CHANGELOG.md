@@ -1,5 +1,18 @@
 # @vlcn.io/nodeno-tests
 
+## 0.6.1
+
+### Patch Changes
+
+- 519bcfc2a: hooks, fixes to support examples, auto-determine tables queried
+- hooks package, used_tables query, web only target for wa-sqlite
+- Updated dependencies [519bcfc2a]
+- Updated dependencies
+  - @vlcn.io/crsqlite-allinone@0.6.1
+  - @vlcn.io/rx-tbl@0.6.1
+  - @vlcn.io/xplat-tests@0.6.1
+  - @vlcn.io/xplat-api@0.6.1
+
 ## 0.6.1-next.0
 
 ### Patch Changes

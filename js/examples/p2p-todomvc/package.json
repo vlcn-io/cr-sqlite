@@ -15,6 +15,7 @@
     "@vlcn.io/wa-crsqlite": "workspace:*",
     "@vlcn.io/sync-p2p": "workspace:*",
     "@vlcn.io/rx-tbl": "workspace:*",
+    "@vlcn.io/react": "workspace:*",
     "comlink": "^4.3.1",
     "nanoid": "^4.0.0",
     "react": "^18.2.0",

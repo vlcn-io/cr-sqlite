@@ -1,7 +1,6 @@
 import * as React from "react";
 import { useState, useEffect } from "react";
-import { Ctx } from "./hooks";
-import { useState } from "react";
+import { Ctx } from "./ctx.js";
 
 export default function Peers({ ctx }: { ctx: Ctx }) {
   const [peerId, setPeerId] = useState<string>("");
@@ -9,11 +8,14 @@ export default function Peers({ ctx }: { ctx: Ctx }) {
   const [established, setEstablished] = useState<string[]>([]);
 
   useEffect(() => {
-    return ctx.rtc.onConnectionsChanged((pending, established) => {
+    const cleanup = ctx.rtc.onConnectionsChanged((pending, established) => {
       console.log("conns changes");
       setPending(pending);
       setEstablished(established);
     });
+    return () => {
+      cleanup();
+    };
   }, [ctx.rtc]);
   return (
     <div className="peers">

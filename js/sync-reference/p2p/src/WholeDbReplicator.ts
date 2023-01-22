@@ -97,7 +97,6 @@ const api = {
 
 // TODO: we need to handle initial sync.
 // Well, that should be easy. Just poke people on connect.
-
 export class WholeDbReplicator {
   private crrs: string[] = [];
   private pendingNotification = false;

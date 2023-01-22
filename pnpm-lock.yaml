@@ -137,6 +137,7 @@ importers:
     specifiers:
       '@types/react': ^18.0.25
       '@types/react-dom': ^18.0.8
+      '@vlcn.io/react': workspace:*
       '@vlcn.io/rx-tbl': workspace:*
       '@vlcn.io/sync-p2p': workspace:*
       '@vlcn.io/wa-crsqlite': workspace:*
@@ -147,6 +148,7 @@ importers:
       uuid: ^9.0.0
       vite: ^3.2.2
     dependencies:
+      '@vlcn.io/react': link:../../react
       '@vlcn.io/rx-tbl': link:../../rx-tbl
       '@vlcn.io/sync-p2p': link:../../sync-reference/p2p
       '@vlcn.io/wa-crsqlite': link:../../browser/wa-crsqlite

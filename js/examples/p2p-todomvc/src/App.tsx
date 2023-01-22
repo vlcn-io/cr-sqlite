@@ -1,5 +1,6 @@
 import * as React from "react";
-import { Ctx, useQuery } from "./hooks";
+import { useAsyncQuery as useQuery } from "@vlcn.io/react";
+import { Ctx } from "./ctx.js";
 import { useState, useCallback, memo } from "react";
 import { nanoid } from "nanoid";
 import Peers from "./Peers";
@@ -117,7 +118,7 @@ function Footer({
   setFilter,
 }: {
   remaining: number;
-  todos: Todo[];
+  todos: readonly Todo[];
   clearCompleted: () => void;
   todoList: TodoList;
   ctx: Ctx;
@@ -194,6 +195,10 @@ export default function App({ ctx }: { ctx: Ctx }) {
   const saveTodo = useCallback(
     (todo: Todo, text: string) => {
       ctx.db.exec(`UPDATE todo SET text = ? WHERE id = ?`, [text, todo.id]);
+      setList((old) => ({
+        ...old,
+        editing: null,
+      }));
     },
     [list]
   );
@@ -208,9 +213,8 @@ export default function App({ ctx }: { ctx: Ctx }) {
   };
   let toggleAllCheck;
 
-  const allTodos: Todo[] = useQuery<Todo>(
+  const allTodos: readonly Todo[] = useQuery<Todo>(
     ctx,
-    ["todo"],
     "SELECT * FROM todo ORDER BY id DESC"
   ).data;
   const completeTodos = allTodos.filter((t) => t.completed);

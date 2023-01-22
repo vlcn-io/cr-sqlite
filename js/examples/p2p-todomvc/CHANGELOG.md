@@ -1,5 +1,12 @@
 # @vlcn.io/crsqlite-p2p-todomvc
 
+## 0.7.3
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/sync-p2p@0.6.2
+
 ## 0.7.2
 
 ### Patch Changes

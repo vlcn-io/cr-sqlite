@@ -1,5 +1,12 @@
 # @vlcn.io/xplat-tests
 
+## 0.6.2
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/sync-p2p@0.6.2
+
 ## 0.6.1
 
 ### Patch Changes

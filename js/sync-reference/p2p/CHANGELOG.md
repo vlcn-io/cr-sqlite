@@ -1,5 +1,11 @@
 # @vlcn.io/replicator-wholedb
 
+## 0.6.2
+
+### Patch Changes
+
+- allow specifying peer server settings
+
 ## 0.6.1
 
 ### Patch Changes

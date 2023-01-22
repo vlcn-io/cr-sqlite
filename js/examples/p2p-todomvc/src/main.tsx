@@ -26,7 +26,16 @@ async function main() {
   const siteid = uuidStringify(r[0][0]);
 
   const rx = await tblrx(db);
-  const rtc = await wdbRtc(db);
+  const rtc = await wdbRtc(
+    db,
+    window.location.hostname === "localhost"
+      ? {
+          host: "localhost",
+          port: 9000,
+          path: "/examples",
+        }
+      : undefined
+  );
 
   window.onbeforeunload = () => {
     db.close();

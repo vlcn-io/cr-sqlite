@@ -55,12 +55,12 @@ export class WholeDbRtc implements PokeProtocol {
     | ((fromSiteId: SiteIDWire, changesets: readonly Changeset[]) => void)
     | null = null;
 
-  constructor(public readonly siteId: SiteIDLocal, private db: DB | DBAsync) {
-    this.site = new Peer(uuidStringify(siteId), {
-      host: "localhost",
-      port: 9000,
-      path: "/examples",
-    });
+  constructor(
+    public readonly siteId: SiteIDLocal,
+    private db: DB | DBAsync,
+    peerServer?: PeerOptions
+  ) {
+    this.site = new Peer(uuidStringify(siteId), peerServer);
     this.site.on("connection", (c) => {
       c.on("open", () => this._newConnection(c));
     });
@@ -240,11 +240,18 @@ class WholeDbRtcPublic {
   }
 }
 
+export type PeerOptions = {
+  host: string;
+  port: number;
+  path: string;
+};
+
 export default async function wholeDbRtc(
-  db: DB | DBAsync
+  db: DB | DBAsync,
+  peerServer?: PeerOptions
 ): Promise<WholeDbRtcPublic> {
   const siteId = (await db.execA<[Uint8Array]>("SELECT crsql_siteid();"))[0][0];
-  const internal = new WholeDbRtc(siteId, db);
+  const internal = new WholeDbRtc(siteId, db, peerServer);
   await internal._init();
   return new WholeDbRtcPublic(internal);
 }

@@ -134,7 +134,7 @@ Note -- these are pre-release. Please look at [the open bugs](https://github.com
 
 Examples apps that use `cr-sqlite` and have a networking layer (albeit a dumb one at the moment) are being developed:
 
-- [Working TODO MVC](https://github.com/vlcn-io/cr-sqlite/tree/main/js/examples/p2p-todomvc)
+- https://github.com/vlcn-io/live-examples
 - [WIP Local-First Presentation Editor](https://github.com/tantaman/strut)
 - [Observable Notebook](https://observablehq.com/@tantaman/cr-sqlite-basic-setup)
 

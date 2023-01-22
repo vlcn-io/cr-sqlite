@@ -20,6 +20,7 @@ function runTests(tests: {
   });
 }
 
+(global as any).navigator = {};
 import { wdbTests } from "@vlcn.io/xplat-tests";
 runTests(wdbTests);
 

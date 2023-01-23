@@ -106,9 +106,7 @@ select crsql_finalize();
 Note -- these are pre-release. Please look at [the open bugs](https://github.com/vlcn-io/cr-sqlite/issues?q=is%3Aissue+is%3Aopen+label%3Abug) if you're planning on taking them for a spin.
 
 - Browser - [@vlcn.io/wa-crsqlite](https://github.com/vlcn-io/cr-sqlite/tree/main/js/browser/wa-crsqlite)
-  - [usage](https://github.com/vlcn-io/cr-sqlite/tree/main/js/browser/examples)
-  - [TodoMVC](https://github.com/vlcn-io/cr-sqlite/tree/main/js/examples)
-  - [Strut.io re-write](https://github.com/tantaman/Strut/blob/master/app/src/main.tsx#L29-L31)
+  - [example apps](https://github.com/vlcn-io/live-examples)
 - NodeJS - [@vlcn.io/crsqlite](https://www.npmjs.com/package/@vlcn.io/crsqlite)
 
   - Usage:

@@ -97,7 +97,7 @@ fn midpoint(a: &str, b: Option<&str>, digits: &str) -> Result<String, &'static s
         let b_bytes = b.as_bytes();
         b_bytes[b_bytes.len() - 1]
     });
-    if a_bytes[a_bytes.len() - 1] == zero_charcode as u8
+    if a_bytes.len() > 0 && a_bytes[a_bytes.len() - 1] == zero_charcode as u8
         || (b_last_char.is_some() && b_last_char.unwrap() == zero_charcode as u8)
     {
         return Err("midpoint - a or b must not end with 0");
@@ -126,7 +126,7 @@ fn midpoint(a: &str, b: Option<&str>, digits: &str) -> Result<String, &'static s
         }
     }
 
-    let digit_a = if a_bytes.len() > 0 {
+    let digit_a = if a.len() > 0 {
         digits.find(a_bytes[0] as char)
     } else {
         Some(0)
@@ -156,7 +156,7 @@ fn midpoint(a: &str, b: Option<&str>, digits: &str) -> Result<String, &'static s
             return Ok(format!(
                 "{}{}",
                 &digits[digit_a..digit_a + 1],
-                midpoint(&a[1..], None, digits)?
+                midpoint(if a == "" { a } else { &a[1..] }, None, digits)?
             ));
         }
     }
@@ -336,33 +336,51 @@ mod tests {
         test(None, Some("Zz"), Ok(Some(String::from("Zy"))));
         test(Some("a0"), None, Ok(Some(String::from("a1"))));
         test(Some("a1"), None, Ok(Some(String::from("a2"))));
-        /*
-        test("a0", "a1", "a0V");
-        test("a1", "a2", "a1V");
-        test("a0V", "a1", "a0l");
-        test("Zz", "a0", "ZzV");
-        test("Zz", "a1", "a0");
-        test(null, "Y00", "Xzzz");
-        test("bzz", null, "c000");
-        test("a0", "a0V", "a0G");
-        test("a0", "a0G", "a08");
-        test("b125", "b129", "b127");
-        test("a0", "a1V", "a1");
-        test("Zz", "a01", "a0");
-        test(null, "a0V", "a0");
-        test(null, "b999", "b99");
+        test(Some("a0"), Some("a1"), Ok(Some(String::from("a0V"))));
+        test(Some("a1"), Some("a2"), Ok(Some(String::from("a1V"))));
+        test(Some("a0V"), Some("a1"), Ok(Some(String::from("a0l"))));
+        test(Some("Zz"), Some("a0"), Ok(Some(String::from("ZzV"))));
+        test(Some("Zz"), Some("a1"), Ok(Some(String::from("a0"))));
+        test(None, Some("Y00"), Ok(Some(String::from("Xzzz"))));
+        test(Some("bzz"), None, Ok(Some(String::from("c000"))));
+        test(Some("a0"), Some("a0V"), Ok(Some(String::from("a0G"))));
+        test(Some("a0"), Some("a0G"), Ok(Some(String::from("a08"))));
+        test(Some("b125"), Some("b129"), Ok(Some(String::from("b127"))));
+        test(Some("a0"), Some("a1V"), Ok(Some(String::from("a1"))));
+        test(Some("Zz"), Some("a01"), Ok(Some(String::from("a0"))));
+        test(None, Some("a0V"), Ok(Some(String::from("a0"))));
+        test(None, Some("b999"), Ok(Some(String::from("b99"))));
         test(
-          null,
-          "A00000000000000000000000000",
-          "invalid order key: A00000000000000000000000000"
+            None,
+            Some("A00000000000000000000000000"),
+            Err("Key is too small"),
         );
-        test(null, "A000000000000000000000000001", "A000000000000000000000000000V");
-        test("zzzzzzzzzzzzzzzzzzzzzzzzzzy", null, "zzzzzzzzzzzzzzzzzzzzzzzzzzz");
-        test("zzzzzzzzzzzzzzzzzzzzzzzzzzz", null, "zzzzzzzzzzzzzzzzzzzzzzzzzzzV");
-        test("a00", null, "invalid order key: a00");
-        test("a00", "a1", "invalid order key: a00");
-        test("0", "1", "invalid order key head: 0");
-        test("a1", "a0", "a1 >= a0");
-                 */
+        test(
+            None,
+            Some("A000000000000000000000000001"),
+            Ok(Some(String::from("A000000000000000000000000000V"))),
+        );
+        test(
+            Some("zzzzzzzzzzzzzzzzzzzzzzzzzzy"),
+            None,
+            Ok(Some(String::from("zzzzzzzzzzzzzzzzzzzzzzzzzzz"))),
+        );
+        test(
+            Some("zzzzzzzzzzzzzzzzzzzzzzzzzzz"),
+            None,
+            Ok(Some(String::from("zzzzzzzzzzzzzzzzzzzzzzzzzzzV"))),
+        );
+        test(Some("a00"), None, Err("Integer part should not end with 0"));
+        test(
+            Some("a00"),
+            Some("a1"),
+            Err("Integer part should not end with 0"),
+        );
+        test(Some("0"), Some("1"), Err("head is out of range"));
+        test(
+            Some("a1"),
+            Some("a0"),
+            Err("key_between - a must be before b"),
+        );
     }
 }

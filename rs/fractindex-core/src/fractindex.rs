@@ -121,7 +121,11 @@ fn midpoint(a: &str, b: Option<&str>, digits: &str) -> Result<String, &'static s
             return Ok(format!(
                 "{}{}",
                 &b[0..n],
-                midpoint(&a[n..], Some(&b[n..]), digits)?
+                midpoint(
+                    if n > a.len() { "" } else { &a[n..] },
+                    if n > b.len() { None } else { Some(&b[n..]) },
+                    digits
+                )?
             ));
         }
     }
@@ -305,7 +309,9 @@ fn decrement_integer(x: &str, digits: &str) -> Result<Option<String>, &'static s
 mod tests {
     extern crate alloc;
     use crate::fractindex;
-    use alloc::string::String;
+    use alloc::vec;
+    use alloc::{string::String, vec::Vec};
+    use rand::distributions::{Distribution, Uniform};
 
     use super::SMALLEST_INTEGER;
     #[test]
@@ -382,5 +388,61 @@ mod tests {
             Some("a0"),
             Err("key_between - a must be before b"),
         );
+    }
+
+    #[test]
+    fn generate_insert_order() {
+        let mut rng = rand::thread_rng();
+        let die = Uniform::from(0..5);
+        // 1. generate a list of indices
+        // 2. Permute the copy by moving items around
+        // 3. Get new indice of the item moved for each move
+        // 4. order by indice and compare to original list
+
+        let mut prev: Option<String> = None;
+        let mut indices: Vec<String> = vec![];
+        for _ in 0..5 {
+            prev = fractindex::key_between(prev.as_deref().map(|x| &x[..]), None, None).unwrap();
+            indices.push(String::from(prev.as_deref().unwrap()));
+        }
+
+        let mut sorted = indices.clone();
+        sorted.sort();
+        assert_eq!(vec_compare(&sorted, &indices), true);
+
+        let mut i = 0;
+        // Run through 1k random re-orderings and ensure the list is always sorted
+        // correctly by fractional index
+        while i < 10 {
+            let from_index = die.sample(&mut rng);
+            let to_index = die.sample(&mut rng);
+            if from_index == to_index {
+                continue;
+            }
+
+            let fract_index = fractindex::key_between(
+                if to_index == 0 {
+                    None
+                } else {
+                    indices.get(to_index - 1).map(|x| &x[..])
+                },
+                indices.get(to_index).map(|x| &x[..]),
+                None,
+            )
+            .unwrap()
+            .unwrap();
+
+            indices.insert(to_index, fract_index);
+            indices.remove(from_index);
+            let mut sorted = indices.clone();
+            sorted.sort();
+            assert_eq!(vec_compare(&sorted, &indices), true);
+
+            i += 1;
+        }
+    }
+
+    fn vec_compare(va: &[String], vb: &[String]) -> bool {
+        (va.len() == vb.len()) && va.iter().zip(vb).all(|(a, b)| a == b)
     }
 }

@@ -11,3 +11,18 @@ pub fn orderings(
     collection_column: &str,
 ) {
 }
+
+pub fn as_ordered(
+    db: *mut sqlite3,
+    table: &str,
+    ordering_column: &str,
+    collection_columns: &[*mut sqlite_nostd::value],
+) {
+    // record some information about the table
+    // we need a crsql_schema table
+    // crsql_master to mimick sqlite?
+}
+
+// prepend -- largely triggers
+// move -- fn
+// append -- largely triggers

@@ -126,6 +126,19 @@ static int initSiteId(sqlite3 *db, unsigned char *ret) {
   return SQLITE_OK;
 }
 
+static int createSchemaTableIfNotExists(sqlite3 *db) {
+  int rc = SQLITE_OK;
+
+  char *zSql = sqlite3_mprintf(
+      "CREATE TABLE IF NOT EXISTS \"%s\" (type TEXT, name TEXT, augments TEXT, "
+      "arg1 ANY, arg2 ANY, arg3 ANY) STRICT;",
+      TBL_SCHEMA);
+  rc = sqlite3_exec(db, zSql, 0, 0, 0);
+  sqlite3_free(zSql);
+
+  return rc;
+}
+
 /**
  * return the uuid which uniquely identifies this database.
  *
@@ -470,7 +483,8 @@ __declspec(dllexport)
     return SQLITE_ERROR;
   }
 
-  initSiteId(db, pExtData->siteId);
+  rc = initSiteId(db, pExtData->siteId);
+  rc += createSchemaTableIfNotExists(db);
 
   if (rc == SQLITE_OK) {
     rc = sqlite3_create_function(

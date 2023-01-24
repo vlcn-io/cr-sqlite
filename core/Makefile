@@ -98,15 +98,20 @@ fuzz: $(TARGET_FUZZ)
 	$(prefix)/fuzz
 
 rs_lib_dbg_static = ../rs/automigrate-native/target/debug/libcrsql_automigrate_native.a
+rs_lib_static = ../rs/automigrate-native/target/release/libcrsql_automigrate_native.a
 ifeq ($(OS),Windows_NT)
 	# or target specific selection? https://github.com/rust-lang/rust/issues/101134
 	# LDLIBS += -lgcc_eh
 	rs_build_flags = -Z build-std=core,panic_abort,alloc --target x86_64-pc-windows-msvc
 	rs_lib_dbg_static = ../rs/automigrate-native/target/x86_64-pc-windows-msvc/debug/crsql_automigrate_native.lib
+	rs_lib_static = ../rs/automigrate-native/target/x86_64-pc-windows-msvc/release/crsql_automigrate_native.lib
 endif
 
 $(rs_lib_dbg_static): FORCE
 	cd ../rs/automigrate-native && cargo build --features omit_load_extension $(rs_build_flags)
+
+$(rs_lib_static): FORCE
+	cd ../rs/automigrate-native && cargo build --release --features omit_load_extension $(rs_build_flags)
 
 # Build the loadable extension.
 $(TARGET_LOADABLE): $(prefix) $(ext_files)

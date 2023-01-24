@@ -129,12 +129,61 @@ static int initSiteId(sqlite3 *db, unsigned char *ret) {
 static int createSchemaTableIfNotExists(sqlite3 *db) {
   int rc = SQLITE_OK;
 
+  rc = sqlite3_exec(db, "SAVEPOINT crsql_create_schema_table;", 0, 0, 0);
+  if (rc != SQLITE_OK) {
+    return rc;
+  }
+
   char *zSql = sqlite3_mprintf(
-      "CREATE TABLE IF NOT EXISTS \"%s\" (type TEXT, name TEXT, augments TEXT, "
-      "arg1 ANY, arg2 ANY, arg3 ANY) STRICT;",
+      "CREATE TABLE IF NOT EXISTS \"%s\" (id INTEGER PRIMARY KEY "
+      "AUTOINCREMENT, type TEXT NOT NULL, name TEXT NOT "
+      "NULL, augments TEXT NOT NULL) STRICT;",
       TBL_SCHEMA);
   rc = sqlite3_exec(db, zSql, 0, 0, 0);
   sqlite3_free(zSql);
+
+  if (rc != SQLITE_OK) {
+    sqlite3_exec(db, "ROLLBACK;", 0, 0, 0);
+    return rc;
+  }
+
+  zSql = sqlite3_mprintf(
+      "CREATE UNIQUE INDEX IF NOT EXISTS __crsql_master_index ON "
+      "\"%s\" (type, name);",
+      TBL_SCHEMA);
+  rc = sqlite3_exec(db, zSql, 0, 0, 0);
+  sqlite3_free(zSql);
+
+  if (rc != SQLITE_OK) {
+    sqlite3_exec(db, "ROLLBACK;", 0, 0, 0);
+    return rc;
+  }
+
+  zSql = sqlite3_mprintf(
+      "CREATE TABLE IF NOT EXISTS \"%s\" (master_id INTEGER NOT NULL, key "
+      "TEXT NOT NULL, value ANY) STRICT;",
+      TBL_SCHEMA_PROPS);
+  rc = sqlite3_exec(db, zSql, 0, 0, 0);
+  sqlite3_free(zSql);
+
+  if (rc != SQLITE_OK) {
+    sqlite3_exec(db, "ROLLBACK;", 0, 0, 0);
+    return rc;
+  }
+
+  zSql = sqlite3_mprintf(
+      "CREATE INDEX IF NOT EXISTS __crsql_master_prop_id_index "
+      "ON \"%s\" (master_id);",
+      TBL_SCHEMA_PROPS);
+  rc = sqlite3_exec(db, zSql, 0, 0, 0);
+  sqlite3_free(zSql);
+
+  if (rc != SQLITE_OK) {
+    sqlite3_exec(db, "ROLLBACK;", 0, 0, 0);
+    return rc;
+  }
+
+  sqlite3_exec(db, "RELEASE crsql_create_schema_table;", 0, 0, 0);
 
   return rc;
 }

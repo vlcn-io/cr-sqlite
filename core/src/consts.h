@@ -39,6 +39,7 @@
 #define TBL_SITE_ID "__crsql_siteid"
 #define TBL_DB_VERSION "__crsql_dbversion"
 #define TBL_SCHEMA "__crsql_master"
+#define TBL_SCHEMA_PROPS "__crsql_master_prop"
 #define UNION "UNION"
 
 #define MAX_TBL_NAME_LEN 2048

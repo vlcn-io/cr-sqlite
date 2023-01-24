@@ -19,12 +19,9 @@ static A_charcode: usize = 65;
 static Z_charcode: usize = 90;
 static zero_charcode: usize = 48;
 
-pub fn key_between(
-    a: Option<&str>,
-    b: Option<&str>,
-    digits: Option<&str>,
-) -> Result<Option<String>, &'static str> {
-    let digits = digits.unwrap_or(BASE_62_DIGITS);
+pub fn key_between(a: Option<&str>, b: Option<&str>) -> Result<Option<String>, &'static str> {
+    // configurable digits not yet supported
+    let digits = BASE_62_DIGITS;
 
     a.map(|a| validate_order_key(a)).transpose()?;
     b.map(|b| validate_order_key(b)).transpose()?;
@@ -42,17 +39,16 @@ pub fn key_between(
             if ia == ib {
                 return Ok(Some(format!("{}{}", ia, midpoint(fa, Some(fb), digits)?)));
             }
-            let i = increment_integer(ia, digits)?;
-            if i.is_none() {
+
+            if let Some(i) = increment_integer(ia, digits)? {
+                if i < b.to_string() {
+                    return Ok(Some(i));
+                }
+
+                return Ok(Some(format!("{}{}", ia, midpoint(fa, None, digits)?)));
+            } else {
                 return Err("Cannot increment anymore");
             }
-
-            let i = i.unwrap();
-            if i < b.to_string() {
-                return Ok(Some(i));
-            }
-
-            return Ok(Some(format!("{}{}", ia, midpoint(fa, None, digits)?)));
         }
         (None, Some(b)) => {
             let ib = get_integer_part(b)?;
@@ -63,11 +59,11 @@ pub fn key_between(
             if ib < b {
                 return Ok(Some(String::from(ib)));
             }
-            let res = decrement_integer(ib, digits)?;
-            if res.is_none() {
+            if let Some(res) = decrement_integer(ib, digits)? {
+                return Ok(Some(res));
+            } else {
                 return Err("cannot decrement anymore");
             }
-            return Ok(Some(res.unwrap()));
         }
         (Some(a), None) => {
             let ia = get_integer_part(a)?;
@@ -145,7 +141,7 @@ fn midpoint(a: &str, b: Option<&str>, digits: &str) -> Result<String, &'static s
                 let mid_digit = round(0.5 * (digit_a + digit_b) as f64);
                 return Ok(String::from(&digits[mid_digit..mid_digit + 1]));
             } else {
-                if b.is_some() && b.unwrap().len() > 1 {
+                if b.map_or(false, |b| b.len() > 1) {
                     return Ok(String::from(&b.unwrap()[0..1]));
                 } else {
                     return Ok(format!(
@@ -221,16 +217,17 @@ fn increment_integer(x: &str, digits: &str) -> Result<Option<String>, &'static s
     while carry && i >= 0 {
         let ui = i as usize;
         let temp = digits.find(&digs[ui..ui + 1]);
-        if temp.is_none() {
-            return Err("invalid digit");
-        }
-        let d = temp.unwrap() + 1;
+        if let Some(temp) = temp {
+            let d = temp + 1;
 
-        if d == digits.len() {
-            digs.replace_range(ui..ui + 1, "0");
+            if d == digits.len() {
+                digs.replace_range(ui..ui + 1, "0");
+            } else {
+                digs.replace_range(ui..ui + 1, &digits[d..d + 1]);
+                carry = false;
+            }
         } else {
-            digs.replace_range(ui..ui + 1, &digits[d..d + 1]);
-            carry = false;
+            return Err("invalid digit");
         }
         i -= 1;
     }
@@ -264,18 +261,17 @@ fn decrement_integer(x: &str, digits: &str) -> Result<Option<String>, &'static s
     let mut i = digs.len() as i32 - 1;
     while borrow && i >= 0 {
         let ui = i as usize;
-        let temp = digits.find(&digs[ui..ui + 1]);
-        if temp.is_none() {
-            return Err("invalid digit");
-        }
-        let d = temp.unwrap() as i32 - 1;
-
-        if d == -1 {
-            digs.replace_range(ui..ui + 1, &digits[digits.len() - 1..digits.len()]);
+        if let Some(temp) = digits.find(&digs[ui..ui + 1]) {
+            let d = temp as i32 - 1;
+            if d == -1 {
+                digs.replace_range(ui..ui + 1, &digits[digits.len() - 1..digits.len()]);
+            } else {
+                let ud = d as usize;
+                digs.replace_range(ui..ui + 1, &digits[ud..ud + 1]);
+                borrow = false;
+            }
         } else {
-            let ud = d as usize;
-            digs.replace_range(ui..ui + 1, &digits[ud..ud + 1]);
-            borrow = false;
+            return Err("invalid digit");
         }
         i -= 1;
     }
@@ -330,7 +326,7 @@ mod tests {
     #[test]
     fn key_between() {
         fn test(a: Option<&str>, b: Option<&str>, exp: Result<Option<String>, &'static str>) {
-            let btwn = fractindex::key_between(a, b, None);
+            let btwn = fractindex::key_between(a, b);
             assert_eq!(btwn, exp);
         }
 
@@ -399,7 +395,7 @@ mod tests {
         let mut prev: Option<String> = None;
         let mut indices: Vec<String> = vec![];
         for _ in 0..5 {
-            prev = fractindex::key_between(prev.as_deref().map(|x| &x[..]), None, None).unwrap();
+            prev = fractindex::key_between(prev.as_deref().map(|x| &x[..]), None).unwrap();
             indices.push(String::from(prev.as_deref().unwrap()));
         }
 
@@ -424,7 +420,6 @@ mod tests {
                     indices.get(to_index - 1).map(|x| &x[..])
                 },
                 indices.get(to_index).map(|x| &x[..]),
-                None,
             )
             .unwrap()
             .unwrap();

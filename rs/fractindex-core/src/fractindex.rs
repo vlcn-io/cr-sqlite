@@ -25,86 +25,85 @@ pub fn key_between(
     digits: Option<&str>,
 ) -> Result<Option<String>, &'static str> {
     let digits = digits.unwrap_or(BASE_62_DIGITS);
-    if !a.is_none() {
-        validate_order_key(a.unwrap())?;
-    } else if !b.is_none() {
-        validate_order_key(b.unwrap())?;
-    }
-    if !a.is_none() && !b.is_none() && a.unwrap() > b.unwrap() {
-        return Err("key_between - a must be before b");
-    }
-    if a.is_none() {
-        if b.is_none() {
-            return Ok(Some(String::from(INTEGER_ZERO)));
-        }
 
-        let b = b.unwrap();
-        let ib = get_integer_part(b)?;
-        let fb = &b[ib.len()..];
-        if ib == SMALLEST_INTEGER {
-            return Ok(Some(format!("{}{}", ib, midpoint("", Some(fb), digits)?)));
-        }
-        if ib < b {
-            return Ok(Some(String::from(ib)));
-        }
-        let res = decrement_integer(ib, digits)?;
-        if res.is_none() {
-            return Err("cannot decrement anymore");
-        }
-        return Ok(Some(res.unwrap()));
-    }
+    a.map(|a| validate_order_key(a)).transpose()?;
+    b.map(|b| validate_order_key(b)).transpose()?;
+    match (&a, &b) {
+        (None, None) => return Ok(Some(String::from(INTEGER_ZERO))),
+        (Some(a), Some(b)) => {
+            if a > b {
+                return Err("key_between - a must be before b");
+            }
 
-    if b.is_none() {
-        let a = a.unwrap();
-        let ia = get_integer_part(a)?;
-        let fa = &a[ia.len()..];
-        let i = increment_integer(ia, digits)?;
-        if i.is_none() {
+            let ia = get_integer_part(a)?;
+            let ib = get_integer_part(b)?;
+            let fa = &a[ia.len()..];
+            let fb = &b[ib.len()..];
+            if ia == ib {
+                return Ok(Some(format!("{}{}", ia, midpoint(fa, Some(fb), digits)?)));
+            }
+            let i = increment_integer(ia, digits)?;
+            if i.is_none() {
+                return Err("Cannot increment anymore");
+            }
+
+            let i = i.unwrap();
+            if i < b.to_string() {
+                return Ok(Some(i));
+            }
+
             return Ok(Some(format!("{}{}", ia, midpoint(fa, None, digits)?)));
-        } else {
-            return Ok(i);
+        }
+        (None, Some(b)) => {
+            let ib = get_integer_part(b)?;
+            let fb = &b[ib.len()..];
+            if ib == SMALLEST_INTEGER {
+                return Ok(Some(format!("{}{}", ib, midpoint("", Some(fb), digits)?)));
+            }
+            if ib < b {
+                return Ok(Some(String::from(ib)));
+            }
+            let res = decrement_integer(ib, digits)?;
+            if res.is_none() {
+                return Err("cannot decrement anymore");
+            }
+            return Ok(Some(res.unwrap()));
+        }
+        (Some(a), None) => {
+            let ia = get_integer_part(a)?;
+            let fa = &a[ia.len()..];
+            let i = increment_integer(ia, digits)?;
+            if i.is_none() {
+                return Ok(Some(format!("{}{}", ia, midpoint(fa, None, digits)?)));
+            } else {
+                return Ok(i);
+            }
         }
     }
-
-    let a = a.unwrap();
-    let b = b.unwrap();
-    let ia = get_integer_part(a)?;
-    let ib = get_integer_part(b)?;
-    let fa = &a[ia.len()..];
-    let fb = &b[ib.len()..];
-    if ia == ib {
-        return Ok(Some(format!("{}{}", ia, midpoint(fa, Some(fb), digits)?)));
-    }
-    let i = increment_integer(ia, digits)?;
-    if i.is_none() {
-        return Err("Cannot increment anymore");
-    }
-
-    let i = i.unwrap();
-    if i < b.to_string() {
-        return Ok(Some(i));
-    }
-
-    Ok(Some(format!("{}{}", ia, midpoint(fa, None, digits)?)))
 }
 
 fn midpoint(a: &str, b: Option<&str>, digits: &str) -> Result<String, &'static str> {
-    if b.is_some() && a > b.unwrap() {
-        return Err("midpoint - a must be before b");
-    }
+    b.map(|b| {
+        if a > b {
+            Err("midpoint - a must be before b")
+        } else {
+            Ok(())
+        }
+    })
+    .transpose()?;
+
     let a_bytes = a.as_bytes();
     let b_last_char = b.map(|b| {
         let b_bytes = b.as_bytes();
         b_bytes[b_bytes.len() - 1]
     });
     if a_bytes.len() > 0 && a_bytes[a_bytes.len() - 1] == zero_charcode as u8
-        || (b_last_char.is_some() && b_last_char.unwrap() == zero_charcode as u8)
+        || (b_last_char.map_or(false, |b| b == zero_charcode as u8))
     {
         return Err("midpoint - a or b must not end with 0");
     }
 
-    if b.is_some() {
-        let b = b.unwrap();
+    if let Some(b) = b {
         let mut n = 0;
         let b_bytes = b.as_bytes();
 
@@ -135,34 +134,32 @@ fn midpoint(a: &str, b: Option<&str>, digits: &str) -> Result<String, &'static s
     } else {
         Some(0)
     };
-    if digit_a.is_none() {
-        return Err("midpoint - a has invalid digits");
-    }
-    let digit_a = digit_a.unwrap();
 
-    let digit_b = if b.is_some() {
-        digits.find(b.unwrap().as_bytes()[0] as char)
-    } else {
-        Some(digits.len())
-    };
-    if digit_b.is_none() {
-        return Err("midpoint - b has invalid digits");
-    }
-    let digit_b = digit_b.unwrap();
-
-    if digit_b - digit_a > 1 {
-        let mid_digit = round(0.5 * (digit_a + digit_b) as f64);
-        return Ok(String::from(&digits[mid_digit..mid_digit + 1]));
-    } else {
-        if b.is_some() && b.unwrap().len() > 1 {
-            return Ok(String::from(&b.unwrap()[0..1]));
+    if let Some(digit_a) = digit_a {
+        let digit_b = match b {
+            Some(b) => digits.find(b.as_bytes()[0] as char),
+            None => Some(digits.len()),
+        };
+        if let Some(digit_b) = digit_b {
+            if digit_b - digit_a > 1 {
+                let mid_digit = round(0.5 * (digit_a + digit_b) as f64);
+                return Ok(String::from(&digits[mid_digit..mid_digit + 1]));
+            } else {
+                if b.is_some() && b.unwrap().len() > 1 {
+                    return Ok(String::from(&b.unwrap()[0..1]));
+                } else {
+                    return Ok(format!(
+                        "{}{}",
+                        &digits[digit_a..digit_a + 1],
+                        midpoint(if a == "" { a } else { &a[1..] }, None, digits)?
+                    ));
+                }
+            }
         } else {
-            return Ok(format!(
-                "{}{}",
-                &digits[digit_a..digit_a + 1],
-                midpoint(if a == "" { a } else { &a[1..] }, None, digits)?
-            ));
+            return Err("midpoint - b has invalid digits");
         }
+    } else {
+        return Err("midpoint - a has invalid digits");
     }
 }
 

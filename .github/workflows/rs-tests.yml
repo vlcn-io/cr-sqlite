@@ -1,0 +1,38 @@
+on:
+  push:
+  pull_request:
+    types: [opened, edited]
+name: "rs-tests"
+jobs:
+  build:
+    name: Testing on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+          - os: windows-2022
+          - os: macos-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+
+      - name: Rust Nightly
+        run: |
+          rustup default nightly
+          rustup update
+
+      - name: Windows rust toolchain
+        if: runner.os == 'Windows'
+        run: rustup component add rust-src --toolchain nightly-x86_64-pc-windows-msvc
+
+      - name: Test Automigrate
+        run: |
+          cd rs/automigrate-core
+          cargo test
+
+      - name: Test Fractindex
+        run: |
+          cd rs/fractindex-core
+          cargo test

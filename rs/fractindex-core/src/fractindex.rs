@@ -13,11 +13,11 @@ pub static BASE_62_DIGITS: &'static str =
 static SMALLEST_INTEGER: &'static str = "A00000000000000000000000000";
 static INTEGER_ZERO: &'static str = "a0";
 
-static a_charcode: usize = 97;
-static z_charcode: usize = 122;
-static A_charcode: usize = 65;
-static Z_charcode: usize = 90;
-static zero_charcode: usize = 48;
+static a_charcode: u8 = 97;
+static z_charcode: u8 = 122;
+static A_charcode: u8 = 65;
+static Z_charcode: u8 = 90;
+static zero_charcode: u8 = 48;
 
 pub fn key_between(a: Option<&str>, b: Option<&str>) -> Result<Option<String>, &'static str> {
     // configurable digits not yet supported
@@ -93,8 +93,8 @@ fn midpoint(a: &str, b: Option<&str>, digits: &str) -> Result<String, &'static s
         let b_bytes = b.as_bytes();
         b_bytes[b_bytes.len() - 1]
     });
-    if a_bytes.len() > 0 && a_bytes[a_bytes.len() - 1] == zero_charcode as u8
-        || (b_last_char.map_or(false, |b| b == zero_charcode as u8))
+    if a_bytes.len() > 0 && a_bytes[a_bytes.len() - 1] == zero_charcode
+        || (b_last_char.map_or(false, |b| b == zero_charcode))
     {
         return Err("midpoint - a or b must not end with 0");
     }
@@ -106,7 +106,7 @@ fn midpoint(a: &str, b: Option<&str>, digits: &str) -> Result<String, &'static s
         while (if n < a_bytes.len() {
             a_bytes[n]
         } else {
-            zero_charcode as u8
+            zero_charcode
         } == b_bytes[n])
         {
             n += 1;
@@ -170,7 +170,7 @@ fn validate_order_key(key: &str) -> Result<(), &'static str> {
     let i = get_integer_part(key)?;
     let f = &key[i.len()..];
     let as_bytes = f.as_bytes();
-    if as_bytes.len() > 0 && as_bytes[as_bytes.len() - 1] == zero_charcode as u8 {
+    if as_bytes.len() > 0 && as_bytes[as_bytes.len() - 1] == zero_charcode {
         return Err("Integer part should not end with 0");
     }
 
@@ -180,14 +180,13 @@ fn validate_order_key(key: &str) -> Result<(), &'static str> {
 fn get_integer_part(key: &str) -> Result<&str, &'static str> {
     // as_bytes is safe as we control the alphabet
     let integer_part_len = get_integer_len(key.as_bytes()[0])?;
-    if integer_part_len > key.len() {
+    if integer_part_len > key.len() as u8 {
         return Err("integer part of key is too long");
     }
-    return Ok(&key[0..integer_part_len]);
+    return Ok(&key[0..integer_part_len as usize]);
 }
 
-fn get_integer_len(head: u8) -> Result<usize, &'static str> {
-    let head = head as usize;
+fn get_integer_len(head: u8) -> Result<u8, &'static str> {
     if head >= a_charcode && head <= z_charcode {
         return Ok(head - a_charcode + 2);
         // >= A and <= Z
@@ -199,7 +198,7 @@ fn get_integer_len(head: u8) -> Result<usize, &'static str> {
 }
 
 fn validate_integer(i: &str) -> Result<(), &'static str> {
-    if i.len() != get_integer_len(i.as_bytes()[0])? {
+    if i.len() as u8 != get_integer_len(i.as_bytes()[0])? {
         return Err("invalid integer part of order key");
     }
 
@@ -240,7 +239,7 @@ fn increment_integer(x: &str, digits: &str) -> Result<Option<String>, &'static s
             return Ok(None);
         }
         let h = head.as_bytes()[0] + 1;
-        if h > a_charcode as u8 {
+        if h > a_charcode {
             digs.push('0');
         } else {
             digs.pop();
@@ -287,7 +286,7 @@ fn decrement_integer(x: &str, digits: &str) -> Result<Option<String>, &'static s
             return Ok(None);
         }
         let h = head.as_bytes()[0] - 1;
-        if h < Z_charcode as u8 {
+        if h < Z_charcode {
             digs.push_str(&digits[digits.len() - 1..digits.len()]);
         } else {
             digs.pop();

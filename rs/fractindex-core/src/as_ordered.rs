@@ -25,17 +25,13 @@ pub fn as_ordered(
     }
 
     // 2. write into our __crsql_master table the information about the index
-    unsafe {
-        if let Err(_) = db.exec(strlit!("SAVEPOINT record_schema_information;")) {
-            // set our error msg
-            return;
-        }
+    if let Err(_) = db.exec_safe("SAVEPOINT record_schema_information;") {
+        // set our error msg
+        return;
     }
     let rc = record_schema_information(db, table, order_by_column, &collection_columns);
     if rc.is_err() {
-        unsafe {
-            let _ = db.exec(strlit!("ROLLBACK;"));
-        }
+        let _ = db.exec_safe("ROLLBACK;");
         // set our error msg
         return;
     }
@@ -43,16 +39,12 @@ pub fn as_ordered(
     // 3. set up triggers to allow for append and pre-pend operations
     if let Err(_) = create_append_prepend_triggers(db, table, order_by_column, &collection_columns)
     {
-        unsafe {
-            let _ = db.exec(strlit!("ROLLBACK;"));
-        }
+        let _ = db.exec_safe("ROLLBACK;");
         // set our error msg
         return;
     }
 
-    unsafe {
-        let _ = db.exec(strlit!("RELEASE;"));
-    }
+    let _ = db.exec_safe("RELEASE;");
 }
 
 fn record_schema_information(

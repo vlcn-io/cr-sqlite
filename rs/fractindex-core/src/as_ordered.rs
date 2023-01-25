@@ -1,10 +1,10 @@
-use sqlite_nostd::{sqlite3, strlit, Connection, ManagedStmt, ResultCode, Value};
+use sqlite_nostd::{context, sqlite3, strlit, Connection, Context, ManagedStmt, ResultCode, Value};
 extern crate alloc;
 use alloc::format;
 use alloc::vec::Vec;
-use core::ffi::c_char;
 
 pub fn as_ordered(
+    context: *mut context,
     db: *mut sqlite3,
     table: &str,
     order_by_column: *mut sqlite_nostd::value,
@@ -16,23 +16,22 @@ pub fn as_ordered(
     let rc = table_has_all_columns(db, table, &collection_columns);
 
     if rc.is_err() {
-        // set our error msg
+        context.result_error("Failed determining if all columns are present in the base table");
         return;
     }
     if let Ok(false) = rc {
-        // set our error msg
+        context.result_error("all columns are not present in the base table");
         return;
     }
 
     // 2. write into our __crsql_master table the information about the index
     if let Err(_) = db.exec_safe("SAVEPOINT record_schema_information;") {
-        // set our error msg
         return;
     }
     let rc = record_schema_information(db, table, order_by_column, &collection_columns);
     if rc.is_err() {
         let _ = db.exec_safe("ROLLBACK;");
-        // set our error msg
+        context.result_error("Failed recording schema information for the base table");
         return;
     }
 
@@ -40,7 +39,7 @@ pub fn as_ordered(
     if let Err(_) = create_append_prepend_triggers(db, table, order_by_column, &collection_columns)
     {
         let _ = db.exec_safe("ROLLBACK;");
-        // set our error msg
+        context.result_error("Failed creating triggers for the base table");
         return;
     }
 

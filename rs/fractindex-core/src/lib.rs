@@ -6,8 +6,11 @@ mod as_ordered;
 mod fractindex;
 
 use core::ffi::c_char;
+use core::slice;
 pub use fractindex::*;
+use sqlite::args;
 use sqlite::Connection;
+use sqlite::{Context, Value};
 use sqlite_nostd as sqlite;
 
 pub extern "C" fn crsql_as_ordered(
@@ -15,7 +18,19 @@ pub extern "C" fn crsql_as_ordered(
     argc: i32,
     argv: *mut *mut sqlite::value,
 ) {
+    let args = args!(argc, argv);
     // decode the args, call as_ordered
+    if args.len() < 2 {
+        ctx.result_error(
+            "Must provide at least 2 arguments -- the table name and the column to order by",
+        );
+        return;
+    }
+
+    let db = ctx.db_handle();
+    let table = args[0].text();
+    let collection_columns = &args[2..];
+    as_ordered::as_ordered(ctx, db, table, args[1], collection_columns);
 }
 
 #[no_mangle]

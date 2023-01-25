@@ -63,6 +63,10 @@ fn record_schema_information(
     let sql = "INSERT OR REPLACE INTO __crsql_master_prop (master_id, key, value) VALUES (?, 'order_by', ?)";
     // for each collection column, insert a row into __crsql_master_props
 
+    // also insert a row to record the order_by_column
+
+    // these rows will only be needed
+
     Ok(ResultCode::OK)
 }
 
@@ -99,6 +103,8 @@ fn create_append_prepend_triggers(
     order_by_column: *mut sqlite_nostd::value,
     collection_columns: &[*mut sqlite_nostd::value],
 ) -> Result<ResultCode, ResultCode> {
+    // post-insert trigger
+    // WHEN order_by is 0 or 1, prepend or append.
     Ok(ResultCode::OK)
 }
 

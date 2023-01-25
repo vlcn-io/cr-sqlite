@@ -161,7 +161,7 @@ static int createSchemaTableIfNotExists(sqlite3 *db) {
 
   zSql = sqlite3_mprintf(
       "CREATE TABLE IF NOT EXISTS \"%s\" (master_id INTEGER NOT NULL, key "
-      "TEXT NOT NULL, value ANY) STRICT;",
+      "TEXT NOT NULL, ord INTEGER DEFAULT 0, value ANY) STRICT;",
       TBL_SCHEMA_PROPS);
   rc = sqlite3_exec(db, zSql, 0, 0, 0);
   sqlite3_free(zSql);
@@ -172,8 +172,8 @@ static int createSchemaTableIfNotExists(sqlite3 *db) {
   }
 
   zSql = sqlite3_mprintf(
-      "CREATE INDEX IF NOT EXISTS __crsql_master_prop_id_index "
-      "ON \"%s\" (master_id);",
+      "CREATE UNIQUE INDEX IF NOT EXISTS __crsql_master_prop_id_index "
+      "ON \"%s\" (master_id, key, ord);",
       TBL_SCHEMA_PROPS);
   rc = sqlite3_exec(db, zSql, 0, 0, 0);
   sqlite3_free(zSql);

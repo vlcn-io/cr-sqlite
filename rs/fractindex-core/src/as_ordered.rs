@@ -60,12 +60,27 @@ fn record_schema_information(
     stmt.bind_text(3, table)?;
     stmt.step()?;
 
-    let sql = "INSERT OR REPLACE INTO __crsql_master_prop (master_id, key, value) VALUES (?, 'order_by', ?)";
-    // for each collection column, insert a row into __crsql_master_props
+    let id = stmt.column_int64(0)?;
 
-    // also insert a row to record the order_by_column
+    let sql =
+        "INSERT OR REPLACE INTO __crsql_master_prop (master_id, key, ord, value) VALUES (?, ?, ?, ?)";
+    let stmt = db.prepare_v2(sql)?;
+    stmt.bind_int64(1, id)?;
+    stmt.bind_text(2, "order_by")?;
+    stmt.bind_int(3, 0)?;
+    stmt.bind_value(4, order_by_column)?;
+    stmt.step()?;
 
-    // these rows will only be needed
+    stmt.reset()?;
+
+    for (i, col) in collection_columns.iter().enumerate() {
+        stmt.bind_int64(1, id)?;
+        stmt.bind_text(2, "collection")?;
+        stmt.bind_int(3, i as i32)?;
+        stmt.bind_value(4, *col)?;
+        stmt.step()?;
+        stmt.reset()?;
+    }
 
     Ok(ResultCode::OK)
 }
@@ -105,6 +120,19 @@ fn create_append_prepend_triggers(
 ) -> Result<ResultCode, ResultCode> {
     // post-insert trigger
     // WHEN order_by is 0 or 1, prepend or append.
+    /*
+    CREATE TRIGGER IF NOT EXISTS __crsql_fractindex_pend_trigger AFTER INSERT
+    ON <table> WHEN NEW.<order_by_column> = 0 OR NEW.<order_by_column> = 1 BEGIN
+        UPDATE <table> SET <order_by_column> = CASE NEW.<order_by_column>
+        WHEN
+            -- "collection_id" is actually a list of all the collection columns
+            0 THEN (SELECT crsql_fract_prepend(<table>, NEW.collection_id))
+            1 THEN (SELECT crsql_fract_append(<table>, NEW.collection_id))
+        END
+        -- we need to unroll the correct pk where clause
+        WHERE id = NEW.id;
+    END;
+     */
     Ok(ResultCode::OK)
 }
 

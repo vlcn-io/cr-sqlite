@@ -4,6 +4,7 @@
 
 mod as_ordered;
 mod fractindex;
+mod fractindex_view;
 mod util;
 
 use core::ffi::c_char;

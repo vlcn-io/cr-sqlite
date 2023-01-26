@@ -14,6 +14,9 @@ pub fn where_predicates(columns: &[*mut sqlite_nostd::value]) -> Result<String, 
             predicates.push_str(" AND ");
         }
     }
+    if columns.len() == 0 {
+        predicates.push_str("1");
+    }
     Ok(predicates)
 }
 
@@ -69,4 +72,13 @@ pub fn extract_columns(
         columns.push(stmt.column_value(0)?);
     }
     Ok(columns)
+}
+
+/// you shouldn't be using this. You should be binding
+pub fn escape_ident(ident: &str) -> String {
+    return ident.replace("\"", "\"\"");
+}
+
+pub fn escape_arg(arg: &str) -> String {
+    return arg.replace("'", "''");
 }

@@ -1,23 +1,18 @@
-pub fn repair_orderings(table: &str, rowid: int64) {
-    // Select the items surrounding the rowid for the given collection
-    // if no collision, return
-    // if collision, make space
+pub fn create_fract_view() {
+    // creates a view against which we can install instead_of triggers
+    // to support move and insert between/after operations
+    /*
+      INSERT INTO todo_fractindex (pk1, pk2, pk3, content, complete, after_pk1, after_pk2, after_pk3) VALUES (1, 2, 3, 'stuff', false, 4, 5, 6);
 
-    // the thing is already inserted
-    // we just need to find all things with the same order in the same collection
-    // well how do we wknow what we're inserting between?
-    // we need to push around there so we need are source
-    // rowid
-    //
-    // we could process inserts into the vtab with an "after" param
-    //
-    // INSERT INTO todos_ordering (id, order, after) VALUES (1, 0.5)
-    //
-    // We could create a view and that view has an extra column strictly
-    // meant for parameter passing.
-    //
-    // and do instead of triggers on the view.
+    UPDATE todo_fractindex SET
+      after_pk1 = 1,
+      after_pk2 = 2,
+      after_pk3 = 3
+    WHERE
+      pk1 = 4 AND pk2 = 5 AND pk3 = 6;
+       */
 
-    // INSERT INTO todo_fractindex (id, content, list_id, after_id) VALUES (1, after_id)
-    // UPDATE todo_fractindex SET after_id = 1 WHERE id = 2
+    // 1. get the primary key list
+    // 2. create view from select * against base table + stand in cols for after_
+    // stand in cols are created via `SLEECT *, NULL AS after_ FROM base_table`
 }

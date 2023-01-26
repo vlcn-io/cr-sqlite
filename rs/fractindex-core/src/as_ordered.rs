@@ -1,7 +1,9 @@
-use sqlite_nostd::{context, sqlite3, strlit, Connection, Context, ManagedStmt, ResultCode, Value};
+use sqlite_nostd::{context, sqlite3, Connection, Context, ResultCode, Value};
 extern crate alloc;
 use alloc::format;
 use alloc::vec::Vec;
+
+use crate::util::{collection_max_select, collection_min_select};
 
 pub fn as_ordered(
     context: *mut context,
@@ -35,9 +37,8 @@ pub fn as_ordered(
         return;
     }
 
-    // 3. set up triggers to allow for append and pre-pend operations
-    if let Err(_) = create_append_prepend_triggers(db, table, order_by_column, &collection_columns)
-    {
+    // 3. set up triggers to allow for append and pre-pend insertions
+    if let Err(_) = create_pend_trigger(db, table, order_by_column, &collection_columns) {
         let _ = db.exec_safe("ROLLBACK;");
         context.result_error("Failed creating triggers for the base table");
         return;
@@ -70,7 +71,6 @@ fn record_schema_information(
     stmt.bind_int(3, 0)?;
     stmt.bind_value(4, order_by_column)?;
     stmt.step()?;
-
     stmt.reset()?;
 
     for (i, col) in collection_columns.iter().enumerate() {
@@ -112,30 +112,26 @@ fn table_has_all_columns(
     Ok(true)
 }
 
-fn create_append_prepend_triggers(
+fn create_pend_trigger(
     db: *mut sqlite3,
     table: &str,
     order_by_column: *mut sqlite_nostd::value,
     collection_columns: &[*mut sqlite_nostd::value],
 ) -> Result<ResultCode, ResultCode> {
-    // post-insert trigger
-    // WHEN order_by is 0 or 1, prepend or append.
-    /*
-    CREATE TRIGGER IF NOT EXISTS __crsql_fractindex_pend_trigger AFTER INSERT
-    ON <table> WHEN NEW.<order_by_column> = 0 OR NEW.<order_by_column> = 1 BEGIN
-        UPDATE <table> SET <order_by_column> = CASE NEW.<order_by_column>
-        WHEN
-            -- "collection_id" is actually a list of all the collection columns
-            0 THEN (SELECT crsql_fract_prepend(<table>, NEW.collection_id))
-            1 THEN (SELECT crsql_fract_append(<table>, NEW.collection_id))
-        END
-        -- we need to unroll the correct pk where clause
-        WHERE id = NEW.id;
-    END;
-     */
-    Ok(ResultCode::OK)
+    let trigger = format!(
+        "CREATE TRIGGER IF NOT EXISTS __crsql_fractindex_pend_trig AFTER INSERT ON {table}
+        WHEN NEW.{order_by_column} = 0 OR NEW.{order_by_column} = 1 BEGIN
+            UPDATE {table} SET {order_by_column} = CASE NEW.{order_by_column}
+            WHEN
+                0 THEN crsql_fract_key_between(NULL, {min_select})
+                1 THEN crsql_fract_key_between({max_select}, NULL)
+            END
+            WHERE _rowid_ = NEW._rowid_;
+        END;",
+        table = table,
+        order_by_column = order_by_column.text(),
+        min_select = collection_min_select(table, order_by_column, collection_columns)?,
+        max_select = collection_max_select(table, order_by_column, collection_columns)?
+    );
+    db.exec_safe(&trigger)
 }
-
-// prepend -- largely triggers
-// move -- fn
-// append -- largely triggers

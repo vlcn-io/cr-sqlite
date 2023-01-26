@@ -74,11 +74,6 @@ pub fn extract_columns(
     Ok(columns)
 }
 
-/// you shouldn't be using this. You should be binding
 pub fn escape_ident(ident: &str) -> String {
     return ident.replace("\"", "\"\"");
-}
-
-pub fn escape_arg(arg: &str) -> String {
-    return arg.replace("'", "''");
 }

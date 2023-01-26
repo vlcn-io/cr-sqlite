@@ -12,10 +12,11 @@ use core::slice;
 pub use fractindex::*;
 use sqlite::args;
 use sqlite::Connection;
+use sqlite::ResultCode;
 use sqlite::{Context, Value};
 use sqlite_nostd as sqlite;
 
-pub extern "C" fn crsql_as_ordered(
+pub extern "C" fn crsql_fract_as_ordered(
     ctx: *mut sqlite::context,
     argc: i32,
     argv: *mut *mut sqlite::value,
@@ -35,6 +36,25 @@ pub extern "C" fn crsql_as_ordered(
     as_ordered::as_ordered(ctx, db, table, args[1], collection_columns);
 }
 
+pub extern "C" fn crsql_fract_key_between(
+    _ctx: *mut sqlite::context,
+    argc: i32,
+    argv: *mut *mut sqlite::value,
+) {
+    let _args = args!(argc, argv);
+}
+
+pub extern "C" fn crsql_fract_fix_conflict_return_old_key(
+    _ctx: *mut sqlite::context,
+    argc: i32,
+    argv: *mut *mut sqlite::value,
+) {
+    let _args = args!(argc, argv);
+
+    // process args
+    // call fix_conflict_return_old_key
+}
+
 #[no_mangle]
 pub extern "C" fn sqlite3_crsqlfractionalindex_init(
     db: *mut sqlite::sqlite3,
@@ -43,15 +63,44 @@ pub extern "C" fn sqlite3_crsqlfractionalindex_init(
 ) -> u32 {
     sqlite::EXTENSION_INIT2(api);
 
-    db.create_function_v2(
-        "crsql_as_ordered",
+    if let Err(rc) = db.create_function_v2(
+        "crsql_fract_as_ordered",
+        -1,
+        sqlite::UTF8 | sqlite::DIRECTONLY,
+        None,
+        Some(crsql_fract_as_ordered),
+        None,
+        None,
+        None,
+    ) {
+        return rc as u32;
+    }
+
+    if let Err(rc) = db.create_function_v2(
+        "crsql_fract_key_between",
+        2,
+        sqlite::UTF8 | sqlite::DETERMINISTIC | sqlite::INNOCUOUS,
+        None,
+        Some(crsql_fract_key_between),
+        None,
+        None,
+        None,
+    ) {
+        return rc as u32;
+    }
+
+    if let Err(rc) = db.create_function_v2(
+        "crsql_fract_fix_conflict_return_old_key",
         -1,
         sqlite::UTF8,
         None,
-        Some(crsql_as_ordered),
+        Some(crsql_fract_fix_conflict_return_old_key),
         None,
         None,
         None,
-    )
-    .unwrap_or(sqlite::ResultCode::ERROR) as u32
+    ) {
+        return rc as u32;
+    }
+
+    ResultCode::OK as u32
 }

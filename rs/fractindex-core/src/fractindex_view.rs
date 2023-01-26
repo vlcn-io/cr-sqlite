@@ -30,13 +30,13 @@ pub fn create_fract_view_and_triggers(
 
     db.exec_safe(&sql)?;
 
-    craete_instead_of_insert_trigger(db, table, order_by_column, collection_columns)?;
+    create_instead_of_insert_trigger(db, table, order_by_column, collection_columns)?;
     create_instead_of_update_trigger()?;
 
     Ok(ResultCode::OK)
 }
 
-fn craete_instead_of_insert_trigger(
+fn create_instead_of_insert_trigger(
     db: *mut sqlite3,
     table: &str,
     order_by_column: *mut sqlite_nostd::value,
@@ -140,7 +140,7 @@ fn create_instead_of_update_trigger() -> Result<ResultCode, ResultCode> {
     Ok(ResultCode::OK)
 }
 
-pub fn crsql_fract_fix_conflict_return_old_key(
+pub fn fix_conflict_return_old_key(
     ctx: *mut context,
     db: *mut sqlite3,
     table: &str,

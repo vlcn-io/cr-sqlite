@@ -33,18 +33,37 @@ static void testAsOrdered() {
       0, 0);
   assert(rc == SQLITE_OK);
 
-  // Test no list columns
   // Test 1 list column
-  // Test many list columns
   rc += sqlite3_exec(
       db, "SELECT crsql_fract_as_ordered('todo', 'ordering', 'list_id')", 0, 0,
       0);
   assert(rc == SQLITE_OK);
 
-  // Idempotency test
+  // Test idempotency
+  rc += sqlite3_exec(
+      db, "SELECT crsql_fract_as_ordered('todo', 'ordering', 'list_id')", 0, 0,
+      0);
+  assert(rc == SQLITE_OK);
+
+  // test prepend
+
+  // test append
+
+  // test insert after
+
+  // test move after
+
+  // Test no list columns
+  rc += sqlite3_exec(db, "SELECT crsql_fract_as_ordered('todo', 'ordering')", 0,
+                     0, 0);
+  assert(rc == SQLITE_OK);
+
+  // Test many list column
+
   // Schema change and re-run test
 
   printf("\t\e[0;32mSuccess\e[0m\n");
+  crsql_close(db);
 }
 
 void crsqlFractSuite() {

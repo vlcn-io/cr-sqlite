@@ -1,7 +1,5 @@
 extern crate alloc;
 
-use core::intrinsics;
-
 use alloc::{
     format,
     string::{String, ToString},
@@ -160,7 +158,14 @@ fn midpoint(a: &str, b: Option<&str>, digits: &str) -> Result<String, &'static s
 }
 
 fn round(d: f64) -> usize {
-    unsafe { intrinsics::roundf64(d) as usize }
+    let tenx = (d * 10.0) as usize;
+    let truncated = d as usize;
+    if tenx - (truncated * 10) >= 5 {
+        truncated + 1
+    } else {
+        truncated
+    }
+    // unsafe { intrinsics::roundf64(d) as usize }
 }
 
 fn validate_order_key(key: &str) -> Result<(), &'static str> {

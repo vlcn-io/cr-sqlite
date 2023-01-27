@@ -5,7 +5,7 @@ use alloc::vec::Vec;
 
 use crate::{
     fractindex_view::create_fract_view_and_view_triggers,
-    util::{collection_max_select, collection_min_select},
+    util::{collection_max_select, collection_min_select, escape_ident},
 };
 
 // TODO: do validation and suggest indices? collection and order should be indexed as compound index
@@ -19,6 +19,21 @@ pub fn as_ordered(
 ) {
     // 0. we should drop all triggers and views if they already exist
     // or be fancy and track schema versions to know if this is needed.
+    let rc = db.exec_safe(&format!(
+        "DROP TRIGGER IF EXISTS \"__crsql_{table}_fractindex_pend_trig\";",
+        table = escape_ident(table)
+    ));
+    if rc.is_err() {
+        context.result_error("Failed dropping prior incarnation of fractindex triggers");
+    }
+
+    let rc = db.exec_safe(&format!(
+        "DROP VIEW IF EXISTS \"{table}_fractindex\";",
+        table = escape_ident(table)
+    ));
+    if rc.is_err() {
+        context.result_error("Failed dropping prior incarnation of fractindex views");
+    }
 
     // 1. ensure that all columns exist in the target table
     let mut provided_cols = collection_columns.to_vec();
@@ -102,7 +117,7 @@ fn create_pend_trigger(
     collection_columns: &Vec<&str>,
 ) -> Result<ResultCode, ResultCode> {
     let trigger = format!(
-        "CREATE TRIGGER IF NOT EXISTS __crsql_fractindex_pend_trig AFTER INSERT ON \"{table}\"
+        "CREATE TRIGGER IF NOT EXISTS \"__crsql_{table}_fractindex_pend_trig\" AFTER INSERT ON \"{table}\"
         WHEN NEW.\"{order_by_column}\" = -1 OR NEW.\"{order_by_column}\" = 1 BEGIN
             UPDATE \"{table}\" SET \"{order_by_column}\" = CASE NEW.\"{order_by_column}\"
             WHEN -1 THEN crsql_fract_key_between(NULL, ({min_select}))
@@ -110,8 +125,8 @@ fn create_pend_trigger(
             END
             WHERE _rowid_ = NEW._rowid_;
         END;",
-        table = table,
-        order_by_column = order_by_column.text(),
+        table = escape_ident(table),
+        order_by_column = escape_ident(order_by_column.text()),
         min_select = collection_min_select(table, order_by_column, collection_columns)?,
         max_select = collection_max_select(table, order_by_column, collection_columns)?
     );
@@ -126,7 +141,7 @@ fn create_simple_move_trigger(
 ) -> Result<ResultCode, ResultCode> {
     // simple move allows moving a thing to the start or end of the list
     let trigger = format!(
-      "CREATE TRIGGER IF NOT EXISTS __crsql_fractindex_ezmove AFTER UPDATE OF \"{order_col}\" ON \"{table}\"
+      "CREATE TRIGGER IF NOT EXISTS \"__crsql_{table}_fractindex_ezmove\" AFTER UPDATE OF \"{order_col}\" ON \"{table}\"
       WHEN NEW.\"{order_col}\" = -1 OR NEW.\"{order_col}\" = 1 BEGIN
         UPDATE \"{table}\" SET \"{order_col}\" = CASE NEW.\"{order_col}\"
         WHEN -1 THEN crsql_fract_key_between(NULL, ({min_select}))
@@ -135,8 +150,8 @@ fn create_simple_move_trigger(
         WHERE _rowid_ = NEW._rowid_;
       END;
       ",
-      table = table,
-      order_col = order_by_column.text(),
+      table = escape_ident(table),
+      order_col = escape_ident(order_by_column.text()),
       min_select = collection_min_select(table, order_by_column, collection_columns)?,
       max_select = collection_max_select(table, order_by_column, collection_columns)?
     );

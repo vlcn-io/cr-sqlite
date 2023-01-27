@@ -39,8 +39,10 @@ static void testAsOrdered() {
   rc += sqlite3_exec(
       db, "SELECT crsql_fract_as_ordered('todo', 'ordering', 'list_id')", 0, 0,
       0);
-  printf("Err: %s\n", sqlite3_errmsg(db));
   assert(rc == SQLITE_OK);
+
+  // Idempotency test
+  // Schema change and re-run test
 
   printf("\t\e[0;32mSuccess\e[0m\n");
 }

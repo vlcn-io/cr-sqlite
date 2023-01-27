@@ -4,7 +4,9 @@ use alloc::format;
 use alloc::string::String;
 use alloc::vec::Vec;
 
-use crate::util::{escape_ident, extract_columns, extract_pk_columns, where_predicates};
+use crate::util::{
+    escape_arg, escape_ident, extract_columns, extract_pk_columns, where_predicates,
+};
 
 pub fn create_fract_view_and_view_triggers(
     db: *mut sqlite3,
@@ -43,7 +45,6 @@ fn create_instead_of_insert_trigger(
     order_by_column: *mut sqlite_nostd::value,
     collection_columns: &Vec<&str>,
 ) -> Result<ResultCode, ResultCode> {
-    #[allow(unused_variables)]
     let columns = extract_columns(db, table)?;
     let columns_ex_order = columns
         .iter()
@@ -62,8 +63,7 @@ fn create_instead_of_insert_trigger(
         .collect::<Vec<_>>()
         .join(", ");
 
-    #[allow(unused_variables)]
-    let (after_pk_values, list_predicates, after_predicates, list_bind_slots, pks) =
+    let (after_pk_values, list_predicates, after_predicates, list_name_args, after_pk_names_args) =
         create_common_inputs(db, table, collection_columns)?;
 
     let sql = format!(
@@ -83,8 +83,9 @@ fn create_instead_of_insert_trigger(
                     (SELECT \"{order_col}\" FROM \"{table}\" WHERE {list_predicates} AND \"{order_col}\" > (SELECT \"{order_col}\" FROM \"{table}\" WHERE {after_predicates}) LIMIT 1)
                   )
                   ELSE crsql_fract_fix_conflict_return_old_key(
-                    ?, ?, {list_bind_slots}{maybe_comma} -1, ?, {after_pk_values}
+                    '{table_arg}', '{order_col_arg}', {list_name_args}{maybe_comma} -1, {after_pk_names_args}, {after_pk_values}
                   )
+                END
               );
         END;",
         table = escape_ident(table),
@@ -92,33 +93,16 @@ fn create_instead_of_insert_trigger(
         col_values_ex_order = col_values_ex_order,
         order_col = escape_ident(order_by_column.text()),
         list_predicates = list_predicates,
-        list_bind_slots = list_bind_slots,
-        maybe_comma = if list_bind_slots.len() > 0 { ", " } else { "" },
+        list_name_args = list_name_args,
+        maybe_comma = if list_name_args.len() > 0 { ", " } else { "" },
         after_predicates = after_predicates,
-        after_pk_values = after_pk_values
+        after_pk_values = after_pk_values,
+        order_col_arg = escape_arg(order_by_column.text()),
+        table_arg = escape_arg(table),
+        after_pk_names_args = after_pk_names_args,
     );
+
     let stmt = db.prepare_v2(&sql)?;
-
-    let mut bind_index = 1;
-    // table arg
-    stmt.bind_text(bind_index, table)?;
-    bind_index += 1;
-    // order col
-    stmt.bind_value(bind_index, order_by_column)?;
-    bind_index += 1;
-
-    // collection column names
-    for col in collection_columns {
-        stmt.bind_text(bind_index, col)?;
-        bind_index += 1;
-    }
-
-    // after pk names
-    for name in pks {
-        stmt.bind_text(bind_index, &format!("after_{}", escape_ident(&name)))?;
-        bind_index += 1;
-    }
-
     stmt.step()
 }
 
@@ -128,7 +112,6 @@ fn create_instead_of_update_trigger(
     order_by_column: *mut sqlite_nostd::value,
     collection_columns: &Vec<&str>,
 ) -> Result<ResultCode, ResultCode> {
-    #[allow(unused_variables)]
     let columns = extract_columns(db, table)?;
     let base_sets_ex_order = columns
         .iter()
@@ -137,8 +120,7 @@ fn create_instead_of_update_trigger(
         .collect::<Vec<_>>()
         .join(",\n");
 
-    #[allow(unused_variables)]
-    let (after_pk_values, list_predicates, after_predicates, list_bind_slots, pks) =
+    let (after_pk_values, list_predicates, after_predicates, list_name_args, after_pk_names_args) =
         create_common_inputs(db, table, collection_columns)?;
 
     let sql = format!(
@@ -159,40 +141,22 @@ fn create_instead_of_update_trigger(
             ) LIMIT 1)
           )
           ELSE crsql_fract_fix_conflict_return_old_key(
-            ?, ?, {list_bind_slots}{maybe_comma}, -1, ?, {after_pk_values}
-          );
+            '{table_arg}', '{order_col_arg}', {list_name_args}{maybe_comma} -1, {after_pk_names_args}, {after_pk_values}
+          )
+          END;
       END;",
         table = table,
         base_sets_ex_order = base_sets_ex_order,
         order_col = order_by_column.text(),
         list_predicates = list_predicates,
         after_predicates = after_predicates,
-        list_bind_slots = list_bind_slots,
-        maybe_comma = if list_bind_slots.len() > 0 { ", " } else { "" },
-        after_pk_values = after_pk_values
+        maybe_comma = if list_name_args.len() > 0 { ", " } else { "" },
+        after_pk_values = after_pk_values,
+        order_col_arg = escape_arg(order_by_column.text()),
+        table_arg = escape_arg(table),
+        after_pk_names_args = after_pk_names_args
     );
     let stmt = db.prepare_v2(&sql)?;
-
-    let mut bind_index = 1;
-    // table arg
-    stmt.bind_text(bind_index, table)?;
-    bind_index += 1;
-    // order col
-    stmt.bind_value(bind_index, order_by_column)?;
-    bind_index += 1;
-
-    // collection column names
-    for col in collection_columns {
-        stmt.bind_text(bind_index, col)?;
-        bind_index += 1;
-    }
-
-    // after pk names
-    for name in pks {
-        stmt.bind_text(bind_index, &format!("after_{}", escape_ident(&name)))?;
-        bind_index += 1;
-    }
-
     stmt.step()
 }
 
@@ -200,7 +164,7 @@ fn create_common_inputs(
     db: *mut sqlite3,
     table: &str,
     collection_columns: &Vec<&str>,
-) -> Result<(String, String, String, String, Vec<String>), ResultCode> {
+) -> Result<(String, String, String, String, String), ResultCode> {
     let pks = extract_pk_columns(db, table)?;
 
     let after_pk_values = pks
@@ -208,14 +172,19 @@ fn create_common_inputs(
         .map(|pk| format!("NEW.\"after_{}\"", escape_ident(pk)))
         .collect::<Vec<_>>()
         .join(", ");
+    let after_pk_name_args = pks
+        .iter()
+        .map(|pk| format!("'after_{}'", escape_arg(pk)))
+        .collect::<Vec<_>>()
+        .join(", ");
 
     let list_predicates = where_predicates(collection_columns)?;
 
     let after_predicates = where_predicates(&pks)?;
 
-    let list_bind_slots = collection_columns
+    let list_name_args = collection_columns
         .iter()
-        .map(|_| "?")
+        .map(|c| format!("'{}'", escape_arg(c)))
         .collect::<Vec<_>>()
         .join(", ");
 
@@ -223,8 +192,8 @@ fn create_common_inputs(
         after_pk_values,
         list_predicates,
         after_predicates,
-        list_bind_slots,
-        pks,
+        list_name_args,
+        after_pk_name_args,
     ))
 }
 

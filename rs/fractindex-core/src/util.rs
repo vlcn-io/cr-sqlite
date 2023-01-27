@@ -84,3 +84,8 @@ pub fn extract_columns(
 pub fn escape_ident(ident: &str) -> String {
     return ident.replace("\"", "\"\"");
 }
+
+/// You should not use this for anything except defining triggers.
+pub fn escape_arg(arg: &str) -> String {
+    return arg.replace("'", "''");
+}

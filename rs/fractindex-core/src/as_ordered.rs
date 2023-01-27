@@ -4,7 +4,7 @@ use alloc::format;
 use alloc::vec::Vec;
 
 use crate::{
-    fractindex_view::create_fract_view_and_triggers,
+    fractindex_view::create_fract_view_and_view_triggers,
     util::{collection_max_select, collection_min_select},
 };
 
@@ -32,71 +32,33 @@ pub fn as_ordered(
         return;
     }
 
-    // 2. write into our __crsql_master table the information about the index
-    if let Err(_) = db.exec_safe("SAVEPOINT record_schema_information;") {
-        return;
-    }
-    let rc = record_schema_information(db, table, order_by_column, &collection_columns);
-    if rc.is_err() {
-        let _ = db.exec_safe("ROLLBACK;");
-        context.result_error("Failed recording schema information for the base table");
+    if let Err(_) = db.exec_safe("SAVEPOINT as_ordered;") {
         return;
     }
 
-    // 3. set up triggers to allow for append and pre-pend insertions
+    // 2. set up triggers to allow for append and pre-pend insertions
     if let Err(_) = create_pend_trigger(db, table, order_by_column, &collection_columns) {
         let _ = db.exec_safe("ROLLBACK;");
         context.result_error("Failed creating triggers for the base table");
         return;
     }
 
+    if let Err(_) = create_simple_move_trigger(db, table, order_by_column, &collection_columns) {
+        let _ = db.exec_safe("ROLLBACK;");
+        context.result_error("Failed creating simple move trigger");
+        return;
+    }
+
     // 4. create fract view for insert after and move operations
-    if let Err(_) = create_fract_view_and_triggers(db, table, order_by_column, &collection_columns)
+    if let Err(_) =
+        create_fract_view_and_view_triggers(db, table, order_by_column, &collection_columns)
     {
         let _ = db.exec_safe("ROLLBACK;");
         context.result_error("Failed creating view for the base table");
         return;
     }
 
-    let _ = db.exec_safe("RELEASE;");
-}
-
-fn record_schema_information(
-    db: *mut sqlite3,
-    table: &str,
-    order_by_column: *mut sqlite_nostd::value,
-    collection_columns: &[*mut sqlite_nostd::value],
-) -> Result<ResultCode, ResultCode> {
-    // TODO: start a savepoint
-    let sql = "INSERT OR REPLACE INTO __crsql_master (type, name, augments) VALUES (?, ?, ?, ?, ?) RETURNING id";
-    let stmt = db.prepare_v2(sql)?;
-    stmt.bind_text(1, "fract_index")?;
-    stmt.bind_text(2, table)?;
-    stmt.bind_text(3, table)?;
-    stmt.step()?;
-
-    let id = stmt.column_int64(0)?;
-
-    let sql =
-        "INSERT OR REPLACE INTO __crsql_master_prop (master_id, key, ord, value) VALUES (?, ?, ?, ?)";
-    let stmt = db.prepare_v2(sql)?;
-    stmt.bind_int64(1, id)?;
-    stmt.bind_text(2, "order_by")?;
-    stmt.bind_int(3, 0)?;
-    stmt.bind_value(4, order_by_column)?;
-    stmt.step()?;
-    stmt.reset()?;
-
-    for (i, col) in collection_columns.iter().enumerate() {
-        stmt.bind_int64(1, id)?;
-        stmt.bind_text(2, "collection")?;
-        stmt.bind_int(3, i as i32)?;
-        stmt.bind_value(4, *col)?;
-        stmt.step()?;
-        stmt.reset()?;
-    }
-
-    Ok(ResultCode::OK)
+    let _ = db.exec_safe("RELEASE as_ordered;");
 }
 
 fn table_has_all_columns(
@@ -133,11 +95,11 @@ fn create_pend_trigger(
     collection_columns: &[*mut sqlite_nostd::value],
 ) -> Result<ResultCode, ResultCode> {
     let trigger = format!(
-        "CREATE TRIGGER IF NOT EXISTS __crsql_fractindex_pend_trig AFTER INSERT ON {table}
-        WHEN NEW.{order_by_column} = 0 OR NEW.{order_by_column} = 1 BEGIN
-            UPDATE {table} SET {order_by_column} = CASE NEW.{order_by_column}
+        "CREATE TRIGGER IF NOT EXISTS __crsql_fractindex_pend_trig AFTER INSERT ON \"{table}\"
+        WHEN NEW.\"{order_by_column}\" = -1 OR NEW.\"{order_by_column}\" = 1 BEGIN
+            UPDATE \"{table}\" SET \"{order_by_column}\" = CASE NEW.\"{order_by_column}\"
             WHEN
-                0 THEN crsql_fract_key_between(NULL, ({min_select}))
+                -1 THEN crsql_fract_key_between(NULL, ({min_select}))
                 1 THEN crsql_fract_key_between(({max_select}), NULL)
             END
             WHERE _rowid_ = NEW._rowid_;
@@ -146,6 +108,32 @@ fn create_pend_trigger(
         order_by_column = order_by_column.text(),
         min_select = collection_min_select(table, order_by_column, collection_columns)?,
         max_select = collection_max_select(table, order_by_column, collection_columns)?
+    );
+    db.exec_safe(&trigger)
+}
+
+fn create_simple_move_trigger(
+    db: *mut sqlite3,
+    table: &str,
+    order_by_column: *mut sqlite_nostd::value,
+    collection_columns: &[*mut sqlite_nostd::value],
+) -> Result<ResultCode, ResultCode> {
+    // simple move allows moving a thing to the start or end of the list
+    let trigger = format!(
+      "CREATE TRIGGER IF NOT EXISTS __crsql_fractindex_ezmove AFTER UPDATE OF \"{order_col}\" ON \"{table}\"
+      WHEN NEW.\"{order_col}\" = -1 OR NEW.\"{order_col}\" = 1 BEGIN
+        UPDATE \"{table}\" SET \"{order_col}\" = CASE NEW.\"{order_col}\"
+        WHEN
+            -1 THEN crsql_fract_key_between(NULL, ({min_select}))
+            1 THEN crsql_fract_key_between(({max_select}), NULL)
+        END
+        WHERE _rowid_ = NEW._rowid_;
+      END;
+      ",
+      table = table,
+      order_col = order_by_column.text(),
+      min_select = collection_min_select(table, order_by_column, collection_columns)?,
+      max_select = collection_max_select(table, order_by_column, collection_columns)?
     );
     db.exec_safe(&trigger)
 }

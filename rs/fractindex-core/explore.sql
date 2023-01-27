@@ -125,3 +125,27 @@ UPDATE todo SET ordering = crsql_fract_key_between(
 ) WHERE {after_id_predicates}
 
 return after_ordering;
+
+---
+
+CREATE TRIGGER IF NOT EXISTS \"{table}_fractindex_update_trig\"
+  INSTEAD OF UPDATE ON \"{table}_fractindex\"
+  BEGIN
+    UPDATE \"{table}\" SET
+      {base_sets_ex_order},
+      \"{order_col}\" = CASE (
+        SELECT count(*) FROM \"{table}\" WHERE {list_predicates} AND \"{order_col}\" = (
+          SELECT \"{order_col}\" FROM \"{table}\" WHERE {after_predicates}
+        )
+      )
+      WHEN 0 THEN crsql_fract_key_between(
+        (SELECT \"{order_col}\" FROM \"{table}\" WHERE {after_predicates}),
+        (SELECT \"{order_col}\" FROM \"{table}\" WHERE {list_predicates} AND \"{order_col}\" > (
+          SELECT \"{order_col}\" FROM \"{table}\" WHERE {after_predicates}
+        ) LIMIT 1)
+      )
+      ELSE crsql_fract_fix_conflict_return_old_key(
+        ?, ?, {list_bind_slots}{maybe_comma}, -1, ?, {after_pk_values}
+      );
+  END;
+  

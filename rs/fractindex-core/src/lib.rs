@@ -10,11 +10,14 @@ mod util;
 use core::ffi::c_char;
 use core::slice;
 pub use fractindex::*;
+use fractindex_view::fix_conflict_return_old_key;
 use sqlite::args;
+use sqlite::ColumnType;
 use sqlite::Connection;
 use sqlite::ResultCode;
 use sqlite::{Context, Value};
 use sqlite_nostd as sqlite;
+extern crate alloc;
 
 pub extern "C" fn crsql_fract_as_ordered(
     ctx: *mut sqlite::context,
@@ -45,14 +48,65 @@ pub extern "C" fn crsql_fract_key_between(
 }
 
 pub extern "C" fn crsql_fract_fix_conflict_return_old_key(
-    _ctx: *mut sqlite::context,
+    ctx: *mut sqlite::context,
     argc: i32,
     argv: *mut *mut sqlite::value,
 ) {
-    let _args = args!(argc, argv);
+    let args = args!(argc, argv);
 
     // process args
-    // call fix_conflict_return_old_key
+    // fix_conflict_return_old_key();
+    if args.len() < 4 {
+        ctx.result_error("Too few arguments to fix_conflict_return_old_key");
+        return;
+    }
+    let table = args[0];
+    let order_col = args[1];
+
+    let collection_columns: &[*mut sqlite_nostd::value] = pull_collection_column_names(2, args);
+    // 2 is where we started, + how many collection columns + 1 for the separator (-1)
+    let next_index = 2 + collection_columns.len() + 1;
+    // from next_index we'll read in primary key names and values
+
+    let primary_key_and_value_count = args.len() - next_index;
+    if primary_key_and_value_count <= 0 || primary_key_and_value_count % 2 != 0 {
+        ctx.result_error("Incorrect number of primary keys and values provided. Must have at least 1 primary key.");
+        return;
+    }
+
+    let primary_key_count = primary_key_and_value_count / 2;
+    let pk_names = &args[next_index..next_index + primary_key_count];
+    let pk_values =
+        &args[next_index + primary_key_count..next_index + primary_key_count + primary_key_count];
+
+    if let Err(_) = fix_conflict_return_old_key(
+        ctx,
+        table.text(),
+        order_col,
+        collection_columns,
+        pk_names,
+        pk_values,
+    ) {
+        ctx.result_error("Failed creating fract idx view and corresponding triggers");
+    }
+
+    return;
+}
+
+fn pull_collection_column_names(
+    from: usize,
+    args: &[*mut sqlite_nostd::value],
+) -> &[*mut sqlite_nostd::value] {
+    let mut i = from;
+    while i < args.len() {
+        let next = args[i];
+        if next.value_type() == ColumnType::Integer {
+            break;
+        }
+        i += 1;
+    }
+
+    return &args[from..i];
 }
 
 #[no_mangle]

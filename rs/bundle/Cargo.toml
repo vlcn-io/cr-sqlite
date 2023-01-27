@@ -8,9 +8,12 @@ license = "Apache 2"
 
 [lib]
 name = "crsql_bundle"
-crate-type = ["rlib"]
+crate-type = ["staticlib"]
+
+# "cdylib" <-- only enable cdylib if omit_load_extension is not enabled
 
 [dependencies]
+crsql_fractindex_core = {path="../fractindex-core"}
 sqlite_nostd = { path="../../deps/sqlite-rs-embedded/sqlite_nostd"}
 
 [profile.dev]

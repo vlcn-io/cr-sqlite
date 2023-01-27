@@ -5,8 +5,12 @@
 
 extern crate alloc;
 
+use core::alloc::GlobalAlloc;
 use core::alloc::Layout;
+use core::ffi::c_char;
 use core::panic::PanicInfo;
+use crsql_fractindex_core::sqlite3_crsqlfractionalindex_init;
+use sqlite_nostd as sqlite;
 use sqlite_nostd::SQLite3Allocator;
 
 #[global_allocator]
@@ -70,10 +74,12 @@ pub fn __rust_alloc_error_handler(_: Layout) -> ! {
 #[no_mangle]
 pub extern "C" fn sqlite3_crsqlrustbundle_init(
     db: *mut sqlite::sqlite3,
-    _err_msg: *mut *mut c_char,
+    err_msg: *mut *mut c_char,
     api: *mut sqlite::api_routines,
 ) -> u32 {
     sqlite::EXTENSION_INIT2(api);
+
+    return sqlite3_crsqlfractionalindex_init(db, err_msg, api);
 
     // load up all our rust extensions that contribute to the project
     // - automigrate

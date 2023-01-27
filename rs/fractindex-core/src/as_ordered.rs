@@ -8,6 +8,8 @@ use crate::{
     util::{collection_max_select, collection_min_select},
 };
 
+// TODO: do validation and suggest indices? collection and order should be indexed as compound index
+// with col columns first.
 pub fn as_ordered(
     context: *mut context,
     db: *mut sqlite3,
@@ -19,9 +21,9 @@ pub fn as_ordered(
     // or be fancy and track schema versions to know if this is needed.
 
     // 1. ensure that all columns exist in the target table
-    let mut collection_columns = collection_columns.to_vec();
-    collection_columns.push(order_by_column);
-    let rc = table_has_all_columns(db, table, &collection_columns);
+    let mut provided_cols = collection_columns.to_vec();
+    provided_cols.push(order_by_column);
+    let rc = table_has_all_columns(db, table, &provided_cols);
 
     if rc.is_err() {
         context.result_error("Failed determining if all columns are present in the base table");
@@ -36,14 +38,19 @@ pub fn as_ordered(
         return;
     }
 
+    let collection_column_names = collection_columns
+        .iter()
+        .map(|c| c.text())
+        .collect::<Vec<_>>();
     // 2. set up triggers to allow for append and pre-pend insertions
-    if let Err(_) = create_pend_trigger(db, table, order_by_column, &collection_columns) {
+    if let Err(_) = create_pend_trigger(db, table, order_by_column, &collection_column_names) {
         let _ = db.exec_safe("ROLLBACK;");
         context.result_error("Failed creating triggers for the base table");
         return;
     }
 
-    if let Err(_) = create_simple_move_trigger(db, table, order_by_column, &collection_columns) {
+    if let Err(_) = create_simple_move_trigger(db, table, order_by_column, &collection_column_names)
+    {
         let _ = db.exec_safe("ROLLBACK;");
         context.result_error("Failed creating simple move trigger");
         return;
@@ -51,7 +58,7 @@ pub fn as_ordered(
 
     // 4. create fract view for insert after and move operations
     if let Err(_) =
-        create_fract_view_and_view_triggers(db, table, order_by_column, &collection_columns)
+        create_fract_view_and_view_triggers(db, table, order_by_column, &collection_column_names)
     {
         let _ = db.exec_safe("ROLLBACK;");
         context.result_error("Failed creating view for the base table");
@@ -92,15 +99,14 @@ fn create_pend_trigger(
     db: *mut sqlite3,
     table: &str,
     order_by_column: *mut sqlite_nostd::value,
-    collection_columns: &[*mut sqlite_nostd::value],
+    collection_columns: &Vec<&str>,
 ) -> Result<ResultCode, ResultCode> {
     let trigger = format!(
         "CREATE TRIGGER IF NOT EXISTS __crsql_fractindex_pend_trig AFTER INSERT ON \"{table}\"
         WHEN NEW.\"{order_by_column}\" = -1 OR NEW.\"{order_by_column}\" = 1 BEGIN
             UPDATE \"{table}\" SET \"{order_by_column}\" = CASE NEW.\"{order_by_column}\"
-            WHEN
-                -1 THEN crsql_fract_key_between(NULL, ({min_select}))
-                1 THEN crsql_fract_key_between(({max_select}), NULL)
+            WHEN -1 THEN crsql_fract_key_between(NULL, ({min_select}))
+            WHEN 1 THEN crsql_fract_key_between(({max_select}), NULL)
             END
             WHERE _rowid_ = NEW._rowid_;
         END;",
@@ -116,16 +122,15 @@ fn create_simple_move_trigger(
     db: *mut sqlite3,
     table: &str,
     order_by_column: *mut sqlite_nostd::value,
-    collection_columns: &[*mut sqlite_nostd::value],
+    collection_columns: &Vec<&str>,
 ) -> Result<ResultCode, ResultCode> {
     // simple move allows moving a thing to the start or end of the list
     let trigger = format!(
       "CREATE TRIGGER IF NOT EXISTS __crsql_fractindex_ezmove AFTER UPDATE OF \"{order_col}\" ON \"{table}\"
       WHEN NEW.\"{order_col}\" = -1 OR NEW.\"{order_col}\" = 1 BEGIN
         UPDATE \"{table}\" SET \"{order_col}\" = CASE NEW.\"{order_col}\"
-        WHEN
-            -1 THEN crsql_fract_key_between(NULL, ({min_select}))
-            1 THEN crsql_fract_key_between(({max_select}), NULL)
+        WHEN -1 THEN crsql_fract_key_between(NULL, ({min_select}))
+        WHEN 1 THEN crsql_fract_key_between(({max_select}), NULL)
         END
         WHERE _rowid_ = NEW._rowid_;
       END;

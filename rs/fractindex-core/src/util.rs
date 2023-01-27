@@ -5,11 +5,14 @@ use alloc::vec::Vec;
 use sqlite_nostd::Value;
 use sqlite_nostd::{self, Connection, ResultCode};
 
-pub fn where_predicates(columns: &[*mut sqlite_nostd::value]) -> Result<String, ResultCode> {
+pub fn where_predicates<T: AsRef<str>>(columns: &[T]) -> Result<String, ResultCode> {
     let mut predicates = String::new();
-    for (i, column) in columns.iter().enumerate() {
-        let column_name = column.text();
-        predicates.push_str(&format!("\"{}\" = NEW.\"{}\"", column_name, column_name));
+    for (i, column_name) in columns.iter().enumerate() {
+        predicates.push_str(&format!(
+            "\"{}\" = NEW.\"{}\"",
+            column_name.as_ref(),
+            column_name.as_ref()
+        ));
         if i < columns.len() - 1 {
             predicates.push_str(" AND ");
         }
@@ -23,7 +26,7 @@ pub fn where_predicates(columns: &[*mut sqlite_nostd::value]) -> Result<String, 
 pub fn collection_min_select(
     table: &str,
     order_by_column: *mut sqlite_nostd::value,
-    collection_columns: &[*mut sqlite_nostd::value],
+    collection_columns: &Vec<&str>,
 ) -> Result<String, ResultCode> {
     Ok(format!(
         "SELECT MIN(\"{}\") FROM \"{}\" WHERE {}",
@@ -36,7 +39,7 @@ pub fn collection_min_select(
 pub fn collection_max_select(
     table: &str,
     order_by_column: *mut sqlite_nostd::value,
-    collection_columns: &[*mut sqlite_nostd::value],
+    collection_columns: &Vec<&str>,
 ) -> Result<String, ResultCode> {
     Ok(format!(
         "SELECT MAX(\"{}\") FROM \"{}\" WHERE {}",
@@ -46,30 +49,34 @@ pub fn collection_max_select(
     ))
 }
 
+/// Stmt is returned to the caller since all values become invalid as soon as the
+/// statement is dropped.
 pub fn extract_pk_columns(
     db: *mut sqlite_nostd::sqlite3,
     table: &str,
-) -> Result<Vec<*mut sqlite_nostd::value>, ResultCode> {
+) -> Result<Vec<String>, ResultCode> {
     let sql = "SELECT \"name\" FROM pragma_table_info(?) WHERE \"pk\" > 0 ORDER BY \"pk\" ASC";
     let stmt = db.prepare_v2(&sql)?;
     stmt.bind_text(1, table)?;
     let mut columns = Vec::new();
     while stmt.step()? == ResultCode::ROW {
-        columns.push(stmt.column_value(0)?);
+        columns.push(String::from(stmt.column_text(0)?));
     }
     Ok(columns)
 }
 
+/// Stmt is returned to the caller since all values become invalid as soon as the
+/// statement is dropped.
 pub fn extract_columns(
     db: *mut sqlite_nostd::sqlite3,
     table: &str,
-) -> Result<Vec<*mut sqlite_nostd::value>, ResultCode> {
+) -> Result<Vec<String>, ResultCode> {
     let sql = "SELECT \"name\" FROM pragma_table_info(?)";
     let stmt = db.prepare_v2(&sql)?;
     stmt.bind_text(1, table)?;
     let mut columns = Vec::new();
     while stmt.step()? == ResultCode::ROW {
-        columns.push(stmt.column_value(0)?);
+        columns.push(String::from(stmt.column_text(0)?));
     }
     Ok(columns)
 }

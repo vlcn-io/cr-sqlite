@@ -10,14 +10,14 @@ pub fn create_fract_view_and_view_triggers(
     db: *mut sqlite3,
     table: &str,
     order_by_column: *mut sqlite_nostd::value,
-    collection_columns: &[*mut sqlite_nostd::value],
+    collection_columns: &Vec<&str>,
 ) -> Result<ResultCode, ResultCode> {
     // extract pk information from pragma table_info
     let pks = extract_pk_columns(db, table)?;
 
     let after_pk_defs = pks
         .iter()
-        .map(|pk| format!("NULL AS \"after_{}\"", pk.text().replace("\"", "\"\"")))
+        .map(|pk| format!("NULL AS \"after_{}\"", escape_ident(pk)))
         .collect::<Vec<_>>()
         .join(", ");
 
@@ -41,26 +41,28 @@ fn create_instead_of_insert_trigger(
     db: *mut sqlite3,
     table: &str,
     order_by_column: *mut sqlite_nostd::value,
-    collection_columns: &[*mut sqlite_nostd::value],
+    collection_columns: &Vec<&str>,
 ) -> Result<ResultCode, ResultCode> {
+    #[allow(unused_variables)]
     let columns = extract_columns(db, table)?;
     let columns_ex_order = columns
         .iter()
-        .filter(|col| col.text() != order_by_column.text())
+        .filter(|col| col != &order_by_column.text())
         .collect::<Vec<_>>();
 
     let col_names_ex_order = columns_ex_order
         .iter()
-        .map(|col| format!("\"{}\"", escape_ident(col.text())))
+        .map(|col| format!("\"{}\"", escape_ident(col)))
         .collect::<Vec<_>>()
         .join(", ");
 
     let col_values_ex_order = columns_ex_order
         .iter()
-        .map(|col| format!("NEW.\"{}\"", escape_ident(col.text())))
+        .map(|col| format!("NEW.\"{}\"", escape_ident(col)))
         .collect::<Vec<_>>()
         .join(", ");
 
+    #[allow(unused_variables)]
     let (after_pk_values, list_predicates, after_predicates, list_bind_slots, pks) =
         create_common_inputs(db, table, collection_columns)?;
 
@@ -107,13 +109,13 @@ fn create_instead_of_insert_trigger(
 
     // collection column names
     for col in collection_columns {
-        stmt.bind_value(bind_index, *col)?;
+        stmt.bind_text(bind_index, col)?;
         bind_index += 1;
     }
 
     // after pk names
     for name in pks {
-        stmt.bind_text(bind_index, &format!("after_{}", escape_ident(name.text())))?;
+        stmt.bind_text(bind_index, &format!("after_{}", escape_ident(&name)))?;
         bind_index += 1;
     }
 
@@ -124,16 +126,18 @@ fn create_instead_of_update_trigger(
     db: *mut sqlite3,
     table: &str,
     order_by_column: *mut sqlite_nostd::value,
-    collection_columns: &[*mut sqlite_nostd::value],
+    collection_columns: &Vec<&str>,
 ) -> Result<ResultCode, ResultCode> {
+    #[allow(unused_variables)]
     let columns = extract_columns(db, table)?;
     let base_sets_ex_order = columns
         .iter()
-        .filter(|col| col.text() != order_by_column.text())
-        .map(|col| format!("\"{col}\" = NEW.\"{col}\"", col = col.text()))
+        .filter(|col| col != &order_by_column.text())
+        .map(|col| format!("\"{col}\" = NEW.\"{col}\"", col = col))
         .collect::<Vec<_>>()
         .join(",\n");
 
+    #[allow(unused_variables)]
     let (after_pk_values, list_predicates, after_predicates, list_bind_slots, pks) =
         create_common_inputs(db, table, collection_columns)?;
 
@@ -179,13 +183,13 @@ fn create_instead_of_update_trigger(
 
     // collection column names
     for col in collection_columns {
-        stmt.bind_value(bind_index, *col)?;
+        stmt.bind_text(bind_index, col)?;
         bind_index += 1;
     }
 
     // after pk names
     for name in pks {
-        stmt.bind_text(bind_index, &format!("after_{}", escape_ident(name.text())))?;
+        stmt.bind_text(bind_index, &format!("after_{}", escape_ident(&name)))?;
         bind_index += 1;
     }
 
@@ -195,22 +199,13 @@ fn create_instead_of_update_trigger(
 fn create_common_inputs(
     db: *mut sqlite3,
     table: &str,
-    collection_columns: &[*mut sqlite_nostd::value],
-) -> Result<
-    (
-        String,
-        String,
-        String,
-        String,
-        Vec<*mut sqlite_nostd::value>,
-    ),
-    ResultCode,
-> {
+    collection_columns: &Vec<&str>,
+) -> Result<(String, String, String, String, Vec<String>), ResultCode> {
     let pks = extract_pk_columns(db, table)?;
 
     let after_pk_values = pks
         .iter()
-        .map(|pk| format!("NEW.\"after_{}\"", escape_ident(pk.text())))
+        .map(|pk| format!("NEW.\"after_{}\"", escape_ident(pk)))
         .collect::<Vec<_>>()
         .join(", ");
 

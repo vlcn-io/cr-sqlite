@@ -113,6 +113,12 @@ $(rs_lib_dbg_static): FORCE
 $(rs_lib_static): FORCE
 	cd ../rs/bundle && cargo build --release --features omit_load_extension $(rs_build_flags)
 
+$(rs_lib_dbg_dynamic): FORCE
+	cd ../rs/bundle && RUSTFLAGS="-C link-args=-lc" cargo rustc --crate-type cdylib
+
+$(rs_lib_dynamic): FORCE
+	cd ../rs/bundle && RUSTFLAGS="-C link-args=-lc" cargo rustc --crate-type cdylib --release
+
 # Build the loadable extension.
 $(TARGET_LOADABLE): $(prefix) $(ext_files)
 	$(CC) -O2 -I./src/ -I./src/sqlite \

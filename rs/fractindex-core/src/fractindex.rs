@@ -165,7 +165,6 @@ fn round(d: f64) -> usize {
     } else {
         truncated
     }
-    // unsafe { intrinsics::roundf64(d) as usize }
 }
 
 fn validate_order_key(key: &str) -> Result<(), &'static str> {

@@ -40,11 +40,34 @@ pub extern "C" fn crsql_fract_as_ordered(
 }
 
 pub extern "C" fn crsql_fract_key_between(
-    _ctx: *mut sqlite::context,
+    ctx: *mut sqlite::context,
     argc: i32,
     argv: *mut *mut sqlite::value,
 ) {
-    let _args = args!(argc, argv);
+    let args = args!(argc, argv);
+
+    let left = args[0];
+    let right = args[1];
+
+    let left = if left.value_type() == ColumnType::Null {
+        None
+    } else {
+        Some(left.text())
+    };
+
+    let right = if right.value_type() == ColumnType::Null {
+        None
+    } else {
+        Some(right.text())
+    };
+
+    let result = key_between(left, right);
+
+    match result {
+        Ok(Some(r)) => ctx.result_text_owned(r),
+        Ok(None) => ctx.result_null(),
+        Err(r) => ctx.result_error(r),
+    }
 }
 
 pub extern "C" fn crsql_fract_fix_conflict_return_old_key(

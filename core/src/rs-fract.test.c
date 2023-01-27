@@ -46,6 +46,21 @@ static void testAsOrdered() {
   assert(rc == SQLITE_OK);
 
   // test prepend
+  rc += sqlite3_exec(db, "INSERT INTO todo VALUES (1, 1, -1, 'head', false)", 0,
+                     0, 0);
+  printf("err: %s\n", sqlite3_errmsg(db));
+  assert(rc == SQLITE_OK);
+  sqlite3_stmt *pStmt;
+  rc += sqlite3_prepare_v2(db, "SELECT ordering FROM todo WHERE id = 1", -1,
+                           &pStmt, 0);
+  assert(rc == SQLITE_OK);
+  sqlite3_step(pStmt);
+  int type = sqlite3_column_type(pStmt, 0);
+  const unsigned char *order = sqlite3_column_text(pStmt, 0);
+
+  printf("Order: %s\n", order);
+  printf("Type: %d\n", type);
+  sqlite3_finalize(pStmt);
 
   // test append
 

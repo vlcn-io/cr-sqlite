@@ -64,7 +64,7 @@ pub extern "C" fn crsql_fract_key_between(
     let result = key_between(left, right);
 
     match result {
-        Ok(Some(r)) => ctx.result_text_shared(&r),
+        Ok(Some(r)) => ctx.result_text_transient(&r),
         Ok(None) => ctx.result_null(),
         Err(r) => ctx.result_error(r),
     }

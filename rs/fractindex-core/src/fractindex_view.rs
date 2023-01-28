@@ -271,7 +271,7 @@ pub fn fix_conflict_return_old_key(
     stmt.bind_value(pk_values.len() as i32 + 1, target_order)?;
     stmt.step()?;
 
-    ctx.result_text_shared(target_order.text());
+    ctx.result_text_transient(target_order.text());
 
     Ok(ResultCode::OK)
 }

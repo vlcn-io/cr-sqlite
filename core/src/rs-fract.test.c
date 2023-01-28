@@ -60,11 +60,10 @@ static void testAsOrdered() {
   sqlite3_finalize(pStmt);
 
   // test append
-  rc += sqlite3_exec(db, "INSERT INTO todo VALUES (2, 1, 1, 'tail', false)", 0,
+  rc += sqlite3_exec(db, "INSERT INTO todo VALUES (3, 1, 1, 'tail', false)", 0,
                      0, 0);
   assert(rc == SQLITE_OK);
-  pStmt;
-  rc += sqlite3_prepare_v2(db, "SELECT ordering FROM todo WHERE id = 2", -1,
+  rc += sqlite3_prepare_v2(db, "SELECT ordering FROM todo WHERE id = 3", -1,
                            &pStmt, 0);
   assert(rc == SQLITE_OK);
   sqlite3_step(pStmt);
@@ -73,6 +72,21 @@ static void testAsOrdered() {
   sqlite3_finalize(pStmt);
 
   // test insert after head
+  rc += sqlite3_exec(db,
+                     "INSERT INTO todo_fractindex (id, list_id, content, "
+                     "complete, after_id) VALUES (2, 1, 'mid', false, 1)",
+                     0, 0, 0);
+  assert(rc == SQLITE_OK);
+  rc += sqlite3_prepare_v2(db, "SELECT ordering FROM todo ORDER BY id ASC", -1,
+                           &pStmt, 0);
+  assert(rc == SQLITE_OK);
+  while (sqlite3_step(pStmt) == SQLITE_ROW) {
+    printf("order: %s\n", sqlite3_column_text(pStmt, 0));
+  }
+  // assert(strcmp((const char *)order, "a1") == 0);
+  sqlite3_finalize(pStmt);
+
+  // test inserts into other lists -- that lists are ordered independently
 
   // test insert before head
 

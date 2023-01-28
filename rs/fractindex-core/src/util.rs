@@ -29,10 +29,10 @@ pub fn collection_min_select(
     collection_columns: &Vec<&str>,
 ) -> Result<String, ResultCode> {
     Ok(format!(
-        "SELECT MIN(\"{}\") FROM \"{}\" WHERE {}",
-        order_by_column.text(),
-        table,
-        where_predicates(collection_columns)?
+        "SELECT MIN(\"{order_col}\") FROM \"{table}\" WHERE {list_preds} AND \"{order_col}\" != -1 AND \"{order_col}\" != 1",
+        order_col = escape_ident(order_by_column.text()),
+        table = escape_ident(table),
+        list_preds = where_predicates(collection_columns)?
     ))
 }
 
@@ -42,10 +42,10 @@ pub fn collection_max_select(
     collection_columns: &Vec<&str>,
 ) -> Result<String, ResultCode> {
     Ok(format!(
-        "SELECT MAX(\"{}\") FROM \"{}\" WHERE {}",
-        order_by_column.text(),
-        table,
-        where_predicates(collection_columns)?
+        "SELECT MAX(\"{order_col}\") FROM \"{table}\" WHERE {list_preds} AND \"{order_col}\" != -1 AND \"{order_col}\" != 1",
+        order_col = escape_ident(order_by_column.text()),
+        table = escape_ident(table),
+        list_preds = where_predicates(collection_columns)?
     ))
 }
 

@@ -13,6 +13,7 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "crsqlite.h"
 int crsql_close(sqlite3 *db);
@@ -48,25 +49,38 @@ static void testAsOrdered() {
   // test prepend
   rc += sqlite3_exec(db, "INSERT INTO todo VALUES (1, 1, -1, 'head', false)", 0,
                      0, 0);
-  printf("err: %s\n", sqlite3_errmsg(db));
   assert(rc == SQLITE_OK);
   sqlite3_stmt *pStmt;
   rc += sqlite3_prepare_v2(db, "SELECT ordering FROM todo WHERE id = 1", -1,
                            &pStmt, 0);
   assert(rc == SQLITE_OK);
   sqlite3_step(pStmt);
-  int type = sqlite3_column_type(pStmt, 0);
   const unsigned char *order = sqlite3_column_text(pStmt, 0);
-
-  printf("Order: %s\n", order);
-  printf("Type: %d\n", type);
+  assert(strcmp((const char *)order, "a0") == 0);
   sqlite3_finalize(pStmt);
 
   // test append
+  rc += sqlite3_exec(db, "INSERT INTO todo VALUES (2, 1, 1, 'tail', false)", 0,
+                     0, 0);
+  assert(rc == SQLITE_OK);
+  pStmt;
+  rc += sqlite3_prepare_v2(db, "SELECT ordering FROM todo WHERE id = 2", -1,
+                           &pStmt, 0);
+  assert(rc == SQLITE_OK);
+  sqlite3_step(pStmt);
+  order = sqlite3_column_text(pStmt, 0);
+  assert(strcmp((const char *)order, "a1") == 0);
+  sqlite3_finalize(pStmt);
+
+  // test insert after head
+
+  // test insert before head
 
   // test insert after
 
   // test move after
+
+  // make some collisions
 
   // Test no list columns
   rc += sqlite3_exec(db, "SELECT crsql_fract_as_ordered('todo', 'ordering')", 0,

@@ -63,7 +63,7 @@ fn create_instead_of_insert_trigger(
         .collect::<Vec<_>>()
         .join(", ");
 
-    let (after_pk_values, list_predicates, after_predicates, list_name_args, after_pk_names_args) =
+    let (after_pk_values, list_predicates, after_predicates, list_name_args, pk_names_args) =
         create_common_inputs(db, table, collection_columns)?;
 
     let sql = format!(
@@ -78,12 +78,16 @@ fn create_instead_of_insert_trigger(
                 CASE (
                   SELECT count(*) FROM \"{table}\" WHERE {list_predicates} AND \"{order_col}\" = (SELECT \"{order_col}\" FROM \"{table}\" WHERE {after_predicates})
                 )
+                  WHEN 1 THEN crsql_fract_key_between(
+                    (SELECT \"{order_col}\" FROM \"{table}\" WHERE {after_predicates}),
+                    (SELECT \"{order_col}\" FROM \"{table}\" WHERE {list_predicates} AND \"{order_col}\" > (SELECT \"{order_col}\" FROM \"{table}\" WHERE {after_predicates}) LIMIT 1)
+                  )
                   WHEN 0 THEN crsql_fract_key_between(
                     (SELECT \"{order_col}\" FROM \"{table}\" WHERE {after_predicates}),
                     (SELECT \"{order_col}\" FROM \"{table}\" WHERE {list_predicates} AND \"{order_col}\" > (SELECT \"{order_col}\" FROM \"{table}\" WHERE {after_predicates}) LIMIT 1)
                   )
                   ELSE crsql_fract_fix_conflict_return_old_key(
-                    '{table_arg}', '{order_col_arg}', {list_name_args}{maybe_comma} -1, {after_pk_names_args}, {after_pk_values}
+                    '{table_arg}', '{order_col_arg}', {list_name_args}{maybe_comma} -1, {pk_names_args}, {after_pk_values}
                   )
                 END
               );
@@ -99,7 +103,7 @@ fn create_instead_of_insert_trigger(
         after_pk_values = after_pk_values,
         order_col_arg = escape_arg(order_by_column.text()),
         table_arg = escape_arg(table),
-        after_pk_names_args = after_pk_names_args,
+        pk_names_args = pk_names_args,
     );
 
     let stmt = db.prepare_v2(&sql)?;
@@ -120,7 +124,7 @@ fn create_instead_of_update_trigger(
         .collect::<Vec<_>>()
         .join(",\n");
 
-    let (after_pk_values, list_predicates, after_predicates, list_name_args, after_pk_names_args) =
+    let (after_pk_values, list_predicates, after_predicates, list_name_args, pk_names_args) =
         create_common_inputs(db, table, collection_columns)?;
 
     let sql = format!(
@@ -134,6 +138,12 @@ fn create_instead_of_update_trigger(
               SELECT \"{order_col}\" FROM \"{table}\" WHERE {after_predicates}
             )
           )
+          WHEN 1 THEN crsql_fract_key_between(
+            (SELECT \"{order_col}\" FROM \"{table}\" WHERE {after_predicates}),
+            (SELECT \"{order_col}\" FROM \"{table}\" WHERE {list_predicates} AND \"{order_col}\" > (
+              SELECT \"{order_col}\" FROM \"{table}\" WHERE {after_predicates}
+            ) LIMIT 1)
+          )
           WHEN 0 THEN crsql_fract_key_between(
             (SELECT \"{order_col}\" FROM \"{table}\" WHERE {after_predicates}),
             (SELECT \"{order_col}\" FROM \"{table}\" WHERE {list_predicates} AND \"{order_col}\" > (
@@ -141,7 +151,7 @@ fn create_instead_of_update_trigger(
             ) LIMIT 1)
           )
           ELSE crsql_fract_fix_conflict_return_old_key(
-            '{table_arg}', '{order_col_arg}', {list_name_args}{maybe_comma} -1, {after_pk_names_args}, {after_pk_values}
+            '{table_arg}', '{order_col_arg}', {list_name_args}{maybe_comma} -1, {pk_names_args}, {after_pk_values}
           )
           END;
       END;",
@@ -154,7 +164,7 @@ fn create_instead_of_update_trigger(
         after_pk_values = after_pk_values,
         order_col_arg = escape_arg(order_by_column.text()),
         table_arg = escape_arg(table),
-        after_pk_names_args = after_pk_names_args
+        pk_names_args = pk_names_args
     );
     let stmt = db.prepare_v2(&sql)?;
     stmt.step()
@@ -172,15 +182,19 @@ fn create_common_inputs(
         .map(|pk| format!("NEW.\"after_{}\"", escape_ident(pk)))
         .collect::<Vec<_>>()
         .join(", ");
-    let after_pk_name_args = pks
+    let pk_name_args = pks
         .iter()
-        .map(|pk| format!("'after_{}'", escape_arg(pk)))
+        .map(|pk| format!("'{}'", escape_arg(pk)))
         .collect::<Vec<_>>()
         .join(", ");
 
     let list_predicates = where_predicates(collection_columns)?;
 
-    let after_predicates = where_predicates(&pks)?;
+    let after_predicates = pks
+        .iter()
+        .map(|pk| format!("\"{pk}\" = NEW.\"after_{pk}\"", pk = escape_ident(pk)))
+        .collect::<Vec<_>>()
+        .join(" AND ");
 
     let list_name_args = collection_columns
         .iter()
@@ -193,7 +207,7 @@ fn create_common_inputs(
         list_predicates,
         after_predicates,
         list_name_args,
-        after_pk_name_args,
+        pk_name_args,
     ))
 }
 

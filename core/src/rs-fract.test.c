@@ -72,18 +72,22 @@ static void testAsOrdered() {
   sqlite3_finalize(pStmt);
 
   // test insert after head
-  rc += sqlite3_exec(db,
-                     "INSERT INTO todo_fractindex (id, list_id, content, "
-                     "complete, after_id) VALUES (2, 1, 'mid', false, 1)",
-                     0, 0, 0);
+  sqlite3_exec(db,
+               "INSERT INTO todo_fractindex (id, list_id, content, "
+               "complete, after_id) VALUES (2, 1, 'mid', false, 1)",
+               0, 0, 0);
   assert(rc == SQLITE_OK);
-  rc += sqlite3_prepare_v2(db, "SELECT ordering FROM todo ORDER BY id ASC", -1,
-                           &pStmt, 0);
+  rc += sqlite3_prepare_v2(
+      db, "SELECT id, ordering FROM todo ORDER BY ordering ASC", -1, &pStmt, 0);
   assert(rc == SQLITE_OK);
+  int i = 1;
   while (sqlite3_step(pStmt) == SQLITE_ROW) {
-    printf("order: %s\n", sqlite3_column_text(pStmt, 0));
+    assert(sqlite3_column_int(pStmt, 0) == i);
+    if (i == 2) {
+      assert(strcmp((const char *)sqlite3_column_text(pStmt, 1), "a0V") == 0);
+    }
+    i += 1;
   }
-  // assert(strcmp((const char *)order, "a1") == 0);
   sqlite3_finalize(pStmt);
 
   // test inserts into other lists -- that lists are ordered independently
@@ -114,3 +118,38 @@ void crsqlFractSuite() {
 
   testAsOrdered();
 }
+
+/*
+sqlite3_prepare_v2(db,
+                     "SELECT count(*) FROM todo WHERE list_id = 1 "
+                     "AND ordering = (SELECT ordering FROM "
+                     "todo WHERE id = 1)",
+                     -1, &pStmt, 0);
+  sqlite3_step(pStmt);
+  int count = sqlite3_column_int(pStmt, 0);
+  printf("Count: %d\n", count);
+  sqlite3_finalize(pStmt);
+
+  sqlite3_prepare_v2(db, "SELECT ordering FROM todo WHERE id = 1", -1, &pStmt,
+                     0);
+  sqlite3_step(pStmt);
+  order = sqlite3_column_text(pStmt, 0);
+  printf("Order 1: %s\n", order);
+  sqlite3_finalize(pStmt);
+
+  sqlite3_prepare_v2(db,
+                     "SELECT ordering FROM todo WHERE list_id = 1 AND ordering "
+                     "> (SELECT ordering FROM todo WHERE list_id = 1) LIMIT 1",
+                     -1, &pStmt, 0);
+  sqlite3_step(pStmt);
+  order = sqlite3_column_text(pStmt, 0);
+  printf("Order 2: %s\n", order);
+  sqlite3_finalize(pStmt);
+
+  sqlite3_prepare_v2(db, "SELECT crsql_fract_key_between('a0', 'a1')", -1,
+                     &pStmt, 0);
+  sqlite3_step(pStmt);
+  order = sqlite3_column_text(pStmt, 0);
+  printf("Order 1.5: %s\n", order);
+  sqlite3_finalize(pStmt);
+*/

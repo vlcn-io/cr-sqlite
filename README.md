@@ -231,11 +231,10 @@ These projects helped improve my understanding of CRDTs on this journey --
 `crsqlite` currently does not support:
 
 1. Foreign key cosntraints. You can still have foreign keys (i.e. a column with an id of another row), but they can't be enforced by the db.
-   1. TODO: discuss design alternatives and why this is actually not a bad thing when considering row level security.
+   1. Foreign key constraints will eventually be supported as we enable more deletion strategies. There are 4 deletion models under which CRDTs updates do not break foreign key constraints.
 2. Uniqueness constraints other than the primary key. The only enforceably unique column in a table should be the primary key. Other columns may be indices but they may not be unique.
    1. TODO: discuss this in much more detail.
 
-Note: prior art [1] & [2] claim to support foreign key and uniqueness constraints. I believe their approach may be unsound and result in update loops and have not incoroprated it into `crsqlite` yet. If I'm wrong, I'll gladly fold their approach in.
 
 # Architecture
 

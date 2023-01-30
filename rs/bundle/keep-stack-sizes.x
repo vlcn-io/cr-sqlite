@@ -8,3 +8,4 @@ SECTIONS
   }
 }
 /* RUSTFLAGS="-Z emit-stack-sizes" cargo rustc --release -- -C link-arg=-Wl,-Tkeep-stack-sizes.x -C link-arg=-N */
+/* https://doc.rust-lang.org/nightly/unstable-book/compiler-flags/emit-stack-sizes.html */

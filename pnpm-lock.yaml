@@ -395,7 +395,7 @@ importers:
       '@types/node': ^18.11.9
       '@vlcn.io/wa-crsqlite': workspace:*
       '@vlcn.io/xplat-tests': workspace:*
-      cypress: ^10.11.0
+      cypress: ^12.4.1
       react: ^18.2.0
       react-dom: ^18.2.0
       typescript: ^4.6.4
@@ -407,7 +407,7 @@ importers:
       '@types/chai': 4.3.4
       '@types/mocha': 10.0.0
       '@types/node': 18.11.9
-      cypress: 10.11.0
+      cypress: 12.4.1
       react: 18.2.0
       react-dom: 18.2.0_react@18.2.0
       typescript: 4.9.3
@@ -3021,9 +3021,9 @@ packages:
     resolution: {integrity: sha512-GAj5FOq0Hd+RsCGVJxZuKaIDXDf3h6GQoNEjFgbLLI/trgtavwUbSnZ5pVfg27DVCaWjIohryS0JFwIJyT2cMg==}
     dev: true
 
-  /cypress/10.11.0:
-    resolution: {integrity: sha512-lsaE7dprw5DoXM00skni6W5ElVVLGAdRUUdZjX2dYsGjbY/QnpzWZ95Zom1mkGg0hAaO/QVTZoFVS7Jgr/GUPA==}
-    engines: {node: '>=12.0.0'}
+  /cypress/12.4.1:
+    resolution: {integrity: sha512-IFMPzc1RJ22Fac+YbdqywtpcuqZXqQJh+JqZDXn+A15zG/dw99njfv8f0bTvD+WAHhP118+xWG/VwilkFg1rnA==}
+    engines: {node: ^14.0.0 || ^16.0.0 || >=18.0.0}
     hasBin: true
     requiresBuild: true
     dependencies:
@@ -6911,7 +6911,7 @@ packages:
       ipaddr.js: 1.9.1
 
   /proxy-from-env/1.0.0:
-    resolution: {integrity: sha1-M8UDmPcOp+uW0h97gXYwpVeRx+4=}
+    resolution: {integrity: sha512-F2JHgJQ1iqwnHDcQjVBsq3n/uoaFL+iPW/eAeL7kVxy/2RrWaN4WroKjjvbsoRtv0ftelNyC01bjRhn/bhcf4A==}
     dev: true
 
   /pseudomap/1.0.2:

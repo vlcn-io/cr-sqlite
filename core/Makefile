@@ -100,18 +100,22 @@ fuzz: $(TARGET_FUZZ)
 rs_lib_dbg_static = ../rs/bundle/target/debug/libcrsql_bundle.a
 rs_lib_static = ../rs/bundle/target/release/libcrsql_bundle.a
 ifeq ($(OS),Windows_NT)
-	# or target specific selection? https://github.com/rust-lang/rust/issues/101134
-	# LDLIBS += -lgcc_eh
-	rs_build_flags = -Z build-std=core,panic_abort,alloc --target x86_64-pc-windows-msvc
-	rs_lib_dbg_static = ../rs/bundle/target/x86_64-pc-windows-msvc/debug/crsql_bundle.lib
-	rs_lib_static = ../rs/bundle/target/x86_64-pc-windows-msvc/release/crsql_bundle.lib
+# or target specific selection? https://github.com/rust-lang/rust/issues/101134
+# can try x86_64-pc-windows-gnu
+	rs_build_flags = -Z build-std=core,panic_abort,alloc --target x86_64-pc-windows-gnu
+# rs_lib_dbg_static = ../rs/bundle/target/x86_64-pc-windows-gnu/debug/crsql_bundle.lib
+# rs_lib_static = ../rs/bundle/target/x86_64-pc-windows-gnu/release/crsql_bundle.lib
+	rs_lib_dbg_static = ../rs/bundle/target/x86_64-pc-windows-gnu/debug/libcrsql_bundle.a
+	rs_lib_static = ../rs/bundle/target/x86_64-pc-windows-gnu/release/libcrsql_bundle.a
+# -lntdll
+# rustflags_static = RUSTFLAGS="-C link-args=-llibcmt -lucrt -lmsvcrt"
 endif
 
 $(rs_lib_dbg_static): FORCE
-	cd ../rs/bundle && cargo build --features omit_load_extension $(rs_build_flags)
+	cd ../rs/bundle && $(rustflags_static) cargo build --features omit_load_extension $(rs_build_flags)
 
 $(rs_lib_static): FORCE
-	cd ../rs/bundle && cargo build --release --features omit_load_extension $(rs_build_flags)
+	cd ../rs/bundle && $(rustflags_static) cargo build --release --features omit_load_extension $(rs_build_flags)
 
 $(rs_lib_dbg_dynamic): FORCE
 	cd ../rs/bundle && RUSTFLAGS="-C link-args=-lc" cargo rustc --crate-type cdylib

@@ -90,24 +90,180 @@ static void testAsOrdered() {
   }
   sqlite3_finalize(pStmt);
 
-  // test inserts into other lists -- that lists are ordered independently
+  // prepend a list with items via -1 trick
+  rc = sqlite3_exec(db,
+                    "INSERT INTO todo (id, list_id, content, "
+                    "complete, ordering) VALUES (0, 1, 'mid', false, -1)",
+                    0, 0, 0);
+  assert(rc == SQLITE_OK);
+  rc += sqlite3_prepare_v2(db, "SELECT ordering FROM todo WHERE id = 0", -1,
+                           &pStmt, 0);
+  assert(rc == SQLITE_OK);
+  sqlite3_step(pStmt);
+  order = sqlite3_column_text(pStmt, 0);
+  assert(strcmp((const char *)order, "Zz") == 0);
+  sqlite3_finalize(pStmt);
 
-  // test insert before head
+  // append to a list with items via 1 trick
+  rc = sqlite3_exec(db,
+                    "INSERT INTO todo (id, list_id, content, "
+                    "complete, ordering) VALUES (4, 1, 'mid', false, 1)",
+                    0, 0, 0);
+  assert(rc == SQLITE_OK);
+  rc += sqlite3_prepare_v2(db, "SELECT ordering FROM todo WHERE id = 4", -1,
+                           &pStmt, 0);
+  assert(rc == SQLITE_OK);
+  sqlite3_step(pStmt);
+  order = sqlite3_column_text(pStmt, 0);
+  assert(strcmp((const char *)order, "a2") == 0);
+  sqlite3_finalize(pStmt);
 
-  // test insert after
+  // before head via view and null
+  sqlite3_exec(db,
+               "INSERT INTO todo_fractindex (id, list_id, content, "
+               "complete, after_id) VALUES (-1, 1, 'firstfirst', false, NULL)",
+               0, 0, 0);
+  assert(rc == SQLITE_OK);
+  rc += sqlite3_prepare_v2(db, "SELECT ordering FROM todo WHERE id = -1", -1,
+                           &pStmt, 0);
+  assert(rc == SQLITE_OK);
+  sqlite3_step(pStmt);
+  order = sqlite3_column_text(pStmt, 0);
+  assert(strcmp((const char *)order, "Zy") == 0);
+  sqlite3_finalize(pStmt);
+
+  // after tail view view
+  sqlite3_exec(db,
+               "INSERT INTO todo_fractindex (id, list_id, content, "
+               "complete, after_id) VALUES (5, 1, 'lastlast', false, 4)",
+               0, 0, 0);
+  assert(rc == SQLITE_OK);
+  rc += sqlite3_prepare_v2(db, "SELECT ordering FROM todo WHERE id = 5", -1,
+                           &pStmt, 0);
+  assert(rc == SQLITE_OK);
+  sqlite3_step(pStmt);
+  order = sqlite3_column_text(pStmt, 0);
+  assert(strcmp((const char *)order, "a3") == 0);
+  sqlite3_finalize(pStmt);
 
   // test move after
+  sqlite3_exec(db, "UPDATE todo_fractindex SET after_id = 4 WHERE id = 3", 0, 0,
+               0);
+  assert(rc == SQLITE_OK);
+  rc += sqlite3_prepare_v2(db, "SELECT ordering FROM todo WHERE id = 3", -1,
+                           &pStmt, 0);
+  assert(rc == SQLITE_OK);
+  sqlite3_step(pStmt);
+  order = sqlite3_column_text(pStmt, 0);
+  assert(strcmp((const char *)order, "a2V") == 0);
+  sqlite3_finalize(pStmt);
+
+  /*
+  -1 -> Zy
+  0 -> Zz
+  1 -> a0
+  2 -> ?
+  4 -> a2
+  3 -> a2V
+  5 -> a3
+  */
+
+  // insert between / insert after
+  sqlite3_exec(db,
+               "INSERT INTO todo_fractindex (id, list_id, content, "
+               "complete, after_id) VALUES (2, 1, 'blark', false, 1)",
+               0, 0, 0);
+  assert(rc == SQLITE_OK);
+  rc += sqlite3_prepare_v2(db, "SELECT ordering FROM todo WHERE id = 2", -1,
+                           &pStmt, 0);
+  assert(rc == SQLITE_OK);
+  sqlite3_step(pStmt);
+  order = sqlite3_column_text(pStmt, 0);
+  assert(strcmp((const char *)order, "a0V") == 0);
+  sqlite3_finalize(pStmt);
+
+  /*
+  -1 -> Zy
+  0 -> Zz
+  1 -> a0
+  2 -> a0V
+  4 -> a2
+  3 -> a2V
+  5 -> a3
+  */
+
+  // move before
+  // move 3 before 4
+  sqlite3_exec(db, "UPDATE todo_fractindex SET after_id = 2 WHERE id = 3", 0, 0,
+               0);
+  assert(rc == SQLITE_OK);
+  rc += sqlite3_prepare_v2(db, "SELECT ordering FROM todo WHERE id = 3", -1,
+                           &pStmt, 0);
+  assert(rc == SQLITE_OK);
+  sqlite3_step(pStmt);
+  order = sqlite3_column_text(pStmt, 0);
+  assert(strcmp((const char *)order, "a1") == 0);
+  sqlite3_finalize(pStmt);
+
+  /*
+  -1 -> Zy
+  0 -> Zz
+  1 -> a0
+  2 -> a0V
+  3 -> a1
+  4 -> a2
+  5 -> a3
+  */
 
   // make some collisions
-
-  // Test no list columns
-  rc += sqlite3_exec(db, "SELECT crsql_fract_as_ordered('todo', 'ordering')", 0,
-                     0, 0);
+  rc = sqlite3_exec(
+      db,
+      "INSERT INTO todo (id, list_id, content, complete, ordering) "
+      "VALUES (6, 1, 'xx', false, 'a1')",
+      0, 0, 0);
   assert(rc == SQLITE_OK);
+  // 3 & 6 collide, try insertion after 3
+  // 3 should be moved down and the new insertion should get 3's position.
+  sqlite3_exec(db,
+               "INSERT INTO todo_fractindex (id, list_id, content, "
+               "complete, after_id) VALUES (7, 1, 'xx', false, 3)",
+               0, 0, 0);
+  assert(rc == SQLITE_OK);
+  rc += sqlite3_prepare_v2(db, "SELECT ordering FROM todo WHERE id = 7", -1,
+                           &pStmt, 0);
+  assert(rc == SQLITE_OK);
+  sqlite3_step(pStmt);
+  order = sqlite3_column_text(pStmt, 0);
+  assert(strcmp((const char *)order, "a1") == 0);
+  sqlite3_finalize(pStmt);
+
+  rc += sqlite3_prepare_v2(db, "SELECT ordering FROM todo WHERE id = 3", -1,
+                           &pStmt, 0);
+  assert(rc == SQLITE_OK);
+  sqlite3_step(pStmt);
+  order = sqlite3_column_text(pStmt, 0);
+  assert(strcmp((const char *)order, "a0l") == 0);
+  sqlite3_finalize(pStmt);
+
+  rc += sqlite3_prepare_v2(db, "SELECT ordering FROM todo WHERE id = 6", -1,
+                           &pStmt, 0);
+  assert(rc == SQLITE_OK);
+  sqlite3_step(pStmt);
+  order = sqlite3_column_text(pStmt, 0);
+  assert(strcmp((const char *)order, "a1") == 0);
+  sqlite3_finalize(pStmt);
 
   // Test many list column
 
   // Schema change and re-run test
+
+  // Test no list columns
+  // rc += sqlite3_exec(db, "SELECT crsql_fract_as_ordered('todo', 'ordering')",
+  // 0,
+  //                    0, 0);
+  // assert(rc == SQLITE_OK);
+
+  // Test insert into other lists is independent
 
   printf("\t\e[0;32mSuccess\e[0m\n");
   crsql_close(db);

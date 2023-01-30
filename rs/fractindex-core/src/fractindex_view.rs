@@ -80,12 +80,11 @@ fn create_instead_of_insert_trigger(
                 )
                   WHEN 1 THEN crsql_fract_key_between(
                     (SELECT \"{order_col}\" FROM \"{table}\" WHERE {after_predicates}),
-                    (SELECT \"{order_col}\" FROM \"{table}\" WHERE {list_predicates} AND \"{order_col}\" > (SELECT \"{order_col}\" FROM \"{table}\" WHERE {after_predicates}) LIMIT 1)
+                    (SELECT \"{order_col}\" FROM \"{table}\" WHERE {list_predicates} AND \"{order_col}\" >
+                      (SELECT \"{order_col}\" FROM \"{table}\" WHERE {after_predicates})
+                    ORDER BY \"{order_col}\" ASC LIMIT 1)
                   )
-                  WHEN 0 THEN crsql_fract_key_between(
-                    (SELECT \"{order_col}\" FROM \"{table}\" WHERE {after_predicates}),
-                    (SELECT \"{order_col}\" FROM \"{table}\" WHERE {list_predicates} AND \"{order_col}\" > (SELECT \"{order_col}\" FROM \"{table}\" WHERE {after_predicates}) LIMIT 1)
-                  )
+                  WHEN 0 THEN -1
                   ELSE crsql_fract_fix_conflict_return_old_key(
                     '{table_arg}', '{order_col_arg}', {list_name_args}{maybe_comma} -1, {pk_names_args}, {after_pk_values}
                   )
@@ -126,6 +125,7 @@ fn create_instead_of_update_trigger(
 
     let (after_pk_values, list_predicates, after_predicates, list_name_args, pk_names_args) =
         create_common_inputs(db, table, collection_columns)?;
+    let pks = extract_pk_columns(db, table)?;
 
     let sql = format!(
         "CREATE TRIGGER IF NOT EXISTS \"{table}_fractindex_update_trig\"
@@ -142,18 +142,14 @@ fn create_instead_of_update_trigger(
             (SELECT \"{order_col}\" FROM \"{table}\" WHERE {after_predicates}),
             (SELECT \"{order_col}\" FROM \"{table}\" WHERE {list_predicates} AND \"{order_col}\" > (
               SELECT \"{order_col}\" FROM \"{table}\" WHERE {after_predicates}
-            ) LIMIT 1)
+            ) ORDER BY \"{order_col}\" ASC LIMIT 1)
           )
-          WHEN 0 THEN crsql_fract_key_between(
-            (SELECT \"{order_col}\" FROM \"{table}\" WHERE {after_predicates}),
-            (SELECT \"{order_col}\" FROM \"{table}\" WHERE {list_predicates} AND \"{order_col}\" > (
-              SELECT \"{order_col}\" FROM \"{table}\" WHERE {after_predicates}
-            ) LIMIT 1)
-          )
+          WHEN 0 THEN -1
           ELSE crsql_fract_fix_conflict_return_old_key(
             '{table_arg}', '{order_col_arg}', {list_name_args}{maybe_comma} -1, {pk_names_args}, {after_pk_values}
           )
-          END;
+          END
+        WHERE {pk_predicates};
       END;",
         table = table,
         base_sets_ex_order = base_sets_ex_order,
@@ -164,7 +160,8 @@ fn create_instead_of_update_trigger(
         after_pk_values = after_pk_values,
         order_col_arg = escape_arg(order_by_column.text()),
         table_arg = escape_arg(table),
-        pk_names_args = pk_names_args
+        pk_names_args = pk_names_args,
+        pk_predicates = where_predicates(&pks)?,
     );
     let stmt = db.prepare_v2(&sql)?;
     stmt.step()
@@ -211,6 +208,7 @@ fn create_common_inputs(
     ))
 }
 
+// TODO: rather than return old key we should return midpoint between old key and after point.
 pub fn fix_conflict_return_old_key(
     ctx: *mut context,
     table: &str,
@@ -227,6 +225,10 @@ pub fn fix_conflict_return_old_key(
         .collect::<Vec<_>>()
         .join(", AND");
 
+    // Get the order of the row that we are inserting after.
+    // This row had collisions.
+    // This row needs to be moved down.
+    // We'll use the order of this row for the order of the new row being inserted.
     let sql = format!(
         "SELECT \"{order_col}\" FROM \"{table}\" WHERE {pk_predicates}",
         order_col = escape_ident(order_col.text()),
@@ -234,8 +236,11 @@ pub fn fix_conflict_return_old_key(
         pk_predicates = pk_predicates
     );
     let stmt = db.prepare_v2(&sql)?;
+    for (i, val) in pk_values.iter().enumerate() {
+        stmt.bind_value(i as i32 + 1, *val)?;
+    }
     let code = stmt.step()?;
-    if code == ResultCode::DONE {
+    if code != ResultCode::ROW {
         // this should be impossible
         return Err(ResultCode::ERROR);
     }
@@ -259,6 +264,7 @@ pub fn fix_conflict_return_old_key(
         .collect::<Vec<_>>()
         .join(" AND ");
 
+    // could do returning `order_col` and calculate new midpoint after
     let sql = format!(
         "UPDATE \"{table}\" SET \"{order_col}\" = crsql_fract_key_between(
         (

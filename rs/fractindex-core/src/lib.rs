@@ -110,7 +110,7 @@ pub extern "C" fn crsql_fract_fix_conflict_return_old_key(
         pk_names,
         pk_values,
     ) {
-        ctx.result_error("Failed creating fract idx view and corresponding triggers");
+        ctx.result_error("Failed fixing up ordering conflicts on insert");
     }
 
     return;

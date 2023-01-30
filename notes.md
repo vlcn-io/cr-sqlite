@@ -1,3 +1,5 @@
+valgrind --leak-check=full -s --num-callers=200 dist/test
+
 https://users.rust-lang.org/t/unresolved-external-symbol-s-when-trying-to-link-a-no-std-binary-to-a-windows-dll/54306
 https://stackoverflow.com/questions/43866969/how-do-i-create-a-static-library-in-rust-to-link-with-c-code-in-windows
 

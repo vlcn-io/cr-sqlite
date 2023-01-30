@@ -36,6 +36,7 @@ void crsqlChangesVtabWriteTestSuite();
 void crsqlChangesVtabCommonTestSuite();
 void crsqlExtDataTestSuite();
 void crsqlSeenPeersTestSuite();
+void crsqlFractSuite();
 
 int main(int argc, char *argv[]) {
   char *suite = "all";
@@ -55,6 +56,7 @@ int main(int argc, char *argv[]) {
   // integration tests should come at the end given fixing unit tests will
   // likely fix integration tests
   SUITE("crsql") crsqlTestSuite();
+  SUITE("fract") crsqlFractSuite();
 
   sqlite3_shutdown();
 }

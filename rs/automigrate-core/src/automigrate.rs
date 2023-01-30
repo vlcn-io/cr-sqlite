@@ -65,7 +65,7 @@ pub extern "C" fn sqlite3_crsqlautomigrate_init(
     sqlite::EXTENSION_INIT2(api);
 
     db.create_function_v2(
-        sqlite::strlit!("crsql_automigrate"),
+        "crsql_automigrate",
         1,
         sqlite::UTF8,
         None,

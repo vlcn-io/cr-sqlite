@@ -11,7 +11,7 @@ name = "crsql_fractindex_core"
 crate-type = ["rlib"]
 
 [dependencies]
-sqlite_nostd = { path="../../../deps/sqlite-rs-embedded/sqlite_nostd"}
+sqlite_nostd = { path="../sqlite-rs-embedded/sqlite_nostd"}
 
 [dev-dependencies]
 rand = "0.8.5"

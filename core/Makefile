@@ -117,8 +117,7 @@ $(TARGET_LOADABLE): $(prefix) $(ext_files) $(rs_lib_static_loadable)
 	$(CC) -O2 -I./src/ -I./src/sqlite \
 	$(LOADABLE_CFLAGS) \
 	$(DEFINE_SQLITE_PATH) \
-	$(rs_lib_static_loadable) \
-	$(ext_files) -o $@
+	$(ext_files) $(rs_lib_static_loadable) -o $@
 
 # Build a SQLite CLI that pre-loads cr-sqlite.
 # Useful for debugging.

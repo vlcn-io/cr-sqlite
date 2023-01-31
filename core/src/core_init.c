@@ -18,19 +18,6 @@
 */
 #include "ext.h"
 
-int sqlite3_crsqlrustbundle_init(sqlite3 *db, char **pzErrMsg,
-                                 const sqlite3_api_routines *pApi);
-
-static int bundle_init(sqlite3 *db, char **pzErrMsg,
-                       const sqlite3_api_routines *pApi) {
-  int rc = sqlite3_crsqlite_init(db, pzErrMsg, pApi);
-  if (rc != SQLITE_OK) {
-    return rc;
-  }
-
-  return sqlite3_crsqlrustbundle_init(db, pzErrMsg, pApi);
-}
-
 int core_init(const char *dummy) {
-  return sqlite3_auto_extension((void *)bundle_init);
+  return sqlite3_auto_extension((void *)sqlite3_crsqlite_init);
 }

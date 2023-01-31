@@ -1,5 +1,4 @@
 import { test, expect, beforeAll, afterAll } from "vitest";
-import { resolve } from "import-meta-resolve";
 import SQLiteDB from "better-sqlite3";
 import {
   validate as uuidValidate,

@@ -2,9 +2,7 @@
 import sqlite3 from "sqlite3";
 // @ts-ignore
 import { open } from "sqlite";
-import { resolve } from "import-meta-resolve";
-const modulePath = new URL(await resolve("@vlcn.io/crsqlite", import.meta.url))
-  .pathname;
+import { extensionPath } from "@vlcn.io/crsqlite";
 
 // open the database
 const db = await open({
@@ -13,7 +11,7 @@ const db = await open({
 });
 
 let version = -1;
-await db.loadExtension(modulePath);
+await db.loadExtension(extensionPath);
 await db.run("CREATE TABLE foo (a primary key, b)");
 await db.run("SELECT crsql_as_crr('foo')");
 await db.run("INSERT INTO foo VALUES (1, 2)");

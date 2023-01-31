@@ -17,9 +17,7 @@
   "dependencies": {
     "@vlcn.io/crsqlite": "workspace:*",
     "@vlcn.io/xplat-api": "workspace:*",
-    "better-sqlite3": "^8.0.1",
-    "import-meta-resolve": "^2.1.0",
-    "nanoid": "^4.0.0"
+    "better-sqlite3": "^8.0.1"
   },
   "scripts": {
     "build": "tsc --build",
@@ -37,6 +35,7 @@
   "devDependencies": {
     "@types/jest": "^29.2.2",
     "typescript": "^4.8.4",
-    "vitest": "^0.25.0"
+    "vitest": "^0.25.0",
+    "nanoid": "^4.0.0"
   }
 }

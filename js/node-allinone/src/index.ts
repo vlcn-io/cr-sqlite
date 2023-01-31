@@ -1,9 +1,7 @@
 // @ts-ignore
 import Database from "better-sqlite3";
-import { resolve } from "import-meta-resolve";
-const modulePath = new URL(await resolve("@vlcn.io/crsqlite", import.meta.url))
-  .pathname;
 import { DB as IDB, Stmt as IStmt, UpdateType } from "@vlcn.io/xplat-api";
+import { extensionPath } from "@vlcn.io/crsqlite";
 
 const api = {
   open(filename?: string, mode: string = "c"): DB {
@@ -16,7 +14,7 @@ export class DB implements IDB {
   private open: boolean;
   constructor(private filename: string) {
     this.db = new Database(filename);
-    this.db.loadExtension(modulePath);
+    this.db.loadExtension(extensionPath);
     this.open = true;
   }
 

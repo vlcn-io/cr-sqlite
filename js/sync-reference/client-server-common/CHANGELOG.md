@@ -1,5 +1,11 @@
 # @vlcn.io/client-server-common
 
+## 0.3.3-next.0
+
+### Patch Changes
+
+- fractional indexing inclusion
+
 ## 0.3.2
 
 ### Patch Changes

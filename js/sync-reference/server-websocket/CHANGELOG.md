@@ -1,5 +1,15 @@
 # @vlcn.io/sync-server
 
+## 0.6.3-next.0
+
+### Patch Changes
+
+- fractional indexing inclusion
+- Updated dependencies
+  - @vlcn.io/crsqlite@0.7.2-next.0
+  - @vlcn.io/client-server-common@0.3.3-next.0
+  - @vlcn.io/server-core@0.6.3-next.0
+
 ## 0.6.2
 
 ### Patch Changes

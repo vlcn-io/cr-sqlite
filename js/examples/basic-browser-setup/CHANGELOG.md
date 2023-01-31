@@ -1,5 +1,14 @@
 # @vlcn.io/crsqlite-examples
 
+## 0.6.3-next.0
+
+### Patch Changes
+
+- fractional indexing inclusion
+- Updated dependencies
+  - @vlcn.io/crsqlite-wasm@0.6.2-next.0
+  - @vlcn.io/wa-crsqlite@0.7.3-next.0
+
 ## 0.6.2
 
 ### Patch Changes

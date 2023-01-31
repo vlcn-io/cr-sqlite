@@ -1,3 +1,5 @@
+pnpm changeset pre enter next
+
 ---
 
 valgrind --leak-check=full -s --num-callers=200 dist/test

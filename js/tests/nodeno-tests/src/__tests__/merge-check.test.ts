@@ -17,7 +17,7 @@ function setupDb() {
   return db;
 }
 
-export default function createInsert(
+function createInsert(
   id: string | number,
   listId: string | number,
   text: string,

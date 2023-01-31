@@ -1,3 +1,5 @@
+---
+
 valgrind --leak-check=full -s --num-callers=200 dist/test
 
 https://users.rust-lang.org/t/unresolved-external-symbol-s-when-trying-to-link-a-no-std-binary-to-a-windows-dll/54306
@@ -5,6 +7,7 @@ https://stackoverflow.com/questions/43866969/how-do-i-create-a-static-library-in
 
 todo:
 
+- flat buffer encoding of pks and values rather than string-concat encoding
 - let server in client-server sync receive out of order events?
 
   - it isn't doing the peer tracking in client-server setup, client is, so this is ok

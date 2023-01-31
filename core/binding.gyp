@@ -90,7 +90,7 @@
           'message': 'Building Rust Dependencies...',
           'inputs': ['./rs'],
           'outputs': ['./rs/bundle/target/release/libcrsql_bundle.a'],
-          'action': ['eval', 'cd ./rs/bundle && cargo build --release && cd ../..'],
+          'action': ['eval', 'cd ./rs/bundle && cargo +nightly build --release && cd ../..'],
         },
       ],
       'cflags': ['-std=c99 -fPIC -shared'],

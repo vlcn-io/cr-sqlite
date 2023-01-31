@@ -26,6 +26,12 @@ jobs:
           rustup default nightly
           rustup update
 
+      - name: Windows rust toolchain
+        if: runner.os == 'Windows'
+        run: |
+          rustup component add rust-src --toolchain nightly-x86_64-pc-windows-gnu
+          rustup default nightly-x86_64-pc-windows-gnu
+
       - name: Make loadable
         run: |
           cd core

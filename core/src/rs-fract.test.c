@@ -223,7 +223,8 @@ static void testAsOrdered() {
       0, 0, 0);
   assert(rc == SQLITE_OK);
   // 3 & 6 collide, try insertion after 3
-  // 3 should be moved down and the new insertion should get 3's position.
+  // 3 should be moved down and the new insertion should get position between
+  // 3's new position and old position
   sqlite3_exec(db,
                "INSERT INTO todo_fractindex (id, list_id, content, "
                "complete, after_id) VALUES (7, 1, 'xx', false, 3)",
@@ -234,7 +235,7 @@ static void testAsOrdered() {
   assert(rc == SQLITE_OK);
   sqlite3_step(pStmt);
   order = sqlite3_column_text(pStmt, 0);
-  assert(strcmp((const char *)order, "a1") == 0);
+  assert(strcmp((const char *)order, "a0t") == 0);
   sqlite3_finalize(pStmt);
 
   rc += sqlite3_prepare_v2(db, "SELECT ordering FROM todo WHERE id = 3", -1,

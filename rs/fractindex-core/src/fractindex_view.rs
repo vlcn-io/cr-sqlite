@@ -4,8 +4,9 @@ use alloc::format;
 use alloc::string::String;
 use alloc::vec::Vec;
 
-use crate::util::{
-    escape_arg, escape_ident, extract_columns, extract_pk_columns, where_predicates,
+use crate::{
+    key_between,
+    util::{escape_arg, escape_ident, extract_columns, extract_pk_columns, where_predicates},
 };
 
 pub fn create_fract_view_and_view_triggers(
@@ -273,7 +274,7 @@ pub fn fix_conflict_return_old_key(
           ON {list_join_predicates} WHERE \"{order_col}\" < ?{target_order_slot} ORDER BY \"{order_col}\" DESC LIMIT 1
         ),
         ?{target_order_slot}
-      ) WHERE {pk_predicates}",
+      ) WHERE {pk_predicates} RETURNING \"{order_col}\"",
         table = escape_ident(table),
         order_col = escape_ident(order_col.text()),
         pk_predicates = pk_predicates,
@@ -290,8 +291,13 @@ pub fn fix_conflict_return_old_key(
     // bind target_order
     stmt.bind_value(pk_values.len() as i32 + 1, target_order)?;
     stmt.step()?;
+    let new_target_order = stmt.column_text(0)?;
+    let ret = key_between(Some(new_target_order), Some(target_order.text()));
 
-    ctx.result_text_transient(target_order.text());
-
-    Ok(ResultCode::OK)
+    if let Ok(Some(ret)) = ret {
+        ctx.result_text_transient(&ret);
+        Ok(ResultCode::OK)
+    } else {
+        Err(ResultCode::ERROR)
+    }
 }

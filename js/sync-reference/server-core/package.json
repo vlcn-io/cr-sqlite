@@ -31,8 +31,6 @@
     "@vlcn.io/client-server-common": "workspace:*",
     "@vlcn.io/crsqlite": "workspace:*",
     "better-sqlite3": "^8.0.1",
-    "import-meta-resolve": "^2.1.0",
-    "nanoid": "^4.0.0",
     "uuid": "^9.0.0",
     "winston": "^3.8.2",
     "yargs": "^17.6.2"

@@ -115,18 +115,18 @@ Note -- these are pre-release. Please look at [the open bugs](https://github.com
   ```js
   const sqlite = require("better-sqlite3");
   const db = sqlite("filename.db");
-  db.loadExtension(require.resolve("@vlcn.io/crsqlite"));
+  const { extensionPath } = require("@vlcn.io/crsqlite");
+  db.loadExtension(extensionPath);
   ```
 
   or, es6:
 
   ```js
-  import { resolve } from "import-meta-resolve";
   import Database from "better-sqlite3";
 
   const db = new Database(":memory");
-  const modulePath = await resolve("@vlcn.io/crsqlite", import.meta.url);
-  db.loadExtension(new URL(modulePath).pathname);
+  import { extensionPath } from "@vlcn.io/crsqlite";
+  db.loadExtension(extensionPath);
   ```
 
 # Example Apps
@@ -234,7 +234,6 @@ These projects helped improve my understanding of CRDTs on this journey --
    1. Foreign key constraints will eventually be supported as we enable more deletion strategies. There are 4 deletion models under which CRDTs updates do not break foreign key constraints.
 2. Uniqueness constraints other than the primary key. The only enforceably unique column in a table should be the primary key. Other columns may be indices but they may not be unique.
    1. TODO: discuss this in much more detail.
-
 
 # Architecture
 

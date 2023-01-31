@@ -1,11 +1,6 @@
 import { Changeset, Config, Version } from "@vlcn.io/client-server-common";
-import { resolve } from "import-meta-resolve";
 import * as fs from "fs";
-import {
-  validate as uuidValidate,
-  parse as uuidParse,
-  stringify as uuidStringify,
-} from "uuid";
+import { validate as uuidValidate, stringify as uuidStringify } from "uuid";
 
 import { Database } from "better-sqlite3";
 import SQLiteDB from "better-sqlite3";
@@ -14,8 +9,7 @@ import logger from "./logger.js";
 import contextStore from "./contextStore.js";
 
 type SiteIdStr = string;
-
-const modulePath = await resolve("@vlcn.io/crsqlite", import.meta.url);
+import { extensionPath } from "@vlcn.io/crsqlite";
 
 const activeDBs = new Map<SiteIdStr, WeakRef<DB>>();
 const finalizationRegistry = new FinalizationRegistry((siteId: SiteIdStr) => {
@@ -47,7 +41,7 @@ class DB {
       this.#bootstrapSiteId();
     }
 
-    this.#db.loadExtension(new URL(modulePath).pathname);
+    this.#db.loadExtension(extensionPath);
     if (create) {
       this.#applySchema(create.schemaName);
     }

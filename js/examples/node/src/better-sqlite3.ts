@@ -1,14 +1,13 @@
-import { resolve } from "import-meta-resolve";
 // @ts-ignore
 import Database from "better-sqlite3";
 import { randomUUID } from "crypto";
-const modulePath = await resolve("@vlcn.io/crsqlite", import.meta.url);
+import { extensionPath } from "@vlcn.io/crsqlite";
 
 const dbA = new Database(":memory:");
 const dbB = new Database(":memory:");
 
-dbA.loadExtension(new URL(modulePath).pathname);
-dbB.loadExtension(new URL(modulePath).pathname);
+dbA.loadExtension(extensionPath);
+dbB.loadExtension(extensionPath);
 
 const dbs = [dbA, dbB] as const;
 

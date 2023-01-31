@@ -97,27 +97,27 @@ ubsan: clean $(TARGET_TEST)
 fuzz: $(TARGET_FUZZ)
 	$(prefix)/fuzz
 
-rs_lib_dbg_static = ../rs/bundle/target/debug/libcrsql_bundle.a
-rs_lib_static = ../rs/bundle/target/release/libcrsql_bundle.a
+rs_lib_dbg_static = ./rs/bundle/target/debug/libcrsql_bundle.a
+rs_lib_static_loadable = ./rs/bundle/target/release/libcrsql_bundle.a
 
 $(rs_lib_dbg_static): FORCE
-	cd ../rs/bundle && $(rustflags_static) cargo build --features omit_load_extension $(rs_build_flags)
+	cd ./rs/bundle && $(rustflags_static) cargo build --features omit_load_extension $(rs_build_flags)
 
-$(rs_lib_static): FORCE
-	cd ../rs/bundle && $(rustflags_static) cargo build --release --features omit_load_extension $(rs_build_flags)
+$(rs_lib_static_loadable): FORCE
+	cd ./rs/bundle && $(rustflags_static) cargo build --release $(rs_build_flags)
 
 $(rs_lib_dbg_dynamic): FORCE
-	cd ../rs/bundle && RUSTFLAGS="-C link-args=-lc" cargo rustc --crate-type cdylib
+	cd ./rs/bundle && RUSTFLAGS="-C link-args=-lc" cargo rustc --crate-type cdylib
 
 $(rs_lib_dynamic): FORCE
-	cd ../rs/bundle && RUSTFLAGS="-C link-args=-lc" cargo rustc --crate-type cdylib --release
+	cd ./rs/bundle && RUSTFLAGS="-C link-args=-lc" cargo rustc --crate-type cdylib --release
 
 # Build the loadable extension.
-$(TARGET_LOADABLE): $(prefix) $(ext_files)
+$(TARGET_LOADABLE): $(prefix) $(ext_files) $(rs_lib_static_loadable)
 	$(CC) -O2 -I./src/ -I./src/sqlite \
 	$(LOADABLE_CFLAGS) \
 	$(DEFINE_SQLITE_PATH) \
-	$(ext_files) -o $@
+	$(ext_files) $(rs_lib_static_loadable) -o $@
 
 # Build a SQLite CLI that pre-loads cr-sqlite.
 # Useful for debugging.
@@ -132,8 +132,8 @@ $(TARGET_SQLITE3): $(prefix) $(TARGET_SQLITE3_EXTRA_C) src/sqlite/shell.c $(ext_
 	$(LDLIBS) -o $@
 
 # Build a normal SQLite CLI that does not include cr-sqlite.
-# cr-sqlite can be laoded in via `load_extension`
-# useful for debugging.
+# cr-sqlite can be laoded in via the `.load` pragma.
+# Useful for debugging.
 $(TARGET_SQLITE3_VANILLA): $(prefix) src/sqlite/shell.c
 	$(CC) -g \
 	$(DEFINE_SQLITE_PATH) \

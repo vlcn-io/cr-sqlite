@@ -61,6 +61,7 @@
   },
   'targets': [
     {
+      'type': 'shared_library',
       'target_name': 'crsqlite',
       'sources': [
         './src/crsqlite.c',
@@ -73,11 +74,24 @@
         './src/changes-vtab-write.c',
         './src/ext-data.c',
         './src/get-table.c',
-        './src/seen-peers.c',
+        './src/seen-peers.c'
+      ],
+      'libraries': [
+        '-L../rs/bundle/target/release',
+        '-lcrsql_bundle'
       ],
       'include_dirs': [
         './src',
         './src/sqlite',
+      ],
+      'actions': [
+        {
+          'action_name': 'build_rust',
+          'message': 'Building Rust Dependencies...',
+          'inputs': ['./rs'],
+          'outputs': ['./rs/bundle/target/release/libcrsql_bundle.a'],
+          'action': ['eval', 'cd ./rs/bundle && cargo +nightly build --release && cd ../..'],
+        },
       ],
       'cflags': ['-std=c99 -fPIC -shared'],
     },

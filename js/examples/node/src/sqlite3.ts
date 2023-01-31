@@ -1,12 +1,9 @@
 // @ts-ignore
-import sqlite3 from 'sqlite3';
-import {resolve} from 'import-meta-resolve';
-const modulePath = new URL(
-  await resolve('@vlcn.io/crsqlite', import.meta.url)
-).pathname;
+import sqlite3 from "sqlite3";
+import { extensionPath } from "@vlcn.io/crsqlite";
 
-const db = new sqlite3.Database(':memory:');
-db.loadExtension(modulePath, (e: any) => {
+const db = new sqlite3.Database(":memory:");
+db.loadExtension(extensionPath, (e: any) => {
   db.get("select crsql_dbversion()", (err: any, row: any) => {
     console.log(row);
   });

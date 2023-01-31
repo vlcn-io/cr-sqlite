@@ -513,6 +513,9 @@ static void rollbackHook(void *pUserData) {
   pExtData->dbVersion = -1;
 }
 
+int sqlite3_crsqlrustbundle_init(sqlite3 *db, char **pzErrMsg,
+                                 const sqlite3_api_routines *pApi);
+
 #ifdef _WIN32
 __declspec(dllexport)
 #endif
@@ -613,6 +616,7 @@ __declspec(dllexport)
     // it?
     sqlite3_commit_hook(db, commitHook, pExtData);
     sqlite3_rollback_hook(db, rollbackHook, pExtData);
+    rc = sqlite3_crsqlrustbundle_init(db, pzErrMsg, pApi);
   }
 
   return rc;

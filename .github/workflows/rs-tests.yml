@@ -29,10 +29,10 @@ jobs:
 
       - name: Test Automigrate
         run: |
-          cd rs/automigrate-core
+          cd core/rs/automigrate-core
           cargo test
 
       - name: Test Fractindex
         run: |
-          cd rs/fractindex-core
+          cd core/rs/fractindex-core
           cargo test

@@ -7,11 +7,9 @@
     "type": "git",
     "url": "git://github.com/vlcn-io/cr-sqlite"
   },
-  "main": "build/Release/crsqlite.node",
-  "files": [
-    "binding.gyp",
-    "src/**"
-  ],
+  "type": "module",
+  "main": "nodejs-helper.js",
+  "types": "nodejs-helper.d.ts",
   "dependencies": {
     "bindings": "^1.5.0",
     "prebuild-install": "^7.1.0"

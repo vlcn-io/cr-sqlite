@@ -7,6 +7,15 @@
     "type": "git",
     "url": "git://github.com/vlcn-io/cr-sqlite"
   },
+  "files": [
+    "src/**",
+    "binding.gyp",
+    "rs/**/*.rs",
+    "rs/**/*.toml",
+    "rs/**/*.lock",
+    "nodejs-helper.d.ts",
+    "nodejs-helper.js"
+  ],
   "type": "module",
   "main": "nodejs-helper.js",
   "types": "nodejs-helper.d.ts",

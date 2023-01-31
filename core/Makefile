@@ -133,8 +133,8 @@ $(TARGET_SQLITE3): $(prefix) $(TARGET_SQLITE3_EXTRA_C) src/sqlite/shell.c $(ext_
 	$(LDLIBS) -o $@
 
 # Build a normal SQLite CLI that does not include cr-sqlite.
-# cr-sqlite can be laoded in via `load_extension`
-# useful for debugging.
+# cr-sqlite can be laoded in via the `.load` pragma.
+# Useful for debugging.
 $(TARGET_SQLITE3_VANILLA): $(prefix) src/sqlite/shell.c
 	$(CC) -g \
 	$(DEFINE_SQLITE_PATH) \

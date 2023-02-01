@@ -2,7 +2,7 @@
   "name": "@vlcn.io/examples-peer-server",
   "private": true,
   "type": "module",
-  "version": "0.6.1",
+  "version": "0.6.2-next.0",
   "scripts": {
     "start": "node src/server.js"
   },

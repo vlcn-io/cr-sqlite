@@ -139,6 +139,13 @@ Examples apps that use `cr-sqlite` and have a networking layer (albeit a dumb on
 
 # Building
 
+Until we have a nix flake, you'll need to install Rust and the nightly toolchain.
+
+- Installing Rust: https://www.rust-lang.org/tools/install
+- Adding the nightly toolchain: `rustup toolchain install nightly`
+
+If you're building on windows: `rustup toolchain install nightly-x86_64-pc-windows-gnu`
+
 ## [Run Time Loadable Extension](https://www.sqlite.org/loadext.htmla)
 
 Instructions on building a native library that can be loaded into SQLite in non-wasm environments.
@@ -179,11 +186,21 @@ pnpm test
 
 This will run all tests across native, js & python packages.
 
+> [pnpm](https://pnpm.io/), not npm.
+
 ## WASM
 
-Run `pnpm build` from the root directory.
+Run `pnpm build` from the root directory. A WASM build for the browser will be available in:
 
-> [pnpm](https://pnpm.io/), not npm.
+- Official port: `js/browser/crsqlite-wasm`
+- wa-sqlite port: `js/browser/wa-crsqlite`
+
+# JS APIs
+
+JS APIs for using `cr-sqlite` in the browser are not yet documented. You can however see examples of them here:
+
+- [Observable Notebook](https://observablehq.com/@tantaman/cr-sqlite-basic-setup)
+- https://github.com/vlcn-io/live-examples
 
 # Prior Art
 
@@ -231,9 +248,8 @@ These projects helped improve my understanding of CRDTs on this journey --
 `crsqlite` currently does not support:
 
 1. Foreign key cosntraints. You can still have foreign keys (i.e. a column with an id of another row), but they can't be enforced by the db.
-   1. Foreign key constraints will eventually be supported as we enable more deletion strategies. There are 4 deletion models under which CRDTs updates do not break foreign key constraints.
+   1. Enforced foreign key constraints will eventually be supported as we enable more deletion strategies. There are 4 deletion models under which CRDT updates do not break foreign key constraints.
 2. Uniqueness constraints other than the primary key. The only enforceably unique column in a table should be the primary key. Other columns may be indices but they may not be unique.
-   1. TODO: discuss this in much more detail.
 
 # Architecture
 

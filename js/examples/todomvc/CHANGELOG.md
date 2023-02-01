@@ -1,5 +1,23 @@
 # @vlcn.io/todomvc
 
+## 0.7.3-next.1
+
+### Patch Changes
+
+- @vlcn.io/server-websocket@0.6.3-next.1
+
+## 0.7.3-next.0
+
+### Patch Changes
+
+- fractional indexing inclusion
+- Updated dependencies
+  - @vlcn.io/wa-crsqlite@0.7.3-next.0
+  - @vlcn.io/react@0.7.3-next.0
+  - @vlcn.io/rx-tbl@0.6.2-next.0
+  - @vlcn.io/client-websocket@0.6.3-next.0
+  - @vlcn.io/server-websocket@0.6.3-next.0
+
 ## 0.7.2
 
 ### Patch Changes

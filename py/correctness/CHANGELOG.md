@@ -1,5 +1,11 @@
 # @vlcn.io/py-correctness
 
+## 0.6.2-next.0
+
+### Patch Changes
+
+- fractional indexing inclusion
+
 ## 0.6.1
 
 ### Patch Changes

@@ -1,5 +1,20 @@
 # @vlcn.io/node-tests
 
+## 0.6.2-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/crsqlite@0.7.2-next.1
+
+## 0.6.2-next.0
+
+### Patch Changes
+
+- fractional indexing inclusion
+- Updated dependencies
+  - @vlcn.io/crsqlite@0.7.2-next.0
+
 ## 0.6.1
 
 ### Patch Changes

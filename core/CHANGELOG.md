@@ -1,5 +1,11 @@
 # @vlcn.io/crsqlite
 
+## 0.7.2-next.1
+
+### Patch Changes
+
+- fixup what is packed
+
 ## 0.7.2-next.0
 
 ### Patch Changes

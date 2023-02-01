@@ -29,6 +29,7 @@
     "@vlcn.io/py-correctness": "0.6.1"
   },
   "changesets": [
-    "many-plants-prove"
+    "many-plants-prove",
+    "tasty-carpets-approve"
   ]
 }

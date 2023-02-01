@@ -1,5 +1,11 @@
 # @vlcn.io/todomvc
 
+## 0.7.3-next.1
+
+### Patch Changes
+
+- @vlcn.io/server-websocket@0.6.3-next.1
+
 ## 0.7.3-next.0
 
 ### Patch Changes

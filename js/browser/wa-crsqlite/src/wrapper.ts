@@ -16,6 +16,16 @@ function log(...data: any[]) {
   }
 }
 
+const stmtFinalizer = new Map<number, WeakRef<StmtAsync>>();
+const stmtFinalizationRegistry = new FinalizationRegistry((base: number) => {
+  const ref = stmtFinalizer.get(base);
+  const stmt = ref?.deref();
+  if (stmt) {
+    stmt.finalize();
+  }
+  stmtFinalizer.delete(base);
+});
+
 /**
  * Although wa-sqlite exposes an async interface, hitting
  * it concurrently deadlocks it.
@@ -216,6 +226,12 @@ export class DB implements DBAsync {
   }
 
   close(): Promise<any> {
+    for (const ref of stmtFinalizer.values()) {
+      const stmt = ref.deref();
+      if (stmt) {
+        stmt.finalize();
+      }
+    }
     return this.exec("SELECT crsql_finalize()").then(() => {
       this.#closed = true;
       return serialize(this.cache, undefined, () => this.api.close(this.db));
@@ -325,13 +341,17 @@ export class DB implements DBAsync {
 class Stmt implements StmtAsync {
   // TOOD: use mode in get/all!
   private mode: "a" | "o" = "o";
+  private finalized = false;
   constructor(
     private cache: Map<string, Promise<any>>,
     private api: SQLiteAPI,
     private base: number,
     private str: number,
     private sql: string
-  ) {}
+  ) {
+    stmtFinalizer.set(base, new WeakRef(this));
+    stmtFinalizationRegistry.register(this, base);
+  }
 
   run(...bindArgs: any[]): Promise<any> {
     return serialize(
@@ -424,9 +444,15 @@ class Stmt implements StmtAsync {
     return this;
   }
 
+  /**
+   * Release the resources associated with the prepared statement.
+   * If you fail to call this it will automatically be called when the statement is garbage collected.
+   */
   finalize(): void {
+    if (this.finalized) return;
     this.api.str_finish(this.str);
     this.api.finalize(this.base);
+    this.finalized = true;
   }
 }
 

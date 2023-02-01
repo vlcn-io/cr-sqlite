@@ -16,16 +16,6 @@ function log(...data: any[]) {
   }
 }
 
-const stmtFinalizer = new Map<number, WeakRef<StmtAsync>>();
-const stmtFinalizationRegistry = new FinalizationRegistry((base: number) => {
-  const ref = stmtFinalizer.get(base);
-  const stmt = ref?.deref();
-  if (stmt) {
-    stmt.finalize();
-  }
-  stmtFinalizer.delete(base);
-});
-
 /**
  * Although wa-sqlite exposes an async interface, hitting
  * it concurrently deadlocks it.
@@ -117,6 +107,16 @@ function computeCacheKey(
 }
 
 export class DB implements DBAsync {
+  private stmtFinalizer = new Map<number, WeakRef<Stmt>>();
+  private tmtFinalizationRegistry = new FinalizationRegistry((base: number) => {
+    const ref = this.stmtFinalizer.get(base);
+    const stmt = ref?.deref();
+    if (stmt) {
+      stmt.finalize();
+    }
+    this.stmtFinalizer.delete(base);
+  });
+
   private cache = new Map<string, Promise<any>>();
   #updateHooks: Set<
     (type: UpdateType, dbName: string, tblName: string, rowid: bigint) => void
@@ -221,12 +221,23 @@ export class DB implements DBAsync {
         throw new Error(`Could not prepare ${sql}`);
       }
 
-      return new Stmt(this.cache, this.api, prepared.stmt, str, sql);
+      return new Stmt(
+        this.stmtFinalizer,
+        this.tmtFinalizationRegistry,
+        this.cache,
+        this.api,
+        prepared.stmt,
+        str,
+        sql
+      );
     });
   }
 
+  /**
+   * Close the database and finalize any prepared statements that were not freed for the given DB.
+   */
   close(): Promise<any> {
-    for (const ref of stmtFinalizer.values()) {
+    for (const ref of this.stmtFinalizer.values()) {
       const stmt = ref.deref();
       if (stmt) {
         stmt.finalize();
@@ -343,6 +354,8 @@ class Stmt implements StmtAsync {
   private mode: "a" | "o" = "o";
   private finalized = false;
   constructor(
+    stmtFinalizer: Map<number, WeakRef<Stmt>>,
+    stmtFinalizationRegistry: FinalizationRegistry<number>,
     private cache: Map<string, Promise<any>>,
     private api: SQLiteAPI,
     private base: number,

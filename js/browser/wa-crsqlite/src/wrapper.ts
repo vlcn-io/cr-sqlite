@@ -349,7 +349,7 @@ export class DB implements DBAsync {
 }
 
 // TOOD: maybe lazily reset only if stmt is reused
-class Stmt implements StmtAsync {
+export class Stmt implements StmtAsync {
   // TOOD: use mode in get/all!
   private mode: "a" | "o" = "o";
   private finalized = false;

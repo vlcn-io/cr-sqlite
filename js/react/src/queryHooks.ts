@@ -20,12 +20,15 @@ const FETCHING: QueryData<any> = Object.freeze({
 // const log = console.log.bind(console);
 const log = (...args: any) => {};
 
-export function useAsyncQuery<T extends {}>(
+type SQL<R> = string;
+
+export function useAsyncQuery<R, M = R[]>(
   ctx: CtxAsync,
-  query: string,
-  bindings?: []
-): QueryData<T> {
-  const stateMachine = useRef<AsyncResultStateMachine<T> | null>(null);
+  query: SQL<R>,
+  bindings?: [],
+  postProcess?: (rows: R[]) => M
+): QueryData<R> {
+  const stateMachine = useRef<AsyncResultStateMachine<R> | null>(null);
   if (stateMachine.current == null) {
     stateMachine.current = new AsyncResultStateMachine(ctx, query, bindings);
   }
@@ -43,13 +46,13 @@ export function useAsyncQuery<T extends {}>(
     stateMachine.current?.respondToQueryChange(query);
   }, [query]);
 
-  return useSyncExternalStore<QueryData<T>>(
+  return useSyncExternalStore<QueryData<R>>(
     stateMachine.current.subscribeReactInternals,
     stateMachine.current.getSnapshot
   );
 }
 
-class AsyncResultStateMachine<T extends {}> {
+class AsyncResultStateMachine<T> {
   private pendingFetchPromise: Promise<any> | null = null;
   private pendingPreparePromise: Promise<StmtAsync | null> | null = null;
   private stmt: StmtAsync | null = null;

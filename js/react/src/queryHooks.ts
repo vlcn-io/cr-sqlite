@@ -20,17 +20,27 @@ const FETCHING: QueryData<any> = Object.freeze({
 // const log = console.log.bind(console);
 const log = (...args: any) => {};
 
-type SQL<R> = string;
+export type SQL<R> = string;
 
-export function useAsyncQuery<R, M = R[]>(
+// TODO: - useRangeQuery
+// TODO: - usePointQuery
+// how can usePointQuery no the point?
+// - must be `o` mode and must provide a `_rowid_` column?
+
+export function useAsyncQuery<R, M = R>(
   ctx: CtxAsync,
   query: SQL<R>,
   bindings?: [],
   postProcess?: (rows: R[]) => M
-): QueryData<R> {
-  const stateMachine = useRef<AsyncResultStateMachine<R> | null>(null);
+): QueryData<M> {
+  const stateMachine = useRef<AsyncResultStateMachine<R, M> | null>(null);
   if (stateMachine.current == null) {
-    stateMachine.current = new AsyncResultStateMachine(ctx, query, bindings);
+    stateMachine.current = new AsyncResultStateMachine(
+      ctx,
+      query,
+      bindings,
+      postProcess
+    );
   }
 
   useEffect(
@@ -46,26 +56,32 @@ export function useAsyncQuery<R, M = R[]>(
     stateMachine.current?.respondToQueryChange(query);
   }, [query]);
 
-  return useSyncExternalStore<QueryData<R>>(
+  return useSyncExternalStore<QueryData<M>>(
     stateMachine.current.subscribeReactInternals,
     stateMachine.current.getSnapshot
   );
 }
 
-class AsyncResultStateMachine<T> {
+class AsyncResultStateMachine<T, M = readonly T[]> {
   private pendingFetchPromise: Promise<any> | null = null;
   private pendingPreparePromise: Promise<StmtAsync | null> | null = null;
   private stmt: StmtAsync | null = null;
   private queriedTables: string[] | null = null;
-  private data: QueryData<T> | null = null;
+  private data: QueryData<M> | null = null;
   private reactInternals: null | (() => void) = null;
-  private error?: QueryData<T>;
+  private error?: QueryData<M>;
   private disposed: boolean = false;
+  private readonly disposedState = {
+    loading: false,
+    data: EMPTY_ARRAY,
+    error: new Error("useAsyncQuery was disposed"),
+  } as const;
 
   constructor(
     private ctx: CtxAsync,
     private query: string,
-    private bindings: readonly any[] | undefined
+    private bindings: readonly any[] | undefined,
+    private postProcess?: (rows: T[]) => M
   ) {}
 
   subscribeReactInternals = (internals: () => void): (() => void) => {
@@ -101,6 +117,8 @@ class AsyncResultStateMachine<T> {
     this.getSnapshot(true);
   };
 
+  // TODO: the change event should be forwarded too.
+  // So we can subscribe to adds vs deletes vs updates vs all
   private respondToDatabaseChange = (changedTbls: Set<string> | null) => {
     if (this.disposed) {
       return;
@@ -131,15 +149,11 @@ class AsyncResultStateMachine<T> {
    * - bindings
    * - underlying db state
    */
-  getSnapshot = (rebind: boolean = false): QueryData<T> => {
+  getSnapshot = (rebind: boolean = false): QueryData<M> => {
     log("get snapshot");
     if (this.disposed) {
       log("disposed");
-      return {
-        loading: false,
-        data: EMPTY_ARRAY,
-        error: new Error("useAsyncQuery was disposed"),
-      };
+      return this.disposedState;
     }
     if (this.data != null) {
       log("data");
@@ -222,7 +236,7 @@ class AsyncResultStateMachine<T> {
 
             this.data = {
               loading: false,
-              data,
+              data: (this.postProcess ? this.postProcess(data) : data) as any,
               error: undefined,
             };
             this.reactInternals!();
@@ -230,7 +244,11 @@ class AsyncResultStateMachine<T> {
           (error: Error) => {
             this.error = {
               loading: false,
-              data: this.data?.data || EMPTY_ARRAY,
+              data:
+                this.data?.data ||
+                ((this.postProcess
+                  ? this.postProcess(EMPTY_ARRAY as any)
+                  : EMPTY_ARRAY) as any),
               error,
             };
             this.reactInternals!();
@@ -282,4 +300,24 @@ function usedTables(db: DBAsync, query: string): Promise<string[]> {
     .then((rows) => {
       return rows.map((r) => r[0]);
     });
+}
+
+export function first<T>(data: T[]): T | undefined {
+  if (!data) {
+    return undefined;
+  }
+  return data[0];
+}
+
+export function firstPick<T>(data: any[]): T | undefined {
+  const d = data[0];
+  if (d == null) {
+    return undefined;
+  }
+
+  return d[Object.keys(d)[0]];
+}
+
+export function pick<T extends any[]>(data: T[]): T[0][] {
+  return data.map((d) => d[Object.keys(d)[0] as any]);
 }

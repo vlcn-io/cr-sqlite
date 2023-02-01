@@ -1,5 +1,16 @@
 # @vlcn.io/sync-client
 
+## 0.6.3-next.1
+
+### Patch Changes
+
+- auto-release prepared statements
+- Updated dependencies
+  - @vlcn.io/rx-tbl@0.6.2-next.1
+  - @vlcn.io/client-core@0.6.3-next.1
+  - @vlcn.io/client-server-common@0.3.3-next.1
+  - @vlcn.io/xplat-api@0.6.2-next.1
+
 ## 0.6.3-next.0
 
 ### Patch Changes

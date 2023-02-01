@@ -1,5 +1,13 @@
 # @vlcn.io/node-tests
 
+## 0.6.2-next.2
+
+### Patch Changes
+
+- auto-release prepared statements
+- Updated dependencies
+  - @vlcn.io/crsqlite@0.7.2-next.2
+
 ## 0.6.2-next.1
 
 ### Patch Changes

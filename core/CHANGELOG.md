@@ -1,5 +1,11 @@
 # @vlcn.io/crsqlite
 
+## 0.7.2-next.2
+
+### Patch Changes
+
+- auto-release prepared statements
+
 ## 0.7.2-next.1
 
 ### Patch Changes

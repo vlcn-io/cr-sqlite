@@ -1,5 +1,17 @@
 # @vlcn.io/todomvc
 
+## 0.7.3-next.2
+
+### Patch Changes
+
+- auto-release prepared statements
+- Updated dependencies
+  - @vlcn.io/wa-crsqlite@0.7.3-next.1
+  - @vlcn.io/react@0.7.3-next.1
+  - @vlcn.io/rx-tbl@0.6.2-next.1
+  - @vlcn.io/client-websocket@0.6.3-next.1
+  - @vlcn.io/server-websocket@0.6.3-next.2
+
 ## 0.7.3-next.1
 
 ### Patch Changes

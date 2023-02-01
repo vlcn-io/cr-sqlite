@@ -1,5 +1,14 @@
 # @vlcn.io/server-core
 
+## 0.6.3-next.2
+
+### Patch Changes
+
+- auto-release prepared statements
+- Updated dependencies
+  - @vlcn.io/crsqlite@0.7.2-next.2
+  - @vlcn.io/client-server-common@0.3.3-next.1
+
 ## 0.6.3-next.1
 
 ### Patch Changes

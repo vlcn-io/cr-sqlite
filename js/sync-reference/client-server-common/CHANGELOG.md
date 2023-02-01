@@ -1,5 +1,11 @@
 # @vlcn.io/client-server-common
 
+## 0.3.3-next.1
+
+### Patch Changes
+
+- auto-release prepared statements
+
 ## 0.3.3-next.0
 
 ### Patch Changes

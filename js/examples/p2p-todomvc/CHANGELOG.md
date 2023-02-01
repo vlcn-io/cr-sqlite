@@ -1,5 +1,16 @@
 # @vlcn.io/crsqlite-p2p-todomvc
 
+## 0.7.4-next.1
+
+### Patch Changes
+
+- auto-release prepared statements
+- Updated dependencies
+  - @vlcn.io/wa-crsqlite@0.7.3-next.1
+  - @vlcn.io/react@0.7.3-next.1
+  - @vlcn.io/rx-tbl@0.6.2-next.1
+  - @vlcn.io/sync-p2p@0.6.3-next.1
+
 ## 0.7.4-next.0
 
 ### Patch Changes

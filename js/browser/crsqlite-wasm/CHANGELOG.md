@@ -1,5 +1,13 @@
 # @vlcn.io/crsqlite-wasm
 
+## 0.6.2-next.1
+
+### Patch Changes
+
+- auto-release prepared statements
+- Updated dependencies
+  - @vlcn.io/xplat-api@0.6.2-next.1
+
 ## 0.6.2-next.0
 
 ### Patch Changes

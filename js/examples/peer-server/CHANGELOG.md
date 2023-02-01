@@ -1,5 +1,11 @@
 # @vlcn.io/examples-peer-server
 
+## 0.6.2-next.1
+
+### Patch Changes
+
+- auto-release prepared statements
+
 ## 0.6.2-next.0
 
 ### Patch Changes

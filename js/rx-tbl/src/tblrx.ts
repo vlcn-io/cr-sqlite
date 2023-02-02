@@ -23,19 +23,18 @@ export class TblRx {
     string,
     Map<bigint, ((updates: UpdateType[]) => void)[]>
   >();
-  #rangeListeners = new Map<
-    string,
-    Map<UpdateType, ((updates: UpdateType[]) => void)[]>
-  >();
+  #rangeListeners = new Map<string, ((updates: UpdateType[]) => void)[]>();
+  #arbitraryListeners = new Set<(updates: UpdateType[]) => void>();
 
   // If a listener is subscribed to many events we'll collapse them into one
   // TODO: test that `onUpdate` is not spread across ticks of the event loop.
 
   #pendingNotification: [UpdateType, string, bigint][] | null = null;
-  // TODO: this BC should be pinned to DB-ID in case many DBs are open
-  #bc = new BroadcastChannel("@vlcn.io/rx-tbl");
+  #bc: BroadcastChannel;
 
   constructor(private readonly db: DB | DBAsync) {
+    // should be dbid.
+    this.#bc = new BroadcastChannel("@vlcn.io/rx-tbl");
     this.#bc.onmessage = (msg) => {
       this.#notifyListeners(msg.data);
     };
@@ -50,35 +49,50 @@ export class TblRx {
   }
 
   #notifyListeners(data: [UpdateType, string, bigint][]) {
-    // go thru range listeners
-    // and point listeners
-    // collect them in a set to de-dupe
-    // then call them
-    const toNotify = new Set<(updates: UpdateType[]) => void>();
+    // toNotify map exists to de-dupe listeners.
+    // If you register for many events you'll only get called once even if many
+    // of those events fire.
+    const toNotify = new Map<(updates: UpdateType[]) => void, UpdateType[]>();
     for (const [updateType, tbl, rowid] of data) {
-      const tblMap = this.#rangeListeners.get(tbl);
-      if (tblMap != null) {
-        const cbList = tblMap.get(updateType);
-        if (cbList != null) {
-          for (const cb of cbList) {
-            toNotify.add(cb);
+      const cbList = this.#rangeListeners.get(tbl);
+      if (cbList != null) {
+        for (const cb of cbList) {
+          let existing = toNotify.get(cb);
+          if (existing == null) {
+            existing = [];
+            toNotify.set(cb, existing);
+          }
+          if (existing.indexOf(updateType) === -1) {
+            existing.push(updateType);
           }
         }
       }
+
       const tblMap2 = this.#pointListeners.get(tbl);
       if (tblMap2 != null) {
         const cbList = tblMap2.get(rowid);
         if (cbList != null) {
           for (const cb of cbList) {
-            toNotify.add(cb);
+            let existing = toNotify.get(cb);
+            if (existing == null) {
+              existing = [];
+              toNotify.set(cb, existing);
+            }
+            if (existing.indexOf(updateType) === -1) {
+              existing.push(updateType);
+            }
           }
         }
       }
     }
 
-    // notify toNotify -- but we need the list of update types.
-    // point listeners on joined results...
-    // what rowid do we use? or do we select all rowids?
+    for (const l of this.#arbitraryListeners) {
+      toNotify.set(l, []);
+    }
+
+    for (const [cb, updates] of toNotify) {
+      cb(updates);
+    }
   }
 
   #preNotify(updateType: UpdateType, tbl: string, rowid: bigint) {
@@ -97,38 +111,22 @@ export class TblRx {
     });
   }
 
-  onRange(
-    tables: string[],
-    updateTypes: UpdateType[],
-    cb: (updates: UpdateType[]) => void
-  ) {
+  onRange(tables: string[], cb: (updates: UpdateType[]) => void) {
     for (const tbl of tables) {
-      for (const updateType of updateTypes) {
-        let tblMap = this.#rangeListeners.get(tbl);
-        if (tblMap == null) {
-          tblMap = new Map();
-          this.#rangeListeners.set(tbl, tblMap);
-        }
-        let cbList = tblMap.get(updateType);
-        if (cbList == null) {
-          cbList = [];
-          tblMap.set(updateType, cbList);
-        }
-        cbList.push(cb);
+      let cbList = this.#rangeListeners.get(tbl);
+      if (cbList == null) {
+        cbList = [];
+        this.#rangeListeners.set(tbl, cbList);
       }
+      cbList.push(cb);
     }
     return () => {
       for (const tbl of tables) {
-        for (const updateType of updateTypes) {
-          const tblMap = this.#rangeListeners.get(tbl);
-          if (tblMap != null) {
-            const cbList = tblMap.get(updateType);
-            if (cbList != null) {
-              const idx = cbList.indexOf(cb);
-              if (idx !== -1) {
-                cbList.splice(idx, 1);
-              }
-            }
+        const cbList = this.#rangeListeners.get(tbl);
+        if (cbList != null) {
+          const idx = cbList.indexOf(cb);
+          if (idx !== -1) {
+            cbList.splice(idx, 1);
           }
         }
       }
@@ -164,9 +162,17 @@ export class TblRx {
     };
   }
 
+  onAny(cb: () => void) {
+    this.#arbitraryListeners.add(cb);
+    return () => {
+      this.#arbitraryListeners.delete(cb);
+    };
+  }
+
   dispose() {
     this.#rangeListeners.clear();
     this.#pointListeners.clear();
+    this.#arbitraryListeners.clear();
     this.#bc.close();
 
     // This isn't the most convenient thing that it closes the db

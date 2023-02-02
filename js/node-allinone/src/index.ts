@@ -12,10 +12,15 @@ const api = {
 export class DB implements IDB {
   private db: Database;
   private open: boolean;
+  public readonly siteid: string;
   constructor(private filename: string) {
     this.db = new Database(filename);
     this.db.loadExtension(extensionPath);
     this.open = true;
+    this.siteid = this.db
+      .prepare("SELECT quote(crsql_siteid());")
+      .get()[0]
+      .replace(/'/g, "");
   }
 
   execMany(sql: string[]): void {

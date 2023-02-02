@@ -1,6 +1,12 @@
 import { useEffect, useRef, useSyncExternalStore } from "react";
-import { DBAsync, StmtAsync } from "@vlcn.io/xplat-api";
+import {
+  DBAsync,
+  StmtAsync,
+  UPDATE_TYPE,
+  UpdateType,
+} from "@vlcn.io/xplat-api";
 import { CtxAsync } from "./context.js";
+import { RowID } from "./rowid.js";
 
 export type QueryData<T> = {
   readonly loading: boolean;
@@ -15,23 +21,43 @@ const FETCHING: QueryData<any> = Object.freeze({
 });
 
 // TODO: two useQuery variants?
-// ony for async db and one for sync db?
+// one for async db and one for sync db?
 
 // const log = console.log.bind(console);
 const log = (...args: any) => {};
 
 export type SQL<R> = string;
 
-// TODO: - useRangeQuery
-// TODO: - usePointQuery
-// how can usePointQuery no the point?
-// - must be `o` mode and must provide a `_rowid_` column?
+const allUpdateTypes = [
+  UPDATE_TYPE.INSERT,
+  UPDATE_TYPE.UPDATE,
+  UPDATE_TYPE.DELETE,
+];
 
-export function useAsyncQuery<R, M = R>(
+export function usePointQuery<R, M = R>(
   ctx: CtxAsync,
+  _rowid_: RowID<R>,
   query: SQL<R>,
   bindings?: [],
   postProcess?: (rows: R[]) => M
+): QueryData<M> {
+  return useQuery(
+    ctx,
+    query,
+    bindings,
+    postProcess,
+    [UPDATE_TYPE.UPDATE, UPDATE_TYPE.DELETE],
+    _rowid_
+  );
+}
+
+export function useQuery<R, M = R>(
+  ctx: CtxAsync,
+  query: SQL<R>,
+  bindings?: [],
+  postProcess?: (rows: R[]) => M,
+  updateTypes: UpdateType[] = allUpdateTypes,
+  _rowid_?: RowID<R>
 ): QueryData<M> {
   const stateMachine = useRef<AsyncResultStateMachine<R, M> | null>(null);
   if (stateMachine.current == null) {
@@ -39,7 +65,9 @@ export function useAsyncQuery<R, M = R>(
       ctx,
       query,
       bindings,
-      postProcess
+      postProcess,
+      updateTypes,
+      _rowid_
     );
   }
 
@@ -49,9 +77,14 @@ export function useAsyncQuery<R, M = R>(
     },
     []
   );
-  useEffect(() => {
-    stateMachine.current?.respondToBindingsChange(bindings || EMPTY_ARRAY);
-  }, bindings || EMPTY_ARRAY);
+  useEffect(
+    () => {
+      stateMachine.current?.respondToBindingsChange(bindings || EMPTY_ARRAY);
+    },
+    _rowid_ == null
+      ? bindings || EMPTY_ARRAY
+      : [...(bindings || EMPTY_ARRAY), _rowid_]
+  );
   useEffect(() => {
     stateMachine.current?.respondToQueryChange(query);
   }, [query]);
@@ -76,17 +109,29 @@ class AsyncResultStateMachine<T, M = readonly T[]> {
     data: EMPTY_ARRAY,
     error: new Error("useAsyncQuery was disposed"),
   } as const;
+  private dbSubscriptionDisposer: (() => void) | null;
 
   constructor(
     private ctx: CtxAsync,
     private query: string,
     private bindings: readonly any[] | undefined,
-    private postProcess?: (rows: T[]) => M
-  ) {}
+    private postProcess?: (rows: T[]) => M,
+    private updateTypes: UpdateType[] = allUpdateTypes,
+    private _rowid_?: bigint
+  ) {
+    this.dbSubscriptionDisposer = null;
+  }
 
   subscribeReactInternals = (internals: () => void): (() => void) => {
     this.reactInternals = internals;
-    return this.ctx.rx.on(this.respondToDatabaseChange);
+    return this.unsubscribeReactInternals;
+  };
+
+  unsubscribeReactInternals = () => {
+    if (this.dbSubscriptionDisposer) {
+      this.dbSubscriptionDisposer();
+      this.dbSubscriptionDisposer = null;
+    }
   };
 
   // TODO: warn the user if query changes too much
@@ -119,17 +164,13 @@ class AsyncResultStateMachine<T, M = readonly T[]> {
 
   // TODO: the change event should be forwarded too.
   // So we can subscribe to adds vs deletes vs updates vs all
-  private respondToDatabaseChange = (changedTbls: Set<string> | null) => {
+  private respondToDatabaseChange = (updates: UpdateType[]) => {
     if (this.disposed) {
       return;
     }
-    if (changedTbls != null) {
-      if (
-        this.queriedTables == null ||
-        !this.queriedTables.some((t) => changedTbls.has(t))
-      ) {
-        return;
-      }
+
+    if (!updates.some((u) => this.updateTypes.includes(u))) {
+      return;
     }
 
     this.pendingFetchPromise = null;
@@ -198,6 +239,22 @@ class AsyncResultStateMachine<T, M = readonly T[]> {
 
         this.stmt = stmt;
         this.queriedTables = queriedTables;
+        this.unsubscribeReactInternals();
+        if (this._rowid_ != null) {
+          if (this.queriedTables.length > 1) {
+            console.warn("usePointQuery should only be used on a single table");
+          }
+          this.dbSubscriptionDisposer = this.ctx.rx.onPoint(
+            this.queriedTables[0],
+            this._rowid_,
+            this.respondToDatabaseChange
+          );
+        } else {
+          this.dbSubscriptionDisposer = this.ctx.rx.onRange(
+            queriedTables,
+            this.respondToDatabaseChange
+          );
+        }
         return stmt;
       }
     );
@@ -285,7 +342,7 @@ class AsyncResultStateMachine<T, M = readonly T[]> {
     this.disposed = true;
     this.stmt?.finalize();
     this.stmt = null;
-    this.ctx.rx.off(this.respondToDatabaseChange);
+    this.unsubscribeReactInternals();
   }
 }
 

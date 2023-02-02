@@ -76,7 +76,13 @@ export class SQLite3 {
           SQLite.SQLITE_OPEN_URI,
         filename != null ? "idb-batch-atomic" : undefined
       )
-      .then((db) => new DB(this.base, db));
+      .then((db) => {
+        const ret = new DB(this.base, db);
+        return ret.execA("select quote(crsql_siteid());").then((siteid) => {
+          ret._setSiteid(siteid[0][0].replace(/'/g, ""));
+          return ret;
+        });
+      });
   }
 }
 
@@ -116,13 +122,26 @@ export class DB implements DBAsync {
     }
     this.stmtFinalizer.delete(base);
   });
+  #siteid: string | null = null;
 
   private cache = new Map<string, Promise<any>>();
   #updateHooks: Set<
     (type: UpdateType, dbName: string, tblName: string, rowid: bigint) => void
   > | null = null;
   #closed = false;
+
   constructor(public api: SQLiteAPI, public db: number) {}
+
+  get siteid(): string {
+    return this.#siteid!;
+  }
+
+  _setSiteid(siteid: string) {
+    if (this.#siteid) {
+      throw new Error("Site id already set");
+    }
+    this.#siteid = siteid;
+  }
 
   execMany(sql: string[]): Promise<any> {
     return serialize(this.cache, null, () =>

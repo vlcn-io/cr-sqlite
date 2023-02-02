@@ -1,4 +1,9 @@
-import { DBAsync, DB as DBSync } from "@vlcn.io/xplat-api";
+import {
+  DBAsync,
+  DB as DBSync,
+  UpdateType,
+  UPDATE_TYPE,
+} from "@vlcn.io/xplat-api";
 type DB = DBAsync | DBSync;
 import tblrx from "@vlcn.io/rx-tbl";
 
@@ -17,16 +22,16 @@ export const tests = {
     const db = await dbProvider();
     await createSimpleSchema(db);
     const rx = tblrx(db);
-    let notified = new Set<string>();
-    rx.on((tbls) => {
-      notified = tbls;
+    let notified: UpdateType[] = [];
+    rx.onRange(["foo"], (updateTypes: UpdateType[]) => {
+      notified = updateTypes;
     });
 
     await db.exec("INSERT INTO foo VALUES (1, 2)");
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    assert(notified.size == 1);
-    assert(notified.has("foo"));
+    assert(notified.length == 1);
+    assert(notified.includes(UPDATE_TYPE.INSERT));
 
     await db.close();
   },
@@ -38,20 +43,20 @@ export const tests = {
     const db = await dbProvider();
     await createSimpleSchema(db);
     const rx = tblrx(db);
-    let notified = new Set<string>();
-    rx.on((tbls) => {
+    let notified: UpdateType[] = [];
+    rx.onRange(["foo"], (tbls) => {
       notified = tbls;
     });
 
     await db.transaction(async () => {
       await db.exec("INSERT INTO foo VALUES (1, 2)");
       await new Promise((resolve) => setTimeout(resolve, 0));
-      assert(notified.size == 0);
+      assert(notified.length == 0);
     });
 
     await new Promise((resolve) => setTimeout(resolve, 0));
-    assert(notified.size == 1);
-    assert(notified.has("foo"));
+    assert(notified.length == 1);
+    assert(notified.includes(UPDATE_TYPE.INSERT));
 
     await db.close();
   },
@@ -66,7 +71,7 @@ export const tests = {
     const rx = await tblrx(db);
 
     let notified = false;
-    rx.on(() => {
+    rx.onRange(["foo"], () => {
       notified = true;
     });
 
@@ -96,7 +101,7 @@ export const tests = {
 
     let notified = false;
     // tbls must always be a set
-    rx.on((tbls: Set<string>) => {
+    rx.onRange([], () => {
       notified = true;
     });
   },
@@ -108,9 +113,13 @@ export const tests = {
     const db = await dbProvider();
     await createSimpleSchema(db);
     const rx = await tblrx(db);
-    let notified = new Set<string>();
-    rx.on((tbls) => {
-      notified = tbls;
+    let notifiedBar = false;
+    let notifiedBaz = false;
+    rx.onRange(["bar"], () => {
+      notifiedBar = true;
+    });
+    rx.onRange(["baz"], () => {
+      notifiedBaz = true;
     });
 
     await db.exec("CREATE TABLE bar (a, b)");
@@ -118,8 +127,8 @@ export const tests = {
 
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    assert(notified.size == 1);
-    assert(notified.has("bar"));
+    assert(notifiedBar);
+    assert(notifiedBaz == false);
   },
 
   "does not fatal for connections that have not loaded the rx extension": (
@@ -141,7 +150,7 @@ export const tests = {
     const rx = tblrx(db);
 
     let notified = false;
-    const disposer = rx.on(() => {
+    const disposer = rx.onRange(["foo"], () => {
       notified = true;
     });
 

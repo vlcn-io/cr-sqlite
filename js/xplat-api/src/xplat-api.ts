@@ -1,11 +1,19 @@
-export type UpdateType = 9 | 18 | 23;
-export const updateType = {
+export type DELETE = 9;
+export type INSERT = 18;
+export type UPDATE = 23;
+export type UpdateType = DELETE | INSERT | UPDATE;
+export const UPDATE_TYPE: {
+  readonly DELETE: DELETE;
+  readonly INSERT: INSERT;
+  readonly UPDATE: UPDATE;
+} = {
   DELETE: 9,
   INSERT: 18,
   UPDATE: 23,
-};
+} as const;
 
 export interface DB {
+  readonly siteid: string;
   execMany(sql: string[]): void;
   exec(sql: string, bind?: unknown[]): void;
   execO<T extends {}>(sql: string, bind?: unknown[]): T[];
@@ -27,6 +35,7 @@ export interface DB {
 }
 
 export type DBAsync = {
+  readonly siteid: string;
   execMany(sql: string[]): Promise<void>;
   exec(sql: string, bind?: unknown[]): Promise<void>;
   execO<T extends {}>(sql: string, bind?: unknown[]): Promise<T[]>;

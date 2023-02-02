@@ -31,7 +31,7 @@ export class DB {
   }
 
   onUpdate(cb: () => void) {
-    const ret = this.rx.on(cb);
+    const ret = this.rx.onAny(cb);
     this.dispoables.push(ret);
     return ret;
   }

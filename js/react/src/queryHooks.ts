@@ -11,7 +11,7 @@ import { RowID } from "./rowid.js";
 export type QueryData<T> = {
   readonly loading: boolean;
   readonly error?: Error;
-  readonly data: readonly T[];
+  readonly data: T;
 };
 
 const EMPTY_ARRAY: readonly any[] = Object.freeze([]);
@@ -38,7 +38,7 @@ export function usePointQuery<R, M = R>(
   ctx: CtxAsync,
   _rowid_: RowID<R>,
   query: SQL<R>,
-  bindings?: [],
+  bindings?: any[],
   postProcess?: (rows: R[]) => M
 ): QueryData<M> {
   return useQuery(
@@ -51,10 +51,22 @@ export function usePointQuery<R, M = R>(
   );
 }
 
-export function useQuery<R, M = R>(
+export function useRangeQuery<R, M = R[]>(
   ctx: CtxAsync,
   query: SQL<R>,
-  bindings?: [],
+  bindings?: any[],
+  postProcess?: (rows: R[]) => M
+) {
+  return useQuery(ctx, query, bindings, postProcess, [
+    UPDATE_TYPE.INSERT,
+    UPDATE_TYPE.DELETE,
+  ]);
+}
+
+export function useQuery<R, M = R[]>(
+  ctx: CtxAsync,
+  query: SQL<R>,
+  bindings?: any[],
   postProcess?: (rows: R[]) => M,
   updateTypes: UpdateType[] = allUpdateTypes,
   _rowid_?: RowID<R>
@@ -104,11 +116,7 @@ class AsyncResultStateMachine<T, M = readonly T[]> {
   private reactInternals: null | (() => void) = null;
   private error?: QueryData<M>;
   private disposed: boolean = false;
-  private readonly disposedState = {
-    loading: false,
-    data: EMPTY_ARRAY,
-    error: new Error("useAsyncQuery was disposed"),
-  } as const;
+  private readonly disposedState;
   private dbSubscriptionDisposer: (() => void) | null;
 
   constructor(
@@ -120,6 +128,13 @@ class AsyncResultStateMachine<T, M = readonly T[]> {
     private _rowid_?: bigint
   ) {
     this.dbSubscriptionDisposer = null;
+    this.disposedState = {
+      loading: false,
+      data: this.postProcess
+        ? this.postProcess(EMPTY_ARRAY as any)
+        : (EMPTY_ARRAY as any),
+      error: new Error("useAsyncQuery was disposed"),
+    } as const;
   }
 
   subscribeReactInternals = (internals: () => void): (() => void) => {
@@ -375,6 +390,6 @@ export function firstPick<T>(data: any[]): T | undefined {
   return d[Object.keys(d)[0]];
 }
 
-export function pick<T extends any[]>(data: T[]): T[0][] {
-  return data.map((d) => d[Object.keys(d)[0] as any]);
+export function pick<T extends any, R>(data: T[]): R[] {
+  return data.map((d: any) => d[Object.keys(d)[0] as any]);
 }

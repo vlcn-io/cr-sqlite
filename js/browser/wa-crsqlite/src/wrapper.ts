@@ -107,6 +107,16 @@ function computeCacheKey(
 }
 
 export class DB implements DBAsync {
+  private stmtFinalizer = new Map<number, WeakRef<Stmt>>();
+  private tmtFinalizationRegistry = new FinalizationRegistry((base: number) => {
+    const ref = this.stmtFinalizer.get(base);
+    const stmt = ref?.deref();
+    if (stmt) {
+      stmt.finalize();
+    }
+    this.stmtFinalizer.delete(base);
+  });
+
   private cache = new Map<string, Promise<any>>();
   #updateHooks: Set<
     (type: UpdateType, dbName: string, tblName: string, rowid: bigint) => void
@@ -211,11 +221,28 @@ export class DB implements DBAsync {
         throw new Error(`Could not prepare ${sql}`);
       }
 
-      return new Stmt(this.cache, this.api, prepared.stmt, str, sql);
+      return new Stmt(
+        this.stmtFinalizer,
+        this.tmtFinalizationRegistry,
+        this.cache,
+        this.api,
+        prepared.stmt,
+        str,
+        sql
+      );
     });
   }
 
+  /**
+   * Close the database and finalize any prepared statements that were not freed for the given DB.
+   */
   close(): Promise<any> {
+    for (const ref of this.stmtFinalizer.values()) {
+      const stmt = ref.deref();
+      if (stmt) {
+        stmt.finalize();
+      }
+    }
     return this.exec("SELECT crsql_finalize()").then(() => {
       this.#closed = true;
       return serialize(this.cache, undefined, () => this.api.close(this.db));
@@ -325,13 +352,19 @@ export class DB implements DBAsync {
 class Stmt implements StmtAsync {
   // TOOD: use mode in get/all!
   private mode: "a" | "o" = "o";
+  private finalized = false;
   constructor(
+    stmtFinalizer: Map<number, WeakRef<Stmt>>,
+    stmtFinalizationRegistry: FinalizationRegistry<number>,
     private cache: Map<string, Promise<any>>,
     private api: SQLiteAPI,
     private base: number,
     private str: number,
     private sql: string
-  ) {}
+  ) {
+    stmtFinalizer.set(base, new WeakRef(this));
+    stmtFinalizationRegistry.register(this, base);
+  }
 
   run(...bindArgs: any[]): Promise<any> {
     return serialize(
@@ -424,9 +457,15 @@ class Stmt implements StmtAsync {
     return this;
   }
 
+  /**
+   * Release the resources associated with the prepared statement.
+   * If you fail to call this it will automatically be called when the statement is garbage collected.
+   */
   finalize(): void {
+    if (this.finalized) return;
     this.api.str_finish(this.str);
     this.api.finalize(this.base);
+    this.finalized = true;
   }
 }
 

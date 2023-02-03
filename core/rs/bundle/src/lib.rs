@@ -47,8 +47,8 @@ pub extern "C" fn __rust_dealloc(ptr: *mut u8, size: usize, align: usize) {
 pub extern "C" fn __rust_realloc(
     ptr: *mut u8,
     old_size: usize,
-    size: usize,
     align: usize,
+    size: usize,
 ) -> *mut u8 {
     unsafe {
         ALLOCATOR.realloc(

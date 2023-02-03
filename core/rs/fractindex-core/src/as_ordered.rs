@@ -90,7 +90,7 @@ fn table_has_all_columns(
 ) -> Result<bool, ResultCode> {
     let bindings = columns.iter().map(|_| "?").collect::<Vec<_>>().join(", ");
     let sql = format!(
-        "SELECT count(*) FROM pragma_table_info(?) WHERE \"name\" in ({})",
+        "SELECT count(*) FROM pragma_table_info(?) WHERE \"name\" IN ({})",
         bindings
     );
     let stmt = db.prepare_v2(&sql)?;

@@ -33,8 +33,7 @@ export class TblRx {
   #bc: BroadcastChannel;
 
   constructor(private readonly db: DB | DBAsync) {
-    // should be dbid.
-    this.#bc = new BroadcastChannel("@vlcn.io/rx-tbl");
+    this.#bc = new BroadcastChannel(db.siteid);
     this.#bc.onmessage = (msg) => {
       this.#notifyListeners(msg.data);
     };

@@ -10,6 +10,7 @@ import contextStore from "./contextStore.js";
 
 type SiteIdStr = string;
 import { extensionPath } from "@vlcn.io/crsqlite";
+import bytesToHex from "./bytesToHex.js";
 
 const activeDBs = new Map<SiteIdStr, WeakRef<DB>>();
 const finalizationRegistry = new FinalizationRegistry((siteId: SiteIdStr) => {
@@ -160,16 +161,7 @@ export default async function dbFactory(
   create?: { schemaName: string }
 ): Promise<DB> {
   let isNew = false;
-  const dsiredDbStr = uuidStringify(desiredDb);
-  if (!uuidValidate(dsiredDbStr)) {
-    logger.error("invalid uuid", {
-      event: "dbFactory.invalidUuid",
-      desiredDb,
-      req: contextStore.get().reqId,
-      create,
-    });
-    throw new Error("Invalid UUID supplied for DBID");
-  }
+  const dsiredDbStr = bytesToHex(desiredDb);
 
   if (create) {
     const schemaName = create.schemaName;

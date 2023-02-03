@@ -21,7 +21,7 @@ export class SQLite3 {
     }
 
     ret._setSiteid(
-      ret.execA("SELECT quote(crsql_siteid());")[0][0].replace(/'/g, "")
+      ret.execA("SELECT quote(crsql_siteid());")[0][0].replace(/'|X/g, "")
     );
     return ret;
   }

@@ -17,6 +17,7 @@ type VersionEvent = typeof RECEIVE | typeof SEND;
  */
 export class DB {
   private dispoables: (() => void)[] = [];
+  private disposed = false;
   constructor(
     private readonly db: DBSync | DBAsync,
     public readonly siteId: Uint8Array,
@@ -101,6 +102,9 @@ export class DB {
   // if we're doing a binary format we should also do this a layer
   // up the stack so we can encode msg types too
   async pullChangeset(seq: [Version, number]): Promise<Changeset[]> {
+    if (this.disposed) {
+      logger.warn("Disposed DB used to pull changeset");
+    }
     logger.info("Pulling changes since ", seq);
     // pull changes since we last sent the server changes,
     // excluding what the server has sent us
@@ -119,9 +123,11 @@ export class DB {
    * This instance cannot be used again after dispose is called.
    */
   dispose() {
+    this.disposed = true;
     this.dispoables.forEach((d) => d());
     this.pullChangesetStmt.finalize();
     this.applyChangesetStmt.finalize();
+    this.updatePeerTrackerStmt.finalize();
   }
 }
 

@@ -30,7 +30,7 @@ function log(...data: any[]) {
  */
 const queue = new PromiseQueue();
 function serialize(
-  cache: Map<string, Promise<any>>,
+  cache: Map<string, Promise<any>> | null,
   key: string | null | undefined,
   cb: () => any
 ) {
@@ -39,9 +39,9 @@ function serialize(
   // TODO: when we no longer have to serialize calls we should use `graphql/DataLoader` infra
   if (key === null) {
     log("Cache clear");
-    cache.clear();
+    cache?.clear();
   } else if (key !== undefined) {
-    const existing = cache.get(key);
+    const existing = cache?.get(key);
     if (existing) {
       log("Cache hit", key);
       return existing;
@@ -52,8 +52,8 @@ function serialize(
   const res = queue.add(cb);
 
   if (key) {
-    cache.set(key, res);
-    res.finally(() => cache.delete(key));
+    cache?.set(key, res);
+    res.finally(() => cache?.delete(key));
   }
 
   return res;
@@ -68,21 +68,21 @@ export class SQLite3 {
   constructor(private base: SQLiteAPI) {}
 
   open(filename?: string, mode: string = "c") {
-    return this.base
-      .open_v2(
+    return serialize(null, undefined, () => {
+      return this.base.open_v2(
         filename || ":memory:",
         SQLite.SQLITE_OPEN_CREATE |
           SQLite.SQLITE_OPEN_READWRITE |
           SQLite.SQLITE_OPEN_URI,
         filename != null ? "idb-batch-atomic" : undefined
-      )
-      .then((db) => {
-        const ret = new DB(this.base, db);
-        return ret.execA("select quote(crsql_siteid());").then((siteid) => {
-          ret._setSiteid(siteid[0][0].replace(/'/g, ""));
-          return ret;
-        });
+      );
+    }).then((db) => {
+      const ret = new DB(this.base, db);
+      return ret.execA("select quote(crsql_siteid());").then((siteid) => {
+        ret._setSiteid(siteid[0][0].replace(/'|X/g, ""));
+        return ret;
       });
+    });
   }
 }
 
@@ -114,14 +114,17 @@ function computeCacheKey(
 
 export class DB implements DBAsync {
   private stmtFinalizer = new Map<number, WeakRef<Stmt>>();
-  private tmtFinalizationRegistry = new FinalizationRegistry((base: number) => {
-    const ref = this.stmtFinalizer.get(base);
-    const stmt = ref?.deref();
-    if (stmt) {
-      stmt.finalize();
-    }
-    this.stmtFinalizer.delete(base);
-  });
+  // private stmtFinalizationRegistry = new FinalizationRegistry(
+  //   (base: number) => {
+  //     const ref = this.stmtFinalizer.get(base);
+  //     const stmt = ref?.deref();
+  //     if (stmt) {
+  //       console.log("finalized ", base);
+  //       stmt.finalize();
+  //     }
+  //     this.stmtFinalizer.delete(base);
+  //   }
+  // );
   #siteid: string | null = null;
 
   private cache = new Map<string, Promise<any>>();
@@ -242,7 +245,7 @@ export class DB implements DBAsync {
 
       return new Stmt(
         this.stmtFinalizer,
-        this.tmtFinalizationRegistry,
+        // this.stmtFinalizationRegistry,
         this.cache,
         this.api,
         prepared.stmt,
@@ -255,11 +258,11 @@ export class DB implements DBAsync {
   /**
    * Close the database and finalize any prepared statements that were not freed for the given DB.
    */
-  close(): Promise<any> {
+  async close(): Promise<any> {
     for (const ref of this.stmtFinalizer.values()) {
       const stmt = ref.deref();
       if (stmt) {
-        stmt.finalize();
+        await stmt.finalize();
       }
     }
     return this.exec("SELECT crsql_finalize()").then(() => {
@@ -374,7 +377,7 @@ export class Stmt implements StmtAsync {
   private finalized = false;
   constructor(
     stmtFinalizer: Map<number, WeakRef<Stmt>>,
-    stmtFinalizationRegistry: FinalizationRegistry<number>,
+    // stmtFinalizationRegistry: FinalizationRegistry<number>,
     private cache: Map<string, Promise<any>>,
     private api: SQLiteAPI,
     private base: number,
@@ -382,7 +385,7 @@ export class Stmt implements StmtAsync {
     private sql: string
   ) {
     stmtFinalizer.set(base, new WeakRef(this));
-    stmtFinalizationRegistry.register(this, base);
+    // stmtFinalizationRegistry.register(this, base);
   }
 
   run(...bindArgs: any[]): Promise<any> {
@@ -453,10 +456,14 @@ export class Stmt implements StmtAsync {
 
   async *iterate<T>(...bindArgs: any[]): AsyncIterator<T> {
     this.bind(bindArgs);
-    while ((await this.api.step(this.base)) == SQLite.SQLITE_ROW) {
+    while (
+      (await serialize(this.cache, undefined, () =>
+        this.api.step(this.base)
+      )) == SQLite.SQLITE_ROW
+    ) {
       yield this.api.row(this.base) as any;
     }
-    await this.api.reset(this.base);
+    await serialize(this.cache, undefined, () => this.api.reset(this.base));
   }
 
   raw(isRaw?: boolean): this {
@@ -480,11 +487,13 @@ export class Stmt implements StmtAsync {
    * Release the resources associated with the prepared statement.
    * If you fail to call this it will automatically be called when the statement is garbage collected.
    */
-  finalize(): void {
-    if (this.finalized) return;
-    this.api.str_finish(this.str);
-    this.api.finalize(this.base);
-    this.finalized = true;
+  finalize(): Promise<void> {
+    return serialize(this.cache, undefined, () => {
+      if (this.finalized) return;
+      this.api.str_finish(this.str);
+      this.finalized = true;
+      return this.api.finalize(this.base);
+    });
   }
 }
 

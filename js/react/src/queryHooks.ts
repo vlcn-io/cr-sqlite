@@ -15,10 +15,6 @@ export type QueryData<T> = {
 };
 
 const EMPTY_ARRAY: readonly any[] = Object.freeze([]);
-const FETCHING: QueryData<any> = Object.freeze({
-  loading: true,
-  data: EMPTY_ARRAY,
-});
 
 // TODO: two useQuery variants?
 // one for async db and one for sync db?
@@ -117,6 +113,7 @@ class AsyncResultStateMachine<T, M = readonly T[]> {
   private error?: QueryData<M>;
   private disposed: boolean = false;
   private readonly disposedState;
+  private readonly fetchingState;
   private dbSubscriptionDisposer: (() => void) | null;
 
   constructor(
@@ -135,6 +132,10 @@ class AsyncResultStateMachine<T, M = readonly T[]> {
         : (EMPTY_ARRAY as any),
       error: new Error("useAsyncQuery was disposed"),
     } as const;
+    this.fetchingState = {
+      ...this.disposedState,
+      error: undefined,
+    };
   }
 
   subscribeReactInternals = (internals: () => void): (() => void) => {
@@ -154,6 +155,9 @@ class AsyncResultStateMachine<T, M = readonly T[]> {
     if (this.disposed) {
       return;
     }
+    if (this.query === query) {
+      return;
+    }
     this.query = query;
     // cancel prep and fetch if in-flight
     this.pendingPreparePromise = null;
@@ -167,6 +171,16 @@ class AsyncResultStateMachine<T, M = readonly T[]> {
   // TODO: warn the user if bindings change too much
   respondToBindingsChange = (bindings: readonly any[]): void => {
     if (this.disposed) {
+      return;
+    }
+    let i = 0;
+    for (i = 0; i < bindings.length; ++i) {
+      if (bindings[i] !== this.bindings?.[i]) {
+        break;
+      }
+    }
+    if (i === bindings.length && i === this.bindings?.length) {
+      // no actual change
       return;
     }
     this.bindings = bindings;
@@ -230,7 +244,7 @@ class AsyncResultStateMachine<T, M = readonly T[]> {
     }
 
     log("fetching");
-    return FETCHING;
+    return this.fetchingState;
   };
 
   private prepare() {
@@ -278,6 +292,9 @@ class AsyncResultStateMachine<T, M = readonly T[]> {
 
   private fetch(rebind: boolean) {
     log("hooks - Fetching");
+    if (this.stmt == null) {
+      rebind = true;
+    }
     this.error = undefined;
     this.data = null;
 

@@ -69,6 +69,7 @@ export default class PromiseQueue {
   #queue: Promise<any> = Promise.resolve();
 
   add<T>(task: () => T): Promise<T> {
+    const stack = new Error().stack;
     let exceptionCountAtEnqueue = this.#exceptionCount;
     const res = this.#queue.then(task).catch((e) => {
       if (exceptionCountAtEnqueue === this.#exceptionCount) {
@@ -76,6 +77,7 @@ export default class PromiseQueue {
         this.#queue = Promise.resolve();
       }
 
+      console.error(stack);
       throw e;
     });
     this.#queue = res;

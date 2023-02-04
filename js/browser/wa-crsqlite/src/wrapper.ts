@@ -490,8 +490,8 @@ export class Stmt implements StmtAsync {
   finalize(): Promise<void> {
     return serialize(this.cache, undefined, () => {
       if (this.finalized) return;
-      this.api.str_finish(this.str);
       this.finalized = true;
+      this.api.str_finish(this.str);
       return this.api.finalize(this.base);
     });
   }

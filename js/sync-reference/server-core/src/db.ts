@@ -161,7 +161,16 @@ export default async function dbFactory(
   create?: { schemaName: string }
 ): Promise<DB> {
   let isNew = false;
-  const dsiredDbStr = bytesToHex(desiredDb);
+  const dsiredDbStr = uuidStringify(desiredDb);
+  if (!uuidValidate(dsiredDbStr)) {
+    logger.error("invalid uuid", {
+      event: "dbFactory.invalidUuid",
+      desiredDb,
+      req: contextStore.get().reqId,
+      create,
+    });
+    throw new Error("Invalid UUID supplied for DBID");
+  }
 
   if (create) {
     const schemaName = create.schemaName;

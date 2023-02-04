@@ -69,7 +69,8 @@ export default class PromiseQueue {
   #queue: Promise<any> = Promise.resolve();
 
   add<T>(task: () => T): Promise<T> {
-    const stack = new Error().stack;
+    // TODO: only enable in dev builds?
+    const source = new Error("Invoked from");
     let exceptionCountAtEnqueue = this.#exceptionCount;
     const res = this.#queue.then(task).catch((e) => {
       if (exceptionCountAtEnqueue === this.#exceptionCount) {
@@ -77,8 +78,7 @@ export default class PromiseQueue {
         this.#queue = Promise.resolve();
       }
 
-      console.error(stack);
-      throw e;
+      throw new AggregateError([e, source]);
     });
     this.#queue = res;
 

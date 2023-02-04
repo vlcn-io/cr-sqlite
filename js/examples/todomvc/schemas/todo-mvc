@@ -1,8 +1,0 @@
-BEGIN;
-
-CREATE TABLE "todo" ("id" PRIMARY KEY, "text", "completed");
-
-SELECT
-  crsql_as_crr('todo');
-
-COMMIT;

@@ -7,7 +7,6 @@
   "include": ["./src/"],
   "references": [
     { "path": "../sync-reference/p2p" },
-    { "path": "../examples/node" },
     { "path": "../node-allinone" },
     { "path": "../sync-reference/p2p" },
     { "path": "../tests/xplat-tests" },

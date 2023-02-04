@@ -19,6 +19,7 @@ export class DB implements IDB {
     this.open = true;
     this.siteid = this.db
       .prepare("SELECT quote(crsql_siteid());")
+      .raw()
       .get()[0]
       .replace(/'/g, "");
   }

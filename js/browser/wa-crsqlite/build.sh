@@ -13,5 +13,6 @@ make
 cp dist/wa-sqlite-async.wasm ../../js/browser/wa-crsqlite/dist
 cp dist/wa-sqlite-async.mjs ../../js/browser/wa-crsqlite/src
 
+# make debug
 # cp debug/wa-sqlite-async.wasm ../../js/browser/wa-crsqlite/dist
 # cp debug/wa-sqlite-async.mjs ../../js/browser/wa-crsqlite/src

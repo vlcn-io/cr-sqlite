@@ -16,14 +16,24 @@
 
 // exist (select 1 from pragma_function_list where name = 'crsql_tbl_rx')
 
-import { DB, DBAsync } from "@vlcn.io/xplat-api";
+import { DB, DBAsync, UpdateType } from "@vlcn.io/xplat-api";
 
 export class TblRx {
-  #listeners = new Set<(tbls: Set<string>) => void>();
-  #pendingNotification: Set<string> | null = null;
-  #bc = new BroadcastChannel("@vlcn.io/rx-tbl");
+  #pointListeners = new Map<
+    string,
+    Map<bigint, ((updates: UpdateType[]) => void)[]>
+  >();
+  #rangeListeners = new Map<string, ((updates: UpdateType[]) => void)[]>();
+  #arbitraryListeners = new Set<(updates: UpdateType[]) => void>();
+
+  // If a listener is subscribed to many events we'll collapse them into one
+  // TODO: test that `onUpdate` is not spread across ticks of the event loop.
+
+  #pendingNotification: [UpdateType, string, bigint][] | null = null;
+  #bc: BroadcastChannel;
 
   constructor(private readonly db: DB | DBAsync) {
+    this.#bc = new BroadcastChannel(db.siteid);
     this.#bc.onmessage = (msg) => {
       this.#notifyListeners(msg.data);
     };
@@ -33,51 +43,135 @@ export class TblRx {
       if (tblName.indexOf("__crsql") !== -1) {
         return;
       }
-      this.#preNotify(tblName);
+      this.#preNotify(updateType, tblName, rowid);
     });
   }
 
-  #notifyListeners(tbls: Set<string>) {
-    for (const l of this.#listeners) {
-      try {
-        // one listener shouldn't kill all others.
-        // e.g., like one thread death doesn't kill all other threads.
-        l(tbls);
-      } catch (e) {
-        console.error(e);
+  #notifyListeners(data: [UpdateType, string, bigint][]) {
+    // toNotify map exists to de-dupe listeners.
+    // If you register for many events you'll only get called once even if many
+    // of those events fire.
+    const toNotify = new Map<(updates: UpdateType[]) => void, UpdateType[]>();
+    for (const [updateType, tbl, rowid] of data) {
+      const cbList = this.#rangeListeners.get(tbl);
+      if (cbList != null) {
+        for (const cb of cbList) {
+          let existing = toNotify.get(cb);
+          if (existing == null) {
+            existing = [];
+            toNotify.set(cb, existing);
+          }
+          if (existing.indexOf(updateType) === -1) {
+            existing.push(updateType);
+          }
+        }
       }
+
+      const tblMap2 = this.#pointListeners.get(tbl);
+      if (tblMap2 != null) {
+        const cbList = tblMap2.get(rowid);
+        if (cbList != null) {
+          for (const cb of cbList) {
+            let existing = toNotify.get(cb);
+            if (existing == null) {
+              existing = [];
+              toNotify.set(cb, existing);
+            }
+            if (existing.indexOf(updateType) === -1) {
+              existing.push(updateType);
+            }
+          }
+        }
+      }
+    }
+
+    for (const l of this.#arbitraryListeners) {
+      toNotify.set(l, []);
+    }
+
+    for (const [cb, updates] of toNotify) {
+      cb(updates);
     }
   }
 
-  #preNotify(tbl: string) {
+  #preNotify(updateType: UpdateType, tbl: string, rowid: bigint) {
     if (this.#pendingNotification != null) {
-      this.#pendingNotification.add(tbl);
+      this.#pendingNotification.push([updateType, tbl, rowid]);
       return;
     }
 
-    this.#pendingNotification = new Set();
-    this.#pendingNotification.add(tbl);
+    this.#pendingNotification = [];
+    this.#pendingNotification.push([updateType, tbl, rowid]);
     queueMicrotask(() => {
-      const tbls = this.#pendingNotification!;
+      const data = this.#pendingNotification!;
       this.#pendingNotification = null;
-      this.#notifyListeners(tbls);
-      this.#bc.postMessage(tbls);
+      this.#notifyListeners(data);
+      this.#bc.postMessage(data);
     });
   }
 
-  on(cb: (tbls: Set<string>) => void) {
-    this.#listeners.add(cb);
+  onRange(tables: string[], cb: (updates: UpdateType[]) => void) {
+    for (const tbl of tables) {
+      let cbList = this.#rangeListeners.get(tbl);
+      if (cbList == null) {
+        cbList = [];
+        this.#rangeListeners.set(tbl, cbList);
+      }
+      cbList.push(cb);
+    }
     return () => {
-      this.off(cb);
+      for (const tbl of tables) {
+        const cbList = this.#rangeListeners.get(tbl);
+        if (cbList != null) {
+          const idx = cbList.indexOf(cb);
+          if (idx !== -1) {
+            cbList.splice(idx, 1);
+          }
+        }
+      }
     };
   }
 
-  off(cb: (tbls: Set<string>) => void) {
-    this.#listeners.delete(cb);
+  onPoint(tbl: string, rowid: bigint, cb: (updates: UpdateType[]) => void) {
+    let tblMap = this.#pointListeners.get(tbl);
+    if (tblMap == null) {
+      tblMap = new Map();
+      this.#pointListeners.set(tbl, tblMap);
+    }
+    let cbList = tblMap.get(rowid);
+    if (cbList == null) {
+      cbList = [];
+      tblMap.set(rowid, cbList);
+    }
+    cbList.push(cb);
+    return () => {
+      const tblMap = this.#pointListeners.get(tbl);
+      if (tblMap != null) {
+        const cbList = tblMap.get(rowid);
+        if (cbList != null) {
+          const idx = cbList.indexOf(cb);
+          if (idx !== -1) {
+            cbList.splice(idx, 1);
+          }
+          if (cbList.length === 0) {
+            tblMap.delete(rowid);
+          }
+        }
+      }
+    };
+  }
+
+  onAny(cb: () => void) {
+    this.#arbitraryListeners.add(cb);
+    return () => {
+      this.#arbitraryListeners.delete(cb);
+    };
   }
 
   dispose() {
-    this.#listeners.clear();
+    this.#rangeListeners.clear();
+    this.#pointListeners.clear();
+    this.#arbitraryListeners.clear();
     this.#bc.close();
 
     // This isn't the most convenient thing that it closes the db

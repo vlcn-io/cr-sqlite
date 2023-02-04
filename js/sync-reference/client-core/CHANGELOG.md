@@ -1,5 +1,25 @@
 # @vlcn.io/client-core
 
+## 0.6.3-next.2
+
+### Patch Changes
+
+- preview all the hook improvements and multi db open fixes
+- Updated dependencies
+  - @vlcn.io/rx-tbl@0.6.2-next.2
+  - @vlcn.io/client-server-common@0.3.3-next.2
+  - @vlcn.io/xplat-api@0.6.2-next.2
+
+## 0.6.3-next.1
+
+### Patch Changes
+
+- auto-release prepared statements
+- Updated dependencies
+  - @vlcn.io/rx-tbl@0.6.2-next.1
+  - @vlcn.io/client-server-common@0.3.3-next.1
+  - @vlcn.io/xplat-api@0.6.2-next.1
+
 ## 0.6.3-next.0
 
 ### Patch Changes

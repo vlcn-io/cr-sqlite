@@ -10,6 +10,7 @@ import contextStore from "./contextStore.js";
 
 type SiteIdStr = string;
 import { extensionPath } from "@vlcn.io/crsqlite";
+import bytesToHex from "./bytesToHex.js";
 
 const activeDBs = new Map<SiteIdStr, WeakRef<DB>>();
 const finalizationRegistry = new FinalizationRegistry((siteId: SiteIdStr) => {

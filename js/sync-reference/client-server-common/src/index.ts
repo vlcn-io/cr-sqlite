@@ -236,7 +236,7 @@ export function uuidStrToBytes(uuid: string): Uint8Array {
 }
 
 export function hexToBytes(hex: string) {
-  const ret = new Uint8Array(16);
+  const ret = new Uint8Array(hex.length / 2);
   for (let c = 0; c < hex.length; c += 2) {
     ret[c / 2] = parseInt(hex.substring(c, c + 2), 16);
   }

@@ -1,5 +1,17 @@
 # @vlcn.io/tsbuild-all
 
+## 0.6.2-next.2
+
+### Patch Changes
+
+- preview all the hook improvements and multi db open fixes
+
+## 0.6.2-next.1
+
+### Patch Changes
+
+- auto-release prepared statements
+
 ## 0.6.2-next.0
 
 ### Patch Changes

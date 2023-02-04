@@ -1,5 +1,17 @@
 # @vlcn.io/crsqlite
 
+## 0.7.2-next.3
+
+### Patch Changes
+
+- preview all the hook improvements and multi db open fixes
+
+## 0.7.2-next.2
+
+### Patch Changes
+
+- auto-release prepared statements
+
 ## 0.7.2-next.1
 
 ### Patch Changes

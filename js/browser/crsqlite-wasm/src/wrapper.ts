@@ -10,14 +10,20 @@ export class SQLite3 {
    * @param filename undefined file name opens an in-memory database
    */
   open(filename?: string, mode: string = "c") {
+    let ret: DB;
     if (filename == null || filename === ":memory:") {
-      return new DB(new this.baseSqlite3.oo1.DB(), this.baseSqlite3);
+      ret = new DB(new this.baseSqlite3.oo1.DB(), this.baseSqlite3);
     } else {
-      return new DB(
+      ret = new DB(
         new this.baseSqlite3.oo1.DB(filename, mode, "opfs"),
         this.baseSqlite3
       );
     }
+
+    ret._setSiteid(
+      ret.execA("SELECT quote(crsql_siteid());")[0][0].replace(/'|X/g, "")
+    );
+    return ret;
   }
 }
 
@@ -28,8 +34,20 @@ export class DB implements IDB {
   #updateHooks: Set<
     (type: UpdateType, dbName: string, tblName: string, rowid: bigint) => void
   > | null = null;
+  #siteid: string | null = null;
 
   constructor(private baseDb: any, private sqlite3: any) {}
+
+  get siteid(): string {
+    return this.#siteid!;
+  }
+
+  _setSiteid(siteid: string) {
+    if (this.#siteid) {
+      throw new Error("Site id already set");
+    }
+    this.#siteid = siteid;
+  }
 
   execMany(sql: string[]): void {
     this.baseDb.exec(sql);

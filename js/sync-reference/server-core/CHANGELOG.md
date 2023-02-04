@@ -1,5 +1,14 @@
 # @vlcn.io/server-core
 
+## 0.6.3-next.3
+
+### Patch Changes
+
+- preview all the hook improvements and multi db open fixes
+- Updated dependencies
+  - @vlcn.io/crsqlite@0.7.2-next.3
+  - @vlcn.io/client-server-common@0.3.3-next.2
+
 ## 0.6.3-next.2
 
 ### Patch Changes

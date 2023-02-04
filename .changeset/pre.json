@@ -29,6 +29,7 @@
     "@vlcn.io/py-correctness": "0.6.2-next.0"
   },
   "changesets": [
+    "beige-queens-run",
     "fluffy-moles-camp",
     "many-plants-prove",
     "tasty-carpets-approve"

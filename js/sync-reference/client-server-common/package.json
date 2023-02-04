@@ -1,7 +1,7 @@
 {
   "name": "@vlcn.io/client-server-common",
   "type": "module",
-  "version": "0.3.3-next.1",
+  "version": "0.3.3-next.2",
   "files": [
     "dist",
     "src"

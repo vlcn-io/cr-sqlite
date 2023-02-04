@@ -1,5 +1,13 @@
 # @vlcn.io/crsqlite-wasm
 
+## 0.6.2-next.2
+
+### Patch Changes
+
+- preview all the hook improvements and multi db open fixes
+- Updated dependencies
+  - @vlcn.io/xplat-api@0.6.2-next.2
+
 ## 0.6.2-next.1
 
 ### Patch Changes

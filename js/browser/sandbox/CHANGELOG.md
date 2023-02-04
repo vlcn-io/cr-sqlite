@@ -1,5 +1,13 @@
 # @vlcn.io/crsqlite-sandbox
 
+## 0.6.3-next.2
+
+### Patch Changes
+
+- preview all the hook improvements and multi db open fixes
+- Updated dependencies
+  - @vlcn.io/wa-crsqlite@0.7.3-next.2
+
 ## 0.6.3-next.1
 
 ### Patch Changes

@@ -1,5 +1,14 @@
 # @vlcn.io/browser-tests
 
+## 0.6.4-next.2
+
+### Patch Changes
+
+- preview all the hook improvements and multi db open fixes
+- Updated dependencies
+  - @vlcn.io/wa-crsqlite@0.7.3-next.2
+  - @vlcn.io/xplat-tests@0.6.3-next.2
+
 ## 0.6.4-next.1
 
 ### Patch Changes

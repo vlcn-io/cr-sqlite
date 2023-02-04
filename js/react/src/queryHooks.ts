@@ -381,10 +381,10 @@ class AsyncResultStateMachine<T, M = readonly T[]> {
 function usedTables(db: DBAsync, query: string): Promise<string[]> {
   return db
     .execA(
-      `SELECT name FROM tables_used('${query.replaceAll(
+      `SELECT tbl_name FROM tables_used('${query.replaceAll(
         "'",
         "''"
-      )}') WHERE type = 'table' AND schema = 'main';`
+      )}') AS u JOIN sqlite_master ON sqlite_master.name = u.name WHERE u.schema = 'main';`
     )
     .then((rows) => {
       return rows.map((r) => r[0]);

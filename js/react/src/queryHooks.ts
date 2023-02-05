@@ -328,7 +328,8 @@ class AsyncResultStateMachine<T, M = readonly T[]> {
               data: (this.postProcess ? this.postProcess(data) : data) as any,
               error: undefined,
             };
-            this.reactInternals!();
+
+            this.reactInternals && this.reactInternals();
           },
           (error: Error) => {
             this.error = {
@@ -340,7 +341,7 @@ class AsyncResultStateMachine<T, M = readonly T[]> {
                   : EMPTY_ARRAY) as any),
               error,
             };
-            this.reactInternals!();
+            this.reactInternals && this.reactInternals!();
           }
         );
       this.pendingFetchPromise = fetchPromise;

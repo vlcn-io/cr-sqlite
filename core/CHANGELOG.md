@@ -1,5 +1,15 @@
 # @vlcn.io/crsqlite
 
+## 0.7.2
+
+### Patch Changes
+
+- 3d09cd595: preview all the hook improvements and multi db open fixes
+- 567d8acba: auto-release prepared statements
+- 54666261b: fractional indexing inclusion
+- fractional indexing, better react hooks, many dbs opened concurrently
+- fd9094220: fixup what is packed
+
 ## 0.7.2-next.3
 
 ### Patch Changes

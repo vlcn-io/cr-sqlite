@@ -1,5 +1,22 @@
 # @vlcn.io/sync-client
 
+## 0.6.3
+
+### Patch Changes
+
+- 3d09cd595: preview all the hook improvements and multi db open fixes
+- 567d8acba: auto-release prepared statements
+- 54666261b: fractional indexing inclusion
+- fractional indexing, better react hooks, many dbs opened concurrently
+- Updated dependencies [3d09cd595]
+- Updated dependencies [567d8acba]
+- Updated dependencies [54666261b]
+- Updated dependencies
+  - @vlcn.io/rx-tbl@0.6.2
+  - @vlcn.io/client-core@0.6.3
+  - @vlcn.io/client-server-common@0.3.3
+  - @vlcn.io/xplat-api@0.6.2
+
 ## 0.6.3-next.2
 
 ### Patch Changes

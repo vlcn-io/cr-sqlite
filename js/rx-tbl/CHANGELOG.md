@@ -1,5 +1,19 @@
 # @vlcn.io/rx-tbl
 
+## 0.6.2
+
+### Patch Changes
+
+- 3d09cd595: preview all the hook improvements and multi db open fixes
+- 567d8acba: auto-release prepared statements
+- 54666261b: fractional indexing inclusion
+- fractional indexing, better react hooks, many dbs opened concurrently
+- Updated dependencies [3d09cd595]
+- Updated dependencies [567d8acba]
+- Updated dependencies [54666261b]
+- Updated dependencies
+  - @vlcn.io/xplat-api@0.6.2
+
 ## 0.6.2-next.2
 
 ### Patch Changes

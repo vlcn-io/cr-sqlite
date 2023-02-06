@@ -1,6 +1,6 @@
 {
   "name": "@vlcn.io/crsqlite-allinone",
-  "version": "0.6.2-next.3",
+  "version": "0.6.2",
   "description": "CR-SQLite loadable extension",
   "homepage": "https://vlcn.io",
   "type": "module",

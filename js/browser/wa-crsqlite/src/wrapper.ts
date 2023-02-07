@@ -375,6 +375,7 @@ export class Stmt implements StmtAsync {
   // TOOD: use mode in get/all!
   private mode: "a" | "o" = "o";
   private finalized = false;
+  private bindings: any[] = [];
   constructor(
     stmtFinalizer: Map<number, WeakRef<Stmt>>,
     // stmtFinalizationRegistry: FinalizationRegistry<number>,
@@ -391,7 +392,11 @@ export class Stmt implements StmtAsync {
   run(...bindArgs: any[]): Promise<any> {
     return serialize(
       this.cache,
-      computeCacheKey(this.sql, this.mode, bindArgs),
+      computeCacheKey(
+        this.sql,
+        this.mode,
+        bindArgs.length > 0 ? bindArgs : this.bindings
+      ),
       () => {
         this.bind(bindArgs);
 
@@ -403,7 +408,11 @@ export class Stmt implements StmtAsync {
   get(...bindArgs: any[]): Promise<any> {
     return serialize(
       this.cache,
-      computeCacheKey(this.sql, this.mode, bindArgs),
+      computeCacheKey(
+        this.sql,
+        this.mode,
+        bindArgs.length > 0 ? bindArgs : this.bindings
+      ),
       async () => {
         this.bind(bindArgs);
         let ret: any = null;
@@ -430,7 +439,11 @@ export class Stmt implements StmtAsync {
   all(...bindArgs: any[]): Promise<any[]> {
     return serialize(
       this.cache,
-      computeCacheKey(this.sql, this.mode, bindArgs),
+      computeCacheKey(
+        this.sql,
+        this.mode,
+        bindArgs.length > 0 ? bindArgs : this.bindings
+      ),
       async () => {
         this.bind(bindArgs);
         const ret: any[] = [];
@@ -477,6 +490,7 @@ export class Stmt implements StmtAsync {
   }
 
   bind(args: any[]): this {
+    this.bindings = args;
     for (let i = 0; i < args.length; ++i) {
       this.api.bind(this.base, i + 1, args[i]);
     }

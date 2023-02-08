@@ -16,6 +16,10 @@ This project implements [CRDTs](https://crdt.tech/) and [CRRs](https://hal.inria
 
 `crsqlite` works by adding metadata tables and triggers around your existing database schema. This means that you do not have to change your schema in order to get conflict resolution support -- with a few caveats around uniqueness constraints and foreign keys. See [Schema Design for CRDTs & Eventual Consistency](#schema-design-for-crdts--eventual-consistency).
 
+# Sponsors
+- [![reflect-app](https://reflect.app/_next/image?url=%2Fsite%2Ficons%2F1024x1024.png&w=32&q=100) Reflect](https://reflect.app/)
+- [robinvasan](https://github.com/robinvasan)
+
 # Usage
 
 The full documentation site is available [here](https://vlcn.io/docs/getting-started).

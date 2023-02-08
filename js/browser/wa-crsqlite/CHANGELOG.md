@@ -1,5 +1,13 @@
 # @vlcn.io/wa-crsqlite
 
+## 0.7.4
+
+### Patch Changes
+
+- 64bit rowid support in update hook, fixup cache key calculating for bind args
+- Updated dependencies
+  - @vlcn.io/wa-sqlite@0.14.3
+
 ## 0.7.3
 
 ### Patch Changes

@@ -1,5 +1,12 @@
 # @vlcn.io/browser-tests
 
+## 0.6.5
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/wa-crsqlite@0.7.4
+
 ## 0.6.4
 
 ### Patch Changes

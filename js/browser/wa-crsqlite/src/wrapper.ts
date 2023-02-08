@@ -101,13 +101,13 @@ function computeCacheKey(
   }
 
   if (bind != null) {
-    return (
+    const ret =
       lower +
       "|" +
       mode +
       "|" +
-      bind.map((b) => (b != null ? b.toString() : "null")).join("|")
-    );
+      bind.map((b) => (b != null ? b.toString() : "null")).join("|");
+    return ret;
   }
   return lower;
 }
@@ -375,6 +375,7 @@ export class Stmt implements StmtAsync {
   // TOOD: use mode in get/all!
   private mode: "a" | "o" = "o";
   private finalized = false;
+  private bindings: any[] = [];
   constructor(
     stmtFinalizer: Map<number, WeakRef<Stmt>>,
     // stmtFinalizationRegistry: FinalizationRegistry<number>,
@@ -391,9 +392,13 @@ export class Stmt implements StmtAsync {
   run(...bindArgs: any[]): Promise<any> {
     return serialize(
       this.cache,
-      computeCacheKey(this.sql, this.mode, bindArgs),
+      computeCacheKey(
+        this.sql,
+        this.mode,
+        bindArgs.length > 0 ? bindArgs : this.bindings
+      ),
       () => {
-        this.bind(bindArgs);
+        bindArgs.length > 0 && this.bind(bindArgs);
 
         return this.api.step(this.base).then(() => this.api.reset(this.base));
       }
@@ -403,9 +408,13 @@ export class Stmt implements StmtAsync {
   get(...bindArgs: any[]): Promise<any> {
     return serialize(
       this.cache,
-      computeCacheKey(this.sql, this.mode, bindArgs),
+      computeCacheKey(
+        this.sql,
+        this.mode,
+        bindArgs.length > 0 ? bindArgs : this.bindings
+      ),
       async () => {
-        this.bind(bindArgs);
+        bindArgs.length > 0 && this.bind(bindArgs);
         let ret: any = null;
         let columnNames =
           this.mode === "o" ? this.api.column_names(this.base) : null;
@@ -430,9 +439,13 @@ export class Stmt implements StmtAsync {
   all(...bindArgs: any[]): Promise<any[]> {
     return serialize(
       this.cache,
-      computeCacheKey(this.sql, this.mode, bindArgs),
+      computeCacheKey(
+        this.sql,
+        this.mode,
+        bindArgs.length > 0 ? bindArgs : this.bindings
+      ),
       async () => {
-        this.bind(bindArgs);
+        bindArgs.length > 0 && this.bind(bindArgs);
         const ret: any[] = [];
         let columnNames =
           this.mode === "o" ? this.api.column_names(this.base) : null;
@@ -477,6 +490,7 @@ export class Stmt implements StmtAsync {
   }
 
   bind(args: any[]): this {
+    this.bindings = args;
     for (let i = 0; i < args.length; ++i) {
       this.api.bind(this.base, i + 1, args[i]);
     }

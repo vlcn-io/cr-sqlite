@@ -294,8 +294,9 @@ export class DB implements DBAsync {
   }
 
   async savepoint(cb: () => Promise<void>): Promise<void> {
+    throw new Error("do not use me yet");
     this.#assertOpen();
-    await this.exec("SAVPOINT");
+    await this.exec("SAVEPOINT");
     await cb();
   }
 

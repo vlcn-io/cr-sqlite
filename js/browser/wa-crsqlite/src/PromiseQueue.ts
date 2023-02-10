@@ -78,7 +78,7 @@ export default class PromiseQueue {
         this.#queue = Promise.resolve();
       }
 
-      throw new AggregateError([e, source]);
+      throw new AggregateError([e, source], e.message);
     });
     this.#queue = res;
 

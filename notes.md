@@ -1,3 +1,25 @@
+PK only table.
+What do?
+
+Insert as normal. We support PK only inserts.
+PK delete? May not be supported.
+PK Change. Def not supported.
+
+PK change.. detect how?
+After update trigger?
+
+Update trigger when
+
+Test:
+pk only columns for insert and no rename or delete.
+
+for rs tests --
+
+- compile vanilla
+- load the extension
+
+---
+
 pnpm changeset pre enter next
 
 ---

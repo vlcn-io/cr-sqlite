@@ -8,7 +8,7 @@ keywords = ["sqlite"]
 license = "Apache-2.0"
 
 [dependencies]
-sqlite_nostd = { path="../sqlite-rs-embedded/sqlite_nostd", features=["omit_load_extension"] }
+sqlite_nostd = { path="../sqlite-rs-embedded/sqlite_nostd", features=["static"] }
 
 [build-dependencies]
-cc = "1.0.46"
+cc = "1.0.79"

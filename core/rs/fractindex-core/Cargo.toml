@@ -26,4 +26,6 @@ panic = "abort"
 target = "wasm32-unknown-emscripten"
 
 [features]
+loadable_extension = ["sqlite_nostd/loadable_extension"]
+static = ["sqlite_nostd/static"]
 omit_load_extension = ["sqlite_nostd/omit_load_extension"]

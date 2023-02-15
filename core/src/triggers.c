@@ -130,15 +130,44 @@ int crsql_createUpdateTrigger(sqlite3 *db, crsql_TableInfo *tableInfo,
   char *pkList = 0;
   char *pkNewList = 0;
   int rc = SQLITE_OK;
-  char **subTriggers = sqlite3_malloc(tableInfo->nonPksLen * sizeof(char *));
+  const int length = tableInfo->nonPksLen == 0 ? 1 : tableInfo->nonPksLen;
+  char **subTriggers = sqlite3_malloc(length * sizeof(char *));
   char *joinedSubTriggers;
-
-  if (tableInfo->nonPksLen == 0) {
-    return rc;
-  }
 
   pkList = crsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, 0);
   pkNewList = crsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, "NEW.");
+
+  // If we updated a table that _only_ has primary key columns
+  // this is the same thing as
+  // a
+  // 1. delete of the old row
+  // followed by
+  // 2. create of a new row
+  // SQLite already calls the delete trigger for the old row
+  // for case 1 so that's covered.
+  //
+  // TODO: Do we not also need to record a creation event
+  // if a pk was changed for a non pk only table?
+  if (tableInfo->nonPksLen == 0) {
+    subTriggers[0] = sqlite3_mprintf(
+        "INSERT INTO \"%s__crsql_clock\" (\
+        %s,\
+        __crsql_col_name,\
+        __crsql_col_version,\
+        __crsql_db_version,\
+        __crsql_site_id\
+      ) SELECT \
+        %s,\
+        %Q,\
+        1,\
+        crsql_nextdbversion(),\
+        NULL\
+      WHERE crsql_internal_sync_bit() = 0 ON CONFLICT DO UPDATE SET\
+        __crsql_col_version = __crsql_col_version + 1,\
+        __crsql_db_version = crsql_nextdbversion(),\
+        __crsql_site_id = NULL;\n",
+        tableInfo->tblName, pkList, pkNewList, PKS_ONLY_CID_SENTINEL);
+  }
 
   for (int i = 0; i < tableInfo->nonPksLen; ++i) {
     // updates are conditionally inserted on the new value not being
@@ -158,9 +187,9 @@ int crsql_createUpdateTrigger(sqlite3 *db, crsql_TableInfo *tableInfo,
         tableInfo->tblName, pkList, pkNewList, tableInfo->nonPks[i].name,
         tableInfo->nonPks[i].name, tableInfo->nonPks[i].name);
   }
-  joinedSubTriggers = crsql_join(subTriggers, tableInfo->nonPksLen);
+  joinedSubTriggers = crsql_join(subTriggers, length);
 
-  for (int i = 0; i < tableInfo->nonPksLen; ++i) {
+  for (int i = 0; i < length; ++i) {
     sqlite3_free(subTriggers[i]);
   }
   sqlite3_free(subTriggers);
@@ -189,14 +218,8 @@ char *crsql_deleteTriggerQuery(crsql_TableInfo *tableInfo) {
   char *pkList = 0;
   char *pkOldList = 0;
 
-  if (tableInfo->pksLen == 0) {
-    pkList = "\"rowid\"";
-    pkOldList = "OLD.\"rowid\"";
-  } else {
-    pkList = crsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, 0);
-    pkOldList =
-        crsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, "OLD.");
-  }
+  pkList = crsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, 0);
+  pkOldList = crsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, "OLD.");
 
   zSql = sqlite3_mprintf(
       "CREATE TRIGGER IF NOT EXISTS \"%s__crsql_dtrig\"\
@@ -222,10 +245,8 @@ char *crsql_deleteTriggerQuery(crsql_TableInfo *tableInfo) {
       tableInfo->tblName, tableInfo->tblName, tableInfo->tblName, pkList,
       pkOldList, DELETE_CID_SENTINEL);
 
-  if (tableInfo->pksLen != 0) {
-    sqlite3_free(pkList);
-    sqlite3_free(pkOldList);
-  }
+  sqlite3_free(pkList);
+  sqlite3_free(pkOldList);
 
   return zSql;
 }

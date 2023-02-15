@@ -127,11 +127,6 @@ fn modify_pkonly_row_impl() -> Result<(), ResultCode> {
     let stmt = db_a.prepare_v2("UPDATE foo SET id = 2 WHERE id = 1;")?;
     stmt.step()?;
 
-    // let stmt = db_a.prepare_v2("SELECT * FROM crsql_changes;")?;
-    // while stmt.step()? == ResultCode::ROW {
-    //   println!("{:?}", stmt.)
-    // }
-
     sync_left_to_right(&db_a, &db_b, -1)?;
 
     let stmt = db_b.prepare_v2("SELECT * FROM foo;")?;
@@ -141,6 +136,39 @@ fn modify_pkonly_row_impl() -> Result<(), ResultCode> {
     assert_eq!(id, 2);
     let result = stmt.step()?;
     assert_eq!(result, ResultCode::DONE);
+
+    Ok(())
+}
+
+#[test]
+/// Test a common configuration of a junction/edge table (with no edge data)
+/// to relate two relations.
+fn junction_table() {
+    junction_table_impl().unwrap();
+}
+
+fn junction_table_impl() -> Result<(), ResultCode> {
+    let db_a = opendb()?;
+    let db_b = opendb()?;
+
+    fn setup_schema(db: &ManagedConnection) -> Result<ResultCode, ResultCode> {
+        db.exec_safe("CREATE TABLE jx (id1, id2, PRIMARY KEY(id1, id2));")?;
+        db.exec_safe("SELECT crsql_as_crr('jx');")
+    }
+
+    setup_schema(&db_a)?;
+    setup_schema(&db_b)?;
+
+    let stmt = db_a.prepare_v2("INSERT INTO jx VALUES (1, 2);");
+
+    // insert an edge
+    // check it
+    // modify the edge to point to something new
+    // check it
+    // change source of edge
+    // check it
+    // delete the edge
+    // check it
 
     Ok(())
 }

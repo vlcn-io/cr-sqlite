@@ -35,13 +35,13 @@ fn opendb() -> Result<ManagedConnection, sqlite::ResultCode> {
     Ok(connection)
 }
 
-fn closedb(db: ManagedConnection) -> Result<(), sqlite::ResultCode> {
+fn closedb(db: ManagedConnection) -> Result<(), ResultCode> {
     db.exec_safe("SELECT crsql_finalize()")?;
     // no close, it gets called on drop.
     Ok(())
 }
 
-fn setup_schema(db: &ManagedConnection) -> Result<sqlite::ResultCode, sqlite::ResultCode> {
+fn setup_schema(db: &ManagedConnection) -> Result<ResultCode, ResultCode> {
     db.exec_safe("CREATE TABLE foo (id INTEGER PRIMARY KEY);")?;
     db.exec_safe("SELECT crsql_as_crr('foo');")
 }
@@ -52,7 +52,7 @@ fn create_pkonlytable() {
     create_pkonlytable_impl().unwrap();
 }
 
-fn create_pkonlytable_impl() -> Result<(), sqlite::ResultCode> {
+fn create_pkonlytable_impl() -> Result<(), ResultCode> {
     let db_a = opendb()?;
 
     setup_schema(&db_a)?;
@@ -65,11 +65,11 @@ fn insert_pkonly_row() {
     insert_pkonly_row_impl().unwrap();
 }
 
-fn insert_pkonly_row_impl() -> Result<(), sqlite::ResultCode> {
+fn insert_pkonly_row_impl() -> Result<(), ResultCode> {
     let db_a = opendb()?;
     let db_b = opendb()?;
 
-    fn setup_schema(db: &ManagedConnection) -> Result<sqlite::ResultCode, sqlite::ResultCode> {
+    fn setup_schema(db: &ManagedConnection) -> Result<ResultCode, ResultCode> {
         db.exec_safe("CREATE TABLE foo (id INTEGER PRIMARY KEY);")?;
         db.exec_safe("SELECT crsql_as_crr('foo');")
     }
@@ -97,5 +97,50 @@ fn insert_pkonly_row_impl() -> Result<(), sqlite::ResultCode> {
 
     closedb(db_a)?;
     closedb(db_b)?;
+    Ok(())
+}
+
+#[test]
+fn modify_pkonly_row() {
+    // inserts then updates then syncs the value of a pk column
+    // inserts, syncs, then updates then syncs
+    //
+    // repeat for single column keys and compound
+    modify_pkonly_row_impl().unwrap()
+}
+
+fn modify_pkonly_row_impl() -> Result<(), ResultCode> {
+    let db_a = opendb()?;
+    let db_b = opendb()?;
+
+    fn setup_schema(db: &ManagedConnection) -> Result<ResultCode, ResultCode> {
+        db.exec_safe("CREATE TABLE foo (id INTEGER PRIMARY KEY);")?;
+        db.exec_safe("SELECT crsql_as_crr('foo');")
+    }
+
+    setup_schema(&db_a)?;
+    setup_schema(&db_b)?;
+
+    let stmt = db_a.prepare_v2("INSERT INTO foo (id) VALUES (1);")?;
+    stmt.step()?;
+
+    let stmt = db_a.prepare_v2("UPDATE foo SET id = 2 WHERE id = 1;")?;
+    stmt.step()?;
+
+    // let stmt = db_a.prepare_v2("SELECT * FROM crsql_changes;")?;
+    // while stmt.step()? == ResultCode::ROW {
+    //   println!("{:?}", stmt.)
+    // }
+
+    sync_left_to_right(&db_a, &db_b, -1)?;
+
+    let stmt = db_b.prepare_v2("SELECT * FROM foo;")?;
+    let result = stmt.step()?;
+    assert_eq!(result, ResultCode::ROW);
+    let id = stmt.column_int(0)?;
+    assert_eq!(id, 2);
+    let result = stmt.step()?;
+    assert_eq!(result, ResultCode::DONE);
+
     Ok(())
 }

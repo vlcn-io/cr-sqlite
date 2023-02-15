@@ -121,7 +121,7 @@ $(TARGET_LOADABLE): $(prefix) $(ext_files) $(rs_lib_static_loadable)
 
 # Build a SQLite CLI that pre-loads cr-sqlite.
 # Useful for debugging.
-$(TARGET_SQLITE3): $(prefix) $(TARGET_SQLITE3_EXTRA_C) src/sqlite/shell.c $(ext_files)
+$(TARGET_SQLITE3): $(prefix) $(TARGET_SQLITE3_EXTRA_C) $(rs_lib_dbg_static) src/sqlite/shell.c $(ext_files)
 	$(CC) -g \
 	$(DEFINE_SQLITE_PATH) \
 	-DSQLITE_THREADSAFE=0 \

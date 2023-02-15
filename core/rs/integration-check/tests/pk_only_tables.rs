@@ -159,7 +159,33 @@ fn junction_table_impl() -> Result<(), ResultCode> {
     setup_schema(&db_a)?;
     setup_schema(&db_b)?;
 
-    let stmt = db_a.prepare_v2("INSERT INTO jx VALUES (1, 2);");
+    db_a.prepare_v2("INSERT INTO jx VALUES (1, 2);")?.step()?;
+    db_a.prepare_v2("UPDATE jx SET id2 = 3 WHERE id1 = 1 AND id2 = 2")?
+        .step()?;
+
+    sync_left_to_right(&db_a, &db_b, -1)?;
+    let stmt = db_b.prepare_v2("SELECT * FROM jx;")?;
+    let result = stmt.step()?;
+    assert_eq!(result, ResultCode::ROW);
+    let id1 = stmt.column_int(0)?;
+    let id2 = stmt.column_int(1)?;
+    assert_eq!(id1, 1);
+    assert_eq!(id2, 3);
+    let result = stmt.step()?;
+    assert_eq!(result, ResultCode::DONE);
+
+    db_b.prepare_v2("UPDATE jx SET id1 = 2 WHERE id1 = 1 AND id2 = 3")?
+        .step()?;
+    sync_left_to_right(&db_b, &db_a, -1)?;
+    let stmt = db_a.prepare_v2("SELECT * FROM jx;")?;
+    let result = stmt.step()?;
+    assert_eq!(result, ResultCode::ROW);
+    let id1 = stmt.column_int(0)?;
+    let id2 = stmt.column_int(1)?;
+    assert_eq!(id1, 1);
+    assert_eq!(id2, 3);
+    let result = stmt.step()?;
+    assert_eq!(result, ResultCode::DONE);
 
     // insert an edge
     // check it

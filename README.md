@@ -154,9 +154,11 @@ If you're building on windows: `rustup toolchain install nightly-x86_64-pc-windo
 
 Instructions on building a native library that can be loaded into SQLite in non-wasm environments.
 
-In the `core` directory of the project, run:
 
 ```bash
+rustup toolchain install nightly # make sure you have the rust nightly toolchain
+git clone --recurse-submodules git@github.com:vlcn-io/cr-sqlite.git
+cd cr-sqlite/core
 make loadable
 ```
 

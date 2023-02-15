@@ -31,8 +31,10 @@ DEFINE_SQLITE_PATH_SOURCE=-DSQLITE_PATH_SOURCE="\"$(COMMIT)\""
 DEFINE_SQLITE_PATH=$(DEFINE_SQLITE_PATH_DATE) $(DEFINE_SQLITE_PATH_VERSION) $(DEFINE_SQLITE_PATH_SOURCE)
 
 prefix=./dist
+dbg_prefix=./dbg
 
 TARGET_LOADABLE=$(prefix)/crsqlite.$(LOADABLE_EXTENSION)
+TARGET_DBG_LOADABLE=$(dbg_prefix)/crsqlite.$(LOADABLE_EXTENSION)
 TARGET_SQLITE3_EXTRA_C=$(prefix)/sqlite3-extra.c
 TARGET_SQLITE3=$(prefix)/sqlite3
 TARGET_SQLITE3_VANILLA=$(prefix)/vanilla-sqlite3
@@ -66,9 +68,12 @@ ext_headers=src/crsqlite.h \
 
 $(prefix):
 	mkdir -p $(prefix)
+$(dbg_prefix):
+	mkdir -p $(dbg_prefix)
 
 clean:
 	rm -rf $(prefix)
+	rm -rf $(db_prefix)
 
 
 FORMAT_FILES=$(ext_files) $(ext_headers) ./src/core_init.c
@@ -76,6 +81,7 @@ format: $(FORMAT_FILES)
 	clang-format -i $(FORMAT_FILES)
 
 loadable: $(TARGET_LOADABLE)
+loadable_dbg: $(TARGET_DBG_LOADABLE)
 sqlite3: $(TARGET_SQLITE3)
 vanilla: $(TARGET_SQLITE3_VANILLA)
 test: $(TARGET_TEST)
@@ -98,26 +104,30 @@ fuzz: $(TARGET_FUZZ)
 	$(prefix)/fuzz
 
 rs_lib_dbg_static = ./rs/bundle/target/debug/libcrsql_bundle.a
-rs_lib_static_loadable = ./rs/bundle/target/release/libcrsql_bundle.a
+rs_lib_loadable = ./rs/bundle/target/release/libcrsql_bundle.a
+rs_lib_dbg_loadable = ./rs/bundle/target/debug/libcrsql_bundle.a
 
 $(rs_lib_dbg_static): FORCE
 	cd ./rs/bundle && $(rustflags_static) cargo build --features static,omit_load_extension $(rs_build_flags)
 
-$(rs_lib_static_loadable): FORCE
+$(rs_lib_loadable): FORCE
 	cd ./rs/bundle && $(rustflags_static) cargo build --release --features loadable_extension $(rs_build_flags)
 
-$(rs_lib_dbg_dynamic): FORCE
-	cd ./rs/bundle && RUSTFLAGS="-C link-args=-lc" cargo rustc --crate-type cdylib --features loadable_extension
-
-$(rs_lib_dynamic): FORCE
-	cd ./rs/bundle && RUSTFLAGS="-C link-args=-lc" cargo rustc --crate-type cdylib --release --features loadable_extension
+$(rs_lib_dbg_loadable): FORCE
+	cd ./rs/bundle && $(rustflags_static) cargo build --features loadable_extension $(rs_build_flags)
 
 # Build the loadable extension.
-$(TARGET_LOADABLE): $(prefix) $(ext_files) $(rs_lib_static_loadable)
+$(TARGET_LOADABLE): $(prefix) $(ext_files) $(rs_lib_loadable)
 	$(CC) -O2 -I./src/ -I./src/sqlite \
 	$(LOADABLE_CFLAGS) \
 	$(DEFINE_SQLITE_PATH) \
-	$(ext_files) $(rs_lib_static_loadable) -o $@
+	$(ext_files) $(rs_lib_loadable) -o $@
+
+$(TARGET_DBG_LOADABLE): $(dbg_prefix) $(ext_files) $(rs_lib_dbg_loadable)
+	$(CC) -g -I./src/ -I./src/sqlite \
+	$(LOADABLE_CFLAGS) \
+	$(DEFINE_SQLITE_PATH) \
+	$(ext_files) $(rs_lib_loadable) -o $@
 
 # Build a SQLite CLI that pre-loads cr-sqlite.
 # Useful for debugging.
@@ -181,6 +191,7 @@ $(TARGET_FUZZ): $(prefix) $(TARGET_SQLITE3_EXTRA_C) src/fuzzer.cc $(ext_files)
 .PHONY: all clean format \
 	test \
 	loadable \
+	loadable_dbg \
 	sqlite3 \
 	correctness \
 	valgrind \

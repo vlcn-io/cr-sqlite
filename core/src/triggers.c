@@ -28,19 +28,8 @@ int crsql_createInsertTrigger(sqlite3 *db, crsql_TableInfo *tableInfo,
   int rc = SQLITE_OK;
   char *joinedSubTriggers;
 
-  // TODO: we should track a sentinel create for this case
-  if (tableInfo->nonPksLen == 0) {
-    return rc;
-  }
-
-  if (tableInfo->pksLen == 0) {
-    pkList = "\"rowid\"";
-    pkNewList = "NEW.\"rowid\"";
-  } else {
-    pkList = crsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, 0);
-    pkNewList =
-        crsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, "NEW.");
-  }
+  pkList = crsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, 0);
+  pkNewList = crsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, "NEW.");
 
   joinedSubTriggers = crsql_insertTriggerQuery(tableInfo, pkList, pkNewList);
 
@@ -57,10 +46,8 @@ int crsql_createInsertTrigger(sqlite3 *db, crsql_TableInfo *tableInfo,
   rc = sqlite3_exec(db, zSql, 0, 0, err);
   sqlite3_free(zSql);
 
-  if (tableInfo->pksLen != 0) {
-    sqlite3_free(pkList);
-    sqlite3_free(pkNewList);
-  }
+  sqlite3_free(pkList);
+  sqlite3_free(pkNewList);
 
   return rc;
 }
@@ -117,13 +104,10 @@ char *crsql_insertTriggerQuery(crsql_TableInfo *tableInfo, char *pkList,
         tableInfo->tblName, pkList, pkNewList, tableInfo->nonPks[i].name);
   }
 
-  joinedSubTriggers = crsql_join(subTriggers, tableInfo->nonPksLen);
+  joinedSubTriggers = crsql_join(subTriggers, length);
 
-  for (int i = 0; i < tableInfo->nonPksLen; ++i) {
+  for (int i = 0; i < length; ++i) {
     sqlite3_free(subTriggers[i]);
-  }
-  if (tableInfo->nonPksLen == 0) {
-    sqlite3_free(subTriggers[0]);
   }
   sqlite3_free(subTriggers);
 

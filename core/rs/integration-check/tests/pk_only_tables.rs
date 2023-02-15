@@ -1,10 +1,10 @@
 use core::ffi::c_char;
-use sqlite::Connection;
 use sqlite::Destructor;
 use sqlite::ManagedConnection;
+use sqlite::{Connection, ResultCode};
 use sqlite_nostd as sqlite;
 
-pub fn sync_left_to_right(
+fn sync_left_to_right(
     l: &dyn Connection,
     r: &dyn Connection,
     since: sqlite::int64,
@@ -80,6 +80,20 @@ fn insert_pkonly_row_impl() -> Result<(), sqlite::ResultCode> {
     let stmt = db_a.prepare_v2("INSERT INTO foo (id) VALUES (?);")?;
     stmt.bind_int(1, 1)?;
     stmt.step()?;
+
+    let stmt = db_a.prepare_v2("SELECT * FROM crsql_changes;")?;
+    let result = stmt.step()?;
+    assert_eq!(result, ResultCode::ROW);
+
+    sync_left_to_right(&db_a, &db_b, -1)?;
+
+    let stmt = db_b.prepare_v2("SELECT * FROM foo;")?;
+    let result = stmt.step()?;
+    assert_eq!(result, ResultCode::ROW);
+    let id = stmt.column_int(0)?;
+    assert_eq!(id, 1);
+    let result = stmt.step()?;
+    assert_eq!(result, ResultCode::DONE);
 
     closedb(db_a)?;
     closedb(db_b)?;

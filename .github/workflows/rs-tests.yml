@@ -30,9 +30,14 @@ jobs:
       - name: Test Automigrate
         run: |
           cd core/rs/automigrate-core
-          cargo test
+          cargo test --features=static
 
       - name: Test Fractindex
         run: |
           cd core/rs/fractindex-core
+          cargo test --features=static
+
+      - name: Integration Tests
+        run: |
+          cd core/rs/integration-check
           cargo test

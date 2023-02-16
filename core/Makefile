@@ -73,7 +73,7 @@ $(dbg_prefix):
 
 clean:
 	rm -rf $(prefix)
-	rm -rf $(db_prefix)
+	rm -rf $(dbg_prefix)
 
 
 FORMAT_FILES=$(ext_files) $(ext_headers) ./src/core_init.c
@@ -104,26 +104,35 @@ fuzz: $(TARGET_FUZZ)
 	$(prefix)/fuzz
 
 rs_lib_dbg_static = ./rs/bundle/target/debug/libcrsql_bundle.a
+rs_lib_dbg_static_cpy = ./dbg/libcrsql_bundle-dbg-static.a
+
 rs_lib_loadable = ./rs/bundle/target/release/libcrsql_bundle.a
+rs_lib_loadable_cpy = ./dist/libcrsql_bundle-loadable.a
+
 rs_lib_dbg_loadable = ./rs/bundle/target/debug/libcrsql_bundle.a
+rs_lib_dbg_loadable_cpy = ./dbg/libcrsql_bundle-dbg-loadable.a
 
-$(rs_lib_dbg_static): FORCE
+$(rs_lib_dbg_static_cpy): FORCE $(dbg_prefix)
 	cd ./rs/bundle && $(rustflags_static) cargo build --features static,omit_load_extension $(rs_build_flags)
+	cp $(rs_lib_dbg_static) $(rs_lib_dbg_static_cpy)
 
-$(rs_lib_loadable): FORCE
+$(rs_lib_loadable_cpy): FORCE $(dbg_prefix)
 	cd ./rs/bundle && $(rustflags_static) cargo build --release --features loadable_extension $(rs_build_flags)
+	cp $(rs_lib_loadable) $(rs_lib_loadable_cpy)
 
-$(rs_lib_dbg_loadable): FORCE
+# we need separate output dirs based on selected features of the build
+$(rs_lib_dbg_loadable_cpy): FORCE $(dbg_prefix)
 	cd ./rs/bundle && $(rustflags_static) cargo build --features loadable_extension $(rs_build_flags)
+	cp $(rs_lib_dbg_loadable) $(rs_lib_dbg_loadable_cpy)
 
 # Build the loadable extension.
-$(TARGET_LOADABLE): $(prefix) $(ext_files) $(rs_lib_loadable)
+$(TARGET_LOADABLE): $(prefix) $(ext_files) $(rs_lib_loadable_cpy)
 	$(CC) -O2 -I./src/ -I./src/sqlite \
 	$(LOADABLE_CFLAGS) \
 	$(DEFINE_SQLITE_PATH) \
-	$(ext_files) $(rs_lib_loadable) -o $@
+	$(ext_files) $(rs_lib_loadable_cpy) -o $@
 
-$(TARGET_DBG_LOADABLE): $(dbg_prefix) $(ext_files) $(rs_lib_dbg_loadable)
+$(TARGET_DBG_LOADABLE): $(dbg_prefix) $(ext_files) $(rs_lib_dbg_loadable_cpy)
 	$(CC) -g -I./src/ -I./src/sqlite \
 	$(LOADABLE_CFLAGS) \
 	$(DEFINE_SQLITE_PATH) \
@@ -131,14 +140,14 @@ $(TARGET_DBG_LOADABLE): $(dbg_prefix) $(ext_files) $(rs_lib_dbg_loadable)
 
 # Build a SQLite CLI that pre-loads cr-sqlite.
 # Useful for debugging.
-$(TARGET_SQLITE3): $(prefix) $(TARGET_SQLITE3_EXTRA_C) $(rs_lib_dbg_static) src/sqlite/shell.c $(ext_files)
+$(TARGET_SQLITE3): $(prefix) $(TARGET_SQLITE3_EXTRA_C) $(rs_lib_dbg_static_cpy) src/sqlite/shell.c $(ext_files)
 	$(CC) -g \
 	$(DEFINE_SQLITE_PATH) \
 	-DSQLITE_THREADSAFE=0 \
 	-DSQLITE_OMIT_LOAD_EXTENSION=1 \
 	-DSQLITE_EXTRA_INIT=core_init \
 	-I./src/ -I./src/sqlite \
-	$(TARGET_SQLITE3_EXTRA_C) src/sqlite/shell.c $(ext_files) $(rs_lib_dbg_static) \
+	$(TARGET_SQLITE3_EXTRA_C) src/sqlite/shell.c $(ext_files) $(rs_lib_dbg_static_cpy) \
 	$(LDLIBS) -o $@
 
 # Build a normal SQLite CLI that does not include cr-sqlite.
@@ -156,7 +165,7 @@ $(TARGET_SQLITE3_EXTRA_C): src/sqlite/sqlite3.c src/core_init.c
 	cat src/sqlite/sqlite3.c src/core_init.c > $@
 
 # run tests
-$(TARGET_TEST): $(prefix) $(TARGET_SQLITE3_EXTRA_C) src/tests.c src/*.test.c $(ext_files) $(rs_lib_dbg_static)
+$(TARGET_TEST): $(prefix) $(TARGET_SQLITE3_EXTRA_C) src/tests.c src/*.test.c $(ext_files) $(rs_lib_dbg_static_cpy)
 	$(CC) -g -Wall \
 	$(DEFINE_SQLITE_PATH) \
 	-DSQLITE_THREADSAFE=0 \
@@ -164,7 +173,7 @@ $(TARGET_TEST): $(prefix) $(TARGET_SQLITE3_EXTRA_C) src/tests.c src/*.test.c $(e
 	-DSQLITE_EXTRA_INIT=core_init \
 	-DUNIT_TEST=1 \
 	-I./src/ -I./src/sqlite \
-	$(TARGET_SQLITE3_EXTRA_C) src/tests.c src/*.test.c $(ext_files) $(rs_lib_dbg_static) \
+	$(TARGET_SQLITE3_EXTRA_C) src/tests.c src/*.test.c $(ext_files) $(rs_lib_dbg_static_cpy) \
 	$(LDLIBS) -o $@
 
 $(TARGET_TEST_ASAN): $(prefix) $(TARGET_SQLITE3_EXTRA_C) src/tests.c src/*.test.c $(ext_files)
@@ -175,7 +184,7 @@ $(TARGET_TEST_ASAN): $(prefix) $(TARGET_SQLITE3_EXTRA_C) src/tests.c src/*.test.
 	-DSQLITE_EXTRA_INIT=core_init \
 	-DUNIT_TEST=1 \
 	-I./src/ -I./src/sqlite \
-	$(TARGET_SQLITE3_EXTRA_C) src/tests.c src/*.test.c $(ext_files) $(rs_lib_dbg_static) \
+	$(TARGET_SQLITE3_EXTRA_C) src/tests.c src/*.test.c $(ext_files) $(rs_lib_dbg_static_cpy) \
 	$(LDLIBS) -o $@
 
 $(TARGET_FUZZ): $(prefix) $(TARGET_SQLITE3_EXTRA_C) src/fuzzer.cc $(ext_files)
@@ -185,7 +194,7 @@ $(TARGET_FUZZ): $(prefix) $(TARGET_SQLITE3_EXTRA_C) src/fuzzer.cc $(ext_files)
 	-DSQLITE_OMIT_LOAD_EXTENSION=1 \
 	-DSQLITE_EXTRA_INIT=core_init \
 	-I./src/ -I./src/sqlite \
-	$(TARGET_SQLITE3_EXTRA_C) src/fuzzer.cc $(ext_files) $(rs_lib_dbg_static) \
+	$(TARGET_SQLITE3_EXTRA_C) src/fuzzer.cc $(ext_files) $(rs_lib_dbg_static_cpy) \
 	$(LDLIBS) -o $@
 
 .PHONY: all clean format \

@@ -41,10 +41,25 @@ fn sync_left_to_right(
     Ok(ResultCode::OK)
 }
 
-fn print_changes(db: &dyn Connection) -> Result<ResultCode, ResultCode> {
-    let stmt = db.prepare_v2(
-        "SELECT [table], [pk], [cid], [val], [col_version], [db_version], quote([site_id]) FROM crsql_changes",
-    )?;
+fn print_changes(
+    db: &dyn Connection,
+    for_db: Option<&dyn Connection>,
+) -> Result<ResultCode, ResultCode> {
+    let stmt = if let Some(for_db) = for_db {
+        let siteid_stmt = for_db.prepare_v2("SELECT crsql_siteid()")?;
+        siteid_stmt.step()?;
+        let siteid = siteid_stmt.column_blob(0)?;
+        let stmt = db.prepare_v2(
+          "SELECT [table], [pk], [cid], [val], [col_version], [db_version], quote([site_id]) FROM crsql_changes WHERE site_id IS NOT ?",
+        )?;
+        stmt.bind_blob(1, siteid, Destructor::STATIC)?;
+        stmt
+    } else {
+        db.prepare_v2(
+          "SELECT [table], [pk], [cid], [val], [col_version], [db_version], quote([site_id]) FROM crsql_changes",
+        )?
+    };
+
     while stmt.step()? == ResultCode::ROW {
         println!(
             "{}, {}, {}, {}, {}, {}, {}",
@@ -82,18 +97,18 @@ fn setup_schema(db: &ManagedConnection) -> Result<ResultCode, ResultCode> {
     db.exec_safe("SELECT crsql_as_crr('foo');")
 }
 
-// #[test]
+#[test]
 fn create_pkonlytable() {
     // just expecting not to throw
     create_pkonlytable_impl().unwrap();
 }
 
-// #[test]
+#[test]
 fn insert_pkonly_row() {
     insert_pkonly_row_impl().unwrap();
 }
 
-// #[test]
+#[test]
 fn modify_pkonly_row() {
     // inserts then updates then syncs the value of a pk column
     // inserts, syncs, then updates then syncs
@@ -183,6 +198,9 @@ fn modify_pkonly_row_impl() -> Result<(), ResultCode> {
     Ok(())
 }
 
+// Current issue with this test is that we're not recording the actual
+// delete event on update of primary key. We're creating a synthetic one
+// on read from `changes` when the target row is missing.
 fn junction_table_impl() -> Result<(), ResultCode> {
     let db_a = opendb()?;
     let db_b = opendb()?;
@@ -214,14 +232,14 @@ fn junction_table_impl() -> Result<(), ResultCode> {
         .step()?;
 
     println!("A before sync");
-    print_changes(&db_a)?;
+    print_changes(&db_a, None)?;
 
     sync_left_to_right(&db_b, &db_a, -1)?;
 
     println!("B");
-    print_changes(&db_b)?;
+    print_changes(&db_b, None)?;
     println!("A after sync");
-    print_changes(&db_a)?;
+    print_changes(&db_a, None)?;
 
     let stmt = db_a.prepare_v2("SELECT * FROM jx;")?;
     let result = stmt.step()?;

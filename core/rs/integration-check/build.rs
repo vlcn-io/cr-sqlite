@@ -20,7 +20,7 @@ fn main() {
 
     cc::Build::new()
         .file("../../src/sqlite/sqlite3.c")
-        .include("../../src/sqlite/sqlite3.h")
+        .include("../../src/sqlite/")
         .flag("-DSQLITE_CORE")
         .compile("sqlite3");
 }

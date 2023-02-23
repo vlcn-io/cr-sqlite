@@ -22,24 +22,21 @@ fn sync_left_to_right(
     r: &dyn Connection,
     since: sqlite::int64,
 ) -> Result<ResultCode, ResultCode> {
-    let siteid_stmt = r.prepare_v2("SELECT crsql_siteid()").unwrap();
-    siteid_stmt.step().unwrap();
-    let siteid = siteid_stmt.column_blob(0).unwrap();
+    let siteid_stmt = r.prepare_v2("SELECT crsql_siteid()")?;
+    siteid_stmt.step()?;
+    let siteid = siteid_stmt.column_blob(0)?;
 
-    let stmt_l = l
-        .prepare_v2("SELECT * FROM crsql_changes WHERE db_version > ? AND site_id IS NOT ?")
-        .unwrap();
-    stmt_l.bind_int64(1, since).unwrap();
-    stmt_l.bind_blob(2, siteid, Destructor::STATIC).unwrap();
+    let stmt_l =
+        l.prepare_v2("SELECT * FROM crsql_changes WHERE db_version > ? AND site_id IS NOT ?")?;
+    stmt_l.bind_int64(1, since)?;
+    stmt_l.bind_blob(2, siteid, Destructor::STATIC)?;
 
     while stmt_l.step()? == ResultCode::ROW {
-        let stmt_r = r
-            .prepare_v2("INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?, ?)")
-            .unwrap();
+        let stmt_r = r.prepare_v2("INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?, ?)")?;
         for x in 0..7 {
-            stmt_r.bind_value(x + 1, stmt_l.column_value(x)?).unwrap();
+            stmt_r.bind_value(x + 1, stmt_l.column_value(x)?)?;
         }
-        stmt_r.step().unwrap();
+        stmt_r.step()?;
     }
     Ok(ResultCode::OK)
 }
@@ -49,13 +46,13 @@ fn print_changes(
     for_db: Option<&dyn Connection>,
 ) -> Result<ResultCode, ResultCode> {
     let stmt = if let Some(for_db) = for_db {
-        let siteid_stmt = for_db.prepare_v2("SELECT crsql_siteid()").unwrap();
-        siteid_stmt.step().unwrap();
-        let siteid = siteid_stmt.column_blob(0).unwrap();
+        let siteid_stmt = for_db.prepare_v2("SELECT crsql_siteid()")?;
+        siteid_stmt.step()?;
+        let siteid = siteid_stmt.column_blob(0)?;
         let stmt = db.prepare_v2(
           "SELECT [table], [pk], [cid], [val], [col_version], [db_version], quote([site_id]) FROM crsql_changes WHERE site_id IS NOT ?",
-        ).unwrap();
-        stmt.bind_blob(1, siteid, Destructor::STATIC).unwrap();
+        )?;
+        stmt.bind_blob(1, siteid, Destructor::STATIC)?;
         stmt
     } else {
         db.prepare_v2(
@@ -83,23 +80,20 @@ fn print_changes(
 }
 
 fn opendb() -> Result<ManagedConnection, ResultCode> {
-    let connection = sqlite::open(sqlite::strlit!(":memory:")).unwrap();
-    connection.enable_load_extension(true).unwrap();
-    connection
-        .load_extension("../../dbg/crsqlite", None)
-        .unwrap();
+    let connection = sqlite::open(sqlite::strlit!(":memory:"))?;
+    connection.enable_load_extension(true)?;
+    connection.load_extension("../../dbg/crsqlite", None)?;
     Ok(connection)
 }
 
 fn closedb(db: ManagedConnection) -> Result<(), ResultCode> {
-    db.exec_safe("SELECT crsql_finalize()").unwrap();
+    db.exec_safe("SELECT crsql_finalize()")?;
     // no close, it gets called on drop.
     Ok(())
 }
 
 fn setup_schema(db: &ManagedConnection) -> Result<ResultCode, ResultCode> {
-    db.exec_safe("CREATE TABLE foo (id INTEGER PRIMARY KEY);")
-        .unwrap();
+    db.exec_safe("CREATE TABLE foo (id INTEGER PRIMARY KEY);")?;
     db.exec_safe("SELECT crsql_as_crr('foo');")
 }
 
@@ -131,78 +125,74 @@ fn junction_table() {
 }
 
 fn create_pkonlytable_impl() -> Result<(), ResultCode> {
-    let db_a = opendb().unwrap();
+    let db_a = opendb()?;
 
-    setup_schema(&db_a).unwrap();
-    closedb(db_a).unwrap();
+    setup_schema(&db_a)?;
+    closedb(db_a)?;
     Ok(())
 }
 
 fn insert_pkonly_row_impl() -> Result<(), ResultCode> {
-    let db_a = opendb().unwrap();
-    let db_b = opendb().unwrap();
+    let db_a = opendb()?;
+    let db_b = opendb()?;
 
     fn setup_schema(db: &ManagedConnection) -> Result<ResultCode, ResultCode> {
-        db.exec_safe("CREATE TABLE foo (id INTEGER PRIMARY KEY);")
-            .unwrap();
+        db.exec_safe("CREATE TABLE foo (id INTEGER PRIMARY KEY);")?;
         db.exec_safe("SELECT crsql_as_crr('foo');")
     }
 
-    setup_schema(&db_a).unwrap();
-    setup_schema(&db_b).unwrap();
+    setup_schema(&db_a)?;
+    setup_schema(&db_b)?;
 
-    let stmt = db_a.prepare_v2("INSERT INTO foo (id) VALUES (?);").unwrap();
-    stmt.bind_int(1, 1).unwrap();
-    stmt.step().unwrap();
+    let stmt = db_a.prepare_v2("INSERT INTO foo (id) VALUES (?);")?;
+    stmt.bind_int(1, 1)?;
+    stmt.step()?;
 
-    let stmt = db_a.prepare_v2("SELECT * FROM crsql_changes;").unwrap();
-    let result = stmt.step().unwrap();
+    let stmt = db_a.prepare_v2("SELECT * FROM crsql_changes;")?;
+    let result = stmt.step()?;
     assert_eq!(result, ResultCode::ROW);
 
-    sync_left_to_right(&db_a, &db_b, -1).unwrap();
+    sync_left_to_right(&db_a, &db_b, -1)?;
 
-    let stmt = db_b.prepare_v2("SELECT * FROM foo;").unwrap();
-    let result = stmt.step().unwrap();
+    let stmt = db_b.prepare_v2("SELECT * FROM foo;")?;
+    let result = stmt.step()?;
     assert_eq!(result, ResultCode::ROW);
-    let id = stmt.column_int(0).unwrap();
+    let id = stmt.column_int(0)?;
     assert_eq!(id, 1);
-    let result = stmt.step().unwrap();
+    let result = stmt.step()?;
     assert_eq!(result, ResultCode::DONE);
 
-    closedb(db_a).unwrap();
-    closedb(db_b).unwrap();
+    closedb(db_a)?;
+    closedb(db_b)?;
     Ok(())
 }
 
 fn modify_pkonly_row_impl() -> Result<(), ResultCode> {
-    let db_a = opendb().unwrap();
-    let db_b = opendb().unwrap();
+    let db_a = opendb()?;
+    let db_b = opendb()?;
 
     fn setup_schema(db: &ManagedConnection) -> Result<ResultCode, ResultCode> {
-        db.exec_safe("CREATE TABLE foo (id INTEGER PRIMARY KEY);")
-            .unwrap();
+        db.exec_safe("CREATE TABLE foo (id INTEGER PRIMARY KEY);")?;
         db.exec_safe("SELECT crsql_as_crr('foo');")
     }
 
-    setup_schema(&db_a).unwrap();
-    setup_schema(&db_b).unwrap();
+    setup_schema(&db_a)?;
+    setup_schema(&db_b)?;
 
-    let stmt = db_a.prepare_v2("INSERT INTO foo (id) VALUES (1);").unwrap();
-    stmt.step().unwrap();
+    let stmt = db_a.prepare_v2("INSERT INTO foo (id) VALUES (1);")?;
+    stmt.step()?;
 
-    let stmt = db_a
-        .prepare_v2("UPDATE foo SET id = 2 WHERE id = 1;")
-        .unwrap();
-    stmt.step().unwrap();
+    let stmt = db_a.prepare_v2("UPDATE foo SET id = 2 WHERE id = 1;")?;
+    stmt.step()?;
 
-    sync_left_to_right(&db_a, &db_b, -1).unwrap();
+    sync_left_to_right(&db_a, &db_b, -1)?;
 
-    let stmt = db_b.prepare_v2("SELECT * FROM foo;").unwrap();
-    let result = stmt.step().unwrap();
+    let stmt = db_b.prepare_v2("SELECT * FROM foo;")?;
+    let result = stmt.step()?;
     assert_eq!(result, ResultCode::ROW);
-    let id = stmt.column_int(0).unwrap();
+    let id = stmt.column_int(0)?;
     assert_eq!(id, 2);
-    let result = stmt.step().unwrap();
+    let result = stmt.step()?;
     assert_eq!(result, ResultCode::DONE);
 
     Ok(())
@@ -212,58 +202,53 @@ fn modify_pkonly_row_impl() -> Result<(), ResultCode> {
 // delete event on update of primary key. We're creating a synthetic one
 // on read from `changes` when the target row is missing.
 fn junction_table_impl() -> Result<(), ResultCode> {
-    let db_a = opendb().unwrap();
-    let db_b = opendb().unwrap();
+    let db_a = opendb()?;
+    let db_b = opendb()?;
 
     fn setup_schema(db: &ManagedConnection) -> Result<ResultCode, ResultCode> {
-        db.exec_safe("CREATE TABLE jx (id1, id2, PRIMARY KEY(id1, id2));")
-            .unwrap();
+        db.exec_safe("CREATE TABLE jx (id1, id2, PRIMARY KEY(id1, id2));")?;
         db.exec_safe("SELECT crsql_as_crr('jx');")
     }
 
-    setup_schema(&db_a).unwrap();
-    setup_schema(&db_b).unwrap();
+    setup_schema(&db_a)?;
+    setup_schema(&db_b)?;
 
-    db_a.prepare_v2("INSERT INTO jx VALUES (1, 2);")?
-        .step()
-        .unwrap();
+    db_a.prepare_v2("INSERT INTO jx VALUES (1, 2);")?.step()?;
     db_a.prepare_v2("UPDATE jx SET id2 = 3 WHERE id1 = 1 AND id2 = 2")?
-        .step()
-        .unwrap();
+        .step()?;
 
-    sync_left_to_right(&db_a, &db_b, -1).unwrap();
-    let stmt = db_b.prepare_v2("SELECT * FROM jx;").unwrap();
-    let result = stmt.step().unwrap();
+    sync_left_to_right(&db_a, &db_b, -1)?;
+    let stmt = db_b.prepare_v2("SELECT * FROM jx;")?;
+    let result = stmt.step()?;
     assert_eq!(result, ResultCode::ROW);
-    let id1 = stmt.column_int(0).unwrap();
-    let id2 = stmt.column_int(1).unwrap();
+    let id1 = stmt.column_int(0)?;
+    let id2 = stmt.column_int(1)?;
     assert_eq!(id1, 1);
     assert_eq!(id2, 3);
-    let result = stmt.step().unwrap();
+    let result = stmt.step()?;
     assert_eq!(result, ResultCode::DONE);
 
     db_b.prepare_v2("UPDATE jx SET id1 = 2 WHERE id1 = 1 AND id2 = 3")?
-        .step()
-        .unwrap();
+        .step()?;
 
     println!("A before sync");
-    print_changes(&db_a, None).unwrap();
+    print_changes(&db_a, None)?;
 
-    sync_left_to_right(&db_b, &db_a, -1).unwrap();
+    sync_left_to_right(&db_b, &db_a, -1)?;
 
     println!("B");
-    print_changes(&db_b, None).unwrap();
+    print_changes(&db_b, None)?;
     println!("A after sync");
-    print_changes(&db_a, None).unwrap();
+    print_changes(&db_a, None)?;
 
-    let stmt = db_a.prepare_v2("SELECT * FROM jx;").unwrap();
-    let result = stmt.step().unwrap();
+    let stmt = db_a.prepare_v2("SELECT * FROM jx;")?;
+    let result = stmt.step()?;
     assert_eq!(result, ResultCode::ROW);
-    let id1 = stmt.column_int(0).unwrap();
-    let id2 = stmt.column_int(1).unwrap();
+    let id1 = stmt.column_int(0)?;
+    let id2 = stmt.column_int(1)?;
     assert_eq!(id1, 1);
     assert_eq!(id2, 3);
-    let result = stmt.step().unwrap();
+    let result = stmt.step()?;
     assert_eq!(result, ResultCode::DONE);
 
     // insert an edge

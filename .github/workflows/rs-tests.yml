@@ -37,6 +37,11 @@ jobs:
           cd core/rs/fractindex-core
           cargo test --features=loadable_extension
 
+      - name: Make Loadable DBG
+        run: |
+          cd core
+          make loadable_dbg
+
       - name: Integration Tests
         run: |
           cd core/rs/integration-check

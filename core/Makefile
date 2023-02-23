@@ -123,8 +123,6 @@ $(rs_lib_loadable_cpy): FORCE $(dbg_prefix)
 # we need separate output dirs based on selected features of the build
 $(rs_lib_dbg_loadable_cpy): FORCE $(dbg_prefix)
 	cd ./rs/bundle && $(rustflags_static) cargo build --features loadable_extension $(rs_build_flags)
-	pwd
-	ls ./rs/bundle/target/debug/
 	cp $(rs_lib_dbg_loadable) $(rs_lib_dbg_loadable_cpy)
 
 # Build the loadable extension.

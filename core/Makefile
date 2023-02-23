@@ -136,7 +136,7 @@ $(TARGET_DBG_LOADABLE): $(dbg_prefix) $(ext_files) $(rs_lib_dbg_loadable_cpy)
 	$(CC) -g -I./src/ -I./src/sqlite \
 	$(LOADABLE_CFLAGS) \
 	$(DEFINE_SQLITE_PATH) \
-	$(ext_files) $(rs_lib_loadable) -o $@
+	$(ext_files) $(rs_lib_dbg_loadable_cpy) -o $@
 
 # Build a SQLite CLI that pre-loads cr-sqlite.
 # Useful for debugging.

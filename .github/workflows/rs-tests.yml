@@ -45,4 +45,4 @@ jobs:
       - name: Integration Tests
         run: |
           cd core/rs/integration-check
-          export RUST_BACKTRACE=1; cargo test
+          cargo test

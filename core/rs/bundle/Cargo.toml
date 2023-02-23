@@ -10,7 +10,7 @@ license = "Apache 2"
 name = "crsql_bundle"
 crate-type = ["staticlib"]
 
-# "cdylib" <-- only enable cdylib if omit_load_extension is not enabled
+# "cdylib" <-- only enable cdylib if loadable_extension is enabled
 
 [dependencies]
 crsql_fractindex_core = {path="../fractindex-core"}
@@ -23,4 +23,6 @@ panic = "abort"
 panic = "abort"
 
 [features]
+loadable_extension = ["sqlite_nostd/loadable_extension"]
+static = ["sqlite_nostd/static"]
 omit_load_extension = ["sqlite_nostd/omit_load_extension"]

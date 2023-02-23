@@ -3,7 +3,7 @@ use alloc::format;
 use alloc::string::String;
 use alloc::vec::Vec;
 use sqlite_nostd::Value;
-use sqlite_nostd::{self, Connection, ResultCode};
+use sqlite_nostd::{self, Connection, Destructor, ResultCode};
 
 pub fn where_predicates<T: AsRef<str>>(columns: &[T]) -> Result<String, ResultCode> {
     let mut predicates = String::new();
@@ -57,7 +57,7 @@ pub fn extract_pk_columns(
 ) -> Result<Vec<String>, ResultCode> {
     let sql = "SELECT \"name\" FROM pragma_table_info(?) WHERE \"pk\" > 0 ORDER BY \"pk\" ASC";
     let stmt = db.prepare_v2(&sql)?;
-    stmt.bind_text(1, table)?;
+    stmt.bind_text(1, table, Destructor::STATIC)?;
     let mut columns = Vec::new();
     while stmt.step()? == ResultCode::ROW {
         columns.push(String::from(stmt.column_text(0)?));
@@ -73,7 +73,7 @@ pub fn extract_columns(
 ) -> Result<Vec<String>, ResultCode> {
     let sql = "SELECT \"name\" FROM pragma_table_info(?)";
     let stmt = db.prepare_v2(&sql)?;
-    stmt.bind_text(1, table)?;
+    stmt.bind_text(1, table, Destructor::STATIC)?;
     let mut columns = Vec::new();
     while stmt.step()? == ResultCode::ROW {
         columns.push(String::from(stmt.column_text(0)?));

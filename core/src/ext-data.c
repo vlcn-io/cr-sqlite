@@ -289,8 +289,8 @@ int crsql_getDbVersion(sqlite3 *db, crsql_ExtData *pExtData, char **errmsg) {
  * changes (2) in `xUpdate` of the changes-vtab to ensure we apply received
  * changed correctly
  */
-int crsql_ensureTableInfosAreUpToDate(sqlite3 *db, crsql_ExtData *pExtData,
-                                      char **errmsg) {
+int crsql_ensureTableInfosAreUpToDate(sqlite3 *db, const char *schemaName,
+                                      crsql_ExtData *pExtData, char **errmsg) {
   int rc = SQLITE_OK;
 
   int bSchemaChanged =
@@ -304,7 +304,7 @@ int crsql_ensureTableInfosAreUpToDate(sqlite3 *db, crsql_ExtData *pExtData,
     crsql_freeAllTableInfos(pExtData->zpTableInfos, pExtData->tableInfosLen);
 
     // re-fetch table infos
-    rc = crsql_pullAllTableInfos(db, &(pExtData->zpTableInfos),
+    rc = crsql_pullAllTableInfos(db, schemaName, &(pExtData->zpTableInfos),
                                  &(pExtData->tableInfosLen), errmsg);
     if (rc != SQLITE_OK) {
       crsql_freeAllTableInfos(pExtData->zpTableInfos, pExtData->tableInfosLen);

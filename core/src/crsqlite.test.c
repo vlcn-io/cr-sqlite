@@ -100,13 +100,13 @@ static void testCreateClockTable() {
   sqlite3_exec(db, "CREATE TABLE baz (a primary key, b)", 0, 0, 0);
   sqlite3_exec(db, "CREATE TABLE boo (a primary key, b, c)", 0, 0, 0);
 
-  rc = crsql_getTableInfo(db, "foo", &tc1, &err);
+  rc = crsql_getTableInfo(db, "main", "foo", &tc1, &err);
   CHECK_OK
-  rc = crsql_getTableInfo(db, "bar", &tc2, &err);
+  rc = crsql_getTableInfo(db, "main", "bar", &tc2, &err);
   CHECK_OK
-  rc = crsql_getTableInfo(db, "baz", &tc3, &err);
+  rc = crsql_getTableInfo(db, "main", "baz", &tc3, &err);
   CHECK_OK
-  rc = crsql_getTableInfo(db, "boo", &tc4, &err);
+  rc = crsql_getTableInfo(db, "main", "boo", &tc4, &err);
   CHECK_OK
 
   rc = crsql_createClockTable(db, tc1, &err);

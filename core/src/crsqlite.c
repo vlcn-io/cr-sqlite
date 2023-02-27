@@ -312,7 +312,7 @@ static int createCrr(sqlite3_context *context, sqlite3 *db,
     return SQLITE_ERROR;
   }
 
-  rc = crsql_getTableInfo(db, tblName, &tableInfo, err);
+  rc = crsql_getTableInfo(db, schemaName, tblName, &tableInfo, err);
 
   if (rc != SQLITE_OK) {
     crsql_freeTableInfo(tableInfo);

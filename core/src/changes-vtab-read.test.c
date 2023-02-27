@@ -33,7 +33,7 @@ static void testChangesQueryForTable() {
 
   rc += sqlite3_exec(db, "create table foo (a primary key, b);", 0, 0, &err);
   rc += sqlite3_exec(db, "select crsql_as_crr('foo');", 0, 0, &err);
-  rc += crsql_getTableInfo(db, "foo", &tblInfo, &err);
+  rc += crsql_getTableInfo(db, "main", "foo", &tblInfo, &err);
   assert(rc == SQLITE_OK);
 
   char *query = crsql_changesQueryForTable(tblInfo, 6);
@@ -77,8 +77,8 @@ static void testChangesUnionQuery() {
                      &err);
   rc += sqlite3_exec(db, "select crsql_as_crr('foo');", 0, 0, &err);
   rc += sqlite3_exec(db, "select crsql_as_crr('bar');", 0, 0, &err);
-  rc += crsql_getTableInfo(db, "foo", &tblInfos[0], &err);
-  rc += crsql_getTableInfo(db, "bar", &tblInfos[1], &err);
+  rc += crsql_getTableInfo(db, "main", "foo", &tblInfos[0], &err);
+  rc += crsql_getTableInfo(db, "main", "bar", &tblInfos[1], &err);
   assert(rc == SQLITE_OK);
 
   char *query = crsql_changesUnionQuery(tblInfos, 2, 6);
@@ -134,7 +134,7 @@ static void testRowPatchDataQuery() {
   rc += sqlite3_exec(db, "select crsql_as_crr('foo');", 0, 0, &err);
   rc += sqlite3_exec(db, "insert into foo values(1, 'cb', 'cc', 'cd')", 0, 0,
                      &err);
-  rc += crsql_getTableInfo(db, "foo", &tblInfo, &err);
+  rc += crsql_getTableInfo(db, "main", "foo", &tblInfo, &err);
   assert(rc == SQLITE_OK);
 
   // TC1: single pk table, 1 col change

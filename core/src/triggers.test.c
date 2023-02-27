@@ -40,7 +40,7 @@ static void testCreateTriggers() {
   rc =
       sqlite3_exec(db, "CREATE TABLE \"foo\" (\"a\" PRIMARY KEY, \"b\", \"c\")",
                    0, 0, &errMsg);
-  rc = crsql_getTableInfo(db, "foo", &tableInfo, &errMsg);
+  rc = crsql_getTableInfo(db, "main", "foo", &tableInfo, &errMsg);
 
   if (rc == SQLITE_OK) {
     rc = crsql_createInsertTrigger(db, tableInfo, &errMsg);
@@ -76,7 +76,7 @@ static void testDeleteTriggerQuery() {
   rc +=
       sqlite3_exec(db, "CREATE TABLE \"foo\" (\"a\" PRIMARY KEY, \"b\", \"c\")",
                    0, 0, &errMsg);
-  rc += crsql_getTableInfo(db, "foo", &tableInfo, &errMsg);
+  rc += crsql_getTableInfo(db, "main", "foo", &tableInfo, &errMsg);
   rc += sqlite3_exec(db, "DROP TABLE foo", 0, 0, &errMsg);
 
   char *query = crsql_deleteTriggerQuery(tableInfo);
@@ -111,7 +111,7 @@ static void testInsertTriggerQuery() {
       db,
       "CREATE TABLE \"foo\" (\"a\", \"b\", \"c\", PRIMARY KEY (\"a\", \"b\"))",
       0, 0, &errMsg);
-  rc += crsql_getTableInfo(db, "foo", &tableInfo, &errMsg);
+  rc += crsql_getTableInfo(db, "main", "foo", &tableInfo, &errMsg);
   assert(rc == SQLITE_OK);
 
   char *query = crsql_insertTriggerQuery(tableInfo, "a, b", "NEW.a, NEW.b");

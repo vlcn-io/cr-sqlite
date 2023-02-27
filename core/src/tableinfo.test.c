@@ -34,7 +34,7 @@ static void testGetTableInfo() {
   rc = sqlite3_open(":memory:", &db);
 
   sqlite3_exec(db, "CREATE TABLE foo (a INT NOT NULL, b)", 0, 0, 0);
-  rc = crsql_getTableInfo(db, "foo", &tableInfo, &errMsg);
+  rc = crsql_getTableInfo(db, "main", "foo", &tableInfo, &errMsg);
 
   if (rc != SQLITE_OK) {
     printf("err: %s %d\n", errMsg, rc);
@@ -64,7 +64,7 @@ static void testGetTableInfo() {
   crsql_freeTableInfo(tableInfo);
 
   sqlite3_exec(db, "CREATE TABLE bar (a PRIMARY KEY, b)", 0, 0, 0);
-  rc = crsql_getTableInfo(db, "bar", &tableInfo, &errMsg);
+  rc = crsql_getTableInfo(db, "main", "bar", &tableInfo, &errMsg);
   if (rc != SQLITE_OK) {
     printf("err: %s %d\n", errMsg, rc);
     sqlite3_free(errMsg);

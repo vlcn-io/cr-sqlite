@@ -185,7 +185,7 @@ static crsql_TableInfo *crsql_tableInfo(const char *tblName,
  * of pragma_table_info, pragma_index_list, pragma_index_info on a given table
  * and its inidces as well as some extra fields to facilitate crr creation.
  */
-int crsql_getTableInfo(sqlite3 *db, const char *tblName,
+int crsql_getTableInfo(sqlite3 *db, const char *schemaName, const char *tblName,
                        crsql_TableInfo **pTableInfo, char **pErrMsg) {
   char *zSql = 0;
   int rc = SQLITE_OK;
@@ -194,8 +194,8 @@ int crsql_getTableInfo(sqlite3 *db, const char *tblName,
   int i = 0;
   crsql_ColumnInfo *columnInfos = 0;
 
-  zSql =
-      sqlite3_mprintf("select count(*) from pragma_table_info('%s')", tblName);
+  zSql = sqlite3_mprintf("select count(*) from \"%w\".pragma_table_info('%q')",
+                         schemaName, tblName);
   numColInfos = crsql_getCount(db, zSql);
   sqlite3_free(zSql);
 
@@ -206,8 +206,8 @@ int crsql_getTableInfo(sqlite3 *db, const char *tblName,
 
   zSql = sqlite3_mprintf(
       "select \"cid\", \"name\", \"type\", \"notnull\", \"pk\" from "
-      "pragma_table_info('%s') order by cid asc",
-      tblName);
+      "\"%w\".pragma_table_info('%q') order by cid asc",
+      schemaName, tblName);
   rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
   sqlite3_free(zSql);
 
@@ -305,7 +305,8 @@ crsql_TableInfo *crsql_findTableInfo(crsql_TableInfo **tblInfos, int len,
  * Run once at vtab initialization -- see docs on crsql_Changes_vtab
  * for the constraints this creates.
  */
-int crsql_pullAllTableInfos(sqlite3 *db, crsql_TableInfo ***pzpTableInfos,
+int crsql_pullAllTableInfos(sqlite3 *db, const char *schemaName,
+                            crsql_TableInfo ***pzpTableInfos,
                             int *rTableInfosLen, char **errmsg) {
   char **zzClockTableNames = 0;
   int rNumCols = 0;
@@ -336,7 +337,8 @@ int crsql_pullAllTableInfos(sqlite3 *db, crsql_TableInfo ***pzpTableInfos,
     char *baseTableName =
         crsql_strndup(zzClockTableNames[i + 1],
                       strlen(zzClockTableNames[i + 1]) - __CRSQL_CLOCK_LEN);
-    rc = crsql_getTableInfo(db, baseTableName, &tableInfos[i], errmsg);
+    rc = crsql_getTableInfo(db, schemaName, baseTableName, &tableInfos[i],
+                            errmsg);
     sqlite3_free(baseTableName);
 
     if (rc != SQLITE_OK) {

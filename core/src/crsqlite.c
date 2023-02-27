@@ -308,7 +308,7 @@ static int createCrr(sqlite3_context *context, sqlite3 *db,
   int rc = SQLITE_OK;
   crsql_TableInfo *tableInfo = 0;
 
-  if (!crsql_isTableCompatible(db, tblName, err)) {
+  if (!crsql_isTableCompatible(db, schemaName, tblName, err)) {
     return SQLITE_ERROR;
   }
 

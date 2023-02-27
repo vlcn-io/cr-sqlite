@@ -171,28 +171,28 @@ static void testIsTableCompatible() {
   // no pks
   rc += sqlite3_exec(db, "CREATE TABLE foo (a)", 0, 0, 0);
   assert(rc == SQLITE_OK);
-  rc = crsql_isTableCompatible(db, "foo", &errmsg);
+  rc = crsql_isTableCompatible(db, "main", "foo", &errmsg);
   assert(rc == 0);
   sqlite3_free(errmsg);
 
   // pks
   rc = sqlite3_exec(db, "CREATE TABLE bar (a primary key)", 0, 0, 0);
   assert(rc == SQLITE_OK);
-  rc = crsql_isTableCompatible(db, "bar", &errmsg);
+  rc = crsql_isTableCompatible(db, "main", "bar", &errmsg);
   assert(rc == 1);
 
   // pks + other non unique indices
   rc = sqlite3_exec(db, "CREATE TABLE baz (a primary key, b)", 0, 0, 0);
   rc += sqlite3_exec(db, "CREATE INDEX bar_i ON baz (b)", 0, 0, 0);
   assert(rc == SQLITE_OK);
-  rc = crsql_isTableCompatible(db, "bar", &errmsg);
+  rc = crsql_isTableCompatible(db, "main", "bar", &errmsg);
   assert(rc == 1);
 
   // pks + other unique indices
   rc = sqlite3_exec(db, "CREATE TABLE fuzz (a primary key, b)", 0, 0, 0);
   rc += sqlite3_exec(db, "CREATE UNIQUE INDEX fuzz_i ON fuzz (b)", 0, 0, 0);
   assert(rc == SQLITE_OK);
-  rc = crsql_isTableCompatible(db, "fuzz", &errmsg);
+  rc = crsql_isTableCompatible(db, "main", "fuzz", &errmsg);
   assert(rc == 0);
   sqlite3_free(errmsg);
 
@@ -200,7 +200,7 @@ static void testIsTableCompatible() {
   rc = sqlite3_exec(db, "CREATE TABLE buzz (a primary key, b NOT NULL)", 0, 0,
                     0);
   assert(rc == SQLITE_OK);
-  rc = crsql_isTableCompatible(db, "buzz", &errmsg);
+  rc = crsql_isTableCompatible(db, "main", "buzz", &errmsg);
   assert(rc == 0);
   sqlite3_free(errmsg);
 
@@ -208,7 +208,7 @@ static void testIsTableCompatible() {
   rc = sqlite3_exec(
       db, "CREATE TABLE boom (a primary key, b NOT NULL DEFAULT 1)", 0, 0, 0);
   assert(rc == SQLITE_OK);
-  rc = crsql_isTableCompatible(db, "boom", &errmsg);
+  rc = crsql_isTableCompatible(db, "main", "boom", &errmsg);
   assert(rc == 1);
 
   // fk constraint
@@ -217,7 +217,7 @@ static void testIsTableCompatible() {
       "CREATE TABLE zoom (a primary key, b, FOREIGN KEY(b) REFERENCES foo(a))",
       0, 0, 0);
   assert(rc == SQLITE_OK);
-  rc = crsql_isTableCompatible(db, "zoom", &errmsg);
+  rc = crsql_isTableCompatible(db, "main", "zoom", &errmsg);
   assert(rc == 0);
   sqlite3_free(errmsg);
 
@@ -225,14 +225,14 @@ static void testIsTableCompatible() {
   rc = sqlite3_exec(db, "CREATE TABLE atable (\"id\" TEXT PRIMARY KEY) STRICT",
                     0, 0, 0);
   assert(rc == SQLITE_OK);
-  rc = crsql_isTableCompatible(db, "atable", &errmsg);
+  rc = crsql_isTableCompatible(db, "main", "atable", &errmsg);
   assert(rc == 1);
 
   rc = sqlite3_exec(
       db, "CREATE TABLE atable2 (\"id\" TEXT PRIMARY KEY, x TEXT) STRICT;", 0,
       0, 0);
   assert(rc == SQLITE_OK);
-  rc = crsql_isTableCompatible(db, "atable2", &errmsg);
+  rc = crsql_isTableCompatible(db, "main", "atable2", &errmsg);
   assert(rc == 1);
 
   rc = sqlite3_exec(db,
@@ -244,7 +244,7 @@ static void testIsTableCompatible() {
     ) STRICT;",
                     0, 0, 0);
   assert(rc == SQLITE_OK);
-  rc = crsql_isTableCompatible(db, "atable2", &errmsg);
+  rc = crsql_isTableCompatible(db, "main", "atable2", &errmsg);
   assert(rc == 1);
 
   printf("\t\e[0;32mSuccess\e[0m\n");

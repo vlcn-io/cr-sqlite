@@ -354,13 +354,15 @@ int crsql_pullAllTableInfos(sqlite3 *db, crsql_TableInfo ***pzpTableInfos,
   return SQLITE_OK;
 }
 
-int crsql_isTableCompatible(sqlite3 *db, const char *tblName, char **errmsg) {
+int crsql_isTableCompatible(sqlite3 *db, const char *schemaName,
+                            const char *tblName, char **errmsg) {
   // No unique indices besides primary key
   sqlite3_stmt *pStmt = 0;
   char *zSql = sqlite3_mprintf(
-      "SELECT count(*) FROM pragma_index_list('%s') WHERE \"origin\" != 'pk' "
+      "SELECT count(*) FROM \"%w\".pragma_index_list('%q') WHERE \"origin\" != "
+      "'pk' "
       "AND \"unique\" = 1",
-      tblName);
+      schemaName, tblName);
   int rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
   sqlite3_free(zSql);
 

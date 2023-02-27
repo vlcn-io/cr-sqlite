@@ -61,7 +61,8 @@ crsql_TableInfo *crsql_findTableInfo(crsql_TableInfo **tblInfos, int len,
 char *crsql_quoteConcat(crsql_ColumnInfo *cols, int len);
 int crsql_pullAllTableInfos(sqlite3 *db, crsql_TableInfo ***pzpTableInfos,
                             int *rTableInfosLen, char **errmsg);
-int crsql_isTableCompatible(sqlite3 *db, const char *tblName, char **errmsg);
+int crsql_isTableCompatible(sqlite3 *db, const char *schemaName,
+                            const char *tblName, char **errmsg);
 int crsql_columnExists(const char *colName, crsql_ColumnInfo *colInfos,
                        int colInfosLen);
 

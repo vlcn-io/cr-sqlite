@@ -113,7 +113,7 @@ class AsyncResultStateMachine<T, M = readonly T[]> {
   private error?: QueryData<M>;
   private disposed: boolean = false;
   private readonly disposedState;
-  private readonly fetchingState;
+  private fetchingState;
   private dbSubscriptionDisposer: (() => void) | null;
 
   constructor(
@@ -134,6 +134,7 @@ class AsyncResultStateMachine<T, M = readonly T[]> {
     } as const;
     this.fetchingState = {
       ...this.disposedState,
+      loading: true,
       error: undefined,
     };
   }
@@ -204,6 +205,12 @@ class AsyncResultStateMachine<T, M = readonly T[]> {
 
     this.pendingFetchPromise = null;
     this.error = undefined;
+    if (this.data != null) {
+      this.fetchingState = {
+        ...this.data,
+        loading: true,
+      } as any;
+    }
     this.data = null;
     this.getSnapshot();
   };

@@ -1,4 +1,4 @@
-use sqlite_nostd::{context, sqlite3, Connection, Context, ResultCode, Value};
+use sqlite_nostd::{context, sqlite3, Connection, Context, Destructor, ResultCode, Value};
 extern crate alloc;
 use alloc::format;
 use alloc::vec::Vec;
@@ -94,7 +94,7 @@ fn table_has_all_columns(
         bindings
     );
     let stmt = db.prepare_v2(&sql)?;
-    stmt.bind_text(1, table)?;
+    stmt.bind_text(1, table, Destructor::STATIC)?;
     for (i, col) in columns.iter().enumerate() {
         stmt.bind_value((i + 2) as i32, *col)?;
     }

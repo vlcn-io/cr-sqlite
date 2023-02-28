@@ -4,4 +4,4 @@ import * as url from "url";
 import { join } from "path";
 const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
 
-export const extensionPath = join(__dirname, "build", "Release", "crsqlite");
+export const extensionPath = join(__dirname, "dist", "crsqlite");

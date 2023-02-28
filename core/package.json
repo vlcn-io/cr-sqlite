@@ -28,13 +28,9 @@
     "prebuild": "^7.2.2"
   },
   "scripts": {
-    "install": "prebuild-install || node-gyp rebuild --release",
-    "build-release": "node-gyp rebuild --release",
-    "build-debug": "node-gyp rebuild --debug",
-    "rebuild-release": "pnpm run build-release",
-    "rebuild-debug": "pnpm run build-debug",
+    "install": "make loadable",
     "test": "make test",
-    "deep-clean": "rm -rf ./build || true && rm -rf dist || true"
+    "deep-clean": "rm -rf ./dbg || true && rm -rf ./dist || true"
   },
   "license": "Apache 2",
   "keywords": [

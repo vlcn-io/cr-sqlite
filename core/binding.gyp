@@ -90,7 +90,13 @@
           'message': 'Building Rust Dependencies...',
           'inputs': ['./rs'],
           'outputs': ['./rs/bundle/target/release/libcrsql_bundle.a'],
-          'action': ['eval', 'cd ./rs/bundle && cargo +nightly build --release --features loadable_extension && cd ../..'],
+          'conditions': [
+            ['OS == "win"', {
+              'action': ['iex', 'cd ./rs/bundle && cargo +nightly build --release --features loadable_extension && cd ../..']
+            }, {
+              'action': ['eval', 'cd ./rs/bundle && cargo +nightly build --release --features loadable_extension && cd ../..']
+            }]
+          ],
         },
       ],
       'cflags': ['-std=c99 -fPIC -shared'],

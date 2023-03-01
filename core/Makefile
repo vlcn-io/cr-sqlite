@@ -121,6 +121,7 @@ $(rs_lib_dbg_loadable_cpy): FORCE $(dbg_prefix)
 $(TARGET_LOADABLE): $(prefix) $(ext_files) $(rs_lib_loadable_cpy)
 	$(CC) -O2 -I./src/ -I./src/sqlite \
 	$(LOADABLE_CFLAGS) \
+	$(MAYBE_ARCH) \
 	$(ext_files) $(rs_lib_loadable_cpy) -o $@
 
 $(TARGET_DBG_LOADABLE): $(dbg_prefix) $(ext_files) $(rs_lib_dbg_loadable_cpy)

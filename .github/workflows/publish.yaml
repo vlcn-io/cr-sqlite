@@ -61,7 +61,7 @@ jobs:
         include:
           - os: macos-latest
             artifact_name: crsqlite.dylib
-            asset_name: crsqlite-macos-aarch64.dylib
+            asset_name: crsqlite-darwin-aarch64.dylib
 
     steps:
       - uses: actions/checkout@v3

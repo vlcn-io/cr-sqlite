@@ -1,4 +1,8 @@
+ifndef CI_GCC
 CC:=gcc
+else
+CC:=$(CI_GCC)
+endif
 
 LOADABLE_CFLAGS=-std=c99 -fPIC -shared -Wall
 
@@ -109,7 +113,9 @@ ifdef CI_MAYBE_TARGET
 	rs_lib_loadable = ./rs/bundle/target/$(CI_MAYBE_TARGET)/release/libcrsql_bundle.a
 	rs_lib_dbg_loadable = ./rs/bundle/target/$(CI_MAYBE_TARGET)/debug/libcrsql_bundle.a
 	RS_TARGET = --target=$(CI_MAYBE_TARGET)
-	C_TARGET = -target $(CI_MAYBE_TARGET)
+	ifndef CI_GCC
+		C_TARGET = -target $(CI_MAYBE_TARGET)
+	endif
 endif
 
 $(rs_lib_dbg_static_cpy): FORCE $(dbg_prefix)

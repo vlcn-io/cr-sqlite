@@ -23,15 +23,10 @@ jobs:
           rustup default nightly
           rustup update
 
-      - name: Build Tests
-        run: |
-          cd core
-          make dist/test
-
       - name: Install valgrind
         run: sudo apt install -y valgrind
 
-      - name: Run Valgrind
+      - name: Valgrind Test
         run: |
           cd core
-          valgrind dist/test
+          make valgrind

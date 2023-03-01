@@ -105,29 +105,31 @@ rs_lib_dbg_loadable = ./rs/bundle/target/debug/libcrsql_bundle.a
 rs_lib_dbg_loadable_cpy = ./dbg/libcrsql_bundle-dbg-loadable.a
 
 ifdef CI_MAYBE_TARGET
-	rs_lib_dbg_static = ./rs/bundle/target/aarch64-apple-darwin/debug/libcrsql_bundle.a
-	rs_lib_loadable = ./rs/bundle/target/aarch64-apple-darwin/release/libcrsql_bundle.a
-	rs_lib_dbg_loadable = ./rs/bundle/target/aarch64-apple-darwin/debug/libcrsql_bundle.a
+	rs_lib_dbg_static = ./rs/bundle/target/$(CI_MAYBE_TARGET)/debug/libcrsql_bundle.a
+	rs_lib_loadable = ./rs/bundle/target/$(CI_MAYBE_TARGET)/release/libcrsql_bundle.a
+	rs_lib_dbg_loadable = ./rs/bundle/target/$(CI_MAYBE_TARGET)/debug/libcrsql_bundle.a
+	RS_TARGET = --target=$(CI_MAYBE_TARGET)
+	C_TARGET = -target $(CI_MAYBE_TARGET)
 endif
 
 $(rs_lib_dbg_static_cpy): FORCE $(dbg_prefix)
-	cd ./rs/bundle && $(rustflags_static) cargo build $(CI_MAYBE_TARGET) --features static,omit_load_extension $(rs_build_flags)
+	cd ./rs/bundle && $(rustflags_static) cargo build $(RS_TARGET) --features static,omit_load_extension $(rs_build_flags)
 	cp $(rs_lib_dbg_static) $(rs_lib_dbg_static_cpy)
 
 $(rs_lib_loadable_cpy): FORCE $(dbg_prefix)
-	cd ./rs/bundle && $(rustflags_static) cargo build $(CI_MAYBE_TARGET) --release --features loadable_extension $(rs_build_flags)
+	cd ./rs/bundle && $(rustflags_static) cargo build $(RS_TARGET) --release --features loadable_extension $(rs_build_flags)
 	cp $(rs_lib_loadable) $(rs_lib_loadable_cpy)
 
 # we need separate output dirs based on selected features of the build
 $(rs_lib_dbg_loadable_cpy): FORCE $(dbg_prefix)
-	cd ./rs/bundle && $(rustflags_static) cargo build $(CI_MAYBE_TARGET) --features loadable_extension $(rs_build_flags)
+	cd ./rs/bundle && $(rustflags_static) cargo build $(RS_TARGET) --features loadable_extension $(rs_build_flags)
 	cp $(rs_lib_dbg_loadable) $(rs_lib_dbg_loadable_cpy)
 
 # Build the loadable extension.
 $(TARGET_LOADABLE): $(prefix) $(ext_files) $(rs_lib_loadable_cpy)
 	$(CC) -O2 -I./src/ -I./src/sqlite \
 	$(LOADABLE_CFLAGS) \
-	$(CI_MAYBE_ARCH) \
+	$(C_TARGET) \
 	$(ext_files) $(rs_lib_loadable_cpy) -o $@
 
 $(TARGET_DBG_LOADABLE): $(dbg_prefix) $(ext_files) $(rs_lib_dbg_loadable_cpy)

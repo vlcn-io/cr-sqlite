@@ -53,6 +53,7 @@ jobs:
           asset_name: ${{ matrix.asset_name }}
           tag: ${{ github.ref }}
 
+  # we can probably collapse all these into the prebuild job
   prebuild-macos-arm:
     name: Prebuild for macos arm
     runs-on: ${{ matrix.os }}
@@ -77,7 +78,41 @@ jobs:
       - name: Build
         run: |
           cd core
-          export CI_MAYBE_ARCH="-target aarch64-apple-darwin" && export CI_MAYBE_TARGET="--target=aarch64-apple-darwin" && make loadable
+          export CI_MAYBE_TARGET="aarch64-apple-darwin" && make loadable
+
+      - name: Upload binaries to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: core/dist/${{ matrix.artifact_name }}
+          asset_name: ${{ matrix.asset_name }}
+          tag: ${{ github.ref }}
+
+  prebuild-linux-arm:
+    name: Prebuild for linux arm
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact_name: crsqlite.so
+            asset_name: crsqlite-linux-aarch64.so
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+
+      - name: Rust Nightly
+        run: |
+          rustup default nightly
+          rustup update
+          rustup target add aarch64-unknown-linux-gnu
+
+      - name: Build
+        run: |
+          cd core
+          export CI_MAYBE_TARGET="aarch64-unknown-linux-gnu" && make loadable
 
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2

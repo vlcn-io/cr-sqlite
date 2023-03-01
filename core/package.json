@@ -9,7 +9,6 @@
   },
   "files": [
     "src/**",
-    "binding.gyp",
     "rs/**/*.rs",
     "rs/**/*.toml",
     "rs/**/*.lock",
@@ -20,17 +19,10 @@
   "type": "module",
   "main": "nodejs-helper.js",
   "types": "nodejs-helper.d.ts",
-  "dependencies": {
-    "bindings": "^1.5.0",
-    "prebuild-install": "^7.1.0"
-  },
-  "devDependencies": {
-    "prebuild": "^7.2.2"
-  },
   "scripts": {
     "install": "node ./nodejs-install-helper.js && make loadable",
     "test": "make test",
-    "deep-clean": "rm -rf ./dbg || true && rm -rf ./dist || true && rm -rf ./binaries || true"
+    "deep-clean": "rm -rf ./dbg || true && rm -rf ./dist || true"
   },
   "license": "Apache 2",
   "keywords": [

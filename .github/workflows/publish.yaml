@@ -23,9 +23,6 @@ jobs:
           - os: macos-latest
             artifact_name: crsqlite.dylib
             asset_name: crsqlite-macos-x86_64.dylib
-          - os: macos-latest
-            artifact_name: crsqlite.dylib
-            asset_name: crsqlite-macos-arm64.dylib
 
     steps:
       - uses: actions/checkout@v3
@@ -43,16 +40,43 @@ jobs:
           rustup component add rust-src --toolchain nightly-x86_64-pc-windows-gnu
           rustup default nightly-x86_64-pc-windows-gnu
 
-      - name: Maybe Build MacOS Arm
-        if: matrix.asset_name == 'crsqlite-macos-arm64'
-        run: |
-          cd core
-          export MAYBE_ARCH="-march=arm64" && make loadable
-
       - name: Build
         run: |
           cd core
           make loadable
+
+      - name: Upload binaries to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: dist/${{ matrix.artifact_name }}
+          asset_name: ${{ matrix.asset_name }}
+          tag: ${{ github.ref }}
+
+  prebuild-macos-arm:
+    name: Prebuild for macos arm
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            artifact_name: crsqlite.dylib
+            asset_name: crsqlite-macos-aarch64.dylib
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+
+      - name: Rust Nightly
+        run: |
+          rustup default nightly-aarch64-apple-darwin
+          rustup update
+
+      - name: Build
+        run: |
+          cd core
+          export CI_MAYBE_ARCH="-march=aarch64" && make loadable
 
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2

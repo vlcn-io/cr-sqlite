@@ -28,9 +28,9 @@
     "prebuild": "^7.2.2"
   },
   "scripts": {
-    "install": "make loadable",
+    "install": "node ./nodejs-install-helper.js && make loadable",
     "test": "make test",
-    "deep-clean": "rm -rf ./dbg || true && rm -rf ./dist || true"
+    "deep-clean": "rm -rf ./dbg || true && rm -rf ./dist || true && rm -rf ./binaries || true"
   },
   "license": "Apache 2",
   "keywords": [

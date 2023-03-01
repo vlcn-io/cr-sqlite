@@ -77,7 +77,7 @@ jobs:
       - name: Build
         run: |
           cd core
-          export CI_MAYBE_ARCH="-march=aarch64" && export CI_MAYBE_TARGET="--target=aarch64-apple-darwin" && make loadable
+          export CI_MAYBE_ARCH="arch -arm64" && export CI_MAYBE_TARGET="--target=aarch64-apple-darwin" && make loadable
 
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2

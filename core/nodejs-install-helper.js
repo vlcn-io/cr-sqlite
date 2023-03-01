@@ -5,16 +5,24 @@
  */
 import { join } from "path";
 import fs from "fs";
-import http from "http";
-import { version } from "./package.json";
+import https from "https";
+import pkg from "./package.json" assert { type: "json" };
+let { version } = pkg;
 
 let arch = process.arch;
 let os = process.platform;
 let ext = "unknown";
+version = "v" + version;
+
 // todo: check msys?
 if (["win32", "cygwin"].includes(process.platform)) {
   os = "windows";
 }
+
+// manual ovverides for testing
+// arch = "x86_64";
+// os = "linux";
+// version = "prebuild-test.3";
 
 switch (os) {
   case "darwin":
@@ -28,7 +36,7 @@ switch (os) {
     break;
 }
 
-switch (process.arch) {
+switch (arch) {
   case "x64":
     arch = "x86_64";
     break;
@@ -37,19 +45,39 @@ switch (process.arch) {
     break;
 }
 
-const binaryUrl = `https://github.com/vlcn-io/cr-sqlite/releases/download/v${version}/crsqlite-${os}-${arch}.${ext}`;
+const binaryUrl = `https://github.com/vlcn-io/cr-sqlite/releases/download/${version}/crsqlite-${os}-${arch}.${ext}`;
+console.log(`Look for prebuilt binary from ${binaryUrl}`);
 const distPath = join("dist", `crsqlite.${ext}`);
 
 // download the file at the url, if it exists
-http.get(binaryUrl, (res) => {
-  if (res.statusCode === 200) {
-    const file = fs.createWriteStream(distPath);
-    res.pipe(file);
-    file.on("finish", () => {
-      file.close();
-      console.log("Prebuilt binary downloaded");
-    });
-  } else {
+let redirectCount = 0;
+function get(url, cb) {
+  https.get(url, (res) => {
+    if (res.statusCode === 302 || res.statusCode === 301) {
+      ++redirectCount;
+      if (redirectCount > 5) {
+        throw new Error("Too many redirects");
+      }
+      get(res.headers.location, cb);
+    } else if (res.statusCode === 200) {
+      cb(res);
+    } else {
+      cb(null);
+    }
+  });
+}
+
+get(binaryUrl, (res) => {
+  if (res == null) {
     console.log("No prebuilt binary available. Building from source.");
+    return;
   }
+
+  const file = fs.createWriteStream(distPath);
+  res.pipe(file);
+  file.on("finish", () => {
+    file.close();
+    console.log("Prebuilt binary downloaded");
+    process.exit(0);
+  });
 });

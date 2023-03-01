@@ -1,6 +1,3 @@
-COMMIT=$(shell git rev-parse HEAD)
-VERSION=$(shell cat VERSION)
-DATE=$(shell date +'%FT%TZ%z')
 CC:=gcc
 
 LOADABLE_CFLAGS=-std=c99 -fPIC -shared -Wall
@@ -24,11 +21,6 @@ endif
 ifdef CONFIG_WINDOWS
 LOADABLE_EXTENSION=dll
 endif
-
-DEFINE_SQLITE_PATH_DATE=-DSQLITE_PATH_DATE="\"$(DATE)\""
-DEFINE_SQLITE_PATH_VERSION=-DSQLITE_PATH_VERSION="\"$(VERSION)\""
-DEFINE_SQLITE_PATH_SOURCE=-DSQLITE_PATH_SOURCE="\"$(COMMIT)\""
-DEFINE_SQLITE_PATH=$(DEFINE_SQLITE_PATH_DATE) $(DEFINE_SQLITE_PATH_VERSION) $(DEFINE_SQLITE_PATH_SOURCE)
 
 prefix=./dist
 dbg_prefix=./dbg
@@ -129,20 +121,17 @@ $(rs_lib_dbg_loadable_cpy): FORCE $(dbg_prefix)
 $(TARGET_LOADABLE): $(prefix) $(ext_files) $(rs_lib_loadable_cpy)
 	$(CC) -O2 -I./src/ -I./src/sqlite \
 	$(LOADABLE_CFLAGS) \
-	$(DEFINE_SQLITE_PATH) \
 	$(ext_files) $(rs_lib_loadable_cpy) -o $@
 
 $(TARGET_DBG_LOADABLE): $(dbg_prefix) $(ext_files) $(rs_lib_dbg_loadable_cpy)
 	$(CC) -g -I./src/ -I./src/sqlite \
 	$(LOADABLE_CFLAGS) \
-	$(DEFINE_SQLITE_PATH) \
 	$(ext_files) $(rs_lib_dbg_loadable_cpy) -o $@
 
 # Build a SQLite CLI that pre-loads cr-sqlite.
 # Useful for debugging.
 $(TARGET_SQLITE3): $(prefix) $(TARGET_SQLITE3_EXTRA_C) $(rs_lib_dbg_static_cpy) src/sqlite/shell.c $(ext_files)
 	$(CC) -g \
-	$(DEFINE_SQLITE_PATH) \
 	-DSQLITE_THREADSAFE=0 \
 	-DSQLITE_OMIT_LOAD_EXTENSION=1 \
 	-DSQLITE_EXTRA_INIT=core_init \
@@ -167,7 +156,6 @@ $(TARGET_SQLITE3_EXTRA_C): src/sqlite/sqlite3.c src/core_init.c
 # run tests
 $(TARGET_TEST): $(prefix) $(TARGET_SQLITE3_EXTRA_C) src/tests.c src/*.test.c $(ext_files) $(rs_lib_dbg_static_cpy)
 	$(CC) -g -Wall \
-	$(DEFINE_SQLITE_PATH) \
 	-DSQLITE_THREADSAFE=0 \
 	-DSQLITE_OMIT_LOAD_EXTENSION=1 \
 	-DSQLITE_EXTRA_INIT=core_init \
@@ -178,7 +166,6 @@ $(TARGET_TEST): $(prefix) $(TARGET_SQLITE3_EXTRA_C) src/tests.c src/*.test.c $(e
 
 $(TARGET_TEST_ASAN): $(prefix) $(TARGET_SQLITE3_EXTRA_C) src/tests.c src/*.test.c $(ext_files)
 	$(CC) -fsanitize=address -g -fno-omit-frame-pointer -Wall \
-	$(DEFINE_SQLITE_PATH) \
 	-DSQLITE_THREADSAFE=0 \
 	-DSQLITE_OMIT_LOAD_EXTENSION=1 \
 	-DSQLITE_EXTRA_INIT=core_init \
@@ -189,7 +176,6 @@ $(TARGET_TEST_ASAN): $(prefix) $(TARGET_SQLITE3_EXTRA_C) src/tests.c src/*.test.
 
 $(TARGET_FUZZ): $(prefix) $(TARGET_SQLITE3_EXTRA_C) src/fuzzer.cc $(ext_files)
 	clang -fsanitize=fuzzer \
-	$(DEFINE_SQLITE_PATH) \
 	-DSQLITE_THREADSAFE=0 \
 	-DSQLITE_OMIT_LOAD_EXTENSION=1 \
 	-DSQLITE_EXTRA_INIT=core_init \

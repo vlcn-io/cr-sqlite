@@ -1,4 +1,4 @@
-CC:=gcc
+CC:=clang
 
 LOADABLE_CFLAGS=-std=c99 -fPIC -shared -Wall
 
@@ -6,6 +6,7 @@ ifeq ($(shell uname -s),Darwin)
 CONFIG_DARWIN=y
 else ifeq ($(OS),Windows_NT)
 CONFIG_WINDOWS=y
+CC=gcc
 else
 CONFIG_LINUX=y
 endif
@@ -84,6 +85,7 @@ asan: $(TARGET_TEST_ASAN)
 	$(TARGET_TEST_ASAN)
 correctness: $(TARGET_LOADABLE) FORCE
 	cd ../py/correctness && pytest
+valgrind: CC=gcc
 valgrind: $(TARGET_TEST)
 	valgrind $(prefix)/test
 analyzer:

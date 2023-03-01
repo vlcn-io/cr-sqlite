@@ -5,8 +5,10 @@
  */
 import { join } from "path";
 import fs from "fs";
+import http from "http";
+import { version } from "./package.json";
 
-const arch = process.arch;
+let arch = process.arch;
 let os = process.platform;
 let ext = "unknown";
 // todo: check msys?
@@ -14,17 +16,40 @@ if (["win32", "cygwin"].includes(process.platform)) {
   os = "windows";
 }
 
-if (os === "darwin") {
-  ext = "dylib";
-} else if (os === "linux") {
-  ext = "so";
-} else if (os === "windows") {
-  ext = "dll";
+switch (os) {
+  case "darwin":
+    ext = "dylib";
+    break;
+  case "linux":
+    ext = "so";
+    break;
+  case "windows":
+    ext = "dll";
+    break;
 }
 
-const binaryPath = join("binaries", `crsqlite-${os}-${arch}.${ext}`);
-
-if (fs.existsSync(binaryPath)) {
-  const distPath = join("dist", `crsqlite.${ext}`);
-  fs.copyFileSync(binaryPath, distPath);
+switch (process.arch) {
+  case "x64":
+    arch = "x86_64";
+    break;
+  case "arm64":
+    arch = "aarch64";
+    break;
 }
+
+const binaryUrl = `https://github.com/vlcn-io/cr-sqlite/releases/download/v${version}/crsqlite-${os}-${arch}.${ext}`;
+const distPath = join("dist", `crsqlite.${ext}`);
+
+// download the file at the url, if it exists
+http.get(binaryUrl, (res) => {
+  if (res.statusCode === 200) {
+    const file = fs.createWriteStream(distPath);
+    res.pipe(file);
+    file.on("finish", () => {
+      file.close();
+      console.log("Prebuilt binary downloaded");
+    });
+  } else {
+    console.log("No prebuilt binary available. Building from source.");
+  }
+});

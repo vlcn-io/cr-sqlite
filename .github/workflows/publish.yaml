@@ -1,4 +1,4 @@
-name: Publish
+name: publish
 
 on:
   push:
@@ -70,13 +70,12 @@ jobs:
 
       - name: Rust Nightly
         run: |
-          rustup default nightly-aarch64-apple-darwin
-          rustup update
+          rustup target add --toolchain nightly aarch64-apple-darwin
 
       - name: Build
         run: |
           cd core
-          export CI_MAYBE_ARCH="-march=aarch64" && make loadable
+          export CI_MAYBE_ARCH="-march=aarch64" && export CI_MAYBE_TARGET="--target=aarch64-apple-darwin" && make loadable
 
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2

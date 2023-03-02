@@ -87,12 +87,17 @@ export class SQLite3 {
 }
 
 const re = /insert\s|update\s|delete\s/;
+const txRe = /begin\s|commit\s|rollback\s|savepoint\s/;
 function computeCacheKey(
   sql: string,
   mode: "o" | "a",
   bind?: SQLiteCompatibleType[]
 ) {
   const lower = sql.toLowerCase();
+
+  if (txRe.exec(lower) != null) {
+    return undefined;
+  }
 
   // is it a write?
   if (re.exec(lower) != null) {
@@ -113,6 +118,7 @@ function computeCacheKey(
 }
 
 export class DB implements DBAsync {
+  __txMutex = txMutex;
   private stmtFinalizer = new Map<number, WeakRef<Stmt>>();
   // private stmtFinalizationRegistry = new FinalizationRegistry(
   //   (base: number) => {
@@ -155,9 +161,10 @@ export class DB implements DBAsync {
   exec(sql: string, bind?: SQLiteCompatibleType[]): Promise<void> {
     // TODO: either? since not returning?
     this.#assertOpen();
-    return serialize(this.cache, computeCacheKey(sql, "a", bind), () =>
-      this.statements(sql, false, bind)
-    );
+    return serialize(this.cache, computeCacheKey(sql, "a", bind), () => {
+      // console.log("exec", sql, bind);
+      return this.statements(sql, false, bind);
+    });
   }
 
   #assertOpen() {
@@ -302,15 +309,17 @@ export class DB implements DBAsync {
 
   transaction(cb: () => Promise<void>): Promise<void> {
     this.#assertOpen();
+    // TODO: we need to enter a new zone and create a new mutex for queries for that zone
+    // in the given tx
     return serializeTx(async () => {
-      await this.exec("BEGIN");
+      await this.exec("SAVEPOINT crsql_transaction");
       try {
         await cb();
       } catch (e) {
         await this.exec("ROLLBACK");
         return;
       }
-      await this.exec("COMMIT");
+      await this.exec("RELEASE crsql_transaction");
     });
   }
 

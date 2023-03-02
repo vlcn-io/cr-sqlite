@@ -103,6 +103,10 @@ export function useQuery<R, M = R[]>(
   );
 }
 
+let pendingQuery: number | null = null;
+let queryTxHolder: number | null = null;
+let queryId = 0;
+
 class AsyncResultStateMachine<T, M = readonly T[]> {
   private pendingFetchPromise: Promise<any> | null = null;
   private pendingPreparePromise: Promise<StmtAsync | null> | null = null;
@@ -321,36 +325,92 @@ class AsyncResultStateMachine<T, M = readonly T[]> {
         stmt.bind(this.bindings || []);
       }
 
-      fetchPromise = stmt
-        .raw(false)
-        .all()
-        .then(
-          (data) => {
-            if (this.pendingFetchPromise !== fetchPromise) {
-              return;
+      const doFetch = () => {
+        return stmt
+          .raw(false)
+          .all()
+          .then(
+            (data) => {
+              if (pendingQuery === myQueryId) {
+                console.log(
+                  "I am last me: " +
+                    myQueryId +
+                    " pending: " +
+                    pendingQuery +
+                    " tx holder: " +
+                    queryTxHolder
+                );
+                pendingQuery = null;
+                // console.log("release", queryTxHolder, myQueryId);
+                // release tx
+                this.ctx.db.exec("RELEASE use_query_" + queryTxHolder).then(
+                  () => {
+                    (this.ctx.db as any).__txMutex.release();
+                  },
+                  () => {
+                    (this.ctx.db as any).__txMutex.release();
+                  }
+                );
+              }
+
+              if (this.pendingFetchPromise !== fetchPromise) {
+                return;
+              }
+
+              this.data = {
+                loading: false,
+                data: (this.postProcess ? this.postProcess(data) : data) as any,
+                error: undefined,
+              };
+
+              this.reactInternals && this.reactInternals();
+            },
+            (error: Error) => {
+              if (pendingQuery === myQueryId) {
+                pendingQuery = null;
+                // rollback tx
+                console.log("rollback", myQueryId);
+                this.ctx.db.exec("ROLLBACK").then(
+                  () => {
+                    (this.ctx.db as any).__txMutex.release();
+                  },
+                  () => {
+                    (this.ctx.db as any).__txMutex.release();
+                  }
+                );
+              }
+              this.error = {
+                loading: false,
+                data:
+                  this.data?.data ||
+                  ((this.postProcess
+                    ? this.postProcess(EMPTY_ARRAY as any)
+                    : EMPTY_ARRAY) as any),
+                error,
+              };
+              this.reactInternals && this.reactInternals!();
             }
+          );
+      };
 
-            this.data = {
-              loading: false,
-              data: (this.postProcess ? this.postProcess(data) : data) as any,
-              error: undefined,
-            };
+      const myQueryId = ++queryId;
+      const prevPending = pendingQuery;
+      pendingQuery = myQueryId;
+      if (prevPending == null) {
+        console.log("no pending. me: " + myQueryId);
+        queryTxHolder = myQueryId;
+        // start tx
+        fetchPromise = (this.ctx.db as any).__txMutex.acquire().then(() => {
+          console.log("acquired tx lock", myQueryId);
+          return this.ctx.db
+            .exec("SAVEPOINT use_query_" + queryTxHolder)
+            .then(doFetch);
+        });
+      } else {
+        console.log("Had pending me: " + myQueryId + " prev: " + prevPending);
+        fetchPromise = doFetch();
+      }
 
-            this.reactInternals && this.reactInternals();
-          },
-          (error: Error) => {
-            this.error = {
-              loading: false,
-              data:
-                this.data?.data ||
-                ((this.postProcess
-                  ? this.postProcess(EMPTY_ARRAY as any)
-                  : EMPTY_ARRAY) as any),
-              error,
-            };
-            this.reactInternals && this.reactInternals!();
-          }
-        );
       this.pendingFetchPromise = fetchPromise;
       return fetchPromise;
     };

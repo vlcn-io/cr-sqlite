@@ -1,5 +1,17 @@
 # @vlcn.io/py-correctness
 
+## 0.7.0
+
+### Minor Changes
+
+- 6316ec315: update to support prebuild binaries, include primary key only table fixes
+
+## 0.7.0-next.0
+
+### Minor Changes
+
+- update to support prebuild binaries, include primary key only table fixes
+
 ## 0.6.2
 
 ### Patch Changes

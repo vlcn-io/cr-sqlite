@@ -74,12 +74,14 @@ importers:
     specifiers:
       '@vlcn.io/wa-sqlite': workspace:*
       '@vlcn.io/xplat-api': workspace:*
+      async-mutex: ^0.4.0
       comlink: ^4.3.1
       typescript: ^4.8.4
       vitest: ^0.26.2
     dependencies:
       '@vlcn.io/wa-sqlite': link:../../../deps/wa-sqlite
       '@vlcn.io/xplat-api': link:../../xplat-api
+      async-mutex: 0.4.0
       comlink: 4.3.1
     devDependencies:
       typescript: 4.9.3
@@ -1836,6 +1838,12 @@ packages:
     resolution: {integrity: sha512-Z7tMw1ytTXt5jqMcOP+OQteU1VuNK9Y02uuJtKQ1Sv69jXQKKg5cibLwGJow8yzZP+eAc18EmLGPal0bp36rvQ==}
     engines: {node: '>=8'}
     dev: true
+
+  /async-mutex/0.4.0:
+    resolution: {integrity: sha512-eJFZ1YhRR8UN8eBLoNzcDPcy/jqjsg6I1AP+KvWQX80BqOSW1oJPJXDylPUEeMr2ZQvHgnQ//Lp6f3RQ1zI7HA==}
+    dependencies:
+      tslib: 2.4.1
+    dev: false
 
   /async/2.6.4:
     resolution: {integrity: sha512-mzo5dfJYwAn29PeiJ0zvwTo04zj8HDJj0Mn8TD7sno7q12prdbnasKJHhkm2c1LgrhlJ0teaea8860oxi51mGA==}

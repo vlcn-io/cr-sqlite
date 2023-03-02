@@ -103,7 +103,7 @@ export default class ChangeStream {
   // TODO: make the throttle configurable
   // TODO: go back to temp trigger model
   // such that we do not perform a query in response to sync events.
-  #localDbChanged = throttle(25, async () => {
+  #localDbChanged = throttle(50, async () => {
     logger.info("received local db change event");
     if (this.#closed) {
       console.warn("Reciving db change event on closed connection");

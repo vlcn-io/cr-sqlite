@@ -4,7 +4,7 @@ import * as SQLite from "@vlcn.io/wa-sqlite";
 import { IDBBatchAtomicVFS } from "@vlcn.io/wa-sqlite/src/examples/IDBBatchAtomicVFS.js";
 import { DBAsync, StmtAsync, UpdateType } from "@vlcn.io/xplat-api";
 import { SQLITE_UTF8 } from "@vlcn.io/wa-sqlite";
-import PromiseQueue from "./PromiseQueue.js";
+import { Mutex } from "async-mutex";
 
 let api: SQLite3 | null = null;
 type SQLiteAPI = ReturnType<typeof SQLite.Factory>;
@@ -28,7 +28,7 @@ function log(...data: any[]) {
  * string gets from cache.
  * undefined has no impact on cache and does not check cache.
  */
-const queue = new PromiseQueue();
+const mutex = new Mutex();
 function serialize(
   cache: Map<string, Promise<any>> | null,
   key: string | null | undefined,
@@ -49,7 +49,7 @@ function serialize(
   }
 
   log("Enqueueing query ", key);
-  const res = queue.add(cb);
+  const res = mutex.runExclusive(cb);
 
   if (key) {
     cache?.set(key, res);
@@ -59,9 +59,9 @@ function serialize(
   return res;
 }
 
-const txQueue = new PromiseQueue();
+const txMutex = new Mutex();
 function serializeTx(cb: () => any) {
-  return txQueue.add(cb);
+  return txMutex.runExclusive(cb);
 }
 
 export class SQLite3 {

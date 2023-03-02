@@ -1,3 +1,11 @@
+import {
+  decrementExpectedAwaits,
+  incrementExpectedAwaits,
+  isAsyncFunction,
+  PSD,
+  ZonedPromise,
+} from "@vlcn.io/zone";
+
 import SQLiteAsyncESMFactory from "./wa-sqlite-async.mjs";
 import * as SQLite from "@vlcn.io/wa-sqlite";
 // @ts-ignore
@@ -5,7 +13,6 @@ import { IDBBatchAtomicVFS } from "@vlcn.io/wa-sqlite/src/examples/IDBBatchAtomi
 import { DBAsync, StmtAsync, UpdateType } from "@vlcn.io/xplat-api";
 import { SQLITE_UTF8 } from "@vlcn.io/wa-sqlite";
 import { Mutex } from "async-mutex";
-import { newScope, PSD } from "@vlcn.io/zone";
 
 let api: SQLite3 | null = null;
 type SQLiteAPI = ReturnType<typeof SQLite.Factory>;
@@ -30,6 +37,7 @@ function log(...data: any[]) {
  * undefined has no impact on cache and does not check cache.
  */
 const topLevelMutex = new Mutex();
+(topLevelMutex as any).name = "topLevelMutex";
 function serialize(
   cache: Map<string, Promise<any>> | null,
   key: string | null | undefined,
@@ -52,6 +60,7 @@ function serialize(
   log("Enqueueing query ", key);
 
   const mutex = (PSD as any).mutex || topLevelMutex;
+  // console.log("try exclusive for: " + mutex.name, new Error());
   const res = mutex.runExclusive(cb);
 
   if (key) {
@@ -64,15 +73,33 @@ function serialize(
 
 function serializeTx(cb: () => any) {
   const mutex = (PSD as any).mutex || topLevelMutex;
+  // console.log("Try exclusive tx for: " + mutex.name, new Error());
   return mutex.runExclusive(() => {
-    return newScope(
-      cb,
-      {
-        mutex: new Mutex(),
+    const subMutex = new Mutex();
+    (subMutex as any).name = mutex.name + "_1";
+
+    const isAsync = isAsyncFunction(cb);
+    if (isAsync) {
+      incrementExpectedAwaits();
+    }
+
+    let returnValue: any;
+    const promiseFollowed = (ZonedPromise as any).follow(
+      () => {
+        returnValue = cb();
+        if (isAsync) {
+          var decrementor = decrementExpectedAwaits.bind(null, null);
+          returnValue.then(decrementor, decrementor);
+        }
       },
-      null,
-      null
+      {
+        mutex: subMutex,
+      }
     );
+
+    return returnValue && typeof returnValue.then === "function"
+      ? (ZonedPromise as any).resolve(returnValue)
+      : promiseFollowed.then(() => returnValue);
   });
 }
 
@@ -320,8 +347,6 @@ export class DB implements DBAsync {
 
   transaction(cb: () => Promise<void>): Promise<void> {
     this.#assertOpen();
-    // TODO: we need to enter a new zone and create a new mutex for queries for that zone
-    // in the given tx
     return serializeTx(async () => {
       await this.exec("SAVEPOINT crsql_transaction");
       try {

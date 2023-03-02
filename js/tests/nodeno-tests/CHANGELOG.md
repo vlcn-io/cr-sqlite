@@ -1,5 +1,19 @@
 # @vlcn.io/nodeno-tests
 
+## 0.7.0-next.0
+
+### Minor Changes
+
+- update to support prebuild binaries, include primary key only table fixes
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/crsqlite-allinone@0.7.0-next.0
+  - @vlcn.io/rx-tbl@0.7.0-next.0
+  - @vlcn.io/xplat-tests@0.7.0-next.0
+  - @vlcn.io/xplat-api@0.7.0-next.0
+
 ## 0.6.3
 
 ### Patch Changes

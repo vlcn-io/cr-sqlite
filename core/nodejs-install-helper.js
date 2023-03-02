@@ -7,6 +7,7 @@ import { join } from "path";
 import fs from "fs";
 import https from "https";
 import pkg from "./package.json" assert { type: "json" };
+import { exec } from "child_process";
 let { version } = pkg;
 
 let arch = process.arch;
@@ -22,7 +23,7 @@ if (["win32", "cygwin"].includes(process.platform)) {
 // manual ovverides for testing
 // arch = "x86_64";
 // os = "linux";
-// version = "prebuild-test.3";
+// version = "prebuild-test.11";
 
 switch (os) {
   case "darwin":
@@ -70,6 +71,7 @@ function get(url, cb) {
 get(binaryUrl, (res) => {
   if (res == null) {
     console.log("No prebuilt binary available. Building from source.");
+    buildFromSource();
     return;
   }
 
@@ -81,3 +83,20 @@ get(binaryUrl, (res) => {
     process.exit(0);
   });
 });
+
+function buildFromSource() {
+  console.log("Building from source");
+  exec("make loadable", (err, stdout, stderr) => {
+    if (err) {
+      console.log("Error building from source");
+      console.log(err.message);
+      process.exit(1);
+    }
+    if (stderr) {
+      console.log(stderr);
+    }
+    console.log("Built from source");
+    console.log(stdout);
+    process.exit(0);
+  });
+}

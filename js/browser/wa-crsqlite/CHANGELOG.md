@@ -1,5 +1,17 @@
 # @vlcn.io/wa-crsqlite
 
+## 0.8.0-next.0
+
+### Minor Changes
+
+- update to support prebuild binaries, include primary key only table fixes
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/wa-sqlite@0.15.0-next.0
+  - @vlcn.io/xplat-api@0.7.0-next.0
+
 ## 0.7.4
 
 ### Patch Changes

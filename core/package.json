@@ -1,6 +1,6 @@
 {
   "name": "@vlcn.io/crsqlite",
-  "version": "0.7.2",
+  "version": "0.8.0-next.0",
   "description": "CR-SQLite loadable extension",
   "homepage": "https://vlcn.io",
   "repository": {
@@ -20,7 +20,7 @@
   "main": "nodejs-helper.js",
   "types": "nodejs-helper.d.ts",
   "scripts": {
-    "install": "node ./nodejs-install-helper.js && make loadable",
+    "install": "node ./nodejs-install-helper.js",
     "test": "make test",
     "deep-clean": "rm -rf ./dbg || true && rm -rf ./dist || true"
   },

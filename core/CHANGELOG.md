@@ -1,5 +1,11 @@
 # @vlcn.io/crsqlite
 
+## 0.8.0-next.0
+
+### Minor Changes
+
+- update to support prebuild binaries, include primary key only table fixes
+
 ## 0.7.2
 
 ### Patch Changes

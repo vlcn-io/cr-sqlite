@@ -1,5 +1,11 @@
 # @vlcn.io/client-server-common
 
+## 0.4.0-next.0
+
+### Minor Changes
+
+- update to support prebuild binaries, include primary key only table fixes
+
 ## 0.3.3
 
 ### Patch Changes

@@ -1,5 +1,19 @@
 # @vlcn.io/sync-client
 
+## 0.7.0-next.0
+
+### Minor Changes
+
+- update to support prebuild binaries, include primary key only table fixes
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/rx-tbl@0.7.0-next.0
+  - @vlcn.io/client-core@0.7.0-next.0
+  - @vlcn.io/client-server-common@0.4.0-next.0
+  - @vlcn.io/xplat-api@0.7.0-next.0
+
 ## 0.6.3
 
 ### Patch Changes

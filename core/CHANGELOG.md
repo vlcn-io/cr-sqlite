@@ -1,5 +1,11 @@
 # @vlcn.io/crsqlite
 
+## 0.8.0-next.2
+
+### Patch Changes
+
+- create dist dir on install
+
 ## 0.8.0-next.1
 
 ### Patch Changes

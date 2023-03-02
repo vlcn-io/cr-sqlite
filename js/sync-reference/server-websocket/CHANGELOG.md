@@ -1,5 +1,13 @@
 # @vlcn.io/sync-server
 
+## 0.7.0-next.2
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/crsqlite@0.8.0-next.2
+  - @vlcn.io/server-core@0.7.0-next.2
+
 ## 0.7.0-next.1
 
 ### Patch Changes

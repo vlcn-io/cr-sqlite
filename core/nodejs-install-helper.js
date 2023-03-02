@@ -50,6 +50,10 @@ const binaryUrl = `https://github.com/vlcn-io/cr-sqlite/releases/download/${vers
 console.log(`Look for prebuilt binary from ${binaryUrl}`);
 const distPath = join("dist", `crsqlite.${ext}`);
 
+if (!fs.existsSync(join(".", "dist"))) {
+  fs.mkdirSync(join(".", "dist"));
+}
+
 // download the file at the url, if it exists
 let redirectCount = 0;
 function get(url, cb) {

@@ -31,6 +31,7 @@
   "dependencies": {
     "@vlcn.io/wa-sqlite": "workspace:*",
     "@vlcn.io/xplat-api": "workspace:*",
+    "async-mutex": "^0.4.0",
     "comlink": "^4.3.1"
   }
 }

@@ -60,7 +60,6 @@ function serialize(
   log("Enqueueing query ", key);
 
   const mutex = (PSD as any).mutex || topLevelMutex;
-  // console.log("try exclusive for: " + mutex.name, new Error());
   const res = mutex.runExclusive(cb);
 
   if (key) {
@@ -73,7 +72,6 @@ function serialize(
 
 function serializeTx(cb: () => any) {
   const mutex = (PSD as any).mutex || topLevelMutex;
-  // console.log("Try exclusive tx for: " + mutex.name, new Error());
   return mutex.runExclusive(() => {
     const subMutex = new Mutex();
     (subMutex as any).name = mutex.name + "_1";
@@ -200,7 +198,6 @@ export class DB implements DBAsync {
     // TODO: either? since not returning?
     this.#assertOpen();
     return serialize(this.cache, computeCacheKey(sql, "a", bind), () => {
-      // console.log("exec", sql, bind);
       return this.statements(sql, false, bind);
     });
   }

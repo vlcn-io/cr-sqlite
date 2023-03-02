@@ -332,16 +332,7 @@ class AsyncResultStateMachine<T, M = readonly T[]> {
           .then(
             (data) => {
               if (pendingQuery === myQueryId) {
-                console.log(
-                  "I am last me: " +
-                    myQueryId +
-                    " pending: " +
-                    pendingQuery +
-                    " tx holder: " +
-                    queryTxHolder
-                );
                 pendingQuery = null;
-                // console.log("release", queryTxHolder, myQueryId);
                 // release tx
                 this.ctx.db.exec("RELEASE use_query_" + queryTxHolder);
               }
@@ -362,7 +353,6 @@ class AsyncResultStateMachine<T, M = readonly T[]> {
               if (pendingQuery === myQueryId) {
                 pendingQuery = null;
                 // rollback tx
-                console.log("rollback", myQueryId);
                 this.ctx.db.exec("ROLLBACK");
               }
               this.error = {
@@ -383,14 +373,12 @@ class AsyncResultStateMachine<T, M = readonly T[]> {
       const prevPending = pendingQuery;
       pendingQuery = myQueryId;
       if (prevPending == null) {
-        console.log("no pending. me: " + myQueryId);
         queryTxHolder = myQueryId;
         // start tx
         fetchPromise = this.ctx.db
           .exec("SAVEPOINT use_query_" + queryTxHolder)
           .then(doFetch);
       } else {
-        console.log("Had pending me: " + myQueryId + " prev: " + prevPending);
         fetchPromise = doFetch();
       }
 

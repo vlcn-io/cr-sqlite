@@ -343,14 +343,7 @@ class AsyncResultStateMachine<T, M = readonly T[]> {
                 pendingQuery = null;
                 // console.log("release", queryTxHolder, myQueryId);
                 // release tx
-                this.ctx.db.exec("RELEASE use_query_" + queryTxHolder).then(
-                  () => {
-                    (this.ctx.db as any).__txMutex.release();
-                  },
-                  () => {
-                    (this.ctx.db as any).__txMutex.release();
-                  }
-                );
+                this.ctx.db.exec("RELEASE use_query_" + queryTxHolder);
               }
 
               if (this.pendingFetchPromise !== fetchPromise) {
@@ -370,14 +363,7 @@ class AsyncResultStateMachine<T, M = readonly T[]> {
                 pendingQuery = null;
                 // rollback tx
                 console.log("rollback", myQueryId);
-                this.ctx.db.exec("ROLLBACK").then(
-                  () => {
-                    (this.ctx.db as any).__txMutex.release();
-                  },
-                  () => {
-                    (this.ctx.db as any).__txMutex.release();
-                  }
-                );
+                this.ctx.db.exec("ROLLBACK");
               }
               this.error = {
                 loading: false,
@@ -400,12 +386,9 @@ class AsyncResultStateMachine<T, M = readonly T[]> {
         console.log("no pending. me: " + myQueryId);
         queryTxHolder = myQueryId;
         // start tx
-        fetchPromise = (this.ctx.db as any).__txMutex.acquire().then(() => {
-          console.log("acquired tx lock", myQueryId);
-          return this.ctx.db
-            .exec("SAVEPOINT use_query_" + queryTxHolder)
-            .then(doFetch);
-        });
+        fetchPromise = this.ctx.db
+          .exec("SAVEPOINT use_query_" + queryTxHolder)
+          .then(doFetch);
       } else {
         console.log("Had pending me: " + myQueryId + " prev: " + prevPending);
         fetchPromise = doFetch();

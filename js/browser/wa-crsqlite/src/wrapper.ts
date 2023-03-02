@@ -5,6 +5,7 @@ import { IDBBatchAtomicVFS } from "@vlcn.io/wa-sqlite/src/examples/IDBBatchAtomi
 import { DBAsync, StmtAsync, UpdateType } from "@vlcn.io/xplat-api";
 import { SQLITE_UTF8 } from "@vlcn.io/wa-sqlite";
 import { Mutex } from "async-mutex";
+import { newScope, PSD } from "@vlcn.io/zone";
 
 let api: SQLite3 | null = null;
 type SQLiteAPI = ReturnType<typeof SQLite.Factory>;
@@ -28,7 +29,7 @@ function log(...data: any[]) {
  * string gets from cache.
  * undefined has no impact on cache and does not check cache.
  */
-const mutex = new Mutex();
+const topLevelMutex = new Mutex();
 function serialize(
   cache: Map<string, Promise<any>> | null,
   key: string | null | undefined,
@@ -49,6 +50,8 @@ function serialize(
   }
 
   log("Enqueueing query ", key);
+
+  const mutex = (PSD as any).mutex || topLevelMutex;
   const res = mutex.runExclusive(cb);
 
   if (key) {
@@ -59,9 +62,18 @@ function serialize(
   return res;
 }
 
-const txMutex = new Mutex();
 function serializeTx(cb: () => any) {
-  return txMutex.runExclusive(cb);
+  const mutex = (PSD as any).mutex || topLevelMutex;
+  return mutex.runExclusive(() => {
+    return newScope(
+      cb,
+      {
+        mutex: new Mutex(),
+      },
+      null,
+      null
+    );
+  });
 }
 
 export class SQLite3 {
@@ -76,7 +88,7 @@ export class SQLite3 {
           SQLite.SQLITE_OPEN_URI,
         filename != null ? "idb-batch-atomic" : undefined
       );
-    }).then((db) => {
+    }).then((db: any) => {
       const ret = new DB(this.base, db);
       return ret.execA("select quote(crsql_siteid());").then((siteid) => {
         ret._setSiteid(siteid[0][0].replace(/'|X/g, ""));
@@ -118,7 +130,6 @@ function computeCacheKey(
 }
 
 export class DB implements DBAsync {
-  __txMutex = txMutex;
   private stmtFinalizer = new Map<number, WeakRef<Stmt>>();
   // private stmtFinalizationRegistry = new FinalizationRegistry(
   //   (base: number) => {

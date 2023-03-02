@@ -24,6 +24,7 @@
     "@vlcn.io/py-correctness": "0.6.2"
   },
   "changesets": [
-    "fuzzy-bananas-rescue"
+    "fuzzy-bananas-rescue",
+    "smooth-ways-applaud"
   ]
 }

@@ -1,5 +1,11 @@
 # @vlcn.io/crsqlite
 
+## 0.8.0-next.1
+
+### Patch Changes
+
+- include install script
+
 ## 0.8.0-next.0
 
 ### Minor Changes

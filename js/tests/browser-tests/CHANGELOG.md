@@ -1,5 +1,17 @@
 # @vlcn.io/browser-tests
 
+## 0.7.0
+
+### Minor Changes
+
+- 6316ec315: update to support prebuild binaries, include primary key only table fixes
+
+### Patch Changes
+
+- Updated dependencies [6316ec315]
+  - @vlcn.io/wa-crsqlite@0.8.0
+  - @vlcn.io/xplat-tests@0.7.0
+
 ## 0.7.0-next.0
 
 ### Minor Changes

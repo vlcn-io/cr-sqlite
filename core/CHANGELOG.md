@@ -1,5 +1,16 @@
 # @vlcn.io/crsqlite
 
+## 0.8.0
+
+### Minor Changes
+
+- 6316ec315: update to support prebuild binaries, include primary key only table fixes
+
+### Patch Changes
+
+- b7e0b21df: create dist dir on install
+- 606060dbe: include install script
+
 ## 0.8.0-next.2
 
 ### Patch Changes

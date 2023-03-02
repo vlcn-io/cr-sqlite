@@ -1,5 +1,20 @@
 # @vlcn.io/sync-server
 
+## 0.7.0
+
+### Minor Changes
+
+- 6316ec315: update to support prebuild binaries, include primary key only table fixes
+
+### Patch Changes
+
+- Updated dependencies [6316ec315]
+- Updated dependencies [b7e0b21df]
+- Updated dependencies [606060dbe]
+  - @vlcn.io/crsqlite@0.8.0
+  - @vlcn.io/client-server-common@0.4.0
+  - @vlcn.io/server-core@0.7.0
+
 ## 0.7.0-next.2
 
 ### Patch Changes

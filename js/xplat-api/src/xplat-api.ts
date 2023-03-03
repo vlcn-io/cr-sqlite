@@ -34,7 +34,12 @@ export interface DB {
   ): () => void;
 }
 
+export type TMutex = {
+  runExclusive<T>(cb: () => Promise<T> | T): Promise<T>;
+};
+
 export type DBAsync = {
+  readonly __mutex: TMutex;
   readonly siteid: string;
   execMany(sql: string[]): Promise<void>;
   exec(sql: string, bind?: unknown[]): Promise<void>;
@@ -53,7 +58,7 @@ export type DBAsync = {
   prepare(sql: string): Promise<StmtAsync>;
   createFunction(name: string, fn: (...args: any) => unknown, opts?: {}): void;
   savepoint(cb: () => Promise<void>): Promise<void>;
-  transaction(cb: () => Promise<void>): Promise<void>;
+  transaction(cb: (tx: DBAsync) => Promise<void>): Promise<void>;
 };
 
 export interface Stmt {
@@ -67,13 +72,13 @@ export interface Stmt {
 }
 
 export interface StmtAsync {
-  run(...bindArgs: any[]): Promise<void>;
-  get(...bindArgs: any[]): Promise<any>;
-  all(...bindArgs: any[]): Promise<any[]>;
-  iterate<T>(...bindArgs: any[]): AsyncIterator<T>;
+  run(tx: DBAsync | null, ...bindArgs: any[]): Promise<void>;
+  get(tx: DBAsync | null, ...bindArgs: any[]): Promise<any>;
+  all(tx: DBAsync | null, ...bindArgs: any[]): Promise<any[]>;
+  iterate<T>(tx: DBAsync | null, ...bindArgs: any[]): AsyncIterator<T>;
   raw(isRaw?: boolean): this;
   bind(args: readonly any[]): this;
-  finalize(): void;
+  finalize(tx: DBAsync | null): void;
 }
 
 export const version = 1;

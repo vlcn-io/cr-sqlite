@@ -46,3 +46,6 @@ describe("wa-sqlite-wrapper.cy.ts", () => {
     ]);
   });
 });
+
+// TODO:
+// test transaction coordination

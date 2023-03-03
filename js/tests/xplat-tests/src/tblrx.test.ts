@@ -1,10 +1,5 @@
-import {
-  DBAsync,
-  DB as DBSync,
-  UpdateType,
-  UPDATE_TYPE,
-} from "@vlcn.io/xplat-api";
-type DB = DBAsync | DBSync;
+import { DBAsync, UpdateType, UPDATE_TYPE } from "@vlcn.io/xplat-api";
+type DB = DBAsync;
 import tblrx from "@vlcn.io/rx-tbl";
 
 function createSimpleSchema(db: DB) {
@@ -48,8 +43,8 @@ export const tests = {
       notified = tbls;
     });
 
-    await db.transaction(async () => {
-      await db.exec("INSERT INTO foo VALUES (1, 2)");
+    await db.tx(async (tx) => {
+      await tx.exec("INSERT INTO foo VALUES (1, 2)");
       await new Promise((resolve) => setTimeout(resolve, 0));
       assert(notified.length == 0);
     });

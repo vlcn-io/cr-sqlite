@@ -1,7 +1,6 @@
 on:
   push:
   pull_request:
-    types: [opened, edited]
 name: "rs-tests"
 jobs:
   build:

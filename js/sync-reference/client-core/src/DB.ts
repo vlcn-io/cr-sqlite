@@ -3,7 +3,7 @@ import {
   randomUuidBytes,
   Version,
 } from "@vlcn.io/client-server-common";
-import { DB as DBSync, DBAsync, Stmt, StmtAsync } from "@vlcn.io/xplat-api";
+import { DBAsync, Stmt, StmtAsync, TXAsync } from "@vlcn.io/xplat-api";
 import { TblRx } from "@vlcn.io/rx-tbl/src/tblrx";
 import logger from "./logger";
 
@@ -19,7 +19,7 @@ export class DB {
   private dispoables: (() => void)[] = [];
   private disposed = false;
   constructor(
-    private readonly db: DBSync | DBAsync,
+    public readonly db: DBAsync,
     public readonly siteId: Uint8Array,
     private readonly rx: TblRx,
     private readonly pullChangesetStmt: Stmt | StmtAsync,
@@ -61,7 +61,7 @@ export class DB {
     seqEnd: readonly [Version, number]
   ) {
     // write them then notify safely
-    await this.db.transaction(async () => {
+    await this.db.tx(async (tx) => {
       for (const cs of changes) {
         // have to run serially given wasm build
         // isn't actually multithreaded
@@ -69,6 +69,7 @@ export class DB {
         // insert statement with all the values?
         // or at least batch to 100 rows at a time in a single insert
         await this.applyChangesetStmt.run(
+          tx,
           cs[0],
           cs[1],
           cs[2],
@@ -80,16 +81,18 @@ export class DB {
       }
 
       // now update our record of the server
-      await this.updatePeerTracker(from, RECEIVE, seqEnd);
+      await this.updatePeerTracker(tx, from, RECEIVE, seqEnd);
     });
   }
 
   async updatePeerTracker(
+    tx: TXAsync,
     fromBin: Uint8Array,
     event: VersionEvent,
     seqEnd: readonly [Version, number]
   ) {
     await this.updatePeerTrackerStmt.run(
+      tx,
       fromBin,
       event,
       BigInt(seqEnd[0]),
@@ -108,7 +111,7 @@ export class DB {
     logger.info("Pulling changes since ", seq);
     // pull changes since we last sent the server changes,
     // excluding what the server has sent us
-    const ret = await this.pullChangesetStmt.all(BigInt(seq[0]));
+    const ret = await this.pullChangesetStmt.all(null, BigInt(seq[0]));
     // make sure we actually got bigints back
     // if they're smaller than bigints they'll be returned as numbers
     for (const c of ret) {
@@ -125,16 +128,13 @@ export class DB {
   dispose() {
     this.disposed = true;
     this.dispoables.forEach((d) => d());
-    this.pullChangesetStmt.finalize();
-    this.applyChangesetStmt.finalize();
-    this.updatePeerTrackerStmt.finalize();
+    this.pullChangesetStmt.finalize(null);
+    this.applyChangesetStmt.finalize(null);
+    this.updatePeerTrackerStmt.finalize(null);
   }
 }
 
-export default async function wrap(
-  db: DBSync | DBAsync,
-  rx: TblRx
-): Promise<DB> {
+export default async function wrap(db: DBAsync, rx: TblRx): Promise<DB> {
   const [pullChangesetStmt, applyChangesetStmt, updatePeerTrackerStmt] =
     await Promise.all([
       db.prepare(

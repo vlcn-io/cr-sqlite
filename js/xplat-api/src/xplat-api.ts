@@ -34,12 +34,25 @@ export interface DB {
   ): () => void;
 }
 
-export type DBAsync = {
-  readonly siteid: string;
+export type TMutex = {
+  runExclusive<T>(cb: () => Promise<T> | T): Promise<T>;
+  acquire(): Promise<() => void>;
+  release(): void;
+};
+
+export interface TXAsync {
+  readonly __mutex: TMutex;
   execMany(sql: string[]): Promise<void>;
   exec(sql: string, bind?: unknown[]): Promise<void>;
   execO<T extends {}>(sql: string, bind?: unknown[]): Promise<T[]>;
   execA<T extends any[]>(sql: string, bind?: unknown[]): Promise<T[]>;
+  prepare(sql: string): Promise<StmtAsync>;
+  tx(cb: (tx: TXAsync) => Promise<void>): Promise<void>;
+  imperativeTx(): Promise<[() => void, TXAsync]>;
+}
+
+export interface DBAsync extends TXAsync {
+  readonly siteid: string;
   close(): Promise<void>;
   onUpdate(
     cb: (
@@ -49,12 +62,8 @@ export type DBAsync = {
       rowid: bigint
     ) => void
   ): () => void;
-
-  prepare(sql: string): Promise<StmtAsync>;
   createFunction(name: string, fn: (...args: any) => unknown, opts?: {}): void;
-  savepoint(cb: () => Promise<void>): Promise<void>;
-  transaction(cb: () => Promise<void>): Promise<void>;
-};
+}
 
 export interface Stmt {
   run(...bindArgs: any[]): void;
@@ -67,13 +76,13 @@ export interface Stmt {
 }
 
 export interface StmtAsync {
-  run(...bindArgs: any[]): Promise<void>;
-  get(...bindArgs: any[]): Promise<any>;
-  all(...bindArgs: any[]): Promise<any[]>;
-  iterate<T>(...bindArgs: any[]): AsyncIterator<T>;
+  run(tx: TXAsync | null, ...bindArgs: any[]): Promise<void>;
+  get(tx: TXAsync | null, ...bindArgs: any[]): Promise<any>;
+  all(tx: TXAsync | null, ...bindArgs: any[]): Promise<any[]>;
+  iterate<T>(tx: TXAsync | null, ...bindArgs: any[]): AsyncIterator<T>;
   raw(isRaw?: boolean): this;
   bind(args: readonly any[]): this;
-  finalize(): void;
+  finalize(tx: TXAsync | null): Promise<void>;
 }
 
 export const version = 1;

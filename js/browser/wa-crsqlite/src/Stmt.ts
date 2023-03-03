@@ -2,6 +2,7 @@ import { DBAsync, StmtAsync } from "@vlcn.io/xplat-api";
 import { computeCacheKey } from "./cache.js";
 import { serialize } from "./serialize.js";
 import * as SQLite from "@vlcn.io/wa-sqlite";
+import TX from "./TX.js";
 
 // TOOD: maybe lazily reset only if stmt is reused
 export default class Stmt implements StmtAsync {
@@ -10,7 +11,7 @@ export default class Stmt implements StmtAsync {
   private finalized = false;
   private bindings: any[] = [];
   constructor(
-    private originDB: DBAsync,
+    private originDB: TX,
     stmtFinalizer: Map<number, WeakRef<Stmt>>,
     // stmtFinalizationRegistry: FinalizationRegistry<number>,
     private cache: Map<string, Promise<any>>,

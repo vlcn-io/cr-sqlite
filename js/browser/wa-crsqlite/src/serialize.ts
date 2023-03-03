@@ -1,6 +1,6 @@
 import TX from "./TX.js";
 import { Mutex } from "async-mutex";
-import { DBAsync, TMutex } from "@vlcn.io/xplat-api";
+import { DBAsync, TMutex, TXAsync } from "@vlcn.io/xplat-api";
 import log from "./log.js";
 
 /**
@@ -50,14 +50,10 @@ export function serialize(
   return res;
 }
 
-export function serializeTx(
-  cb: (db: DBAsync) => any,
-  mutex: Mutex,
-  db: DBAsync
-) {
+export function serializeTx(cb: (db: TXAsync) => any, mutex: Mutex, db: TX) {
   return mutex.runExclusive(() => {
     const subMutex = new Mutex();
-    const tx = new TX(db, subMutex);
+    const tx = new TX(db.api, db.db, subMutex, db.assertOpen, db.stmtFinalizer);
     return cb(tx);
   });
 }

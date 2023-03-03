@@ -38,13 +38,18 @@ export type TMutex = {
   runExclusive<T>(cb: () => Promise<T> | T): Promise<T>;
 };
 
-export type DBAsync = {
+export interface TXAsync {
   readonly __mutex: TMutex;
-  readonly siteid: string;
   execMany(sql: string[]): Promise<void>;
   exec(sql: string, bind?: unknown[]): Promise<void>;
   execO<T extends {}>(sql: string, bind?: unknown[]): Promise<T[]>;
   execA<T extends any[]>(sql: string, bind?: unknown[]): Promise<T[]>;
+  prepare(sql: string): Promise<StmtAsync>;
+  transaction(cb: (tx: TXAsync) => Promise<void>): Promise<void>;
+}
+
+export interface DBAsync extends TXAsync {
+  readonly siteid: string;
   close(): Promise<void>;
   onUpdate(
     cb: (
@@ -54,12 +59,8 @@ export type DBAsync = {
       rowid: bigint
     ) => void
   ): () => void;
-
-  prepare(sql: string): Promise<StmtAsync>;
   createFunction(name: string, fn: (...args: any) => unknown, opts?: {}): void;
-  savepoint(cb: () => Promise<void>): Promise<void>;
-  transaction(cb: (tx: DBAsync) => Promise<void>): Promise<void>;
-};
+}
 
 export interface Stmt {
   run(...bindArgs: any[]): void;

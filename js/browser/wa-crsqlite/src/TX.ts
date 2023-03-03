@@ -1,37 +1,170 @@
-import { DBAsync } from "@vlcn.io/xplat-api";
+import { StmtAsync, TXAsync } from "@vlcn.io/xplat-api";
 import { Mutex } from "async-mutex";
+import { computeCacheKey } from "./cache.js";
+import { serialize, serializeTx } from "./serialize.js";
+import Stmt from "./Stmt.js";
+import * as SQLite from "@vlcn.io/wa-sqlite";
 
-export default class TX implements DBAsync {
-  constructor(private readonly db: DBAsync, public readonly __mutex: Mutex) {}
+export default class TX implements TXAsync {
+  private cache = new Map<string, Promise<any>>();
 
-  get siteid(): string {
-    return this.db.siteid;
+  constructor(
+    public api: SQLiteAPI,
+    public db: number,
+    public readonly __mutex: Mutex,
+    public readonly assertOpen: () => void,
+    public readonly stmtFinalizer: Map<number, WeakRef<Stmt>>
+  ) {}
+
+  execMany(sql: string[]): Promise<void> {
+    this.assertOpen();
+    return serialize(
+      this.cache,
+      null,
+      () => this.api.exec(this.db, sql.join("")),
+      this.__mutex
+    );
   }
 
-  execMany(sql: string[]): Promise<void> {}
-  exec(sql: string, bind?: unknown[]): Promise<void> {}
-  execO<T extends {}>(sql: string, bind?: unknown[]): Promise<T[]> {}
-  execA<T extends any[]>(sql: string, bind?: unknown[]): Promise<T[]> {}
-  close(): Promise<void> {}
+  exec(sql: string, bind?: SQLiteCompatibleType[]): Promise<void> {
+    this.assertOpen();
+    return serialize(
+      this.cache,
+      computeCacheKey(sql, "a", bind),
+      () => {
+        return this.statements(sql, false, bind);
+      },
+      this.__mutex
+    );
+  }
+  execO<T extends {}>(
+    sql: string,
+    bind?: SQLiteCompatibleType[]
+  ): Promise<T[]> {
+    this.assertOpen();
+    return serialize(
+      this.cache,
+      computeCacheKey(sql, "o", bind),
+      () => this.statements(sql, true, bind),
+      this.__mutex
+    );
+  }
 
-  onUpdate(
-    cb: (
-      type: UpdateType,
-      dbName: string,
-      tblName: string,
-      rowid: bigint
-    ) => void
-  ): () => void {}
+  execA<T extends any[]>(
+    sql: string,
+    bind?: SQLiteCompatibleType[]
+  ): Promise<T[]> {
+    this.assertOpen();
+    return serialize(
+      this.cache,
+      computeCacheKey(sql, "a", bind),
+      () => this.statements(sql, false, bind),
+      this.__mutex
+    );
+  }
 
-  prepare(sql: string): Promise<StmtAsync> {}
+  prepare(sql: string): Promise<StmtAsync> {
+    this.assertOpen();
+    return serialize(
+      this.cache,
+      undefined,
+      async () => {
+        const str = this.api.str_new(this.db, sql);
+        const prepared = await this.api.prepare_v2(
+          this.db,
+          this.api.str_value(str)
+        );
+        if (prepared == null) {
+          this.api.str_finish(str);
+          throw new Error(`Could not prepare ${sql}`);
+        }
 
-  createFunction(
-    name: string,
-    fn: (...args: any) => unknown,
-    opts?: {}
-  ): void {}
+        return new Stmt(
+          this,
+          this.stmtFinalizer,
+          // this.stmtFinalizationRegistry,
+          this.cache,
+          this.api,
+          prepared.stmt,
+          str,
+          sql
+        );
+      },
+      this.__mutex
+    );
+  }
 
-  savepoint(cb: () => Promise<void>): Promise<void> {}
+  transaction(cb: (tx: TXAsync) => Promise<void>): Promise<void> {
+    this.assertOpen();
+    return serializeTx(
+      async (tx: TXAsync) => {
+        await this.exec("SAVEPOINT crsql_transaction");
+        try {
+          await cb(tx);
+        } catch (e) {
+          await this.exec("ROLLBACK");
+          return;
+        }
+        await this.exec("RELEASE crsql_transaction");
+      },
+      this.__mutex,
+      this
+    );
+  }
 
-  transaction(cb: (tx: DBAsync) => Promise<void>): Promise<void> {}
+  private async statements(
+    sql: string,
+    retObjects: boolean,
+    bind?: unknown[]
+  ): Promise<any> {
+    const results: { columns: string[]; rows: any[] }[] = [];
+
+    for await (const stmt of this.api.statements(this.db, sql)) {
+      const rows: any[] = [];
+      const columns = this.api.column_names(stmt);
+      if (bind) {
+        this.bind(stmt, bind);
+      }
+      while ((await this.api.step(stmt)) === SQLite.SQLITE_ROW) {
+        const row = this.api.row(stmt);
+        rows.push(row);
+      }
+      if (columns.length) {
+        results.push({ columns, rows });
+      }
+    }
+
+    // we'll only return results for first stmt
+    // if (results.length > 1) {
+    //   throw new Error("We currently only support 1 statement per query.");
+    // }
+    const returning = results[0];
+    if (returning == null) return null;
+
+    if (!retObjects) {
+      return returning.rows;
+    }
+
+    const objects: Object[] = [];
+    for (const row of returning.rows) {
+      const o: { [key: string]: any } = {};
+      for (let i = 0; i < returning.columns.length; ++i) {
+        o[returning.columns[i]] = row[i];
+      }
+      objects.push(o);
+    }
+
+    return objects;
+  }
+
+  private bind(stmt: number, values: unknown[]) {
+    for (let i = 0; i < values.length; ++i) {
+      const v = values[i];
+      this.api.bind(
+        stmt,
+        i + 1,
+        typeof v === "boolean" ? (v && 1) || 0 : (v as any)
+      );
+    }
+  }
 }

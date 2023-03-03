@@ -365,7 +365,8 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
   if (sanitizedInsertVal == 0) {
     sqlite3_free(pkValsStr);
     sqlite3_free(pkIdentifierList);
-    *errmsg = sqlite3_mprintf("Failed sanitizing value for changeset");
+    *errmsg = sqlite3_mprintf("Failed sanitizing value for changeset (%s)",
+                              insertVal);
     return SQLITE_ERROR;
   }
 

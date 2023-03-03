@@ -1,4 +1,4 @@
-import { DB, DBAsync } from "@vlcn.io/xplat-api";
+import { DBAsync } from "@vlcn.io/xplat-api";
 import { parse as uuidParse, stringify as uuidStringify } from "uuid";
 export type SiteIDWire = string;
 export type SiteIDLocal = Uint8Array;
@@ -86,7 +86,7 @@ export type Changeset = [
 const api = {
   async install(
     siteId: SiteIDLocal,
-    db: DB | DBAsync,
+    db: DBAsync,
     network: PokeProtocol
   ): Promise<WholeDbReplicator> {
     const ret = new WholeDbReplicator(siteId, db, network);
@@ -105,7 +105,7 @@ export class WholeDbReplicator {
 
   constructor(
     siteId: SiteIDLocal,
-    private db: DB | DBAsync,
+    private db: DBAsync,
     private network: PokeProtocol
   ) {
     this.db = db;
@@ -236,7 +236,7 @@ export class WholeDbReplicator {
     fromSiteId: SiteIDWire,
     changesets: readonly Changeset[]
   ) => {
-    await this.db.transaction(async () => {
+    await this.db.transaction(async (tx) => {
       let maxVersion = 0n;
       log("inserting changesets in tx", changesets);
       const stmt = await this.db.prepare(
@@ -252,6 +252,7 @@ export class WholeDbReplicator {
           maxVersion = v > maxVersion ? v : maxVersion;
           // cannot use same statement in parallel
           await stmt.run(
+            tx,
             cs[0],
             cs[1],
             cs[2],
@@ -265,7 +266,7 @@ export class WholeDbReplicator {
         console.error(e);
         throw e;
       } finally {
-        stmt.finalize();
+        stmt.finalize(tx);
       }
 
       await this.db.exec(

@@ -14,7 +14,7 @@ import {
   Socket,
   Version,
 } from "@vlcn.io/client-server-common";
-import { DB as DBSync, DBAsync } from "@vlcn.io/xplat-api";
+import { DBAsync } from "@vlcn.io/xplat-api";
 import ChangeStream from "./changeStream.js";
 import { TblRx } from "@vlcn.io/rx-tbl";
 import logger from "./logger.js";
@@ -23,7 +23,7 @@ export type ReplicatorArgs = {
   /**
    * Pointer to the local database which we need to sync with the server
    */
-  localDb: DBSync | DBAsync;
+  localDb: DBAsync;
   /**
    * Site id of the remote database.
    * Can be any valid uuid. If the DB does not exists on the server

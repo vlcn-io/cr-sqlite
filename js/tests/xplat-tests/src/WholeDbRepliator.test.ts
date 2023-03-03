@@ -1,10 +1,10 @@
-import { DBAsync, DB as DBSync } from "@vlcn.io/xplat-api";
+import { DBAsync } from "@vlcn.io/xplat-api";
 import wdbr, { PokeProtocol } from "@vlcn.io/sync-p2p";
 // @ts-ignore
 import { v4 as uuidv4, stringify as uuidStringify } from "uuid";
 import { Changeset } from "@vlcn.io/sync-p2p";
 
-type DB = DBAsync | DBSync;
+type DB = DBAsync;
 
 async function createSimpleSchema(db: DB) {
   await db.execMany([

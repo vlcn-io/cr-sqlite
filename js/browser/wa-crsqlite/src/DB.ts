@@ -90,6 +90,10 @@ export class DB implements DBAsync {
     return this.#tx.transaction(cb);
   }
 
+  imperativeTransaction(): Promise<[() => void, TXAsync]> {
+    return this.#tx.imperativeTransaction();
+  }
+
   /**
    * Close the database and finalize any prepared statements that were not freed for the given DB.
    */

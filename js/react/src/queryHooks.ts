@@ -4,6 +4,7 @@ import {
   StmtAsync,
   UPDATE_TYPE,
   UpdateType,
+  TXAsync,
 } from "@vlcn.io/xplat-api";
 import { CtxAsync } from "./context.js";
 import { RowID } from "./rowid.js";
@@ -106,6 +107,7 @@ export function useQuery<R, M = R[]>(
 let pendingQuery: number | null = null;
 let queryTxHolder: number | null = null;
 let queryId = 0;
+let txAcquisition: Promise<[() => void, TXAsync]> | null = null;
 
 class AsyncResultStateMachine<T, M = readonly T[]> {
   private pendingFetchPromise: Promise<any> | null = null;
@@ -265,7 +267,7 @@ class AsyncResultStateMachine<T, M = readonly T[]> {
     this.data = null;
     this.pendingFetchPromise = null;
     if (this.stmt) {
-      this.stmt.finalize();
+      this.stmt.finalize(null);
     }
     this.stmt = null;
 
@@ -273,7 +275,7 @@ class AsyncResultStateMachine<T, M = readonly T[]> {
       ([stmt, queriedTables]) => {
         // Someone called in with a new query before we finished preparing the original query
         if (this.pendingPreparePromise !== preparePromise) {
-          stmt.finalize();
+          stmt.finalize(null);
           return null;
         }
 
@@ -325,16 +327,18 @@ class AsyncResultStateMachine<T, M = readonly T[]> {
         stmt.bind(this.bindings || []);
       }
 
-      const doFetch = () => {
+      const doFetch = (releaser: () => void, tx: TXAsync) => {
         return stmt
           .raw(false)
-          .all()
+          .all(tx)
           .then(
             (data) => {
               if (pendingQuery === myQueryId) {
                 pendingQuery = null;
-                // release tx
-                this.ctx.db.exec("RELEASE use_query_" + queryTxHolder);
+                txAcquisition = null;
+                this.ctx.db
+                  .exec("RELEASE use_query_" + queryTxHolder)
+                  .then(releaser, releaser);
               }
 
               if (this.pendingFetchPromise !== fetchPromise) {
@@ -353,7 +357,7 @@ class AsyncResultStateMachine<T, M = readonly T[]> {
               if (pendingQuery === myQueryId) {
                 pendingQuery = null;
                 // rollback tx
-                this.ctx.db.exec("ROLLBACK");
+                this.ctx.db.exec("ROLLBACK").then(releaser, releaser);
               }
               this.error = {
                 loading: false,
@@ -375,12 +379,14 @@ class AsyncResultStateMachine<T, M = readonly T[]> {
       if (prevPending == null) {
         queryTxHolder = myQueryId;
         // start tx
-        fetchPromise = this.ctx.db
-          .exec("SAVEPOINT use_query_" + queryTxHolder)
-          .then(doFetch);
-      } else {
-        fetchPromise = doFetch();
+        txAcquisition = this.ctx.db.imperativeTransaction().then((relAndTx) => {
+          relAndTx[1].exec("SAVEPOINT use_query_" + queryTxHolder);
+          return relAndTx;
+        });
       }
+      fetchPromise = txAcquisition!.then(([releaser, tx]) =>
+        doFetch(releaser, tx)
+      );
 
       this.pendingFetchPromise = fetchPromise;
       return fetchPromise;
@@ -411,7 +417,7 @@ class AsyncResultStateMachine<T, M = readonly T[]> {
 
   dispose() {
     this.disposed = true;
-    this.stmt?.finalize();
+    this.stmt?.finalize(null);
     this.stmt = null;
     this.unsubscribeReactInternals();
   }

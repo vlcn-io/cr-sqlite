@@ -1,4 +1,4 @@
-import { DBAsync, StmtAsync } from "@vlcn.io/xplat-api";
+import { DBAsync, StmtAsync, TXAsync } from "@vlcn.io/xplat-api";
 import { computeCacheKey } from "./cache.js";
 import { serialize } from "./serialize.js";
 import * as SQLite from "@vlcn.io/wa-sqlite";
@@ -146,7 +146,7 @@ export default class Stmt implements StmtAsync {
    * Release the resources associated with the prepared statement.
    * If you fail to call this it will automatically be called when the statement is garbage collected.
    */
-  finalize(tx: DBAsync | null): Promise<void> {
+  finalize(tx: TXAsync | null): Promise<void> {
     return serialize(
       this.cache,
       undefined,

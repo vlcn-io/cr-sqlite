@@ -36,6 +36,8 @@ export interface DB {
 
 export type TMutex = {
   runExclusive<T>(cb: () => Promise<T> | T): Promise<T>;
+  acquire(): Promise<() => void>;
+  release(): void;
 };
 
 export interface TXAsync {
@@ -46,6 +48,7 @@ export interface TXAsync {
   execA<T extends any[]>(sql: string, bind?: unknown[]): Promise<T[]>;
   prepare(sql: string): Promise<StmtAsync>;
   transaction(cb: (tx: TXAsync) => Promise<void>): Promise<void>;
+  imperativeTransaction(): Promise<[() => void, TXAsync]>;
 }
 
 export interface DBAsync extends TXAsync {
@@ -73,13 +76,13 @@ export interface Stmt {
 }
 
 export interface StmtAsync {
-  run(tx: DBAsync | null, ...bindArgs: any[]): Promise<void>;
-  get(tx: DBAsync | null, ...bindArgs: any[]): Promise<any>;
-  all(tx: DBAsync | null, ...bindArgs: any[]): Promise<any[]>;
-  iterate<T>(tx: DBAsync | null, ...bindArgs: any[]): AsyncIterator<T>;
+  run(tx: TXAsync | null, ...bindArgs: any[]): Promise<void>;
+  get(tx: TXAsync | null, ...bindArgs: any[]): Promise<any>;
+  all(tx: TXAsync | null, ...bindArgs: any[]): Promise<any[]>;
+  iterate<T>(tx: TXAsync | null, ...bindArgs: any[]): AsyncIterator<T>;
   raw(isRaw?: boolean): this;
   bind(args: readonly any[]): this;
-  finalize(tx: DBAsync | null): void;
+  finalize(tx: TXAsync | null): Promise<void>;
 }
 
 export const version = 1;

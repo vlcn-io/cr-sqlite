@@ -112,6 +112,22 @@ export default class TX implements TXAsync {
     );
   }
 
+  imperativeTransaction(): Promise<[() => void, TXAsync]> {
+    return this.__mutex.acquire().then((release) => {
+      const subMutex = new Mutex();
+      return [
+        release,
+        new TX(
+          this.api,
+          this.db,
+          subMutex,
+          this.assertOpen,
+          this.stmtFinalizer
+        ),
+      ];
+    });
+  }
+
   private async statements(
     sql: string,
     retObjects: boolean,

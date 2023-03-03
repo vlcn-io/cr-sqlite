@@ -223,6 +223,17 @@ static int changesNext(sqlite3_vtab_cursor *cur) {
     return SQLITE_ERROR;
   }
 
+  if (strcmp(DELETE_CID_SENTINEL, cid) == 0) {
+    pCur->rowType = ROW_TYPE_DELETE;
+    return SQLITE_OK;
+  } else if (strcmp(PKS_ONLY_CID_SENTINEL, cid) == 0) {
+    pCur->rowType = ROW_TYPE_PKONLY;
+    return SQLITE_OK;
+  } else {
+    pCur->rowType = ROW_TYPE_UPDATE;
+    return SQLITE_OK;
+  }
+
   char *zSql = crsql_rowPatchDataQuery(pCur->pTab->db, tblInfo, cid, pks);
   if (zSql == 0) {
     pTabBase->zErrMsg = sqlite3_mprintf(
@@ -230,14 +241,6 @@ static int changesNext(sqlite3_vtab_cursor *cur) {
         "%s",
         tbl);
     return SQLITE_ERROR;
-  }
-
-  if (zSql[0] == '\0') {
-    // it's a delete -- no row data to grab
-    pCur->pRowStmt = 0;
-    sqlite3_free(zSql);
-
-    return SQLITE_OK;
   }
 
   sqlite3_stmt *pRowStmt;
@@ -308,8 +311,10 @@ static int changesColumn(
       }
       break;
     case CHANGES_SINCE_VTAB_CID:
-      if (pCur->pRowStmt == 0) {
+      if (pCur->rowType == ROW_TYPE_DELETE) {
         sqlite3_result_text(ctx, DELETE_CID_SENTINEL, -1, SQLITE_STATIC);
+      } else if (pCur->rowType == ROW_TYPE_PKONLY) {
+        sqlite3_result_text(ctx, PKS_ONLY_CID_SENTINEL, -1, SQLITE_STATIC);
       } else {
         sqlite3_result_value(ctx,
                              sqlite3_column_value(pCur->pChangesStmt, CID));

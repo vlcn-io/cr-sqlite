@@ -14,7 +14,7 @@ use core::ffi::c_char;
 use sqlite::ColumnType;
 use sqlite::Destructor;
 use sqlite::ManagedConnection;
-use sqlite::{Connection, ResultCode};
+use sqlite::{Connection, ResultCode, Value};
 use sqlite_nostd as sqlite;
 
 fn sync_left_to_right(
@@ -122,6 +122,12 @@ fn modify_pkonly_row() {
 /// to relate two relations.
 fn junction_table() {
     // junction_table_impl().unwrap();
+}
+
+// https://discord.com/channels/989870439897653248/989870440585494530/1081084118680485938
+#[test]
+fn dicord_report_1() {
+    discord_report_1_impl().unwrap();
 }
 
 fn create_pkonlytable_impl() -> Result<(), ResultCode> {
@@ -259,6 +265,34 @@ fn junction_table_impl() -> Result<(), ResultCode> {
     // check it
     // delete the edge
     // check it
+
+    Ok(())
+}
+
+fn discord_report_1_impl() -> Result<(), ResultCode> {
+    let db_a = opendb()?;
+    db_a.exec_safe("CREATE TABLE IF NOT EXISTS data (id NUMBER PRIMARY KEY);")?;
+    db_a.exec_safe("SELECT crsql_as_crr('data')")?;
+    db_a.exec_safe("INSERT INTO data VALUES (42) ON CONFLICT DO NOTHING;")?;
+
+    let stmt = db_a.prepare_v2("SELECT * FROM crsql_changes")?;
+
+    assert_eq!(stmt.step()?, ResultCode::ROW);
+
+    let table = stmt.column_text(0)?;
+    assert_eq!(table, "data");
+    let pk_val = stmt.column_text(1)?;
+    assert_eq!(pk_val, "42");
+    let cid = stmt.column_text(2)?;
+    assert_eq!(cid, "__crsql_pko");
+    let val_type = stmt.column_type(3)?;
+    assert_eq!(val_type, ColumnType::Null);
+    let col_version = stmt.column_int64(4)?;
+    assert_eq!(col_version, 1);
+    let db_version = stmt.column_int64(5)?;
+    assert_eq!(db_version, 1);
+
+    assert_eq!(stmt.step()?, ResultCode::DONE);
 
     Ok(())
 }

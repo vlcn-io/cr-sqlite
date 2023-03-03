@@ -4,6 +4,7 @@ import * as SQLite from "@vlcn.io/wa-sqlite";
 import { IDBBatchAtomicVFS } from "@vlcn.io/wa-sqlite/src/examples/IDBBatchAtomicVFS.js";
 import { serialize, topLevelMutex } from "./serialize.js";
 import { DB } from "./DB.js";
+export { DB } from "./DB.js";
 
 let api: SQLite3 | null = null;
 type SQLiteAPI = ReturnType<typeof SQLite.Factory>;

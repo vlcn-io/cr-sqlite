@@ -336,9 +336,11 @@ class AsyncResultStateMachine<T, M = readonly T[]> {
               if (pendingQuery === myQueryId) {
                 pendingQuery = null;
                 txAcquisition = null;
-                this.ctx.db
-                  .exec("RELEASE use_query_" + queryTxHolder)
-                  .then(releaser, releaser);
+                console.log("release ", queryTxHolder);
+                tx.exec("RELEASE use_query_" + queryTxHolder).then(
+                  releaser,
+                  releaser
+                );
               }
 
               if (this.pendingFetchPromise !== fetchPromise) {
@@ -357,7 +359,7 @@ class AsyncResultStateMachine<T, M = readonly T[]> {
               if (pendingQuery === myQueryId) {
                 pendingQuery = null;
                 // rollback tx
-                this.ctx.db.exec("ROLLBACK").then(releaser, releaser);
+                tx.exec("ROLLBACK").then(releaser, releaser);
               }
               this.error = {
                 loading: false,
@@ -379,6 +381,7 @@ class AsyncResultStateMachine<T, M = readonly T[]> {
       if (prevPending == null) {
         queryTxHolder = myQueryId;
         // start tx
+        console.log("acquire ", queryTxHolder);
         txAcquisition = this.ctx.db.imperativeTransaction().then((relAndTx) => {
           relAndTx[1].exec("SAVEPOINT use_query_" + queryTxHolder);
           return relAndTx;

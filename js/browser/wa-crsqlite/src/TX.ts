@@ -98,14 +98,14 @@ export default class TX implements TXAsync {
     this.assertOpen();
     return serializeTx(
       async (tx: TXAsync) => {
-        await this.exec("SAVEPOINT crsql_transaction");
+        await tx.exec("SAVEPOINT crsql_transaction");
         try {
           await cb(tx);
         } catch (e) {
-          await this.exec("ROLLBACK");
+          await tx.exec("ROLLBACK");
           return;
         }
-        await this.exec("RELEASE crsql_transaction");
+        await tx.exec("RELEASE crsql_transaction");
       },
       this.__mutex,
       this

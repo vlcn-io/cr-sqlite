@@ -1,7 +1,6 @@
 on:
   push:
   pull_request:
-    types: [opened, edited]
 name: "c-valgrind"
 jobs:
   build:

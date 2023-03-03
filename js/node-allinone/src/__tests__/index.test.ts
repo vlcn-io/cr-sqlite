@@ -1,10 +1,9 @@
 import * as nanoid from "nanoid";
 import sqlite from "../index.js";
-import { test, expect } from "vitest";
-import { DB, DBAsync } from "@vlcn.io/xplat-api";
+import { test } from "vitest";
+import { DB } from "@vlcn.io/xplat-api";
 
 type SiteIDWire = string;
-type SiteIDLocal = Uint8Array;
 type CID = string;
 type QuoteConcatedPKs = string | number;
 type TableName = string;
@@ -184,16 +183,13 @@ test("failing two -- discord: https://discord.com/channels/989870439897653248/98
   );
 });
 
-test("using sync api as async GH #104", async () => {
-  const changesReceived = async (
-    db: DB | DBAsync,
-    changesets: readonly Changeset[]
-  ) => {
-    await db.transaction(async () => {
+test("using sync api as async GH #104", () => {
+  const changesReceived = (db: DB, changesets: readonly Changeset[]) => {
+    db.transaction(() => {
       // uncomment to make fail
       let maxVersion = 0n;
       // console.log("inserting changesets in tx", changesets);
-      const stmt = await db.prepare(
+      const stmt = db.prepare(
         'INSERT INTO crsql_changes ("table", "pk", "cid", "val", "col_version", "db_version", "site_id") VALUES (?, ?, ?, ?, ?, ?, ?)'
       );
       // TODO: may want to chunk
@@ -206,7 +202,7 @@ test("using sync api as async GH #104", async () => {
           const v = BigInt(cs[5]);
           maxVersion = v > maxVersion ? v : maxVersion;
           // cannot use same statement in parallel
-          await stmt.run(
+          stmt.run(
             cs[0],
             cs[1],
             cs[2],
@@ -258,7 +254,7 @@ test("using sync api as async GH #104", async () => {
     ]
   );
 
-  const changes: Changeset[] = await dbSource.execA<Changeset>(
+  const changes: Changeset[] = dbSource.execA<Changeset>(
     `SELECT "table", "pk", "cid", "val", "col_version", "db_version", "site_id" FROM crsql_changes`
   );
 
@@ -266,7 +262,7 @@ test("using sync api as async GH #104", async () => {
   dbTarget.execMany(initSql);
 
   try {
-    await changesReceived(dbTarget, changes);
+    changesReceived(dbTarget, changes);
   } finally {
     // console.log("closing db");
     dbTarget.close();

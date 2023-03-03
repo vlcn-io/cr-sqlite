@@ -94,7 +94,7 @@ export default class TX implements TXAsync {
     );
   }
 
-  transaction(cb: (tx: TXAsync) => Promise<void>): Promise<void> {
+  tx(cb: (tx: TXAsync) => Promise<void>): Promise<void> {
     this.assertOpen();
     return serializeTx(
       async (tx: TXAsync) => {
@@ -112,7 +112,7 @@ export default class TX implements TXAsync {
     );
   }
 
-  imperativeTransaction(): Promise<[() => void, TXAsync]> {
+  imperativeTx(): Promise<[() => void, TXAsync]> {
     return this.__mutex.acquire().then((release) => {
       const subMutex = new Mutex();
       return [

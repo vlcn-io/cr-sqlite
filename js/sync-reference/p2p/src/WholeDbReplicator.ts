@@ -236,10 +236,10 @@ export class WholeDbReplicator {
     fromSiteId: SiteIDWire,
     changesets: readonly Changeset[]
   ) => {
-    await this.db.transaction(async (tx) => {
+    await this.db.tx(async (tx) => {
       let maxVersion = 0n;
       log("inserting changesets in tx", changesets);
-      const stmt = await this.db.prepare(
+      const stmt = await tx.prepare(
         'INSERT INTO crsql_changes ("table", "pk", "cid", "val", "col_version", "db_version", "site_id") VALUES (?, ?, ?, ?, ?, ?, ?)'
       );
       // TODO: may want to chunk
@@ -269,7 +269,7 @@ export class WholeDbReplicator {
         stmt.finalize(tx);
       }
 
-      await this.db.exec(
+      await tx.exec(
         `INSERT OR REPLACE INTO __crsql_wdbreplicator_peers (site_id, version) VALUES (?, ?)`,
         [uuidParse(fromSiteId), maxVersion]
       );

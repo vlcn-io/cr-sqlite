@@ -61,7 +61,7 @@ export class DB {
     seqEnd: readonly [Version, number]
   ) {
     // write them then notify safely
-    await this.db.transaction(async (tx) => {
+    await this.db.tx(async (tx) => {
       for (const cs of changes) {
         // have to run serially given wasm build
         // isn't actually multithreaded

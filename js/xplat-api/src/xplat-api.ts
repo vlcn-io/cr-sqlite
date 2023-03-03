@@ -47,8 +47,8 @@ export interface TXAsync {
   execO<T extends {}>(sql: string, bind?: unknown[]): Promise<T[]>;
   execA<T extends any[]>(sql: string, bind?: unknown[]): Promise<T[]>;
   prepare(sql: string): Promise<StmtAsync>;
-  transaction(cb: (tx: TXAsync) => Promise<void>): Promise<void>;
-  imperativeTransaction(): Promise<[() => void, TXAsync]>;
+  tx(cb: (tx: TXAsync) => Promise<void>): Promise<void>;
+  imperativeTx(): Promise<[() => void, TXAsync]>;
 }
 
 export interface DBAsync extends TXAsync {

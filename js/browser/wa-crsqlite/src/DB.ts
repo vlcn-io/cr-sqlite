@@ -86,12 +86,12 @@ export class DB implements DBAsync {
     return this.#tx.prepare(sql);
   }
 
-  transaction(cb: (tx: TXAsync) => Promise<void>): Promise<void> {
-    return this.#tx.transaction(cb);
+  tx(cb: (tx: TXAsync) => Promise<void>): Promise<void> {
+    return this.#tx.tx(cb);
   }
 
-  imperativeTransaction(): Promise<[() => void, TXAsync]> {
-    return this.#tx.imperativeTransaction();
+  imperativeTx(): Promise<[() => void, TXAsync]> {
+    return this.#tx.imperativeTx();
   }
 
   /**

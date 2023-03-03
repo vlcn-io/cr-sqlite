@@ -9,8 +9,8 @@ describe("wa-sqlite-wrapper.cy.ts", () => {
     await db.exec("CREATE TABLE foo (a);");
 
     try {
-      await db.transaction(async () => {
-        await db.exec("INSERT INTO foo VALUES (1);");
+      await db.tx(async (tx) => {
+        await tx.exec("INSERT INTO foo VALUES (1);");
         throw new Error();
       });
     } catch (e) {}
@@ -23,8 +23,8 @@ describe("wa-sqlite-wrapper.cy.ts", () => {
     const db = await crsqlite.open();
     await db.exec("CREATE TABLE foo (a);");
 
-    await db.transaction(async () => {
-      await db.exec("INSERT INTO foo VALUES (1);");
+    await db.tx(async (tx) => {
+      await tx.exec("INSERT INTO foo VALUES (1);");
     });
 
     const fooCount = await db.execA("SELECT count(*) FROM foo");

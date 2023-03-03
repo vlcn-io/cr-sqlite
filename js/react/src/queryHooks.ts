@@ -382,7 +382,7 @@ class AsyncResultStateMachine<T, M = readonly T[]> {
         queryTxHolder = myQueryId;
         // start tx
         console.log("acquire ", queryTxHolder);
-        txAcquisition = this.ctx.db.imperativeTransaction().then((relAndTx) => {
+        txAcquisition = this.ctx.db.imperativeTx().then((relAndTx) => {
           relAndTx[1].exec("SAVEPOINT use_query_" + queryTxHolder);
           return relAndTx;
         });

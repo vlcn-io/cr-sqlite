@@ -7,11 +7,11 @@
     "src"
   ],
   "exports": {
-    ".": "./dist/wrapper.js",
+    ".": "./dist/index.js",
     "./wa-sqlite-async.wasm": "./dist/wa-sqlite-async.wasm"
   },
-  "module": "dist/wrapper.js",
-  "types": "dist/wrapper.d.ts",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
   "sideEffects": false,
   "devDependencies": {
     "typescript": "^4.8.4",
@@ -31,7 +31,6 @@
   "dependencies": {
     "@vlcn.io/wa-sqlite": "workspace:*",
     "@vlcn.io/xplat-api": "workspace:*",
-    "async-mutex": "^0.4.0",
-    "comlink": "^4.3.1"
+    "async-mutex": "^0.4.0"
   }
 }

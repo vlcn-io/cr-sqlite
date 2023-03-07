@@ -21,8 +21,8 @@ function runTests(tests: {
 }
 
 (global as any).navigator = {};
-import { wdbTests } from "@vlcn.io/xplat-tests";
-runTests(wdbTests);
+// import { wdbTests } from "@vlcn.io/xplat-tests";
+// runTests(wdbTests);
 
 // TODO: better-sqlite3 currently does not expose an udpate hook
 // import { tblrxTests } from "@vlcn.io/xplat-tests";

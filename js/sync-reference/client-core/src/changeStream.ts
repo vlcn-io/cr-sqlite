@@ -91,7 +91,12 @@ export default class ChangeStream {
 
     // only update tracker on ack
     // so we know that our change was persisted at the remote server
-    await this.db.updatePeerTracker(this.remoteDbId, SEND, msg.seqEnd);
+    await this.db.updatePeerTracker(
+      this.db.db,
+      this.remoteDbId,
+      SEND,
+      msg.seqEnd
+    );
 
     // We just droped below threshold and had previously blocked a send.
     // Can send now.

@@ -75,14 +75,12 @@ importers:
       '@vlcn.io/wa-sqlite': workspace:*
       '@vlcn.io/xplat-api': workspace:*
       async-mutex: ^0.4.0
-      comlink: ^4.3.1
       typescript: ^4.8.4
       vitest: ^0.26.2
     dependencies:
       '@vlcn.io/wa-sqlite': link:../../../deps/wa-sqlite
       '@vlcn.io/xplat-api': link:../../xplat-api
       async-mutex: 0.4.0
-      comlink: 4.3.1
     devDependencies:
       typescript: 4.9.3
       vitest: 0.26.2

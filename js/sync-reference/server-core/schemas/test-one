@@ -1,4 +1,0 @@
-CREATE TABLE "foo" (a primary key, b);
-
-SELECT
-  crsql_as_crr('foo');

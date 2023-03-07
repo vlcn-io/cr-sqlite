@@ -1,5 +1,5 @@
 import { test, expect } from "vitest";
-import crsqlite, { DB } from "@vlcn.io/crsqlite-allinone";
+import crsqlite from "@vlcn.io/crsqlite-allinone";
 import fc from "fast-check";
 
 function setupDb() {

@@ -115,10 +115,6 @@ char *crsql_changesUnionQuery(crsql_TableInfo **tableInfos, int tableInfosLen,
  */
 char *crsql_rowPatchDataQuery(sqlite3 *db, crsql_TableInfo *tblInfo,
                               const char *colName, const char *pks) {
-  if (strcmp(DELETE_CID_SENTINEL, colName) == 0) {
-    return sqlite3_mprintf("");
-  }
-
   char *pkWhereList =
       crsql_extractWhereList(tblInfo->pks, tblInfo->pksLen, pks);
   if (pkWhereList == 0) {

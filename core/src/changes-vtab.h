@@ -103,6 +103,10 @@ struct crsql_Changes_vtab {
  * Everything allocated here must be constructed in
  * changesOpen and released in changesCrsrFinalize
  */
+#define ROW_TYPE_UPDATE 0
+#define ROW_TYPE_DELETE 1
+#define ROW_TYPE_PKONLY 2
+
 typedef struct crsql_Changes_cursor crsql_Changes_cursor;
 struct crsql_Changes_cursor {
   sqlite3_vtab_cursor base;
@@ -113,6 +117,7 @@ struct crsql_Changes_cursor {
   sqlite3_stmt *pRowStmt;
 
   sqlite3_int64 dbVersion;
+  int rowType;
 };
 
 #endif

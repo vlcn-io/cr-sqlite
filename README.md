@@ -17,6 +17,7 @@ This project implements [CRDTs](https://crdt.tech/) and [CRRs](https://hal.inria
 `crsqlite` works by adding metadata tables and triggers around your existing database schema. This means that you do not have to change your schema in order to get conflict resolution support -- with a few caveats around uniqueness constraints and foreign keys. See [Schema Design for CRDTs & Eventual Consistency](#schema-design-for-crdts--eventual-consistency).
 
 # Sponsors
+
 - [![reflect-app](https://reflect.app/_next/image?url=%2Fsite%2Ficons%2F1024x1024.png&w=32&q=100) Reflect](https://reflect.app/)
 - [robinvasan](https://github.com/robinvasan)
 - [iansinnott](https://github.com/iansinnott)
@@ -109,7 +110,7 @@ select crsql_finalize();
 
 # Packages
 
-Pre-built binaries of the extension are available in the `releases` section -- https://github.com/vlcn-io/cr-sqlite/releases
+Pre-built binaries of the extension are available in the [releases section](https://github.com/vlcn-io/cr-sqlite/releases).
 
 These can be loaded into `sqlite` via the [`load_extension` command](https://www.sqlite.org/loadext.html#loading_an_extension) from any language (Python, NodeJS, C++, Rust, etc.) that has SQLite bindings.
 
@@ -139,7 +140,6 @@ If you're building on windows: `rustup toolchain install nightly-x86_64-pc-windo
 ## [Run Time Loadable Extension](https://www.sqlite.org/loadext.htmla)
 
 Instructions on building a native library that can be loaded into SQLite in non-wasm environments.
-
 
 ```bash
 rustup toolchain install nightly # make sure you have the rust nightly toolchain

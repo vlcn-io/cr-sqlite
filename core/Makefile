@@ -119,16 +119,16 @@ ifdef CI_MAYBE_TARGET
 endif
 
 $(rs_lib_dbg_static_cpy): FORCE $(dbg_prefix)
-	cd ./rs/bundle && $(rustflags_static) cargo build $(RS_TARGET) --features static,omit_load_extension $(rs_build_flags)
+	cd ./rs/bundle && $(rustflags_static) cargo +nightly build $(RS_TARGET) --features static,omit_load_extension $(rs_build_flags)
 	cp $(rs_lib_dbg_static) $(rs_lib_dbg_static_cpy)
 
 $(rs_lib_loadable_cpy): FORCE $(dbg_prefix)
-	cd ./rs/bundle && $(rustflags_static) cargo build $(RS_TARGET) --release --features loadable_extension $(rs_build_flags)
+	cd ./rs/bundle && $(rustflags_static) cargo +nightly build $(RS_TARGET) --release --features loadable_extension $(rs_build_flags)
 	cp $(rs_lib_loadable) $(rs_lib_loadable_cpy)
 
 # we need separate output dirs based on selected features of the build
 $(rs_lib_dbg_loadable_cpy): FORCE $(dbg_prefix)
-	cd ./rs/bundle && $(rustflags_static) cargo build $(RS_TARGET) --features loadable_extension $(rs_build_flags)
+	cd ./rs/bundle && $(rustflags_static) cargo +nightly build $(RS_TARGET) --features loadable_extension $(rs_build_flags)
 	cp $(rs_lib_dbg_loadable) $(rs_lib_dbg_loadable_cpy)
 
 # Build the loadable extension.

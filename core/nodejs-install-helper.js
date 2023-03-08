@@ -54,6 +54,11 @@ if (!fs.existsSync(join(".", "dist"))) {
   fs.mkdirSync(join(".", "dist"));
 }
 
+if (fs.existsSync(distPath)) {
+  console.log("Binary already present and installed.");
+  process.exit(0);
+}
+
 // download the file at the url, if it exists
 let redirectCount = 0;
 function get(url, cb) {

@@ -15,6 +15,11 @@ let os = process.platform;
 let ext = "unknown";
 version = "v" + version;
 
+if (process.env.CRSQLITE_NOPREBUILD) {
+  console.log("CRSQLITE_NOPREBUILD env variable is set. Building from source.");
+  process.exit(0);
+}
+
 // todo: check msys?
 if (["win32", "cygwin"].includes(process.platform)) {
   os = "windows";

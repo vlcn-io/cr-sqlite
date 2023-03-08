@@ -19,6 +19,7 @@ This project implements [CRDTs](https://crdt.tech/) and [CRRs](https://hal.inria
 # Sponsors
 - [![reflect-app](https://reflect.app/_next/image?url=%2Fsite%2Ficons%2F1024x1024.png&w=32&q=100) Reflect](https://reflect.app/)
 - [robinvasan](https://github.com/robinvasan)
+- [iansinnott](https://github.com/iansinnott)
 
 # Usage
 

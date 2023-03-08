@@ -108,30 +108,15 @@ select crsql_finalize();
 
 # Packages
 
-Note -- these are pre-release. Please look at [the open bugs](https://github.com/vlcn-io/cr-sqlite/issues?q=is%3Aissue+is%3Aopen+label%3Abug) if you're planning on taking them for a spin.
+Pre-built binaries of the extension are available in the `releases` section -- https://github.com/vlcn-io/cr-sqlite/releases
 
-- Browser - [@vlcn.io/wa-crsqlite](https://github.com/vlcn-io/cr-sqlite/tree/main/js/browser/wa-crsqlite)
-  - [example apps](https://github.com/vlcn-io/live-examples)
-- NodeJS - [@vlcn.io/crsqlite](https://www.npmjs.com/package/@vlcn.io/crsqlite)
+These can be loaded into `sqlite` via the [`load_extension` command](https://www.sqlite.org/loadext.html#loading_an_extension) from any language (Python, NodeJS, C++, Rust, etc.) that has SQLite bindings.
 
-  - Usage:
+> Note: if you're using `cr-sqlite` as a run time loadable extension, loading the extension should be the _first_ operation you do after opening a connection to the database. The extension needs to be loaded on every connection you create.
 
-  ```js
-  const sqlite = require("better-sqlite3");
-  const db = sqlite("filename.db");
-  const { extensionPath } = require("@vlcn.io/crsqlite");
-  db.loadExtension(extensionPath);
-  ```
+For a WASM build that works in the browser, see the [crsqlite-js](https://github.com/vlcn-io/crsqlite-js) repository.
 
-  or, es6:
-
-  ```js
-  import Database from "better-sqlite3";
-
-  const db = new Database(":memory");
-  import { extensionPath } from "@vlcn.io/crsqlite";
-  db.loadExtension(extensionPath);
-  ```
+For UI integrations (e.g., React) see the [crsqlite-js](https://github.com/vlcn-io/crsqlite-js) repository.
 
 # Example Apps
 

@@ -18,6 +18,12 @@ jobs:
         with:
           submodules: true
 
+      - name: Load .env file
+        uses: xom9ikk/dotenv@v2
+        with:
+          path: ./
+          load-mode: strict
+
       - name: Rust Nightly
         run: |
           rustup default nightly

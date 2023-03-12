@@ -17,6 +17,7 @@ This project implements [CRDTs](https://crdt.tech/) and [CRRs](https://hal.inria
 `crsqlite` works by adding metadata tables and triggers around your existing database schema. This means that you do not have to change your schema in order to get conflict resolution support -- with a few caveats around uniqueness constraints and foreign keys. See [Schema Design for CRDTs & Eventual Consistency](#schema-design-for-crdts--eventual-consistency).
 
 # Sponsors
+
 - [![reflect-app](https://reflect.app/_next/image?url=%2Fsite%2Ficons%2F1024x1024.png&w=32&q=100) Reflect](https://reflect.app/)
 - [robinvasan](https://github.com/robinvasan)
 - [iansinnott](https://github.com/iansinnott)
@@ -109,38 +110,23 @@ select crsql_finalize();
 
 # Packages
 
-Note -- these are pre-release. Please look at [the open bugs](https://github.com/vlcn-io/cr-sqlite/issues?q=is%3Aissue+is%3Aopen+label%3Abug) if you're planning on taking them for a spin.
+Pre-built binaries of the extension are available in the [releases section](https://github.com/vlcn-io/cr-sqlite/releases).
 
-- Browser - [@vlcn.io/wa-crsqlite](https://github.com/vlcn-io/cr-sqlite/tree/main/js/browser/wa-crsqlite)
-  - [example apps](https://github.com/vlcn-io/live-examples)
-- NodeJS - [@vlcn.io/crsqlite](https://www.npmjs.com/package/@vlcn.io/crsqlite)
+These can be loaded into `sqlite` via the [`load_extension` command](https://www.sqlite.org/loadext.html#loading_an_extension) from any language (Python, NodeJS, C++, Rust, etc.) that has SQLite bindings.
 
-  - Usage:
+> Note: if you're using `cr-sqlite` as a run time loadable extension, loading the extension should be the _first_ operation you do after opening a connection to the database. The extension needs to be loaded on every connection you create.
 
-  ```js
-  const sqlite = require("better-sqlite3");
-  const db = sqlite("filename.db");
-  const { extensionPath } = require("@vlcn.io/crsqlite");
-  db.loadExtension(extensionPath);
-  ```
+For a WASM build that works in the browser, see the [crsqlite-js](https://github.com/vlcn-io/crsqlite-js) repository.
 
-  or, es6:
-
-  ```js
-  import Database from "better-sqlite3";
-
-  const db = new Database(":memory");
-  import { extensionPath } from "@vlcn.io/crsqlite";
-  db.loadExtension(extensionPath);
-  ```
+For UI integrations (e.g., React) see the [crsqlite-js](https://github.com/vlcn-io/crsqlite-js) repository.
 
 # Example Apps
 
-Examples apps that use `cr-sqlite` and have a networking layer (albeit a dumb one at the moment) are being developed:
+Examples apps that use `cr-sqlite` and have a networking layer:
 
 - https://github.com/vlcn-io/live-examples
-- [WIP Local-First Presentation Editor](https://github.com/tantaman/strut)
 - [Observable Notebook](https://observablehq.com/@tantaman/cr-sqlite-basic-setup)
+- [WIP Local-First Presentation Editor](https://github.com/tantaman/strut)
 
 # Building
 
@@ -154,7 +140,6 @@ If you're building on windows: `rustup toolchain install nightly-x86_64-pc-windo
 ## [Run Time Loadable Extension](https://www.sqlite.org/loadext.htmla)
 
 Instructions on building a native library that can be loaded into SQLite in non-wasm environments.
-
 
 ```bash
 rustup toolchain install nightly # make sure you have the rust nightly toolchain
@@ -282,12 +267,11 @@ Every row and column in the database is associated with a [lamport timestamp](ht
 # Future
 
 - Sharing & Privacy -- in a real-world collaborative scenario, you may not want to share your entire database with other peers. Thus, in addition to clock information, we must keep visibility information to use when computing deltas and doing replication.
-- Byzantine fault tolerance -- `crsqlite` currently assumes friendly actors. We need to guard against malicious updates.
-- Subselects -- peers may want to sync subsets of the database even if they have access to the entire thing. Compute deltas but only send those deltas that fall into the peer's provided query.
+- Query based replication -- peers may want to sync subsets of the database even if they have access to the entire thing. Compute deltas but only send those deltas that fall into the peer's provided query.
 
 # Example Use Case
 
-Say we have a databse schema called "Animal App." Alice, Bob and Billy all have local copies of "Animal App" on their devices. They start their day at a hostel with all of their devices synced. They then part ways, backpacking into the wilderness each with their own copy of the db.
+Say we have a database schema called "Animal App." Alice, Bob and Billy all have local copies of "Animal App" on their devices. They start their day at a hostel with all of their devices synced. They then part ways, backpacking into the wilderness each with their own copy of the db.
 
 As they see different (or maybe even the same) animals, they record their observations.
 

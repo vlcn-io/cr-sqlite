@@ -1,12 +1,3 @@
-[submodule "deps/emsdk"]
-	path = deps/emsdk
-	url = git@github.com:emscripten-core/emsdk.git
-[submodule "deps/wa-sqlite"]
-	path = deps/wa-sqlite
-	url = git@github.com:vlcn-io/wa-sqlite.git
-[submodule "deps/sqlite"]
-	path = deps/sqlite
-	url = git@github.com:vlcn-io/sqlite.git
 [submodule "deps/sqlite-no_std"]
 	path = core/rs/sqlite-rs-embedded
 	url = https://github.com/vlcn-io/sqlite-no_std

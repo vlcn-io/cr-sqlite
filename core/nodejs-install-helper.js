@@ -15,6 +15,11 @@ let os = process.platform;
 let ext = "unknown";
 version = "v" + version;
 
+if (process.env.CRSQLITE_NOPREBUILD) {
+  console.log("CRSQLITE_NOPREBUILD env variable is set. Building from source.");
+  process.exit(0);
+}
+
 // todo: check msys?
 if (["win32", "cygwin"].includes(process.platform)) {
   os = "windows";
@@ -52,6 +57,11 @@ const distPath = join("dist", `crsqlite.${ext}`);
 
 if (!fs.existsSync(join(".", "dist"))) {
   fs.mkdirSync(join(".", "dist"));
+}
+
+if (fs.existsSync(distPath)) {
+  console.log("Binary already present and installed.");
+  process.exit(0);
 }
 
 // download the file at the url, if it exists

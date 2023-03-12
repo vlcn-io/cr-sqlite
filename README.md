@@ -122,11 +122,11 @@ For UI integrations (e.g., React) see the [crsqlite-js](https://github.com/vlcn-
 
 # Example Apps
 
-Examples apps that use `cr-sqlite` and have a networking layer (albeit a dumb one at the moment) are being developed:
+Examples apps that use `cr-sqlite` and have a networking layer:
 
 - https://github.com/vlcn-io/live-examples
-- [WIP Local-First Presentation Editor](https://github.com/tantaman/strut)
 - [Observable Notebook](https://observablehq.com/@tantaman/cr-sqlite-basic-setup)
+- [WIP Local-First Presentation Editor](https://github.com/tantaman/strut)
 
 # Building
 
@@ -267,12 +267,11 @@ Every row and column in the database is associated with a [lamport timestamp](ht
 # Future
 
 - Sharing & Privacy -- in a real-world collaborative scenario, you may not want to share your entire database with other peers. Thus, in addition to clock information, we must keep visibility information to use when computing deltas and doing replication.
-- Byzantine fault tolerance -- `crsqlite` currently assumes friendly actors. We need to guard against malicious updates.
-- Subselects -- peers may want to sync subsets of the database even if they have access to the entire thing. Compute deltas but only send those deltas that fall into the peer's provided query.
+- Query based replication -- peers may want to sync subsets of the database even if they have access to the entire thing. Compute deltas but only send those deltas that fall into the peer's provided query.
 
 # Example Use Case
 
-Say we have a databse schema called "Animal App." Alice, Bob and Billy all have local copies of "Animal App" on their devices. They start their day at a hostel with all of their devices synced. They then part ways, backpacking into the wilderness each with their own copy of the db.
+Say we have a database schema called "Animal App." Alice, Bob and Billy all have local copies of "Animal App" on their devices. They start their day at a hostel with all of their devices synced. They then part ways, backpacking into the wilderness each with their own copy of the db.
 
 As they see different (or maybe even the same) animals, they record their observations.
 

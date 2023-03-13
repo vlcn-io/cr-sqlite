@@ -25,6 +25,12 @@ jobs:
             asset_name: crsqlite-darwin-x86_64.dylib
 
     steps:
+      - name: Load .env file
+        uses: xom9ikk/dotenv@v2
+        with:
+          path: ./
+          load-mode: strict
+
       - uses: actions/checkout@v3
         with:
           submodules: true

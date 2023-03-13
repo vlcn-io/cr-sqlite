@@ -182,10 +182,7 @@ This will run all tests across native, js & python packages.
 
 ## WASM
 
-Run `pnpm build` from the root directory. A WASM build for the browser will be available in:
-
-- Official port: `js/browser/crsqlite-wasm`
-- wa-sqlite port: `js/browser/wa-crsqlite`
+For a WASM build that works in the browser, see the [crsqlite-js](https://github.com/vlcn-io/crsqlite-js) repository.
 
 # JS APIs
 

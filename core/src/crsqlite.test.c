@@ -326,7 +326,7 @@ static void teste2e() {
 }
 
 static void testSelectChangesAfterChangingColumnName() {
-  printf("SelectAfterChangeingColumnName\n");
+  printf("SelectAfterChangingColumnName\n");
 
   int rc = SQLITE_OK;
   char *err = 0;
@@ -351,8 +351,8 @@ static void testSelectChangesAfterChangingColumnName() {
   rc += sqlite3_prepare_v2(db, "SELECT * FROM crsql_changes", -1, &pStmt, 0);
   assert(rc == SQLITE_OK);
   int numRows = 0;
-  // Columns that no long exist post-alter should not
-  // be retained for replication
+  // clock records should now be for column `c` with a `null` value.
+  // nit: test if a default value is set for the column
   while ((rc = sqlite3_step(pStmt)) == SQLITE_ROW) {
     ++numRows;
   }

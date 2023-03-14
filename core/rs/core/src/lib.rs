@@ -28,22 +28,23 @@ pub fn backfill_table(
 ) -> Result<ResultCode, ResultCode> {
     db.exec_safe("SAVEPOINT backfill")?;
 
-    let stmt = db.prepare_v2(&format!(
-        "SELECT {pk_cols} FROM \"{table}\" as t1
-          LEFT JOIN \"{table}__crsql_clock\" as t2 ON {pk_on_conditions} WHERE t2.\"{first_pk}\" IS NULL",
-        table = escape_ident(table),
-        pk_cols = pk_cols
-            .iter()
-            .map(|f| format!("\"{}\"", escape_ident(f)))
-            .collect::<Vec<_>>()
-            .join(", "),
-        pk_on_conditions = pk_cols
-            .iter()
-            .map(|f| format!("t1.\"{}\" = t2.\"{}\"", escape_ident(f), escape_ident(f)))
-            .collect::<Vec<_>>()
-            .join(" AND "),
-        first_pk = escape_ident(pk_cols[0]),
-    ));
+    let sql = format!(
+      "SELECT {pk_cols} FROM \"{table}\" as t1
+        LEFT JOIN \"{table}__crsql_clock\" as t2 ON {pk_on_conditions} WHERE t2.\"{first_pk}\" IS NULL",
+      table = escape_ident(table),
+      pk_cols = pk_cols
+          .iter()
+          .map(|f| format!("t1.\"{}\"", escape_ident(f)))
+          .collect::<Vec<_>>()
+          .join(", "),
+      pk_on_conditions = pk_cols
+          .iter()
+          .map(|f| format!("t1.\"{}\" = t2.\"{}\"", escape_ident(f), escape_ident(f)))
+          .collect::<Vec<_>>()
+          .join(" AND "),
+      first_pk = escape_ident(pk_cols[0]),
+    );
+    let stmt = db.prepare_v2(&sql);
 
     let result = match stmt {
         Ok(stmt) => create_clock_rows_from_stmt(stmt, db, table, pk_cols, non_pk_cols),

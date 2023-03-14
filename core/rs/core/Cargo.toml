@@ -21,10 +21,8 @@ panic = "abort"
 [profile.release]
 panic = "abort"
 
-[build]
-target = "wasm32-unknown-emscripten"
-
 [features]
+default = ["loadable_extension"]
 loadable_extension = ["sqlite_nostd/loadable_extension"]
 static = ["sqlite_nostd/static"]
 omit_load_extension = ["sqlite_nostd/omit_load_extension"]

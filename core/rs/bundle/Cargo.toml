@@ -14,6 +14,7 @@ crate-type = ["staticlib"]
 
 [dependencies]
 crsql_fractindex_core = {path="../fractindex-core"}
+crsql_core = { path="../core" }
 sqlite_nostd = { path="../sqlite-rs-embedded/sqlite_nostd"}
 
 [profile.dev]

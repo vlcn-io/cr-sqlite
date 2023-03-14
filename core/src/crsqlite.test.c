@@ -348,21 +348,26 @@ static void testSelectChangesAfterChangingColumnName() {
   rc += sqlite3_exec(db, "SELECT crsql_commit_alter('foo')", 0, 0, 0);
   assert(rc == SQLITE_OK);
 
-  rc += sqlite3_prepare_v2(db, "SELECT * FROM crsql_changes", -1, &pStmt, 0);
+  rc += sqlite3_prepare_v2(db, "SELECT cid, val FROM crsql_changes", -1, &pStmt,
+                           0);
   assert(rc == SQLITE_OK);
   int numRows = 0;
   // clock records should now be for column `c` with a `null` value.
   // nit: test if a default value is set for the column
   while ((rc = sqlite3_step(pStmt)) == SQLITE_ROW) {
     ++numRows;
+    assert(strcmp((const char *)sqlite3_column_text(pStmt, 0), "c") == 0);
+    assert(strcmp((const char *)sqlite3_column_text(pStmt, 1), "NULL") == 0);
   }
   sqlite3_finalize(pStmt);
-  assert(numRows == 0);
+  // we should still have a change given we never dropped the row
+  assert(numRows == 1);
   assert(rc == SQLITE_DONE);
 
   // insert some rows post schema change
   rc = sqlite3_exec(db, "INSERT INTO foo VALUES (2, 3);", 0, 0, 0);
-  rc += sqlite3_prepare_v2(db, "SELECT * FROM crsql_changes", -1, &pStmt, 0);
+  rc += sqlite3_prepare_v2(
+      db, "SELECT * FROM crsql_changes WHERE db_version > 1", -1, &pStmt, 0);
   assert(rc == SQLITE_OK);
   numRows = 0;
   // Columns that no long exist post-alter should not

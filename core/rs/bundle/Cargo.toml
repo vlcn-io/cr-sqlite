@@ -24,6 +24,6 @@ panic = "abort"
 panic = "abort"
 
 [features]
-loadable_extension = ["sqlite_nostd/loadable_extension"]
-static = ["sqlite_nostd/static"]
-omit_load_extension = ["sqlite_nostd/omit_load_extension"]
+loadable_extension = ["sqlite_nostd/loadable_extension", "crsql_fractindex_core/loadable_extension", "crsql_core/loadable_extension"]
+static = ["sqlite_nostd/static", "crsql_fractindex_core/static", "crsql_core/static"]
+omit_load_extension = ["sqlite_nostd/omit_load_extension", "crsql_fractindex_core/omit_load_extension", "crsql_core/omit_load_extension"]

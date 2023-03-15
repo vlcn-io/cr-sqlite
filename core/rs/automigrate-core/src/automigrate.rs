@@ -3,6 +3,7 @@ extern crate alloc;
 use alloc::string::String;
 use core::ffi::c_char;
 use core::slice;
+use sqlite::ResultCode;
 use sqlite_nostd as sqlite;
 
 use sqlite::Connection;
@@ -30,7 +31,22 @@ pub extern "C" fn crsql_automigrate(
         );
         return;
     }
+
+    let stmt = db
+        .unwrap()
+        .prepare_v2("SELECT count(*) FROM pragma_function_list WHERE name = 'crsql_automigrate';")
+        .unwrap();
+    stmt.step().unwrap();
+    let name = stmt.column_text(0).unwrap();
+    ctx.result_text_transient(name);
     // let db = db.unwrap();
+
+    /*
+    Could remove all the crrs statements...
+    Or load the crr extensions back in...
+    Or parse all the things...
+    Have an arg to provide all extensions to load and their paths...
+     */
 
     /*
      * The automigrate algorithm:
@@ -49,9 +65,38 @@ pub extern "C" fn crsql_automigrate(
      * 3. find modified columns -- we can't do this given we don't have a stable identifier for columns
      *   -- well we could if only type information on the columns changed or primary key participation changed
      *   -- need to also figure out index changes
+     *
+     * What do when primary key participation changes?
+     * Would necessitate dropping all clock entries and re-creating?
+     *
+     * Test:
+     * - All clock entries for removed columns are dropped
+     * - How shall this interact with your `crsql_migrate_begin` methods?
+     *  - These need testing to ensure proper clock table bookkeeping
+     *  - Resurrect corretness tests?
+     *  - Change py sqlite default config to auto-commit / tx?
      */
-    ctx.result_text_owned(String::from("ello mate!"));
+    // ctx.result_text_owned(String::from("ello mate!"));
 }
+
+fn crsql_automigrate_impl() -> Result<ResultCode, ResultCode> {}
+
+fn find_dropped_tables() -> Result<Vec<String>, ResultCode> {
+    Ok(vec![])
+}
+
+fn find_new_tables() -> Result<Vec<String>, ResultCode> {
+    Ok(vec![])
+}
+
+struct ModifiedTable {
+    name: String,
+    new_columns: Vec<String>,
+    dropped_columns: Vec<String>,
+    modified_columns: Vec<String>,
+}
+
+fn find_modified_tables() -> Result<ResultCode, ResultCode> {}
 
 // fn pull_schema_version(schema: &str) {
 //     // pull first line

@@ -14,7 +14,7 @@ use core::ffi::c_char;
 use sqlite::ColumnType;
 use sqlite::Destructor;
 use sqlite::ManagedConnection;
-use sqlite::{Connection, ResultCode, Value};
+use sqlite::{Connection, ResultCode};
 use sqlite_nostd as sqlite;
 
 fn sync_left_to_right(
@@ -41,43 +41,43 @@ fn sync_left_to_right(
     Ok(ResultCode::OK)
 }
 
-fn print_changes(
-    db: &dyn Connection,
-    for_db: Option<&dyn Connection>,
-) -> Result<ResultCode, ResultCode> {
-    let stmt = if let Some(for_db) = for_db {
-        let siteid_stmt = for_db.prepare_v2("SELECT crsql_siteid()")?;
-        siteid_stmt.step()?;
-        let siteid = siteid_stmt.column_blob(0)?;
-        let stmt = db.prepare_v2(
-          "SELECT [table], [pk], [cid], [val], [col_version], [db_version], quote([site_id]) FROM crsql_changes WHERE site_id IS NOT ?",
-        )?;
-        stmt.bind_blob(1, siteid, Destructor::STATIC)?;
-        stmt
-    } else {
-        db.prepare_v2(
-          "SELECT [table], [pk], [cid], [val], [col_version], [db_version], quote([site_id]) FROM crsql_changes",
-        )?
-    };
+// fn print_changes(
+//     db: &dyn Connection,
+//     for_db: Option<&dyn Connection>,
+// ) -> Result<ResultCode, ResultCode> {
+//     let stmt = if let Some(for_db) = for_db {
+//         let siteid_stmt = for_db.prepare_v2("SELECT crsql_siteid()")?;
+//         siteid_stmt.step()?;
+//         let siteid = siteid_stmt.column_blob(0)?;
+//         let stmt = db.prepare_v2(
+//           "SELECT [table], [pk], [cid], [val], [col_version], [db_version], quote([site_id]) FROM crsql_changes WHERE site_id IS NOT ?",
+//         )?;
+//         stmt.bind_blob(1, siteid, Destructor::STATIC)?;
+//         stmt
+//     } else {
+//         db.prepare_v2(
+//           "SELECT [table], [pk], [cid], [val], [col_version], [db_version], quote([site_id]) FROM crsql_changes",
+//         )?
+//     };
 
-    while stmt.step()? == ResultCode::ROW {
-        println!(
-            "{}, {}, {}, {}, {}, {}, {}",
-            stmt.column_text(0)?,
-            stmt.column_text(1)?,
-            stmt.column_text(2)?,
-            if stmt.column_type(3)? == ColumnType::Null {
-                ""
-            } else {
-                stmt.column_text(3)?
-            },
-            stmt.column_int64(4)?,
-            stmt.column_int64(5)?,
-            stmt.column_text(6)?,
-        );
-    }
-    Ok(sqlite::ResultCode::OK)
-}
+//     while stmt.step()? == ResultCode::ROW {
+//         println!(
+//             "{}, {}, {}, {}, {}, {}, {}",
+//             stmt.column_text(0)?,
+//             stmt.column_text(1)?,
+//             stmt.column_text(2)?,
+//             if stmt.column_type(3)? == ColumnType::Null {
+//                 ""
+//             } else {
+//                 stmt.column_text(3)?
+//             },
+//             stmt.column_int64(4)?,
+//             stmt.column_int64(5)?,
+//             stmt.column_text(6)?,
+//         );
+//     }
+//     Ok(sqlite::ResultCode::OK)
+// }
 
 fn opendb() -> Result<ManagedConnection, ResultCode> {
     let connection = sqlite::open(sqlite::strlit!(":memory:"))?;
@@ -201,6 +201,8 @@ fn modify_pkonly_row_impl() -> Result<(), ResultCode> {
     let result = stmt.step()?;
     assert_eq!(result, ResultCode::DONE);
 
+    closedb(db_a)?;
+    closedb(db_b)?;
     Ok(())
 }
 
@@ -238,14 +240,14 @@ fn junction_table_impl() -> Result<(), ResultCode> {
         .step()?;
 
     println!("A before sync");
-    print_changes(&db_a, None)?;
+    // print_changes(&db_a, None)?;
 
     sync_left_to_right(&db_b, &db_a, -1)?;
 
     println!("B");
-    print_changes(&db_b, None)?;
+    // print_changes(&db_b, None)?;
     println!("A after sync");
-    print_changes(&db_a, None)?;
+    // print_changes(&db_a, None)?;
 
     let stmt = db_a.prepare_v2("SELECT * FROM jx;")?;
     let result = stmt.step()?;
@@ -266,6 +268,8 @@ fn junction_table_impl() -> Result<(), ResultCode> {
     // delete the edge
     // check it
 
+    closedb(db_a)?;
+    closedb(db_b)?;
     Ok(())
 }
 
@@ -294,5 +298,6 @@ fn discord_report_1_impl() -> Result<(), ResultCode> {
 
     assert_eq!(stmt.step()?, ResultCode::DONE);
 
+    closedb(db_a)?;
     Ok(())
 }

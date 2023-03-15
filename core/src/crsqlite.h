@@ -28,5 +28,8 @@ SQLITE_EXTENSION_INIT3
 #endif
 
 int crsql_createClockTable(sqlite3 *db, crsql_TableInfo *tableInfo, char **err);
+int crsql_backfill_table(sqlite3_context *context, const char *tblName,
+                         const char **zpkNames, int pkCount,
+                         const char **zNonPkNames, int nonPkCount);
 
 #endif

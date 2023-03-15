@@ -327,6 +327,20 @@ static int createCrr(sqlite3_context *context, sqlite3 *db,
     }
   }
 
+  const char **pkNames = sqlite3_malloc(sizeof(char *) * tableInfo->pksLen);
+  for (size_t i = 0; i < tableInfo->pksLen; i++) {
+    pkNames[i] = tableInfo->pks[i].name;
+  }
+  const char **nonPkNames =
+      sqlite3_malloc(sizeof(char *) * tableInfo->nonPksLen);
+  for (size_t i = 0; i < tableInfo->nonPksLen; i++) {
+    nonPkNames[i] = tableInfo->nonPks[i].name;
+  }
+  rc = crsql_backfill_table(context, tblName, pkNames, tableInfo->pksLen,
+                            nonPkNames, tableInfo->nonPksLen);
+  sqlite3_free(pkNames);
+  sqlite3_free(nonPkNames);
+
   crsql_freeTableInfo(tableInfo);
   return rc;
 }

@@ -3,6 +3,9 @@ node-deps = ./packages/crsqlite-wasm/node_modules
 wasm-file = ./packages/crsqlite-wasm/dist/crsqlite.wasm
 tsbuildinfo = ./tsbuild-all/tsconfig.tsbuildinfo
 
+.EXPORT_ALL_VARIABLES:
+	CRSQLITE_NOPREBUILD = 1
+
 all: $(wasm-file) $(tsbuildinfo)
 
 $(git-deps):

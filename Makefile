@@ -1,7 +1,10 @@
-git-deps = crsqlite-js/deps/wa-sqlite crsqlite-js/deps/emsdk
+git-deps = core/rs/sqlite-rs-embedded
 node-deps = node_modules
 
-all: crsqlite crsqlite-js misc-js model-js
+.EXPORT_ALL_VARIABLES:
+	CRSQLITE_NOPREBUILD = 1
+
+all: crsqlite js
 
 $(git-deps):
 	git submodule update --init --recursive
@@ -9,18 +12,11 @@ $(git-deps):
 $(node-deps): $(git-deps)
 	pnpm install
 
-crsqlite:
-	cd cr-sqlite/core; \
+crsqlite: $(git-deps)
+	cd core; \
 	make loadable
 
-crsqlite-js: crsqlite $(node-deps)
-	cd crsqlite-js && pnpm run build
+js: crsqlite $(node-deps)
+	cd js && make all
 
-misc-js:
-	cd misc-js/typescript; \
-	pnpm run build
-
-model-js: misc-js
-	cd model-js/ts && pnpm run build
-
-.PHONY: crsqlite crsqlite-js misc-js model-js all
+.PHONY: crsqlite js all

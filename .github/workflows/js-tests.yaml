@@ -20,7 +20,7 @@ jobs:
       - name: Load .env file
         uses: xom9ikk/dotenv@v2
         with:
-          path: ./cr-sqlite
+          path: ./
           load-mode: strict
 
       - name: Rust Nightly
@@ -57,4 +57,4 @@ jobs:
         run: pnpm i
 
       - name: Test
-        run: cd crsqlite-js && make test
+        run: cd js && make test

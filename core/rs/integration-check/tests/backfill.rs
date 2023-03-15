@@ -46,15 +46,18 @@ fn new_empty_table_impl() -> Result<(), ResultCode> {
 
 #[test]
 fn new_nonempty_table() {
-    new_nonempty_table_impl().unwrap();
+    new_nonempty_table_impl(false).unwrap();
 }
 
-fn new_nonempty_table_impl() -> Result<(), ResultCode> {
+fn new_nonempty_table_impl(apply_twice: bool) -> Result<(), ResultCode> {
     let db = opendb()?;
     db.exec_safe("CREATE TABLE foo (id PRIMARY KEY, name);")?;
     db.exec_safe("INSERT INTO foo VALUES (1, 'one'), (2, 'two');")?;
     db.exec_safe("SELECT crsql_as_crr('foo');")?;
     let stmt = db.prepare_v2("SELECT * FROM foo__crsql_clock;")?;
+    if apply_twice {
+        db.exec_safe("SELECT crsql_as_crr('foo');")?;
+    }
 
     let mut cnt = 0;
     while stmt.step()? == ResultCode::ROW {
@@ -67,7 +70,25 @@ fn new_nonempty_table_impl() -> Result<(), ResultCode> {
     assert_eq!(cnt, 2);
 
     // select from crsql_changes too
-
+    let stmt = db.prepare_v2(
+        "SELECT [table], [pk], [cid], [val], [col_version], [db_version] FROM crsql_changes;",
+    )?;
+    let mut cnt = 0;
+    while stmt.step()? == ResultCode::ROW {
+        cnt = cnt + 1;
+        if cnt == 1 {
+            assert_eq!(stmt.column_text(1)?, "1"); // pk
+            assert_eq!(stmt.column_text(3)?, "'one'"); // col value
+        } else {
+            assert_eq!(stmt.column_text(1)?, "2"); // pk
+            assert_eq!(stmt.column_text(3)?, "'two'"); // col value
+        }
+        assert_eq!(stmt.column_text(0)?, "foo"); // table name
+        assert_eq!(stmt.column_text(2)?, "name"); // col name
+        assert_eq!(stmt.column_int64(4)?, 1); // col version
+        assert_eq!(stmt.column_int64(5)?, 1); // db version
+    }
+    assert_eq!(cnt, 2);
     closedb(db)
 }
 
@@ -77,8 +98,17 @@ fn reapplied_empty_table() {
 }
 
 fn reapplied_empty_table_impl() -> Result<(), ResultCode> {
-    Ok(())
+    let db = opendb()?;
+    // Just testing that we can execute these statements without error
+    db.exec_safe("CREATE TABLE foo (id PRIMARY KEY, name);")?;
+    db.exec_safe("SELECT crsql_as_crr('foo');")?;
+    db.exec_safe("SELECT * FROM foo__crsql_clock;")?;
+    db.exec_safe("SELECT crsql_as_crr('foo');")?;
+    db.exec_safe("SELECT * FROM foo__crsql_clock;")?;
+    closedb(db)
 }
 
 #[test]
-fn reapplied_nonempty_table_with_newdata() {}
+fn reapplied_nonempty_table_with_newdata() {
+    new_nonempty_table_impl(true).unwrap();
+}

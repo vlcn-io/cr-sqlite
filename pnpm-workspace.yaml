@@ -4,7 +4,7 @@ packages:
   - "js/packages/browser-tests"
   - "js/packages/client-core"
   - "js/packages/client-server-common"
-  - "js/packages/client-websocet"
+  - "js/packages/client-websocket"
   - "js/packages/create-web"
   - "js/packages/crsqlite-wasm"
   - "js/packages/node-allinone"

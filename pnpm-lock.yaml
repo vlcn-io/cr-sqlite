@@ -97,6 +97,25 @@ importers:
       uuid: 9.0.0
       vitest: 0.26.3
 
+  js/packages/client-websocket:
+    specifiers:
+      '@vlcn.io/client-core': workspace:*
+      '@vlcn.io/client-server-common': workspace:*
+      '@vlcn.io/crsqlite-wasm': workspace:*
+      '@vlcn.io/rx-tbl': workspace:*
+      '@vlcn.io/xplat-api': workspace:*
+      typescript: ^4.9.3
+      vitest: ^0.25.0
+    dependencies:
+      '@vlcn.io/client-core': link:../client-core
+      '@vlcn.io/client-server-common': link:../client-server-common
+      '@vlcn.io/crsqlite-wasm': link:../crsqlite-wasm
+      '@vlcn.io/rx-tbl': link:../rx-tbl
+      '@vlcn.io/xplat-api': link:../xplat-api
+    devDependencies:
+      typescript: 4.9.5
+      vitest: 0.25.8
+
   js/packages/create-web:
     specifiers:
       typescript: ^4.8.4

@@ -108,20 +108,20 @@ pub extern "C" fn crsql_backfill_table(
     context: *mut context,
     table: *const c_char,
     pk_cols: *const *const c_char,
-    pk_cols_len: usize,
+    pk_cols_len: c_int,
     non_pk_cols: *const *const c_char,
-    non_pk_cols_len: usize,
+    non_pk_cols_len: c_int,
 ) -> c_int {
     let table = unsafe { CStr::from_ptr(table).to_str() };
     let pk_cols = unsafe {
-        let parts = slice::from_raw_parts(pk_cols, pk_cols_len);
+        let parts = slice::from_raw_parts(pk_cols, pk_cols_len as usize);
         parts
             .iter()
             .map(|&p| CStr::from_ptr(p).to_str())
             .collect::<Result<Vec<_>, _>>()
     };
     let non_pk_cols = unsafe {
-        let parts = slice::from_raw_parts(non_pk_cols, non_pk_cols_len);
+        let parts = slice::from_raw_parts(non_pk_cols, non_pk_cols_len as usize);
         parts
             .iter()
             .map(|&p| CStr::from_ptr(p).to_str())

@@ -1,0 +1,60 @@
+on: pull_request
+name: "js-tests"
+jobs:
+  build:
+    name: Testing on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+          # - os: windows-2022 # windows hangs indefintely when installing build tools
+          # can't switch to node19 for windows until https://github.com/WiseLibs/better-sqlite3/pull/870 is resolved
+          # as some js tests use better-sqlite3
+          - os: macos-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Load .env file
+        uses: xom9ikk/dotenv@v2
+        with:
+          path: ./
+          load-mode: strict
+
+      - name: Rust Nightly
+        run: |
+          rustup default nightly
+          rustup update
+
+      - name: Rustup Target - Linux
+        if: runner.os == 'Linux'
+        run: rustup component add rust-src --toolchain nightly-x86_64-unknown-linux-gnu
+
+      - name: Rustup Target - Mac
+        if: runner.os == 'macOS'
+        run: rustup component add rust-src --toolchain nightly-x86_64-apple-darwin
+
+      - uses: cachix/install-nix-action@v18
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+      - run: nix-env -i wabt -f '<nixpkgs>'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 19.x
+
+      - name: Windows build tools
+        if: runner.os == 'Windows'
+        run: npm install --global windows-build-tools
+
+      - name: Install
+        run: pnpm i
+
+      - name: Test
+        run: cd js && make test

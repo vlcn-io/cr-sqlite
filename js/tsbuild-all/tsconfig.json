@@ -1,0 +1,23 @@
+{
+  "extends": "../tsconfig-template.json",
+  "compilerOptions": {
+    "outDir": "./dist/",
+    "rootDir": "./src"
+  },
+  "include": ["./src/"],
+  "references": [
+    { "path": "../packages/client-core" },
+    { "path": "../packages/client-server-common" },
+    { "path": "../packages/client-websocket" },
+    { "path": "../packages/node-allinone" },
+    { "path": "../packages/node-tests" },
+    { "path": "../packages/p2p" },
+    { "path": "../packages/react" },
+    { "path": "../packages/rx-tbl" },
+    { "path": "../packages/server-core" },
+    { "path": "../packages/server-websocket" },
+    { "path": "../packages/xplat-api" },
+    { "path": "../packages/xplat-tests" },
+    { "path": "../packages/crsqlite-wasm"}
+  ]
+}

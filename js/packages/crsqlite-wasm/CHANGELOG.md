@@ -1,0 +1,348 @@
+# @vlcn.io/wa-crsqlite
+
+## 0.9.0
+
+### Minor Changes
+
+- 14c9f4e: useQuery perf updates, primary key only table fixes, sync in a background worker
+
+### Patch Changes
+
+- Updated dependencies [14c9f4e]
+  - @vlcn.io/xplat-api@0.8.0
+
+## 0.9.0-next.0
+
+### Minor Changes
+
+- useQuery perf updates, primary key only table fixes, sync in a background worker
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/xplat-api@0.8.0-next.0
+
+## 0.8.0
+
+### Minor Changes
+
+- 6316ec315: update to support prebuild binaries, include primary key only table fixes
+
+### Patch Changes
+
+- Updated dependencies [6316ec315]
+  - @vlcn.io/wa-sqlite@0.15.0
+  - @vlcn.io/xplat-api@0.7.0
+
+## 0.8.0-next.0
+
+### Minor Changes
+
+- update to support prebuild binaries, include primary key only table fixes
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/wa-sqlite@0.15.0-next.0
+  - @vlcn.io/xplat-api@0.7.0-next.0
+
+## 0.7.4
+
+### Patch Changes
+
+- 64bit rowid support in update hook, fixup cache key calculating for bind args
+- Updated dependencies
+  - @vlcn.io/wa-sqlite@0.14.3
+
+## 0.7.3
+
+### Patch Changes
+
+- 3d09cd595: preview all the hook improvements and multi db open fixes
+- 567d8acba: auto-release prepared statements
+- 54666261b: fractional indexing inclusion
+- fractional indexing, better react hooks, many dbs opened concurrently
+- Updated dependencies [3d09cd595]
+- Updated dependencies [567d8acba]
+- Updated dependencies [54666261b]
+- Updated dependencies
+  - @vlcn.io/wa-sqlite@0.14.2
+  - @vlcn.io/xplat-api@0.6.2
+
+## 0.7.3-next.2
+
+### Patch Changes
+
+- preview all the hook improvements and multi db open fixes
+- Updated dependencies
+  - @vlcn.io/wa-sqlite@0.14.2-next.2
+  - @vlcn.io/xplat-api@0.6.2-next.2
+
+## 0.7.3-next.1
+
+### Patch Changes
+
+- auto-release prepared statements
+- Updated dependencies
+  - @vlcn.io/wa-sqlite@0.14.2-next.1
+  - @vlcn.io/xplat-api@0.6.2-next.1
+
+## 0.7.3-next.0
+
+### Patch Changes
+
+- fractional indexing inclusion
+- Updated dependencies
+  - @vlcn.io/wa-sqlite@0.14.2-next.0
+  - @vlcn.io/xplat-api@0.6.2-next.0
+
+## 0.7.2
+
+### Patch Changes
+
+- 519bcfc2a: hooks, fixes to support examples, auto-determine tables queried
+- hooks package, used_tables query, web only target for wa-sqlite
+- Updated dependencies [519bcfc2a]
+- Updated dependencies
+  - @vlcn.io/wa-sqlite@0.14.1
+  - @vlcn.io/xplat-api@0.6.1
+
+## 0.7.2-next.0
+
+### Patch Changes
+
+- hooks, fixes to support examples, auto-determine tables queried
+- Updated dependencies
+  - @vlcn.io/wa-sqlite@0.14.1-next.0
+  - @vlcn.io/xplat-api@0.6.1-next.0
+
+## 0.7.1
+
+### Patch Changes
+
+- accept auth tokens in server impl, fix error case leading to infinite loop in sync server, unbreak esm.sh
+
+## 0.7.0
+
+### Minor Changes
+
+- seen peers, binary encoding for network layer, retry on disconnect for server, auto-track peers
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/wa-sqlite@0.14.0
+  - @vlcn.io/xplat-api@0.6.0
+
+## 0.6.3
+
+### Patch Changes
+
+- deploy table validation fix
+- Updated dependencies
+  - @vlcn.io/wa-sqlite@0.13.3
+  - @vlcn.io/xplat-api@0.5.3
+
+## 0.6.2
+
+### Patch Changes
+
+- cid winner selection bugfix
+- Updated dependencies
+  - @vlcn.io/wa-sqlite@0.13.2
+  - @vlcn.io/xplat-api@0.5.2
+
+## 0.6.1
+
+### Patch Changes
+
+- rebuild all
+- Updated dependencies
+  - @vlcn.io/wa-sqlite@0.13.1
+  - @vlcn.io/xplat-api@0.5.1
+
+## 0.6.0
+
+### Minor Changes
+
+- breaking change -- fix version recording problem that prevented convergence in p2p cases
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/wa-sqlite@0.13.0
+  - @vlcn.io/xplat-api@0.5.0
+
+## 0.5.2
+
+### Patch Changes
+
+- fix gh #108
+- Updated dependencies
+  - @vlcn.io/wa-sqlite@0.12.2
+
+## 0.5.1
+
+### Patch Changes
+
+- fix mem leak and cid win value selection bug
+- Updated dependencies
+  - @vlcn.io/wa-sqlite@0.12.1
+  - @vlcn.io/xplat-api@0.4.1
+
+## 0.5.0
+
+### Minor Changes
+
+- fix tie breaking for merge, add example client-server sync
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/wa-sqlite@0.12.0
+  - @vlcn.io/xplat-api@0.4.0
+
+## 0.4.2
+
+### Patch Changes
+
+- fix bigint overflow in wasm, fix site_id not being returned with changesets
+- Updated dependencies
+  - @vlcn.io/wa-sqlite@0.11.2
+  - @vlcn.io/xplat-api@0.3.1
+
+## 0.4.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/wa-sqlite@0.11.1
+
+## 0.4.0
+
+### Minor Changes
+
+- fix multi-way merge
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/wa-sqlite@0.11.0
+  - @vlcn.io/xplat-api@0.3.0
+
+## 0.3.0
+
+### Minor Changes
+
+- incorporate schema fitness checks
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/wa-sqlite@0.10.0
+
+## 0.2.0
+
+### Minor Changes
+
+- update to use `wa-sqlite`, fix site id forwarding, fix scientific notation replication, etc.
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/wa-sqlite@0.9.0
+  - @vlcn.io/xplat-api@0.2.0
+
+## 0.1.11
+
+### Patch Changes
+
+- fix linking issues on linux distros
+- Updated dependencies
+  - @vlcn.io/wa-sqlite@0.8.9
+  - @vlcn.io/xplat-api@0.1.5
+
+## 0.1.10
+
+### Patch Changes
+
+- fixes site id not being passed during replication
+- Updated dependencies
+  - @vlcn.io/wa-sqlite@0.8.8
+  - @vlcn.io/xplat-api@0.1.4
+
+## 0.1.9
+
+### Patch Changes
+
+- cache per connection
+
+## 0.1.8
+
+### Patch Changes
+
+- fix statement preparation error in cases where there are multiple concurrent db connections
+- Updated dependencies
+  - @vlcn.io/wa-sqlite@0.8.7
+  - @vlcn.io/xplat-api@0.1.3
+
+## 0.1.7
+
+### Patch Changes
+
+- update sqlite binaries
+- Updated dependencies
+  - @vlcn.io/wa-sqlite@0.8.6
+  - @vlcn.io/xplat-api@0.1.2
+
+## 0.1.6
+
+### Patch Changes
+
+- use `globalThis` not window
+
+## 0.1.5
+
+### Patch Changes
+
+- tx queue to prevent tx within tx
+
+## 0.1.4
+
+### Patch Changes
+
+- include sources in npm packages
+
+## 0.1.3
+
+### Patch Changes
+
+- debug logging, fatal on bad binds
+- Updated dependencies
+  - @vlcn.io/wa-sqlite@0.8.5
+
+## 0.1.2
+
+### Patch Changes
+
+- allow callers to specify path to wasm
+
+## 0.1.1
+
+### Patch Changes
+
+- remove `link:../` references so we actually correctly resolve packages
+- Updated dependencies
+  - @vlcn.io/wa-sqlite@0.8.4
+  - @vlcn.io/xplat-api@0.1.1
+
+## 0.1.0
+
+### Minor Changes
+
+- first release that works end to end
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/xplat-api@0.1.0

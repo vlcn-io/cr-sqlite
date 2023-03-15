@@ -1,0 +1,36 @@
+{
+  "name": "@vlcn.io/create-web",
+  "version": "0.1.0",
+  "description": "scaffold a web project with crdt support",
+  "homepage": "https://vlcn.io",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/vlcn-io/crsqlite-js",
+    "directory": "https://github.com/vlcn-io/crsqlite-js/tree/main/packages/create-web"
+  },
+  "module": "dist/index.js",
+  "main": "dist/index.js",
+  "files": [
+    "dist/**"
+  ],
+  "dependencies": {
+  },
+  "scripts": {
+    "build": "tsc --build",
+    "watch": "tsc --build -w",
+    "test": "vitest run",
+    "deep-clean": "rm -rf ./dist || true && rm tsconfig.tsbuildinfo || true"
+  },
+  "license": "MIT",
+  "keywords": [
+    "sql",
+    "sqlite",
+    "sqlite3",
+    "crdt"
+  ],
+  "devDependencies": {
+    "typescript": "^4.8.4",
+    "vitest": "^0.25.0"
+  }
+}

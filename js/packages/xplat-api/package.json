@@ -1,0 +1,29 @@
+{
+  "name": "@vlcn.io/xplat-api",
+  "type": "module",
+  "version": "0.8.0",
+  "files": [
+    "dist"
+  ],
+  "module": "dist/xplat-api.js",
+  "main": "dist/xplat-api.js",
+  "sideEffects": false,
+  "devDependencies": {
+    "typescript": "^4.8.4",
+    "vitest": "^0.25.2"
+  },
+  "scripts": {
+    "build": "tsc --build",
+    "watch": "tsc --build --watch",
+    "deep-clean": "rm -rf ./dist || true && rm tsconfig.tsbuildinfo || true",
+    "test": "vitest run"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:vlcn-io/cr-sqlite.git",
+    "directory": "https://github.com/vlcn-io/cr-sqlite/tree/main/js/xplat-api"
+  },
+  "dependencies": {
+    "comlink": "^4.3.1"
+  }
+}

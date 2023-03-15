@@ -1,4 +1,5 @@
 from crsql_correctness import connect
+import pprint
 import pytest
 
 def test_c1_4_no_primary_keys():
@@ -48,3 +49,27 @@ def test_c2_create_index():
   idx_info = c.execute("select * from pragma_index_info('foo_idx')").fetchall()
 
   print(idx_info)
+
+def test_drop_clock_on_col_remove():
+  c = connect(":memory:")
+  c.execute("CREATE TABLE todo (id PRIMARY KEY, name, complete, list);")
+  c.execute("SELECT crsql_as_crr('todo');")
+  c.execute("INSERT INTO todo VALUES (1, 'cook', 0, 'home');")
+  c.commit()
+  changes = c.execute("SELECT [table], [pk], [cid], [val] FROM crsql_changes").fetchall()
+
+  expected = [
+    ('todo', '1', 'name', "'cook'"),
+    ('todo', '1', 'complete', '0'),
+    ('todo', '1', 'list', "'home'"),
+  ]
+
+  c.execute("SELECT crsql_begin_alter('todo');")
+
+  assert(changes == expected)
+
+def test_backfill_clocks_on_col_add():
+  None
+
+def test_clock_nuke_on_pk_alter():
+  None

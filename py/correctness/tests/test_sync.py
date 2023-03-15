@@ -1,7 +1,8 @@
 from crsql_correctness import connect, close, min_db_v
 import pprint
 
-# Using this to prototype sync rather than test it.
+# js_tests included a Fast-Check driven merge test.
+# 
 
 def init():
   dbs = list(map(lambda c: connect(":memory:"), range(3)))
@@ -37,16 +38,16 @@ def insert_data(c):
   c.execute("INSERT INTO slide VALUES (2, 1, 1)")
   c.execute("INSERT INTO slide VALUES (3, 1, 2)")
 
-  c.execute("COMMIT")
+  c.commit()
 
 def update_data(c):
   c.execute("UPDATE user SET name = 'Maestro' WHERE id = 1")
   c.execute("UPDATE deck SET title = 'Presto' WHERE id = 1")
-  c.execute("COMMIT")
+  c.commit()
 
 def delete_data(c):
   c.execute("DELETE FROM component WHERE id = 1")
-  c.execute("COMMIT")
+  c.commit()
 
 def get_changes_since(c, version, requestor):
   return c.execute(
@@ -105,10 +106,10 @@ def test_delete():
   db.execute("DELETE FROM component")
   db.execute("DELETE FROM deck")
   db.execute("DELETE FROM slide")
-  db.execute("COMMIT")
+  db.commit()
 
   rows = get_changes_since(db, 0, -1)
-  pprint.pprint(rows)
+  # pprint.pprint(rows)
   # TODO: we should have the network layer collapse these events or do it ourselves.
   # given we have past events that we're missing data for, they're now marked off as deletes
   # TODO: should deletes not get a proper version? Would be better for ordering and chunking replications

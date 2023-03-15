@@ -116,9 +116,9 @@ These can be loaded into `sqlite` via the [`load_extension` command](https://www
 
 > Note: if you're using `cr-sqlite` as a run time loadable extension, loading the extension should be the _first_ operation you do after opening a connection to the database. The extension needs to be loaded on every connection you create.
 
-For a WASM build that works in the browser, see the [crsqlite-js](https://github.com/vlcn-io/crsqlite-js) repository.
+For a WASM build that works in the browser, see the [js](./js) directory.
 
-For UI integrations (e.g., React) see the [crsqlite-js](https://github.com/vlcn-io/crsqlite-js) repository.
+For UI integrations (e.g., React) see the [js]./js) directory.
 
 # Example Apps
 

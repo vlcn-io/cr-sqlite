@@ -1,0 +1,36 @@
+{
+  "name": "@vlcn.io/crsqlite-wasm",
+  "type": "module",
+  "version": "0.9.0",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "exports": {
+    ".": "./dist/index.js",
+    "./crsqlite.wasm": "./dist/crsqlite.wasm"
+  },
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "sideEffects": false,
+  "devDependencies": {
+    "typescript": "^4.8.4",
+    "vitest": "^0.26.2"
+  },
+  "scripts": {
+    "build": "tsc --build",
+    "watch": "tsc --build --watch",
+    "deep-clean": "rm -rf ./dist || true && rm tsconfig.tsbuildinfo || true",
+    "test": "vitest run"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:vlcn-io/cr-sqlite.git",
+    "directory": "https://github.com/vlcn-io/cr-sqlite/tree/main/js/browser/crsqlite"
+  },
+  "dependencies": {
+    "@vlcn.io/wa-sqlite": "workspace:*",
+    "@vlcn.io/xplat-api": "workspace:*",
+    "async-mutex": "^0.4.0"
+  }
+}

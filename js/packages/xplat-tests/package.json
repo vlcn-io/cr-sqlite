@@ -1,0 +1,32 @@
+{
+  "name": "@vlcn.io/xplat-tests",
+  "private": true,
+  "type": "module",
+  "version": "0.7.0",
+  "files": [
+    "dist"
+  ],
+  "main": "dist/index.js",
+  "sideEffects": false,
+  "devDependencies": {
+    "typescript": "^4.8.4",
+    "vitest": "^0.25.2"
+  },
+  "scripts": {
+    "build": "tsc --build",
+    "watch": "tsc --build --watch",
+    "deep-clean": "rm -rf ./dist || true && rm tsconfig.tsbuildinfo || true",
+    "test": "echo 'These tests are run via node-tests and browser-tests'"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:vlcn-io/cr-sqlite.git",
+    "directory": "https://github.com/vlcn-io/cr-sqlite/tree/main/js/test/xplat-tests"
+  },
+  "dependencies": {
+    "@vlcn.io/sync-p2p": "workspace:*",
+    "@vlcn.io/xplat-api": "workspace:*",
+    "@vlcn.io/rx-tbl": "workspace:*",
+    "uuid": "^9.0.0"
+  }
+}

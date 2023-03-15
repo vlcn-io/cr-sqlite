@@ -37,6 +37,7 @@ pub extern "C" fn crsql_automigrate(
      * 1. Pull the supplied schema version of the input string
      * 2. Ensure it is greater than db's current schema version
      * 3. open a new in-memory db (w crsqlite loaded in the mem db -- detect via pragma query)
+     * SELECT count(*) FROM pragma_function_list WHERE name = 'crsql_automigrate';
      * 4. apply supplied schema against the memory db
      * 5. find dropped tables
      * 6. find new tables

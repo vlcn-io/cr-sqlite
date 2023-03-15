@@ -2,7 +2,7 @@
 
 [![c-tests](https://github.com/vlcn-io/cr-sqlite/actions/workflows/c-tests.yaml/badge.svg)](https://github.com/vlcn-io/cr-sqlite/actions/workflows/c-tests.yaml)
 [![c-valgrind](https://github.com/vlcn-io/cr-sqlite/actions/workflows/c-valgrind.yaml/badge.svg)](https://github.com/vlcn-io/cr-sqlite/actions/workflows/c-valgrind.yaml)
-[![js-tests](https://github.com/vlcn-io/workspace/actions/workflows/js-tests.yaml/badge.svg)](https://github.com/vlcn-io/workspace/actions/workflows/js-tests.yaml)
+[![js-tests](https://github.com/vlcn-io/cr-sqlite/actions/workflows/js-tests.yaml/badge.svg)](https://github.com/vlcn-io/cr-sqlite/actions/workflows/js-tests.yaml)
 [![py-tests](https://github.com/vlcn-io/cr-sqlite/actions/workflows/py-tests.yaml/badge.svg)](https://github.com/vlcn-io/cr-sqlite/actions/workflows/py-tests.yaml)
 [![rs-tests](https://github.com/vlcn-io/cr-sqlite/actions/workflows/rs-tests.yml/badge.svg)](https://github.com/vlcn-io/cr-sqlite/actions/workflows/rs-tests.yml)
 

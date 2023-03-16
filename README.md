@@ -186,7 +186,7 @@ For a WASM build that works in the browser, see the [js](./js) directory.
 
 # JS APIs
 
-JS APIs for using `cr-sqlite` in the browser are not yet documented. You can however see examples of them here:
+JS APIs for using `cr-sqlite` in the browser are not yet documented but exist in the [js dir](./js). You can also see examples of them in use here:
 
 - [Observable Notebook](https://observablehq.com/@tantaman/cr-sqlite-basic-setup)
 - https://github.com/vlcn-io/live-examples

@@ -56,12 +56,12 @@ function TodoList() {
 
 ```ts
 import tblrx from "@vlcn.io/rx-tbl";
-import startSync, { uuidStrToBytes } from "@vlcn.io/client-websocket";
+import startSync from "@vlcn.io/client-websocket";
 
 const rx = tblrx(db);
 const sync = await startSync(`ws://${window.location.hostname}:8080/sync`, {
   localDb: db,
-  remoteDbId: uuidStrToBytes(dbid),
+  remoteDbId: dbid,
   create: {
     schemaName: "todo-mvc",
   },

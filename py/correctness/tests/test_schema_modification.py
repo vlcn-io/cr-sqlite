@@ -48,7 +48,7 @@ def test_c2_create_index():
   c.execute("select crsql_as_crr('foo')")
   idx_info = c.execute("select * from pragma_index_info('foo_idx')").fetchall()
 
-  print(idx_info)
+  # print(idx_info)
 
 def test_drop_clock_on_col_remove():
   c = connect(":memory:")
@@ -63,6 +63,7 @@ def test_drop_clock_on_col_remove():
     ('todo', '1', 'complete', '0'),
     ('todo', '1', 'list', "'home'"),
   ]
+  assert(changes == expected)
 
   c.execute("SELECT crsql_begin_alter('todo');")
 

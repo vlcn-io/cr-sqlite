@@ -182,7 +182,7 @@ This will run all tests across native, js & python packages.
 
 ## WASM
 
-For a WASM build that works in the browser, see the [crsqlite-js](https://github.com/vlcn-io/crsqlite-js) repository.
+For a WASM build that works in the browser, see the [js](./js) directory.
 
 # JS APIs
 

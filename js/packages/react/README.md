@@ -4,4 +4,4 @@ In progress React integration. While we've gotten it to allowing ~100 SQLite que
 
 The high level design idea: https://riffle.systems/essays/prelude/
 
-The [live-examples](../../../live-examples-js/) make use of the react hooks.
+The [live-examples]([../../../live-examples-js/](https://github.com/vlcn-io/live-examples)) make use of the react hooks.

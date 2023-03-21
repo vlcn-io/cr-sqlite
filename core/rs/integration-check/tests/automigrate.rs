@@ -24,7 +24,7 @@ fn opendb() -> Result<ManagedConnection, ResultCode> {
 
 fn closedb(db: ManagedConnection) -> Result<(), ResultCode> {
     db.exec_safe("SELECT crsql_finalize()")?;
-    // no close, it gets called on drop.
+    // no close, close gets called on drop.
     Ok(())
 }
 

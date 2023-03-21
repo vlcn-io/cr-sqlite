@@ -321,7 +321,7 @@ static int createCrr(sqlite3_context *context, sqlite3 *db,
 
   rc = crsql_createClockTable(db, tableInfo, err);
   if (rc == SQLITE_OK) {
-    rc = crsql_removeCrrTriggersIfExist(db, tableInfo->tblName, err);
+    rc = crsql_remove_crr_triggers_if_exist(db, tableInfo->tblName);
     if (rc == SQLITE_OK) {
       rc = crsql_createCrrTriggers(db, tableInfo, err);
     }
@@ -440,7 +440,7 @@ static void crsqlBeginAlterFunc(sqlite3_context *context, int argc,
     return;
   }
 
-  rc = crsql_removeCrrTriggersIfExist(db, tblName, &errmsg);
+  rc = crsql_remove_crr_triggers_if_exist(db, tblName);
   if (rc != SQLITE_OK) {
     sqlite3_result_error(context, errmsg, -1);
     sqlite3_free(errmsg);

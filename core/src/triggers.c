@@ -274,32 +274,3 @@ int crsql_createCrrTriggers(sqlite3 *db, crsql_TableInfo *tableInfo,
 
   return rc;
 }
-
-int crsql_removeCrrTriggersIfExist(sqlite3 *db, const char *tblName,
-                                   char **err) {
-  char *zSql = 0;
-  int rc = SQLITE_OK;
-
-  zSql = sqlite3_mprintf("DROP TRIGGER IF EXISTS \"%s__crsql_itrig\"", tblName);
-  rc = sqlite3_exec(db, zSql, 0, 0, err);
-  sqlite3_free(zSql);
-  if (rc != SQLITE_OK) {
-    return rc;
-  }
-
-  zSql = sqlite3_mprintf("DROP TRIGGER IF EXISTS \"%s__crsql_utrig\"", tblName);
-  rc = sqlite3_exec(db, zSql, 0, 0, err);
-  sqlite3_free(zSql);
-  if (rc != SQLITE_OK) {
-    return rc;
-  }
-
-  zSql = sqlite3_mprintf("DROP TRIGGER IF EXISTS \"%s__crsql_dtrig\"", tblName);
-  rc = sqlite3_exec(db, zSql, 0, 0, err);
-  sqlite3_free(zSql);
-  if (rc != SQLITE_OK) {
-    return rc;
-  }
-
-  return rc;
-}

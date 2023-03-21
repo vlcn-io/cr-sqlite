@@ -40,9 +40,28 @@ pub extern "C" fn crsql_as_table(
     let args = sqlite::args!(argc, argv);
     let db = ctx.db_handle();
     let table = args[0].text();
-    if let Err(_) = remove_crr_clock_table_if_exists(db, table) {
-        ctx.result_error(&format!("could not downgrade CRR {table}", table = table))
+
+    if let Err(_) = db.exec_safe("SAVEPOINT as_table;") {
+        ctx.result_error("failed to start as_table savepoint");
+        return;
     }
+
+    if let Err(_) = crsql_as_table_impl(db, table) {
+        ctx.result_error("failed to downgrade the crr");
+        if let Err(_) = db.exec_safe("ROLLBACK TO as_table;") {
+            // fine.
+        }
+        return;
+    }
+
+    if let Err(_) = db.exec_safe("RELEASE as_table;") {
+        // fine
+    }
+}
+
+fn crsql_as_table_impl(db: *mut sqlite::sqlite3, table: &str) -> Result<ResultCode, ResultCode> {
+    remove_crr_clock_table_if_exists(db, table)?;
+    remove_crr_triggers_if_exist(db, table)
 }
 
 #[no_mangle]

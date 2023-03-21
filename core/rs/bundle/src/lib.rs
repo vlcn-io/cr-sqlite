@@ -26,7 +26,7 @@ use crsql_core;
 use crsql_core::sqlite3_crsqlcore_init;
 use crsql_fractindex_core::sqlite3_crsqlfractionalindex_init;
 use sqlite_nostd as sqlite;
-use sqlite_nostd::{ResultCode, SQLite3Allocator};
+use sqlite_nostd::SQLite3Allocator;
 
 #[global_allocator]
 static ALLOCATOR: SQLite3Allocator = SQLite3Allocator {};

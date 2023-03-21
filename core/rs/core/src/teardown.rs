@@ -21,9 +21,8 @@ pub fn remove_crr_clock_table_if_exists(
     table: &str,
 ) -> Result<ResultCode, ResultCode> {
     let escaped_table = crate::escape_ident(table);
-    // Dropping a table drops all triggers automagically
     db.exec_safe(&format!(
-        "DROP TABLE IF EXISTS \"{table}\"",
+        "DROP TABLE IF EXISTS \"{table}__crsql_clock\"",
         table = escaped_table
     ))
 }

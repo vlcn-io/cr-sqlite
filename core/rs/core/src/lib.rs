@@ -87,6 +87,8 @@ fn create_clock_rows_from_stmt(
         }
 
         for col in non_pk_cols.iter() {
+            // We even backfill default values since we can't differentiate between an explicit
+            // reset to a default vs an implicit set to default on create.
             write_stmt.bind_text(pk_cols.len() as i32 + 1, col, Destructor::STATIC)?;
             write_stmt.step()?;
             write_stmt.reset()?;

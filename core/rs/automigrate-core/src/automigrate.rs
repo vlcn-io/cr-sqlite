@@ -1,16 +1,16 @@
 extern crate alloc;
 
-use alloc::string::String;
-use alloc::vec;
-use alloc::vec::Vec;
+// use alloc::string::String;
+// use alloc::vec;
+// use alloc::vec::Vec;
 use core::ffi::c_char;
 use core::slice;
-use sqlite::ResultCode;
+// use sqlite::ResultCode;
 use sqlite_nostd as sqlite;
 
 use sqlite::Connection;
 use sqlite::Context;
-use sqlite::Value;
+// use sqlite::Value;
 
 pub extern "C" fn crsql_automigrate(
     ctx: *mut sqlite::context,
@@ -23,7 +23,7 @@ pub extern "C" fn crsql_automigrate(
         return;
     }
 
-    let schema = args[0].text();
+    // let schema = args[0].text();
 
     // let schema_version = pull_schema_version(schema);
     let db = sqlite::open(sqlite::strlit!(":memory:"));
@@ -86,28 +86,28 @@ pub extern "C" fn crsql_automigrate(
     // ctx.result_text_owned(String::from("ello mate!"));
 }
 
-fn crsql_automigrate_impl() -> Result<ResultCode, ResultCode> {
-    Ok(ResultCode::OK)
-}
+// fn crsql_automigrate_impl() -> Result<ResultCode, ResultCode> {
+//     Ok(ResultCode::OK)
+// }
 
-fn find_dropped_tables() -> Result<Vec<String>, ResultCode> {
-    Ok(vec![])
-}
+// fn find_dropped_tables() -> Result<Vec<String>, ResultCode> {
+//     Ok(vec![])
+// }
 
-fn find_new_tables() -> Result<Vec<String>, ResultCode> {
-    Ok(vec![])
-}
+// fn find_new_tables() -> Result<Vec<String>, ResultCode> {
+//     Ok(vec![])
+// }
 
-struct ModifiedTable {
-    name: String,
-    new_columns: Vec<String>,
-    dropped_columns: Vec<String>,
-    modified_columns: Vec<String>,
-}
+// struct ModifiedTable {
+//     name: String,
+//     new_columns: Vec<String>,
+//     dropped_columns: Vec<String>,
+//     modified_columns: Vec<String>,
+// }
 
-fn find_modified_tables() -> Result<Vec<ModifiedTable>, ResultCode> {
-    Ok(vec![])
-}
+// fn find_modified_tables() -> Result<Vec<ModifiedTable>, ResultCode> {
+//     Ok(vec![])
+// }
 
 // fn pull_schema_version(schema: &str) {
 //     // pull first line

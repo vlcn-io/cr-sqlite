@@ -7,7 +7,7 @@ mod fractindex;
 mod fractindex_view;
 mod util;
 
-use core::ffi::c_char;
+use core::ffi::{c_char, c_int};
 use core::slice;
 pub use fractindex::*;
 use fractindex_view::fix_conflict_return_old_key;
@@ -137,7 +137,7 @@ pub extern "C" fn sqlite3_crsqlfractionalindex_init(
     db: *mut sqlite::sqlite3,
     _err_msg: *mut *mut c_char,
     api: *mut sqlite::api_routines,
-) -> u32 {
+) -> c_int {
     sqlite::EXTENSION_INIT2(api);
 
     if let Err(rc) = db.create_function_v2(
@@ -150,7 +150,7 @@ pub extern "C" fn sqlite3_crsqlfractionalindex_init(
         None,
         None,
     ) {
-        return rc as u32;
+        return rc as c_int;
     }
 
     if let Err(rc) = db.create_function_v2(
@@ -163,7 +163,7 @@ pub extern "C" fn sqlite3_crsqlfractionalindex_init(
         None,
         None,
     ) {
-        return rc as u32;
+        return rc as c_int;
     }
 
     if let Err(rc) = db.create_function_v2(
@@ -176,8 +176,8 @@ pub extern "C" fn sqlite3_crsqlfractionalindex_init(
         None,
         None,
     ) {
-        return rc as u32;
+        return rc as c_int;
     }
 
-    ResultCode::OK as u32
+    ResultCode::OK as c_int
 }

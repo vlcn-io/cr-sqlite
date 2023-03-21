@@ -14,7 +14,6 @@
 use sqlite_nostd::{sqlite3, Connection, Destructor, ManagedStmt, ResultCode};
 extern crate alloc;
 use alloc::format;
-use alloc::string::String;
 use alloc::vec::Vec;
 
 /**
@@ -31,18 +30,18 @@ pub fn backfill_table(
     let sql = format!(
       "SELECT {pk_cols} FROM \"{table}\" as t1
         LEFT JOIN \"{table}__crsql_clock\" as t2 ON {pk_on_conditions} WHERE t2.\"{first_pk}\" IS NULL",
-      table = escape_ident(table),
+      table = crate::escape_ident(table),
       pk_cols = pk_cols
           .iter()
-          .map(|f| format!("t1.\"{}\"", escape_ident(f)))
+          .map(|f| format!("t1.\"{}\"", crate::escape_ident(f)))
           .collect::<Vec<_>>()
           .join(", "),
       pk_on_conditions = pk_cols
           .iter()
-          .map(|f| format!("t1.\"{}\" = t2.\"{}\"", escape_ident(f), escape_ident(f)))
+          .map(|f| format!("t1.\"{}\" = t2.\"{}\"", crate::escape_ident(f), crate::escape_ident(f)))
           .collect::<Vec<_>>()
           .join(" AND "),
-      first_pk = escape_ident(pk_cols[0]),
+      first_pk = crate::escape_ident(pk_cols[0]),
     );
     let stmt = db.prepare_v2(&sql);
 
@@ -70,10 +69,10 @@ fn create_clock_rows_from_stmt(
         "INSERT INTO \"{table}__crsql_clock\"
           ({pk_cols}, __crsql_col_name, __crsql_col_version, __crsql_db_version) VALUES
           ({pk_values}, ?, 1, crsql_nextdbversion())",
-        table = escape_ident(table),
+        table = crate::escape_ident(table),
         pk_cols = pk_cols
             .iter()
-            .map(|f| format!("\"{}\"", escape_ident(f)))
+            .map(|f| format!("\"{}\"", crate::escape_ident(f)))
             .collect::<Vec<_>>()
             .join(", "),
         pk_values = pk_cols.iter().map(|_| "?").collect::<Vec<_>>().join(", "),
@@ -96,8 +95,4 @@ fn create_clock_rows_from_stmt(
     }
 
     Ok(ResultCode::OK)
-}
-
-fn escape_ident(ident: &str) -> String {
-    return ident.replace("\"", "\"\"");
 }

@@ -3,7 +3,7 @@ extern crate alloc;
 // use alloc::string::String;
 // use alloc::vec;
 // use alloc::vec::Vec;
-use core::ffi::c_char;
+use core::ffi::{c_char, c_int};
 use core::slice;
 // use sqlite::ResultCode;
 use sqlite_nostd as sqlite;
@@ -17,7 +17,7 @@ pub extern "C" fn crsql_automigrate(
     argc: i32,
     argv: *mut *mut sqlite::value,
 ) {
-    let args = sqlite::args!(argc, argv);
+    let _args = sqlite::args!(argc, argv);
     if argc != 1 {
         ctx.result_error("expected 1 argument");
         return;
@@ -118,7 +118,7 @@ pub extern "C" fn sqlite3_crsqlautomigrate_init(
     db: *mut sqlite::sqlite3,
     _err_msg: *mut *mut c_char,
     api: *mut sqlite::api_routines,
-) -> u32 {
+) -> c_int {
     sqlite::EXTENSION_INIT2(api);
 
     db.create_function_v2(
@@ -131,5 +131,5 @@ pub extern "C" fn sqlite3_crsqlautomigrate_init(
         None,
         None,
     )
-    .unwrap_or(sqlite::ResultCode::ERROR) as u32
+    .unwrap_or(sqlite::ResultCode::ERROR) as c_int
 }

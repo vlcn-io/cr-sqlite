@@ -47,7 +47,6 @@ def test_db_version_restored_from_disk():
   # Close and reopen to check that version was persisted and re-initialized correctly
   close(c)
   c = connect(dbfile)
-  print(c.execute("select * from foo").fetchall())
   assert c.execute("SELECT crsql_dbversion()").fetchone()[0] == min_db_v + 1
   close(c)
 

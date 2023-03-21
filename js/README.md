@@ -7,6 +7,7 @@ JavaScript packages to use `cr-sqlite` in the browser, node, react and other JS 
 Scaffolding a new project -- todo: add a vlcn / cr-sqlite application template
 
 Example apps to look at until then:
+
 - https://github.com/vlcn-io/live-examples
 - [Observable Notebook](https://observablehq.com/@tantaman/cr-sqlite-basic-setup)
 - [WIP Local-First Presentation Editor](https://github.com/tantaman/strut)
@@ -47,8 +48,14 @@ function TodoList() {
     ctx,
     "SELECT * FROM todo ORDER BY id DESC"
   ).data;
-  
-  return <div>{allTodos.map(t => <Todo item={t} />)}</div>;
+
+  return (
+    <div>
+      {allTodos.map((t) => (
+        <Todo item={t} />
+      ))}
+    </div>
+  );
 }
 ```
 
@@ -98,7 +105,7 @@ const sync = await startSync(`ws://${window.location.hostname}:8080/sync`, {
 
 ## Integration Tests
 
-- node-tests: 
+- node-tests:
 - xplat-tests:
 - browser-tests:
 
@@ -107,7 +114,7 @@ const sync = await startSync(`ws://${window.location.hostname}:8080/sync`, {
 If you want to build these projects from source and/or hack on them or contribute, you'll need to clone the workspace repository:
 
 ```bash
-git clone --recurse-submodules git@github.com:vlcn-io/workspace.git 
+git clone --recurse-submodules git@github.com:vlcn-io/workspace.git
 ```
 
 Running `make` in that directory will get you set up. Ensure you have the rust nightly toolchain installed and activated before running make.

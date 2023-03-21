@@ -9,6 +9,6 @@
     "url": "git://github.com/vlcn-io/cr-sqlite"
   },
   "scripts": {
-    "test": "pytest"
+    "test": "export PYTHONPATH=./src && pytest"
   }
 }

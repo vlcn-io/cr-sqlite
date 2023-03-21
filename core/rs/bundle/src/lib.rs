@@ -23,6 +23,7 @@ use core::alloc::Layout;
 use core::ffi::{c_int, CStr};
 use core::panic::PanicInfo;
 use core::{ffi::c_char, slice};
+use crsql_automigrate_core::sqlite3_crsqlautomigrate_init;
 use crsql_core::backfill_table;
 use crsql_fractindex_core::sqlite3_crsqlfractionalindex_init;
 use sqlite_nostd as sqlite;
@@ -94,7 +95,12 @@ pub extern "C" fn sqlite3_crsqlrustbundle_init(
 ) -> u32 {
     sqlite::EXTENSION_INIT2(api);
 
-    return sqlite3_crsqlfractionalindex_init(db, err_msg, api);
+    let rc = sqlite3_crsqlfractionalindex_init(db, err_msg, api);
+    if rc != 0 {
+        return rc;
+    }
+
+    return sqlite3_crsqlautomigrate_init(db, err_msg, api);
 
     // load up all our rust extensions that contribute to the project
     // - automigrate

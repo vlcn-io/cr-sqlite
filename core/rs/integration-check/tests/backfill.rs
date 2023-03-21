@@ -12,6 +12,8 @@
  */
 
 // Test that we can backfill old tables
+// the bulk of these tests have been moved to the python code
+// given integration tests are much more easily written in python
 use core::ffi::c_char;
 use sqlite::ManagedConnection;
 use sqlite::{Connection, ResultCode};

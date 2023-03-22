@@ -1,0 +1,46 @@
+on:
+  push:
+  pull_request:
+name: "rs-valgrind"
+jobs:
+  build:
+    name: Testing on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+
+      - name: Load .env file
+        uses: xom9ikk/dotenv@v2
+        with:
+          path: ./
+          load-mode: strict
+
+      - name: Rust Nightly
+        run: |
+          rustup default nightly
+          rustup update
+
+      - name: Install Valgrind
+        run: |
+          cargo install cargo-valgrind
+
+      - name: Test Automigrate
+        run: |
+          cd core/rs/automigrate-core
+          cargo valgrind test --features=loadable_extension
+
+      - name: Test Fractindex
+        run: |
+          cd core/rs/fractindex-core
+          cargo valgrind test --features=loadable_extension
+
+      - name: Integration Tests
+        run: |
+          cd core/rs/integration-check
+          cargo valgrind test

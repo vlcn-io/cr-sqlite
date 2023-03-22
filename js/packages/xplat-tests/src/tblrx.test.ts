@@ -78,9 +78,8 @@ export const tests = {
 
     if (last && "then" in last) {
       await last;
-    } else {
-      await new Promise((resolve) => setTimeout(resolve, 0));
     }
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
     // @ts-ignore
     assert(notified == true);

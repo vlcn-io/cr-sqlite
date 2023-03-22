@@ -17,86 +17,86 @@ version = "v" + version;
 
 if (process.env.CRSQLITE_NOPREBUILD) {
   console.log("CRSQLITE_NOPREBUILD env variable is set. Building from source.");
-  process.exit(0);
-}
-
-// todo: check msys?
-if (["win32", "cygwin"].includes(process.platform)) {
-  os = "windows";
-}
-
-// manual ovverides for testing
-// arch = "x86_64";
-// os = "linux";
-// version = "prebuild-test.11";
-
-switch (os) {
-  case "darwin":
-    ext = "dylib";
-    break;
-  case "linux":
-    ext = "so";
-    break;
-  case "windows":
-    ext = "dll";
-    break;
-}
-
-switch (arch) {
-  case "x64":
-    arch = "x86_64";
-    break;
-  case "arm64":
-    arch = "aarch64";
-    break;
-}
-
-const binaryUrl = `https://github.com/vlcn-io/cr-sqlite/releases/download/${version}/crsqlite-${os}-${arch}.${ext}`;
-console.log(`Look for prebuilt binary from ${binaryUrl}`);
-const distPath = join("dist", `crsqlite.${ext}`);
-
-if (!fs.existsSync(join(".", "dist"))) {
-  fs.mkdirSync(join(".", "dist"));
-}
-
-if (fs.existsSync(distPath)) {
-  console.log("Binary already present and installed.");
-  process.exit(0);
-}
-
-// download the file at the url, if it exists
-let redirectCount = 0;
-function get(url, cb) {
-  https.get(url, (res) => {
-    if (res.statusCode === 302 || res.statusCode === 301) {
-      ++redirectCount;
-      if (redirectCount > 5) {
-        throw new Error("Too many redirects");
-      }
-      get(res.headers.location, cb);
-    } else if (res.statusCode === 200) {
-      cb(res);
-    } else {
-      cb(null);
-    }
-  });
-}
-
-get(binaryUrl, (res) => {
-  if (res == null) {
-    console.log("No prebuilt binary available. Building from source.");
-    buildFromSource();
-    return;
+  buildFromSource();
+} else {
+  // todo: check msys?
+  if (["win32", "cygwin"].includes(process.platform)) {
+    os = "windows";
   }
 
-  const file = fs.createWriteStream(distPath);
-  res.pipe(file);
-  file.on("finish", () => {
-    file.close();
-    console.log("Prebuilt binary downloaded");
+  // manual ovverides for testing
+  // arch = "x86_64";
+  // os = "linux";
+  // version = "prebuild-test.11";
+
+  switch (os) {
+    case "darwin":
+      ext = "dylib";
+      break;
+    case "linux":
+      ext = "so";
+      break;
+    case "windows":
+      ext = "dll";
+      break;
+  }
+
+  switch (arch) {
+    case "x64":
+      arch = "x86_64";
+      break;
+    case "arm64":
+      arch = "aarch64";
+      break;
+  }
+
+  const binaryUrl = `https://github.com/vlcn-io/cr-sqlite/releases/download/${version}/crsqlite-${os}-${arch}.${ext}`;
+  console.log(`Look for prebuilt binary from ${binaryUrl}`);
+  const distPath = join("dist", `crsqlite.${ext}`);
+
+  if (!fs.existsSync(join(".", "dist"))) {
+    fs.mkdirSync(join(".", "dist"));
+  }
+
+  if (fs.existsSync(distPath)) {
+    console.log("Binary already present and installed.");
     process.exit(0);
+  }
+
+  // download the file at the url, if it exists
+  let redirectCount = 0;
+  function get(url, cb) {
+    https.get(url, (res) => {
+      if (res.statusCode === 302 || res.statusCode === 301) {
+        ++redirectCount;
+        if (redirectCount > 5) {
+          throw new Error("Too many redirects");
+        }
+        get(res.headers.location, cb);
+      } else if (res.statusCode === 200) {
+        cb(res);
+      } else {
+        cb(null);
+      }
+    });
+  }
+
+  get(binaryUrl, (res) => {
+    if (res == null) {
+      console.log("No prebuilt binary available. Building from source.");
+      buildFromSource();
+      return;
+    }
+
+    const file = fs.createWriteStream(distPath);
+    res.pipe(file);
+    file.on("finish", () => {
+      file.close();
+      console.log("Prebuilt binary downloaded");
+      process.exit(0);
+    });
   });
-});
+}
 
 function buildFromSource() {
   console.log("Building from source");

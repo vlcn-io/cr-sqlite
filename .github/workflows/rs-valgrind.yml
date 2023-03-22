@@ -26,7 +26,10 @@ jobs:
           rustup default nightly
           rustup update
 
-      - name: Install Valgrind
+      - name: Install valgrind
+        run: sudo apt install -y valgrind
+
+      - name: Install Cargo Valgrind
         run: |
           cargo install cargo-valgrind
 

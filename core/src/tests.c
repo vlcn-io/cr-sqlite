@@ -37,6 +37,7 @@ void crsqlChangesVtabCommonTestSuite();
 void crsqlExtDataTestSuite();
 void crsqlSeenPeersTestSuite();
 void crsqlFractSuite();
+void crsqlIsCrrTestSuite();
 
 int main(int argc, char *argv[]) {
   char *suite = "all";
@@ -57,6 +58,7 @@ int main(int argc, char *argv[]) {
   // likely fix integration tests
   SUITE("crsql") crsqlTestSuite();
   SUITE("fract") crsqlFractSuite();
+  SUITE("is_crr") crsqlIsCrrTestSuite();
 
   sqlite3_shutdown();
 }

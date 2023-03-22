@@ -312,6 +312,14 @@ static int createCrr(sqlite3_context *context, sqlite3 *db,
     return SQLITE_ERROR;
   }
 
+  rc = crsql_is_crr(db, tblName);
+  if (rc < 0) {
+    return rc * -1;
+  }
+  if (rc == 1) {
+    return SQLITE_OK;
+  }
+
   rc = crsql_getTableInfo(db, tblName, &tableInfo, err);
 
   if (rc != SQLITE_OK) {

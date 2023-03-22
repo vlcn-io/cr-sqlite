@@ -14,15 +14,16 @@
 #![cfg_attr(not(test), no_std)]
 
 mod backfill;
+mod is_crr;
 mod teardown;
 
 use core::{ffi::c_char, slice};
 extern crate alloc;
-use alloc::format;
 use alloc::string::String;
 use alloc::vec::Vec;
 pub use backfill::*;
 use core::ffi::{c_int, CStr};
+pub use is_crr::*;
 use sqlite::ResultCode;
 use sqlite_nostd as sqlite;
 use sqlite_nostd::{context, Connection, Context, Value};
@@ -137,5 +138,23 @@ pub extern "C" fn crsql_remove_crr_triggers_if_exist(
         }
     } else {
         ResultCode::NOMEM as c_int
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn crsql_is_crr(db: *mut sqlite::sqlite3, table: *const c_char) -> c_int {
+    if let Ok(table) = unsafe { CStr::from_ptr(table).to_str() } {
+        match is_crr(db, table) {
+            Ok(b) => {
+                if b {
+                    1
+                } else {
+                    0
+                }
+            }
+            Err(c) => (c as c_int) * -1,
+        }
+    } else {
+        (ResultCode::NOMEM as c_int) * -1
     }
 }

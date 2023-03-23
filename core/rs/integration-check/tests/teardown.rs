@@ -10,22 +10,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-use core::ffi::c_char;
-use sqlite::ManagedConnection;
 use sqlite::{Connection, ResultCode};
 use sqlite_nostd as sqlite;
-
-fn opendb() -> Result<ManagedConnection, ResultCode> {
-    let connection = sqlite::open(sqlite::strlit!(":memory:"))?;
-    connection.enable_load_extension(true)?;
-    connection.load_extension("../../dbg/crsqlite", None)?;
-    Ok(connection)
-}
-
-fn closedb(db: ManagedConnection) -> Result<(), ResultCode> {
-    db.exec_safe("SELECT crsql_finalize()")?;
-    Ok(())
-}
 
 #[test]
 fn tear_down() {
@@ -33,7 +19,7 @@ fn tear_down() {
 }
 
 fn tear_down_impl() -> Result<(), ResultCode> {
-    let db = opendb()?;
+    let db = integration_utils::opendb()?;
     db.exec_safe("CREATE TABLE foo (a primary key, b);")?;
     db.exec_safe("SELECT crsql_as_crr('foo');")?;
     db.exec_safe("SELECT crsql_as_table('foo');")?;
@@ -41,5 +27,5 @@ fn tear_down_impl() -> Result<(), ResultCode> {
     stmt.step()?;
     let count = stmt.column_int(0)?;
     assert!(count == 0);
-    closedb(db)
+    integration_utils::closedb(db)
 }

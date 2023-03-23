@@ -14,9 +14,10 @@ use sqlite::Context;
 
 pub extern "C" fn crsql_automigrate(
     ctx: *mut sqlite::context,
-    argc: i32,
+    argc: c_int,
     argv: *mut *mut sqlite::value,
 ) {
+    // args: schema_version, schema, extension_paths...
     let _args = sqlite::args!(argc, argv);
     if argc != 1 {
         ctx.result_error("expected 1 argument");
@@ -123,7 +124,7 @@ pub extern "C" fn sqlite3_crsqlautomigrate_init(
 
     db.create_function_v2(
         "crsql_automigrate",
-        1,
+        -1,
         sqlite::UTF8,
         None,
         Some(crsql_automigrate),

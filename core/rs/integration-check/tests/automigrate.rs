@@ -10,23 +10,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-use core::ffi::c_char;
-use sqlite::ManagedConnection;
 use sqlite::{Connection, ResultCode};
 use sqlite_nostd as sqlite;
-
-fn opendb() -> Result<ManagedConnection, ResultCode> {
-    let connection = sqlite::open(sqlite::strlit!(":memory:"))?;
-    connection.enable_load_extension(true)?;
-    connection.load_extension("../../dbg/crsqlite", None)?;
-    Ok(connection)
-}
-
-fn closedb(db: ManagedConnection) -> Result<(), ResultCode> {
-    db.exec_safe("SELECT crsql_finalize()")?;
-    // no close, close gets called on drop.
-    Ok(())
-}
 
 #[test]
 fn invoke_automigrate() {
@@ -34,10 +19,10 @@ fn invoke_automigrate() {
 }
 
 fn invoke_automigrate_impl() -> Result<(), ResultCode> {
-    let db = opendb()?;
+    let db = integration_utils::opendb()?;
     let stmt = db.prepare_v2("SELECT crsql_automigrate('BLAH')")?;
     stmt.step()?;
     let text = stmt.column_text(0)?;
     println!("text: {:?}", text);
-    closedb(db)
+    integration_utils::closedb(db)
 }

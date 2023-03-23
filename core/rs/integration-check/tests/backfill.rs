@@ -14,23 +14,8 @@
 // Test that we can backfill old tables
 // the bulk of these tests have been moved to the python code
 // given integration tests are much more easily written in python
-use core::ffi::c_char;
-use sqlite::ManagedConnection;
 use sqlite::{Connection, ResultCode};
 use sqlite_nostd as sqlite;
-
-fn opendb() -> Result<ManagedConnection, ResultCode> {
-    let connection = sqlite::open(sqlite::strlit!(":memory:"))?;
-    connection.enable_load_extension(true)?;
-    connection.load_extension("../../dbg/crsqlite", None)?;
-    Ok(connection)
-}
-
-fn closedb(db: ManagedConnection) -> Result<(), ResultCode> {
-    db.exec_safe("SELECT crsql_finalize()")?;
-    // no close, it gets called on drop.
-    Ok(())
-}
 
 #[test]
 fn new_empty_table() {
@@ -38,12 +23,12 @@ fn new_empty_table() {
 }
 
 fn new_empty_table_impl() -> Result<(), ResultCode> {
-    let db = opendb()?;
+    let db = integration_utils::opendb()?;
     // Just testing that we can execute these statements without error
     db.exec_safe("CREATE TABLE foo (id PRIMARY KEY, name);")?;
     db.exec_safe("SELECT crsql_as_crr('foo');")?;
     db.exec_safe("SELECT * FROM foo__crsql_clock;")?;
-    closedb(db)
+    integration_utils::closedb(db)
 }
 
 #[test]
@@ -52,7 +37,7 @@ fn new_nonempty_table() {
 }
 
 fn new_nonempty_table_impl(apply_twice: bool) -> Result<(), ResultCode> {
-    let db = opendb()?;
+    let db = integration_utils::opendb()?;
     db.exec_safe("CREATE TABLE foo (id PRIMARY KEY, name);")?;
     db.exec_safe("INSERT INTO foo VALUES (1, 'one'), (2, 'two');")?;
     db.exec_safe("SELECT crsql_as_crr('foo');")?;
@@ -91,7 +76,7 @@ fn new_nonempty_table_impl(apply_twice: bool) -> Result<(), ResultCode> {
         assert_eq!(stmt.column_int64(5)?, 1); // db version
     }
     assert_eq!(cnt, 2);
-    closedb(db)
+    integration_utils::closedb(db)
 }
 
 #[test]
@@ -100,14 +85,14 @@ fn reapplied_empty_table() {
 }
 
 fn reapplied_empty_table_impl() -> Result<(), ResultCode> {
-    let db = opendb()?;
+    let db = integration_utils::opendb()?;
     // Just testing that we can execute these statements without error
     db.exec_safe("CREATE TABLE foo (id PRIMARY KEY, name);")?;
     db.exec_safe("SELECT crsql_as_crr('foo');")?;
     db.exec_safe("SELECT * FROM foo__crsql_clock;")?;
     db.exec_safe("SELECT crsql_as_crr('foo');")?;
     db.exec_safe("SELECT * FROM foo__crsql_clock;")?;
-    closedb(db)
+    integration_utils::closedb(db)
 }
 
 #[test]

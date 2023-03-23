@@ -1,6 +1,6 @@
 [submodule "deps/sqlite-no_std"]
 	path = core/rs/sqlite-rs-embedded
-	url = https://github.com/vlcn-io/sqlite-no_std
+	url = git@github.com:vlcn-io/sqlite-rs-embedded.git
 [submodule "js/deps/emsdk"]
 	path = js/deps/emsdk
 	url = git@github.com:emscripten-core/emsdk.git

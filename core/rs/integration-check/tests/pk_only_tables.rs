@@ -10,7 +10,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-use core::ffi::c_char;
 use sqlite::ColumnType;
 use sqlite::Destructor;
 use sqlite::ManagedConnection;
@@ -79,19 +78,6 @@ fn sync_left_to_right(
 //     Ok(sqlite::ResultCode::OK)
 // }
 
-fn opendb() -> Result<ManagedConnection, ResultCode> {
-    let connection = sqlite::open(sqlite::strlit!(":memory:"))?;
-    connection.enable_load_extension(true)?;
-    connection.load_extension("../../dbg/crsqlite", None)?;
-    Ok(connection)
-}
-
-fn closedb(db: ManagedConnection) -> Result<(), ResultCode> {
-    db.exec_safe("SELECT crsql_finalize()")?;
-    // no close, it gets called on drop.
-    Ok(())
-}
-
 fn setup_schema(db: &ManagedConnection) -> Result<ResultCode, ResultCode> {
     db.exec_safe("CREATE TABLE foo (id INTEGER PRIMARY KEY);")?;
     db.exec_safe("SELECT crsql_as_crr('foo');")
@@ -131,16 +117,16 @@ fn dicord_report_1() {
 }
 
 fn create_pkonlytable_impl() -> Result<(), ResultCode> {
-    let db_a = opendb()?;
+    let db_a = integration_utils::opendb()?;
 
     setup_schema(&db_a)?;
-    closedb(db_a)?;
+    integration_utils::closedb(db_a)?;
     Ok(())
 }
 
 fn insert_pkonly_row_impl() -> Result<(), ResultCode> {
-    let db_a = opendb()?;
-    let db_b = opendb()?;
+    let db_a = integration_utils::opendb()?;
+    let db_b = integration_utils::opendb()?;
 
     fn setup_schema(db: &ManagedConnection) -> Result<ResultCode, ResultCode> {
         db.exec_safe("CREATE TABLE foo (id INTEGER PRIMARY KEY);")?;
@@ -168,14 +154,14 @@ fn insert_pkonly_row_impl() -> Result<(), ResultCode> {
     let result = stmt.step()?;
     assert_eq!(result, ResultCode::DONE);
 
-    closedb(db_a)?;
-    closedb(db_b)?;
+    integration_utils::closedb(db_a)?;
+    integration_utils::closedb(db_b)?;
     Ok(())
 }
 
 fn modify_pkonly_row_impl() -> Result<(), ResultCode> {
-    let db_a = opendb()?;
-    let db_b = opendb()?;
+    let db_a = integration_utils::opendb()?;
+    let db_b = integration_utils::opendb()?;
 
     fn setup_schema(db: &ManagedConnection) -> Result<ResultCode, ResultCode> {
         db.exec_safe("CREATE TABLE foo (id INTEGER PRIMARY KEY);")?;
@@ -201,8 +187,8 @@ fn modify_pkonly_row_impl() -> Result<(), ResultCode> {
     let result = stmt.step()?;
     assert_eq!(result, ResultCode::DONE);
 
-    closedb(db_a)?;
-    closedb(db_b)?;
+    integration_utils::closedb(db_a)?;
+    integration_utils::closedb(db_b)?;
     Ok(())
 }
 
@@ -210,8 +196,8 @@ fn modify_pkonly_row_impl() -> Result<(), ResultCode> {
 // delete event on update of primary key. We're creating a synthetic one
 // on read from `changes` when the target row is missing.
 fn junction_table_impl() -> Result<(), ResultCode> {
-    let db_a = opendb()?;
-    let db_b = opendb()?;
+    let db_a = integration_utils::opendb()?;
+    let db_b = integration_utils::opendb()?;
 
     fn setup_schema(db: &ManagedConnection) -> Result<ResultCode, ResultCode> {
         db.exec_safe("CREATE TABLE jx (id1, id2, PRIMARY KEY(id1, id2));")?;
@@ -268,13 +254,13 @@ fn junction_table_impl() -> Result<(), ResultCode> {
     // delete the edge
     // check it
 
-    closedb(db_a)?;
-    closedb(db_b)?;
+    integration_utils::closedb(db_a)?;
+    integration_utils::closedb(db_b)?;
     Ok(())
 }
 
 fn discord_report_1_impl() -> Result<(), ResultCode> {
-    let db_a = opendb()?;
+    let db_a = integration_utils::opendb()?;
     db_a.exec_safe("CREATE TABLE IF NOT EXISTS data (id NUMBER PRIMARY KEY);")?;
     db_a.exec_safe("SELECT crsql_as_crr('data')")?;
     db_a.exec_safe("INSERT INTO data VALUES (42) ON CONFLICT DO NOTHING;")?;
@@ -298,6 +284,6 @@ fn discord_report_1_impl() -> Result<(), ResultCode> {
 
     assert_eq!(stmt.step()?, ResultCode::DONE);
 
-    closedb(db_a)?;
+    integration_utils::closedb(db_a)?;
     Ok(())
 }

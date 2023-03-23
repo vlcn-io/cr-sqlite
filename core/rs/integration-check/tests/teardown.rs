@@ -24,6 +24,7 @@ fn opendb() -> Result<ManagedConnection, ResultCode> {
 
 fn closedb(db: ManagedConnection) -> Result<(), ResultCode> {
     db.exec_safe("SELECT crsql_finalize()")?;
+    sqlite::shutdown();
     Ok(())
 }
 

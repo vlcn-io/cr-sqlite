@@ -124,7 +124,7 @@ fn create_pkonlytable_impl() -> Result<(), ResultCode> {
     let db_a = integration_utils::opendb()?;
 
     setup_schema(&db_a)?;
-    integration_utils::closedb(db_a)?;
+    integration_utils::closedb(&db_a)?;
     Ok(())
 }
 
@@ -158,8 +158,8 @@ fn insert_pkonly_row_impl() -> Result<(), ResultCode> {
     let result = stmt.step()?;
     assert_eq!(result, ResultCode::DONE);
 
-    integration_utils::closedb(db_a)?;
-    integration_utils::closedb(db_b)?;
+    integration_utils::closedb(&db_a)?;
+    integration_utils::closedb(&db_b)?;
     Ok(())
 }
 
@@ -191,8 +191,8 @@ fn modify_pkonly_row_impl() -> Result<(), ResultCode> {
     let result = stmt.step()?;
     assert_eq!(result, ResultCode::DONE);
 
-    integration_utils::closedb(db_a)?;
-    integration_utils::closedb(db_b)?;
+    integration_utils::closedb(&db_a)?;
+    integration_utils::closedb(&db_b)?;
     Ok(())
 }
 
@@ -258,8 +258,8 @@ fn junction_table_impl() -> Result<(), ResultCode> {
     // delete the edge
     // check it
 
-    integration_utils::closedb(db_a)?;
-    integration_utils::closedb(db_b)?;
+    integration_utils::closedb(&db_a)?;
+    integration_utils::closedb(&db_b)?;
     Ok(())
 }
 
@@ -288,6 +288,6 @@ fn discord_report_1_impl() -> Result<(), ResultCode> {
 
     assert_eq!(stmt.step()?, ResultCode::DONE);
 
-    integration_utils::closedb(db_a)?;
+    integration_utils::closedb(&db_a)?;
     Ok(())
 }

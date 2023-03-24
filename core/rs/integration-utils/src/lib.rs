@@ -29,8 +29,7 @@ macro_rules! counter_setup {
         static COUNTER: AtomicUsize = AtomicUsize::new($count);
 
         fn decrement_counter() {
-            COUNTER.fetch_sub(1, Ordering::SeqCst);
-            if COUNTER.load(Ordering::SeqCst) == 0 {
+            if COUNTER.fetch_sub(1, Ordering::SeqCst) == 1 {
                 sqlite::shutdown();
             }
         }

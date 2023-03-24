@@ -14,7 +14,7 @@
 use sqlite_nostd::{sqlite3, Connection, Destructor, ManagedStmt, ResultCode};
 extern crate alloc;
 use alloc::format;
-use alloc::vec::Vec;
+use alloc::{vec, vec::Vec};
 
 /**
  * Backfills rows in a table with clock values.
@@ -46,7 +46,7 @@ pub fn backfill_table(
     let stmt = db.prepare_v2(&sql);
 
     let result = match stmt {
-        Ok(stmt) => create_clock_rows_from_stmt(stmt, db, table, pk_cols, non_pk_cols),
+        Ok(stmt) => create_clock_rows_from_stmt(stmt, db, table, &pk_cols, &non_pk_cols),
         Err(e) => Err(e),
     };
 
@@ -55,15 +55,24 @@ pub fn backfill_table(
         return Err(e);
     }
 
-    Ok(ResultCode::OK)
+    if let Err(e) = backfill_missing_columns(db, table, &pk_cols, &non_pk_cols) {
+        db.exec_safe("ROLLBACK TO backfill")?;
+        return Err(e);
+    }
+
+    db.exec_safe("RELEASE backfill")
 }
 
+/**
+* Given a statement that returns rows in the source table not present
+* in the clock table, create those rows in the clock table.
+*/
 fn create_clock_rows_from_stmt(
     read_stmt: ManagedStmt,
     db: *mut sqlite3,
     table: &str,
-    pk_cols: Vec<&str>,
-    non_pk_cols: Vec<&str>,
+    pk_cols: &Vec<&str>,
+    non_pk_cols: &Vec<&str>,
 ) -> Result<ResultCode, ResultCode> {
     let write_stmt = db.prepare_v2(&format!(
         "INSERT INTO \"{table}__crsql_clock\"
@@ -95,4 +104,67 @@ fn create_clock_rows_from_stmt(
     }
 
     Ok(ResultCode::OK)
+}
+
+/**
+* For each column, make sure there was a clock table entry.
+* If not, fill the data in for it for each row.
+*
+* Can we optimize and skip cases where it is equivalent to the default value?
+* E.g., adding a new column should not require a backfill...
+*/
+fn backfill_missing_columns(
+    db: *mut sqlite3,
+    table: &str,
+    pk_cols: &Vec<&str>,
+    non_pk_cols: &Vec<&str>,
+) -> Result<ResultCode, ResultCode> {
+    let has_col_stmt = db.prepare_v2(&format!(
+        "SELECT 1 FROM \"{table}__crsql_clock\" WHERE \"__crsql_col_name\" = ? LIMIT 1",
+        table = table,
+    ))?;
+    for non_pk_col in non_pk_cols {
+        let exists = has_col(&has_col_stmt)?;
+        if exists {
+            continue;
+        }
+        fill_column(db, table, &pk_cols, non_pk_col)?;
+    }
+
+    Ok(ResultCode::OK)
+}
+
+fn has_col(stmt: &ManagedStmt) -> Result<bool, ResultCode> {
+    let step_result = stmt.step()?;
+    if step_result == ResultCode::DONE {
+        Ok(false)
+    } else {
+        Ok(true)
+    }
+}
+
+/**
+*
+*/
+fn fill_column(
+    db: *mut sqlite3,
+    table: &str,
+    pk_cols: &Vec<&str>,
+    non_pk_col: &str,
+) -> Result<ResultCode, ResultCode> {
+    // read all rows
+    // invoke `create_clocks_rows_from_stmt with just the single non_pk_col
+    // have to process all the rows, unfortunately.
+    let read_stmt = db.prepare_v2(&format!(
+        "SELECT {pk_cols} FROM {table}",
+        table = crate::escape_ident(table),
+        pk_cols = pk_cols
+            .iter()
+            .map(|f| format!("\"{}\"", crate::escape_ident(f)))
+            .collect::<Vec<_>>()
+            .join(", "),
+    ))?;
+
+    let non_pk_cols = vec![non_pk_col];
+    create_clock_rows_from_stmt(read_stmt, db, table, pk_cols, &non_pk_cols)
 }

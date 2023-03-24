@@ -17,9 +17,31 @@
 use sqlite::{Connection, ResultCode};
 use sqlite_nostd as sqlite;
 
+// TODO: auto-calculate starting number
+integration_utils::counter_setup!(4);
+
 #[test]
 fn new_empty_table() {
     new_empty_table_impl().unwrap();
+    decrement_counter();
+}
+
+#[test]
+fn new_nonempty_table() {
+    new_nonempty_table_impl(false).unwrap();
+    decrement_counter();
+}
+
+#[test]
+fn reapplied_empty_table() {
+    reapplied_empty_table_impl().unwrap();
+    decrement_counter();
+}
+
+#[test]
+fn reapplied_nonempty_table_with_newdata() {
+    new_nonempty_table_impl(true).unwrap();
+    decrement_counter();
 }
 
 fn new_empty_table_impl() -> Result<(), ResultCode> {
@@ -29,11 +51,6 @@ fn new_empty_table_impl() -> Result<(), ResultCode> {
     db.exec_safe("SELECT crsql_as_crr('foo');")?;
     db.exec_safe("SELECT * FROM foo__crsql_clock;")?;
     integration_utils::closedb(db)
-}
-
-#[test]
-fn new_nonempty_table() {
-    new_nonempty_table_impl(false).unwrap();
 }
 
 fn new_nonempty_table_impl(apply_twice: bool) -> Result<(), ResultCode> {
@@ -79,11 +96,6 @@ fn new_nonempty_table_impl(apply_twice: bool) -> Result<(), ResultCode> {
     integration_utils::closedb(db)
 }
 
-#[test]
-fn reapplied_empty_table() {
-    reapplied_empty_table_impl().unwrap();
-}
-
 fn reapplied_empty_table_impl() -> Result<(), ResultCode> {
     let db = integration_utils::opendb()?;
     // Just testing that we can execute these statements without error
@@ -93,9 +105,4 @@ fn reapplied_empty_table_impl() -> Result<(), ResultCode> {
     db.exec_safe("SELECT crsql_as_crr('foo');")?;
     db.exec_safe("SELECT * FROM foo__crsql_clock;")?;
     integration_utils::closedb(db)
-}
-
-#[test]
-fn reapplied_nonempty_table_with_newdata() {
-    new_nonempty_table_impl(true).unwrap();
 }

@@ -16,6 +16,43 @@ use sqlite::ManagedConnection;
 use sqlite::{Connection, ResultCode};
 use sqlite_nostd as sqlite;
 
+integration_utils::counter_setup!(2);
+
+#[test]
+fn create_pkonlytable() {
+    // just expecting not to throw
+    create_pkonlytable_impl().unwrap();
+    decrement_counter();
+}
+
+#[test]
+fn insert_pkonly_row() {
+    insert_pkonly_row_impl().unwrap();
+    decrement_counter();
+}
+
+#[test]
+fn modify_pkonly_row() {
+    // inserts then updates then syncs the value of a pk column
+    // inserts, syncs, then updates then syncs
+    //
+    // repeat for single column keys and compound
+    // modify_pkonly_row_impl().unwrap()
+}
+
+#[test]
+/// Test a common configuration of a junction/edge table (with no edge data)
+/// to relate two relations.
+fn junction_table() {
+    // junction_table_impl().unwrap();
+}
+
+// https://discord.com/channels/989870439897653248/989870440585494530/1081084118680485938
+#[test]
+fn dicord_report_1() {
+    discord_report_1_impl().unwrap();
+}
+
 fn sync_left_to_right(
     l: &dyn Connection,
     r: &dyn Connection,
@@ -81,39 +118,6 @@ fn sync_left_to_right(
 fn setup_schema(db: &ManagedConnection) -> Result<ResultCode, ResultCode> {
     db.exec_safe("CREATE TABLE foo (id INTEGER PRIMARY KEY);")?;
     db.exec_safe("SELECT crsql_as_crr('foo');")
-}
-
-#[test]
-fn create_pkonlytable() {
-    // just expecting not to throw
-    create_pkonlytable_impl().unwrap();
-}
-
-#[test]
-fn insert_pkonly_row() {
-    insert_pkonly_row_impl().unwrap();
-}
-
-#[test]
-fn modify_pkonly_row() {
-    // inserts then updates then syncs the value of a pk column
-    // inserts, syncs, then updates then syncs
-    //
-    // repeat for single column keys and compound
-    // modify_pkonly_row_impl().unwrap()
-}
-
-#[test]
-/// Test a common configuration of a junction/edge table (with no edge data)
-/// to relate two relations.
-fn junction_table() {
-    // junction_table_impl().unwrap();
-}
-
-// https://discord.com/channels/989870439897653248/989870440585494530/1081084118680485938
-#[test]
-fn dicord_report_1() {
-    discord_report_1_impl().unwrap();
 }
 
 fn create_pkonlytable_impl() -> Result<(), ResultCode> {

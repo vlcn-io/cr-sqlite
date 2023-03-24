@@ -13,9 +13,13 @@
 use sqlite::{Connection, ResultCode};
 use sqlite_nostd as sqlite;
 
+// TODO: auto-calculate starting number
+integration_utils::counter_setup!(1);
+
 #[test]
 fn invoke_automigrate() {
     invoke_automigrate_impl().unwrap();
+    decrement_counter();
 }
 
 fn invoke_automigrate_impl() -> Result<(), ResultCode> {
@@ -24,5 +28,6 @@ fn invoke_automigrate_impl() -> Result<(), ResultCode> {
     stmt.step()?;
     let text = stmt.column_text(0)?;
     println!("text: {:?}", text);
-    integration_utils::closedb(db)
+    integration_utils::closedb(db)?;
+    Ok(())
 }

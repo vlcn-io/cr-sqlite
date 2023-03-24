@@ -15,6 +15,28 @@ pub fn closedb(db: ManagedConnection) -> Result<(), ResultCode> {
     Ok(())
 }
 
+// macro_rules! wrap_fn {
+//     ( $name:ident, $body:expr ) => {
+
+//         fn $name() $body
+//     };
+// }
+
+#[macro_export]
+macro_rules! counter_setup {
+    ( $count:expr ) => {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        static COUNTER: AtomicUsize = AtomicUsize::new($count);
+
+        fn decrement_counter() {
+            COUNTER.fetch_sub(1, Ordering::SeqCst);
+            if COUNTER.load(Ordering::SeqCst) == 0 {
+                sqlite::shutdown();
+            }
+        }
+    };
+}
+
 // Macro to allow `afterAll` tear down once all tests complete
 // Works by bumping a static counter on each fn def
 // then by calling `afterAll` which checks the counter

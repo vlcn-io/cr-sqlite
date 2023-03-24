@@ -164,6 +164,8 @@ def test_backfill_clocks_on_rename():
     # todo: clocks aren't getting backfilled for the renamed col :/
     # the rename isn't working since there _are_ clock entries for the old row.
     # but just not for a specific column in that row.
+    # We need to find cells with missing data.
+    # For each row, does a cell exist for each column?
 
     pprint.pprint(changes)
     None
@@ -188,3 +190,7 @@ def test_backfill_existing_data():
     assert (changes == [('foo', '1', 'name', "'bar'"),
                         ('foo', '2', 'name', "'baz'"),
                         ('foo', '3', 'name', 'NULL')])
+
+
+# TODO: test that we are not compacting out sentinel clock rows
+# post alter.

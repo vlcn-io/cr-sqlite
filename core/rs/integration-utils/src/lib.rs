@@ -10,6 +10,7 @@ pub fn opendb() -> Result<ManagedConnection, ResultCode> {
 }
 
 pub fn closedb(db: &ManagedConnection) -> Result<(), ResultCode> {
+    println!("FINALIZE");
     db.exec_safe("SELECT crsql_finalize()")?;
     // no close, close gets called on drop.
     Ok(())

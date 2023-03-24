@@ -30,5 +30,5 @@ fn tear_down_impl() -> Result<(), ResultCode> {
     stmt.step()?;
     let count = stmt.column_int(0)?;
     assert!(count == 0);
-    integration_utils::closedb(db)
+    integration_utils::closedb(&db)
 }

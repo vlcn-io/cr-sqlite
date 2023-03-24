@@ -50,7 +50,7 @@ fn new_empty_table_impl() -> Result<(), ResultCode> {
     db.exec_safe("CREATE TABLE foo (id PRIMARY KEY, name);")?;
     db.exec_safe("SELECT crsql_as_crr('foo');")?;
     db.exec_safe("SELECT * FROM foo__crsql_clock;")?;
-    integration_utils::closedb(db)
+    integration_utils::closedb(&db)
 }
 
 fn new_nonempty_table_impl(apply_twice: bool) -> Result<(), ResultCode> {
@@ -93,7 +93,7 @@ fn new_nonempty_table_impl(apply_twice: bool) -> Result<(), ResultCode> {
         assert_eq!(stmt.column_int64(5)?, 1); // db version
     }
     assert_eq!(cnt, 2);
-    integration_utils::closedb(db)
+    integration_utils::closedb(&db)
 }
 
 fn reapplied_empty_table_impl() -> Result<(), ResultCode> {
@@ -104,5 +104,5 @@ fn reapplied_empty_table_impl() -> Result<(), ResultCode> {
     db.exec_safe("SELECT * FROM foo__crsql_clock;")?;
     db.exec_safe("SELECT crsql_as_crr('foo');")?;
     db.exec_safe("SELECT * FROM foo__crsql_clock;")?;
-    integration_utils::closedb(db)
+    integration_utils::closedb(&db)
 }

@@ -28,6 +28,6 @@ fn invoke_automigrate_impl() -> Result<(), ResultCode> {
     stmt.step()?;
     let text = stmt.column_text(0)?;
     println!("text: {:?}", text);
-    integration_utils::closedb(db)?;
+    integration_utils::closedb(&db)?;
     Ok(())
 }

@@ -13,9 +13,12 @@
 use sqlite::{Connection, ResultCode};
 use sqlite_nostd as sqlite;
 
+integration_utils::counter_setup!(1);
+
 #[test]
 fn tear_down() {
     tear_down_impl().unwrap();
+    decrement_counter();
 }
 
 fn tear_down_impl() -> Result<(), ResultCode> {

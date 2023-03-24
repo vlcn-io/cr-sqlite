@@ -24,24 +24,7 @@ pub extern "C" fn crsql_automigrate(
         return;
     }
 
-    // let schema = args[0].text();
-
-    // let schema_version = pull_schema_version(schema);
-    let db = sqlite::open(sqlite::strlit!(":memory:"));
-    if !db.is_ok() {
-        ctx.result_error(
-            "failed to open the in-memory db required to calculate schema modifications",
-        );
-        return;
-    }
-
-    let stmt = db
-        .unwrap()
-        .prepare_v2("SELECT count(*) FROM pragma_function_list WHERE name = 'crsql_automigrate';")
-        .unwrap();
-    stmt.step().unwrap();
-    let name = stmt.column_text(0).unwrap();
-    ctx.result_text_transient(name);
+    ctx.result_text_transient("fii");
     // let db = db.unwrap();
 
     /*

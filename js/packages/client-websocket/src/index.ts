@@ -44,13 +44,16 @@ export default async function startSyncWith(
 
 function startSyncInWorker(
   uri: string,
-  args: Overwrite<ReplicatorArgs, { rx: TblRx }>
+  args: Overwrite<ReplicatorArgs, { rx: TblRx }> & { workerUri?: string }
 ) {
   const disposables: (() => void)[] = [];
 
-  const worker = new Worker(new URL("./worker.js", import.meta.url), {
-    type: "module",
-  });
+  const worker = new Worker(
+    args.workerUri || new URL("./worker.js", import.meta.url),
+    {
+      type: "module",
+    }
+  );
 
   const dbname = args.localDb.filename;
 

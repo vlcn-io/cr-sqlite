@@ -1,5 +1,11 @@
 # @vlcn.io/crsqlite
 
+## 0.9.1-next.1
+
+### Patch Changes
+
+- include makefile in pkg
+
 ## 0.9.1-next.0
 
 ### Patch Changes

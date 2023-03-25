@@ -1,5 +1,11 @@
 # @vlcn.io/nodeno-tests
 
+## 0.7.1-next.1
+
+### Patch Changes
+
+- @vlcn.io/crsqlite-allinone@0.8.1-next.1
+
 ## 0.7.1-next.0
 
 ### Patch Changes

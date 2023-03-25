@@ -24,6 +24,7 @@
     "@vlcn.io/py-correctness": "0.7.0"
   },
   "changesets": [
+    "grumpy-kiwis-rest",
     "slow-wasps-pull"
   ]
 }

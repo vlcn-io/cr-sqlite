@@ -1,5 +1,12 @@
 # @vlcn.io/crsqlite-allinone
 
+## 0.8.1-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/crsqlite@0.9.1-next.1
+
 ## 0.8.1-next.0
 
 ### Patch Changes

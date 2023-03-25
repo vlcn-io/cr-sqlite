@@ -23,12 +23,14 @@ fn tear_down() {
 
 fn tear_down_impl() -> Result<(), ResultCode> {
     let db = integration_utils::opendb()?;
-    db.exec_safe("CREATE TABLE foo (a primary key, b);")?;
-    db.exec_safe("SELECT crsql_as_crr('foo');")?;
-    db.exec_safe("SELECT crsql_as_table('foo');")?;
-    let stmt = db.prepare_v2("SELECT count(*) FROM sqlite_master WHERE name LIKE 'foo__%'")?;
+    db.db.exec_safe("CREATE TABLE foo (a primary key, b);")?;
+    db.db.exec_safe("SELECT crsql_as_crr('foo');")?;
+    db.db.exec_safe("SELECT crsql_as_table('foo');")?;
+    let stmt = db
+        .db
+        .prepare_v2("SELECT count(*) FROM sqlite_master WHERE name LIKE 'foo__%'")?;
     stmt.step()?;
     let count = stmt.column_int(0)?;
     assert!(count == 0);
-    integration_utils::closedb(&db)
+    Ok(())
 }

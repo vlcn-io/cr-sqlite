@@ -408,6 +408,7 @@ static void crsqlMakeCrrFunc(sqlite3_context *context, int argc,
   rc = createCrr(context, db, schemaName, tblName, &errmsg);
   if (rc != SQLITE_OK) {
     sqlite3_result_error(context, errmsg, -1);
+    sqlite3_result_error_code(context, rc);
     sqlite3_free(errmsg);
     sqlite3_exec(db, "ROLLBACK", 0, 0, 0);
     return;

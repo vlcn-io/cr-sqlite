@@ -1,5 +1,17 @@
 # @vlcn.io/sync-client
 
+## 0.8.1-next.2
+
+### Patch Changes
+
+- add missing type for workerUri
+
+## 0.8.1-next.1
+
+### Patch Changes
+
+- allow passing of uri to worker script
+
 ## 0.8.1-next.0
 
 ### Patch Changes

@@ -16,7 +16,7 @@ export default async function startSyncWith(
   args: Overwrite<
     ReplicatorArgs,
     { remoteDbId: Uint8Array | string; rx: TblRx }
-  > & { worker?: boolean }
+  > & { worker?: boolean; workerUri?: string }
 ): Promise<{ stop: () => void }> {
   const parsedArgs = {
     ...args,

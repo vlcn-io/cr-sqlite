@@ -24,7 +24,9 @@
     "@vlcn.io/py-correctness": "0.7.0"
   },
   "changesets": [
+    "angry-bulldogs-repair",
     "grumpy-kiwis-rest",
+    "plenty-students-decide",
     "slow-wasps-pull"
   ]
 }

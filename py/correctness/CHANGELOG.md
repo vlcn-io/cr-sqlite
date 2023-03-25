@@ -1,5 +1,11 @@
 # @vlcn.io/py-correctness
 
+## 0.7.1-next.0
+
+### Patch Changes
+
+---
+
 ## 0.7.0
 
 ### Minor Changes

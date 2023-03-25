@@ -1,5 +1,15 @@
 # @vlcn.io/server-core
 
+## 0.8.1-next.0
+
+### Patch Changes
+
+---
+
+- Updated dependencies
+  - @vlcn.io/crsqlite@0.9.1-next.0
+  - @vlcn.io/client-server-common@0.5.1-next.0
+
 ## 0.8.0
 
 ### Minor Changes

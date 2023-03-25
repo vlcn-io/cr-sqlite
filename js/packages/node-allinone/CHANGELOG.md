@@ -1,5 +1,15 @@
 # @vlcn.io/crsqlite-allinone
 
+## 0.8.1-next.0
+
+### Patch Changes
+
+---
+
+- Updated dependencies
+  - @vlcn.io/crsqlite@0.9.1-next.0
+  - @vlcn.io/xplat-api@0.8.1-next.0
+
 ## 0.8.0
 
 ### Minor Changes

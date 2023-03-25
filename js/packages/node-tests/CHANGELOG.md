@@ -1,5 +1,17 @@
 # @vlcn.io/nodeno-tests
 
+## 0.7.1-next.0
+
+### Patch Changes
+
+---
+
+- Updated dependencies
+  - @vlcn.io/crsqlite-allinone@0.8.1-next.0
+  - @vlcn.io/rx-tbl@0.8.1-next.0
+  - @vlcn.io/xplat-api@0.8.1-next.0
+  - @vlcn.io/xplat-tests@0.7.1-next.0
+
 ## 0.7.0
 
 ### Minor Changes

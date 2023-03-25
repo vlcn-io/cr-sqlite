@@ -1,5 +1,15 @@
 # @vlcn.io/client-core
 
+## 0.8.1-next.0
+
+### Patch Changes
+
+---
+
+- Updated dependencies
+  - @vlcn.io/client-server-common@0.5.1-next.0
+  - @vlcn.io/xplat-api@0.8.1-next.0
+
 ## 0.8.0
 
 ### Minor Changes

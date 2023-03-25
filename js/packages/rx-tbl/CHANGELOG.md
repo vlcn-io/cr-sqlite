@@ -1,5 +1,14 @@
 # @vlcn.io/rx-tbl
 
+## 0.8.1-next.0
+
+### Patch Changes
+
+---
+
+- Updated dependencies
+  - @vlcn.io/xplat-api@0.8.1-next.0
+
 ## 0.8.0
 
 ### Minor Changes

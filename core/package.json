@@ -8,6 +8,7 @@
     "url": "git://github.com/vlcn-io/cr-sqlite"
   },
   "files": [
+    "Makefile",
     "src/**",
     "rs/**/*.rs",
     "rs/**/*.toml",

@@ -74,7 +74,7 @@ fn create_clock_rows_from_stmt(
     pk_cols: &Vec<&str>,
     non_pk_cols: &Vec<&str>,
 ) -> Result<ResultCode, ResultCode> {
-    let write_stmt = db.prepare_v2(&format!(
+    let sql = format!(
         "INSERT INTO \"{table}__crsql_clock\"
           ({pk_cols}, __crsql_col_name, __crsql_col_version, __crsql_db_version) VALUES
           ({pk_values}, ?, 1, crsql_nextdbversion())",
@@ -85,7 +85,8 @@ fn create_clock_rows_from_stmt(
             .collect::<Vec<_>>()
             .join(", "),
         pk_values = pk_cols.iter().map(|_| "?").collect::<Vec<_>>().join(", "),
-    ))?;
+    );
+    let write_stmt = db.prepare_v2(&sql)?;
 
     while read_stmt.step()? == ResultCode::ROW {
         // bind primary key values

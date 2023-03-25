@@ -24,10 +24,9 @@ fn invoke_automigrate() {
 
 fn invoke_automigrate_impl() -> Result<(), ResultCode> {
     let db = integration_utils::opendb()?;
-    let stmt = db.prepare_v2("SELECT crsql_automigrate('BLAH')")?;
+    let stmt = db.db.prepare_v2("SELECT crsql_automigrate('BLAH')")?;
     stmt.step()?;
     let text = stmt.column_text(0)?;
     println!("text: {:?}", text);
-    integration_utils::closedb(&db)?;
     Ok(())
 }

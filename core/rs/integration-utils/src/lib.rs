@@ -2,18 +2,23 @@ use core::ffi::c_char;
 use sqlite::{Connection, ManagedConnection, ResultCode};
 use sqlite_nostd as sqlite;
 
-pub fn opendb() -> Result<ManagedConnection, ResultCode> {
+pub fn opendb() -> Result<CRConnection, ResultCode> {
     let connection = sqlite::open(sqlite::strlit!(":memory:"))?;
     connection.enable_load_extension(true)?;
     connection.load_extension("../../dbg/crsqlite", None)?;
-    Ok(connection)
+    Ok(CRConnection { db: connection })
 }
 
-pub fn closedb(db: &ManagedConnection) -> Result<(), ResultCode> {
-    println!("FINALIZE");
-    db.exec_safe("SELECT crsql_finalize()")?;
-    // no close, close gets called on drop.
-    Ok(())
+pub struct CRConnection {
+    pub db: ManagedConnection,
+}
+
+impl Drop for CRConnection {
+    fn drop(&mut self) {
+        if let Err(_) = self.db.exec_safe("SELECT crsql_finalize()") {
+            panic!("Failed to finalize cr sql statements");
+        }
+    }
 }
 
 // macro_rules! wrap_fn {

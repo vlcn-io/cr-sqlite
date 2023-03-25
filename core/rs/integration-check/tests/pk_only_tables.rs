@@ -123,8 +123,7 @@ fn setup_schema(db: &ManagedConnection) -> Result<ResultCode, ResultCode> {
 fn create_pkonlytable_impl() -> Result<(), ResultCode> {
     let db_a = integration_utils::opendb()?;
 
-    setup_schema(&db_a)?;
-    integration_utils::closedb(&db_a)?;
+    setup_schema(&db_a.db)?;
     Ok(())
 }
 
@@ -137,29 +136,26 @@ fn insert_pkonly_row_impl() -> Result<(), ResultCode> {
         db.exec_safe("SELECT crsql_as_crr('foo');")
     }
 
-    setup_schema(&db_a)?;
-    setup_schema(&db_b)?;
+    setup_schema(&db_a.db)?;
+    setup_schema(&db_b.db)?;
 
-    let stmt = db_a.prepare_v2("INSERT INTO foo (id) VALUES (?);")?;
+    let stmt = db_a.db.prepare_v2("INSERT INTO foo (id) VALUES (?);")?;
     stmt.bind_int(1, 1)?;
     stmt.step()?;
 
-    let stmt = db_a.prepare_v2("SELECT * FROM crsql_changes;")?;
+    let stmt = db_a.db.prepare_v2("SELECT * FROM crsql_changes;")?;
     let result = stmt.step()?;
     assert_eq!(result, ResultCode::ROW);
 
-    sync_left_to_right(&db_a, &db_b, -1)?;
+    sync_left_to_right(&db_a.db, &db_b.db, -1)?;
 
-    let stmt = db_b.prepare_v2("SELECT * FROM foo;")?;
+    let stmt = db_b.db.prepare_v2("SELECT * FROM foo;")?;
     let result = stmt.step()?;
     assert_eq!(result, ResultCode::ROW);
     let id = stmt.column_int(0)?;
     assert_eq!(id, 1);
     let result = stmt.step()?;
     assert_eq!(result, ResultCode::DONE);
-
-    integration_utils::closedb(&db_a)?;
-    integration_utils::closedb(&db_b)?;
     Ok(())
 }
 
@@ -172,18 +168,18 @@ fn modify_pkonly_row_impl() -> Result<(), ResultCode> {
         db.exec_safe("SELECT crsql_as_crr('foo');")
     }
 
-    setup_schema(&db_a)?;
-    setup_schema(&db_b)?;
+    setup_schema(&db_a.db)?;
+    setup_schema(&db_b.db)?;
 
-    let stmt = db_a.prepare_v2("INSERT INTO foo (id) VALUES (1);")?;
+    let stmt = db_a.db.prepare_v2("INSERT INTO foo (id) VALUES (1);")?;
     stmt.step()?;
 
-    let stmt = db_a.prepare_v2("UPDATE foo SET id = 2 WHERE id = 1;")?;
+    let stmt = db_a.db.prepare_v2("UPDATE foo SET id = 2 WHERE id = 1;")?;
     stmt.step()?;
 
-    sync_left_to_right(&db_a, &db_b, -1)?;
+    sync_left_to_right(&db_a.db, &db_b.db, -1)?;
 
-    let stmt = db_b.prepare_v2("SELECT * FROM foo;")?;
+    let stmt = db_b.db.prepare_v2("SELECT * FROM foo;")?;
     let result = stmt.step()?;
     assert_eq!(result, ResultCode::ROW);
     let id = stmt.column_int(0)?;
@@ -191,8 +187,6 @@ fn modify_pkonly_row_impl() -> Result<(), ResultCode> {
     let result = stmt.step()?;
     assert_eq!(result, ResultCode::DONE);
 
-    integration_utils::closedb(&db_a)?;
-    integration_utils::closedb(&db_b)?;
     Ok(())
 }
 
@@ -208,15 +202,18 @@ fn junction_table_impl() -> Result<(), ResultCode> {
         db.exec_safe("SELECT crsql_as_crr('jx');")
     }
 
-    setup_schema(&db_a)?;
-    setup_schema(&db_b)?;
+    setup_schema(&db_a.db)?;
+    setup_schema(&db_b.db)?;
 
-    db_a.prepare_v2("INSERT INTO jx VALUES (1, 2);")?.step()?;
-    db_a.prepare_v2("UPDATE jx SET id2 = 3 WHERE id1 = 1 AND id2 = 2")?
+    db_a.db
+        .prepare_v2("INSERT INTO jx VALUES (1, 2);")?
+        .step()?;
+    db_a.db
+        .prepare_v2("UPDATE jx SET id2 = 3 WHERE id1 = 1 AND id2 = 2")?
         .step()?;
 
-    sync_left_to_right(&db_a, &db_b, -1)?;
-    let stmt = db_b.prepare_v2("SELECT * FROM jx;")?;
+    sync_left_to_right(&db_a.db, &db_b.db, -1)?;
+    let stmt = db_b.db.prepare_v2("SELECT * FROM jx;")?;
     let result = stmt.step()?;
     assert_eq!(result, ResultCode::ROW);
     let id1 = stmt.column_int(0)?;
@@ -226,20 +223,21 @@ fn junction_table_impl() -> Result<(), ResultCode> {
     let result = stmt.step()?;
     assert_eq!(result, ResultCode::DONE);
 
-    db_b.prepare_v2("UPDATE jx SET id1 = 2 WHERE id1 = 1 AND id2 = 3")?
+    db_b.db
+        .prepare_v2("UPDATE jx SET id1 = 2 WHERE id1 = 1 AND id2 = 3")?
         .step()?;
 
     println!("A before sync");
     // print_changes(&db_a, None)?;
 
-    sync_left_to_right(&db_b, &db_a, -1)?;
+    sync_left_to_right(&db_b.db, &db_a.db, -1)?;
 
     println!("B");
     // print_changes(&db_b, None)?;
     println!("A after sync");
     // print_changes(&db_a, None)?;
 
-    let stmt = db_a.prepare_v2("SELECT * FROM jx;")?;
+    let stmt = db_a.db.prepare_v2("SELECT * FROM jx;")?;
     let result = stmt.step()?;
     assert_eq!(result, ResultCode::ROW);
     let id1 = stmt.column_int(0)?;
@@ -257,19 +255,18 @@ fn junction_table_impl() -> Result<(), ResultCode> {
     // check it
     // delete the edge
     // check it
-
-    integration_utils::closedb(&db_a)?;
-    integration_utils::closedb(&db_b)?;
     Ok(())
 }
 
 fn discord_report_1_impl() -> Result<(), ResultCode> {
     let db_a = integration_utils::opendb()?;
-    db_a.exec_safe("CREATE TABLE IF NOT EXISTS data (id NUMBER PRIMARY KEY);")?;
-    db_a.exec_safe("SELECT crsql_as_crr('data')")?;
-    db_a.exec_safe("INSERT INTO data VALUES (42) ON CONFLICT DO NOTHING;")?;
+    db_a.db
+        .exec_safe("CREATE TABLE IF NOT EXISTS data (id NUMBER PRIMARY KEY);")?;
+    db_a.db.exec_safe("SELECT crsql_as_crr('data')")?;
+    db_a.db
+        .exec_safe("INSERT INTO data VALUES (42) ON CONFLICT DO NOTHING;")?;
 
-    let stmt = db_a.prepare_v2("SELECT * FROM crsql_changes")?;
+    let stmt = db_a.db.prepare_v2("SELECT * FROM crsql_changes")?;
 
     assert_eq!(stmt.step()?, ResultCode::ROW);
 
@@ -288,6 +285,5 @@ fn discord_report_1_impl() -> Result<(), ResultCode> {
 
     assert_eq!(stmt.step()?, ResultCode::DONE);
 
-    integration_utils::closedb(&db_a)?;
     Ok(())
 }

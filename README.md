@@ -1,4 +1,4 @@
-# crsql - Convergent, Replicated, SQLite
+# cr-sqlite - Convergent, Replicated, SQLite
 
 [![c-tests](https://github.com/vlcn-io/cr-sqlite/actions/workflows/c-tests.yaml/badge.svg)](https://github.com/vlcn-io/cr-sqlite/actions/workflows/c-tests.yaml)
 [![c-valgrind](https://github.com/vlcn-io/cr-sqlite/actions/workflows/c-valgrind.yaml/badge.svg)](https://github.com/vlcn-io/cr-sqlite/actions/workflows/c-valgrind.yaml)
@@ -6,15 +6,25 @@
 [![py-tests](https://github.com/vlcn-io/cr-sqlite/actions/workflows/py-tests.yaml/badge.svg)](https://github.com/vlcn-io/cr-sqlite/actions/workflows/py-tests.yaml)
 [![rs-tests](https://github.com/vlcn-io/cr-sqlite/actions/workflows/rs-tests.yml/badge.svg)](https://github.com/vlcn-io/cr-sqlite/actions/workflows/rs-tests.yml)
 
-A standalone component of the [vlcn](https://vlcn.io) project | [discord](https://discord.gg/AtdVY6zDW3).
+A component of the [vlcn](https://vlcn.io) project | [discord](https://discord.gg/AtdVY6zDW3).
 
-`crsql` is a [run time loadable extension](https://www.sqlite.org/loadext.html) for SQLite that adds CRDT and sync support.
+> # It's like Git, for your data.
 
-[SQLite](https://www.sqlite.org/index.html) is a foundation of offline, local-first and edge deployed software. Wouldn't it be great, however, if we could merge two or more SQLite databases together and not run into any conflicts?
+CR-SQLite is a [run-time loadable extension](https://www.sqlite.org/loadext.html) for [SQLite](https://www.sqlite.org/index.html) and [libSQL](https://github.com/libsql/libsql) that allows merging SQLite databases together that have taken independent writes.
 
-This project implements [CRDTs](https://crdt.tech/) and [CRRs](https://hal.inria.fr/hal-02983557/document) in `SQLite`, allowing databases that share a common schema to merge their state together. Merges can happen between an arbitrary number of peers and all peers will eventually converge to the same state.
+In other words, you can write to your SQLite database while offline. I can write to mine while offline. We can then both come online and merge our databases together, without conflict.
 
-`crsqlite` works by adding metadata tables and triggers around your existing database schema. This means that you do not have to change your schema in order to get conflict resolution support -- with a few caveats around uniqueness constraints and foreign keys. See [Schema Design for CRDTs & Eventual Consistency](#schema-design-for-crdts--eventual-consistency).
+**In technical terms:** we're adding multi-master and partition tolerance to SQLite via conflict free replicated data types ([CRDTs](https://en.wikipedia.org/wiki/Conflict-free_replicated_data_type)) and/or causally ordered event logs.
+
+# When is this useful?
+
+1. Syncing data between devices
+2. Implementing realtime collaboration
+3. Offline editing
+4. Being resilient to network conditions
+5. Enabling instantaneous interactions
+
+All of the above involve a merging of independent edits problem. If your database can handle this for you, you don't need custom code in your application to handle those 5 cases.
 
 # Sponsors
 
@@ -26,7 +36,7 @@ This project implements [CRDTs](https://crdt.tech/) and [CRRs](https://hal.inria
 
 The full documentation site is available [here](https://vlcn.io/docs/getting-started).
 
-`crsqlite` exposes three APIs:
+`crsqlite` exposes three main APIs:
 
 - A function extension (`crsql_as_crr`) to upgrade existing tables to "crrs" or "conflict free replicated relations"
   - `SELECT crsql_as_crr('table_name')`
@@ -34,7 +44,7 @@ The full documentation site is available [here](https://vlcn.io/docs/getting-sta
   - `SELECT * FROM crsql_changes WHERE db_version > x AND site_id IS NULL` -- to get local changes
   - `SELECT * FROM crsql_changes WHERE db_version > x AND site_id != some_site` -- to get all changes excluding those synced from some site
   - `INSERT INTO crsql_changes VALUES ([patches receied from select on another peer])`
-- And (on latest) `crsql_alter_begin('table_name')` & `crsql_alter_commit('table_name')` primitives to allow altering table definitions that have been upgraded to `crr`s.
+- And `crsql_alter_begin('table_name')` & `crsql_alter_commit('table_name')` primitives to allow altering table definitions that have been upgraded to `crr`s.
   - Until we move forward with extending the syntax of SQLite to be CRR aware, altering CRRs looks like:
     ```sql
     SELECT crsql_alter_begin('table_name');
@@ -43,9 +53,10 @@ The full documentation site is available [here](https://vlcn.io/docs/getting-sta
     SELECT crsql_alter_commit('table_name');
     ```
     A future version of cr-sqlite may extend the SQL syntax to make this more natural.
+- Other methods exist for extracting replication metadata which can be found in the main docs.
 
-Application code would use the function extension to enable crr support on tables.
-Networking code would use the `crsql_changes` virtual table to fetch and apply changes.
+Application code uses the function extension to enable crr support on tables.
+Networking code uses the `crsql_changes` virtual table to fetch and apply changes.
 
 Usage looks like:
 
@@ -126,8 +137,9 @@ For UI integrations (e.g., React) see the [js]./js) directory.
 
 Examples apps that use `cr-sqlite` and have a networking layer:
 
-- https://github.com/vlcn-io/live-examples
 - [Observable Notebook](https://observablehq.com/@tantaman/cr-sqlite-basic-setup)
+- [Tutorials](https://vlcn.io/docs/guide-sync)
+- TodoMVC - https://github.com/vlcn-io/live-examples
 - [WIP Local-First Presentation Editor](https://github.com/tantaman/strut)
 
 # Building
@@ -158,6 +170,10 @@ This will create a shared library at `dist/crsqlite.[lib extension]`
 - Darwin / OS X: `.dylib`
 - Windows: `.dll`
 
+## WASM
+
+For a WASM build that works in the browser, see the [js](./js) directory.
+
 ## CLI
 
 Instructions on building a `sqlite3` CLI that has `cr-sqlite` statically linked and pre-loaded.
@@ -172,19 +188,28 @@ This will create a `sqlite3` binary at `dist/sqlite3`
 
 ## Tests
 
-Ensure you've installed depenencies via `pnpm isntall` in the root director then run:
+core:
 
 ```bash
-pnpm test
+cd core
+make test
 ```
 
-This will run all tests across native, js & python packages.
+js integration tests:
 
-> [pnpm](https://pnpm.io/), not npm.
+```bash
+cd js
+make test
+```
 
-## WASM
+py integration tests:
 
-For a WASM build that works in the browser, see the [js](./js) directory.
+```bash
+cd py/correctness
+pip install -e .
+export PYTHONPATH=./src
+pytest
+```
 
 # JS APIs
 
@@ -193,109 +218,81 @@ JS APIs for using `cr-sqlite` in the browser are not yet documented but exist in
 - [Observable Notebook](https://observablehq.com/@tantaman/cr-sqlite-basic-setup)
 - https://github.com/vlcn-io/live-examples
 
-# Prior Art
+# How does it work?
 
-## [1] Towards a General Database Management System of Conflict-Free Replicated Relations
+There are two approaches with very different tradeoffs. Both will eventually be supported by `cr-sqlite`. `v1` (and current releases) support the first approach. `v2` will support both approaches.
 
-https://munin.uit.no/bitstream/handle/10037/22344/thesis.pdf?sequence=2
+## Approach 1: History-free CRDTs
 
-`crsqlite` improves upon [1] in the following ways --
+Approach 1 is characterized by the following properties:
 
-- [1] stores two copies of all the data. `crsqlite` only keeps one by leveraging views and `ISNTEAD OF` triggers.
-- [1] cannot compute deltas between databases without sending the full copy of each database to be compared. `crsqlite` only needs the logical clock (1 64bit int per peer) of a given database to determine what updates that database is missing.
+1. Keeps no history / only keeps the current state
+2. Automatically handles merge conflicts. No options for manual merging.
+3. Tables are Grow Only Sets or variants of Observe-Remove Sets
+4. Rows are maps of CRDTs. The column names being the keys, column values being a specific CRDT type
+5. Columns can be counter, fractional index or last write wins CRDTs.
+   1. multi-value registers, RGA and others to come in future iterations
 
-## [2] Conflict-Free Replicated Relations for Multi-Synchronous Database Management at Edge
+Tables which should be synced are defined as a composition of other types of CRDTs.
 
-https://hal.inria.fr/hal-02983557/document
+Example table definition:
 
-`crsqlite` improves upon [2] in the following ways --
+```sql
+CREATE CLSet post (
+ id INTEGER PRIMARY KEY,
+ views COUNTER,
+ content PERITEXT,
+ owner_id LWW INTEGER
+);
+```
 
-- [2] is implemented in a specific ORM. `crsqlite` runs at the db layer and allows existing applications to interface with the db as normal.
-- [2] keeps a queue of all writes. This queue is drained when those writes are merged. This means that [2] can only sync changes to a single centralized node. `crsqlite` keeps a logical clock at each database. If a new database comes online it sends its logical clock to a peer. That peer can compute what changes are missing from the clock.
+> note: given that extensions can't extend the SQLite syntax this is notional. We are, however, extending the libSQL syntax so this will be available in that fork. In base SQLite you'd run the `select crsql_as_crr` function as seen earlier.
 
-## [3] CRDTs for Mortals
+- CLSet - causal length set
+- COUNTER - distributed counter
+- PERITEXT - collaborative text
 
-https://www.youtube.com/watch?v=DEcwa68f-jY
+Under approach 1, merging two tables works roughly like so:
 
-`crsqlite` improves upon [3] in the following ways --
+1. Rows are identified by primary key
+2. Tables are unioned (and a delete log is consulted) such that both tables will have the same rows.
 
-- [3] requires retaining all history for all time (iiuc), `crsqlite` only needs the latest state
-- [3] keeps a hloc per column, `crsqlite` only keeps an extra int per column and a clock per row.
+If a row was modified in multiple places, then we merge the row. Merging a row involves merging each column of that row according to the semantics of the CRDT for the column.
 
-[3] is better in the following way --
+1. Last-write wins just picks the lastest write
+2. Counter CRDT sums the values
+3. Multi-value registers keep all conflicting values
+4. Fractional indices are taken as last write
 
-- `crsqlite` requires more work at the network layer to ensure ordered delivery and to deliver only the columns of a row that changed. [3] doesn't require any causal order to delivery and already identifies single column changes.
+For more background see [this post](https://vlcn.io/blog/gentle-intro-to-crdts.html).
 
-## Other
+Notes:
 
-These projects helped improve my understanding of CRDTs on this journey --
+- LWW, Fractional Index, Observe-Remove sets are available now.
+- Counter and rich-text CRDTs are still [being implemented](https://github.com/vlcn-io/cr-sqlite/issues/65).
+- Custom SQL syntax will be available in our libSQL integration. The SQLite extension requires a slightly different syntax than what is depicted above.
 
-- [shelf](https://github.com/dglittle/shelf)
-- [tiny-merge](https://github.com/siliconjungle/tiny-merge)
-- [Merkle-CRDT](https://arxiv.org/pdf/2004.00107.pdf)
+## Approach 2: Causal Event Log
 
-# Schema Design for CRDTs & Eventual Consistency
+> To be implemented in v2 of cr-sqlite
 
-`crsqlite` currently does not support:
+Approach 2 has the following properties:
 
-1. Foreign key cosntraints. You can still have foreign keys (i.e. a column with an id of another row), but they can't be enforced by the db.
-   1. Enforced foreign key constraints will eventually be supported as we enable more deletion strategies. There are 4 deletion models under which CRDT updates do not break foreign key constraints.
-2. Uniqueness constraints other than the primary key. The only enforceably unique column in a table should be the primary key. Other columns may be indices but they may not be unique.
+1. A history of every modification that happens to the database is kept
+   1. This history can be garbage collected in certain network topologies
+2. Merge conflicts can be automatically handled (via CRDT style rules) or the developer can define their own conflict resolution plan.
+3. The developer can choose to fork the data on merge conflict rather than merging
+4. Forks can live indefinitely or a specific fork can be chosen and other forks dropped
 
-# Architecture
+This is much more akin to git and event sourcing but with the drawback being that it is much more write heavy and much more space intensive.
 
-## Tables
+# Research & Prior Art
 
-Tables are modeled as [GSets](<https://en.wikipedia.org/wiki/Conflict-free_replicated_data_type#G-Set_(Grow-only_Set)>) where each item has a [causal length](https://munin.uit.no/bitstream/handle/10037/19591/article.pdf?sequence=2). You can call this a "CLSet". This allows us to keep all rows as well as track deletes so your application will not see deleted rows.
+cr-sqlite was inspired by and built on ideas from these papers:
 
-## Rows
-
-Rows are currently modeled as [LWW maps](https://bartoszsypytkowski.com/crdt-map/#crdtmapwithlastwritewinsupdates). I.e., each column in a row is a [LWW Register](https://bartoszsypytkowski.com/operation-based-crdts-registers-and-sets/#lastwritewinsregister).
-
-Things to support in the future
-
-- counter columns
-- MVR (multi-value register) columns
-
-## Deltas
-
-Deltas between databases are calculated by each database keeping a [version vector](https://en.wikipedia.org/wiki/Version_vector) that represents the last time it synced with a given peer.
-
-Every row and column in the database is associated with a [lamport timestamp](https://tantaman.com/2022-10-18-lamport-sufficient-for-lww.html). This clock allows peers to ask one another for updates since the last time they communicated.
-
-# Future
-
-- Sharing & Privacy -- in a real-world collaborative scenario, you may not want to share your entire database with other peers. Thus, in addition to clock information, we must keep visibility information to use when computing deltas and doing replication.
-- Query based replication -- peers may want to sync subsets of the database even if they have access to the entire thing. Compute deltas but only send those deltas that fall into the peer's provided query.
-
-# Example Use Case
-
-Say we have a database schema called "Animal App." Alice, Bob and Billy all have local copies of "Animal App" on their devices. They start their day at a hostel with all of their devices synced. They then part ways, backpacking into the wilderness each with their own copy of the db.
-
-As they see different (or maybe even the same) animals, they record their observations.
-
-- Name
-- Genus
-- Species
-- Habitat
-- Diet
-- Etc.
-
-Some observations may even involve making updates to the prior day's (or week's) observations written by other members of the party.
-
-At the end of the day, the group comes back together. They need to merge all of their work. `crsqlite` will allow Alice, Bob and Billy to merge their changes (without conflict) in a p2p fashion and converge to the same state.
-
-Note that "without conflict" would be based on the rules of the selected `CRDTs` used within the schema.
-
-Some example are --
-
-- Tables might be [grow only sets](<https://en.wikipedia.org/wiki/Conflict-free_replicated_data_type#G-Set_(Grow-only_Set)>) -- thus never losing an observation.
-  - Or [sets with a causal length](https://www.youtube.com/watch?v=l4JxlK8Qzvs) so we can safely remove rows
-- Table columns might be last write win (LWW) registers -- converging but throwing out earlier writes
-- Table columns might be multi value (MV) registers -- keeping around all concurrent edits to a single column for users (or code) to pick and merge later.
-- A column might be a [counter CRDT](https://www.cs.utexas.edu/~rossbach/cs380p-fall2019/papers/Counters.html) which accumulates all observations from all parties
-
-# Old Design
-
-A description of the original design. Note that this design was only used for the prototype and we've evolved it for the production version --
-[![loom](https://cdn.loom.com/sessions/thumbnails/0934f93364d340e0ba658146a974edb4-with-play.gif)](https://www.loom.com/share/0934f93364d340e0ba658146a974edb4)
+- [Towards a General Database Management System of Conflict-Free Replicated Relations](https://munin.uit.no/bitstream/handle/10037/22344/thesis.pdf?sequence=2)
+- [Conflict-Free Replicated Relations for Multi-Synchronous Database Management at Edge](https://hal.inria.fr/hal-02983557/document)
+- [Merkle-CRDTs](https://arxiv.org/pdf/2004.00107.pdf)
+- [Time, Clocks, and the Ordering of Events in a Distributed System](https://lamport.azurewebsites.net/pubs/time-clocks.pdf)
+- [Replicated abstract data types: Building blocks for collaborative applications](http://csl.skku.edu/papers/jpdc11.pdf)
+- [CRDTs for Brrr](https://josephg.com/blog/crdts-go-brrr/)

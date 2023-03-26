@@ -268,7 +268,7 @@ export class WholeDbReplicator {
         console.error(e);
         throw e;
       } finally {
-        stmt.finalize(tx);
+        await stmt.finalize(tx);
       }
 
       await tx.exec(

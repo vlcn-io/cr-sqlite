@@ -152,25 +152,27 @@ export class WholeDbReplicator {
       "SELECT name FROM sqlite_master WHERE name LIKE '%__crsql_clock'"
     );
 
-    const baseTableNames = crrs.map((crr) => {
+    const baseTableNames = crrs.map(async (crr) => {
       const fullTblName = crr[0];
       const baseTblName = fullTblName.substring(
         0,
         fullTblName.lastIndexOf("__crsql_clock")
       );
-      ["INSERT", "UPDATE", "DELETE"].map((verb) => {
-        this.db.exec(
-          `CREATE TEMP TRIGGER IF NOT EXISTS "${baseTblName}__crsql_wdbreplicator_${verb.toLowerCase()}" AFTER ${verb} ON "${baseTblName}"
+      await Promise.all(
+        ["INSERT", "UPDATE", "DELETE"].map(async (verb) => {
+          return await this.db.exec(
+            `CREATE TEMP TRIGGER IF NOT EXISTS "${baseTblName}__crsql_wdbreplicator_${verb.toLowerCase()}" AFTER ${verb} ON "${baseTblName}"
           BEGIN
             select crsql_wdbreplicator() WHERE crsql_internal_sync_bit() = 0;
           END;
         `
-        );
-      });
+          );
+        })
+      );
 
       return baseTblName;
     });
-    this.crrs = baseTableNames;
+    this.crrs = await Promise.all(baseTableNames);
   }
 
   private async createPeerTrackingTable() {

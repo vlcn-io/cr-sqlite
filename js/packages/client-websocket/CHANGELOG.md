@@ -1,5 +1,19 @@
 # @vlcn.io/sync-client
 
+## 0.8.1
+
+### Patch Changes
+
+- 3921d8d: add missing type for workerUri
+- 3921d8d: allow passing of uri to worker script
+- aad733d: --
+- Updated dependencies [aad733d]
+  - @vlcn.io/client-core@0.8.1
+  - @vlcn.io/client-server-common@0.5.1
+  - @vlcn.io/crsqlite-wasm@0.9.1
+  - @vlcn.io/rx-tbl@0.8.1
+  - @vlcn.io/xplat-api@0.8.1
+
 ## 0.8.1-next.2
 
 ### Patch Changes

@@ -1,5 +1,15 @@
 # @vlcn.io/xplat-tests
 
+## 0.7.1
+
+### Patch Changes
+
+- aad733d: --
+- Updated dependencies [aad733d]
+  - @vlcn.io/sync-p2p@0.7.2
+  - @vlcn.io/rx-tbl@0.8.1
+  - @vlcn.io/xplat-api@0.8.1
+
 ## 0.7.1-next.0
 
 ### Patch Changes

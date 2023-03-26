@@ -1,5 +1,11 @@
 # @vlcn.io/tsbuild-all
 
+## 0.7.1
+
+### Patch Changes
+
+- aad733d: --
+
 ## 0.7.1-next.0
 
 ### Patch Changes

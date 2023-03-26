@@ -1,5 +1,11 @@
 # @vlcn.io/client-server-common
 
+## 0.5.1
+
+### Patch Changes
+
+- aad733d: --
+
 ## 0.5.1-next.0
 
 ### Patch Changes

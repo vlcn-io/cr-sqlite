@@ -33,6 +33,10 @@ fn escape_ident(ident: &str) -> String {
     return ident.replace("\"", "\"\"");
 }
 
+fn escape_value(v: &str) -> String {
+    return v.replace("'", "''");
+}
+
 pub extern "C" fn crsql_as_table(
     ctx: *mut sqlite::context,
     argc: i32,

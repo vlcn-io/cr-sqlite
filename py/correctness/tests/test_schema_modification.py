@@ -121,7 +121,9 @@ def test_backfill_col_add():
     changes = c.execute(changes_query).fetchall()
     assert (changes == [('todo', '1', 'name', "'cook'"),
                         ('todo', '1', 'complete', '0'),
-                        ('todo', '1', 'list', "'home'")])
+                        ('todo', '1', 'list', "'home'"),
+                        ('todo', '1', 'assignee', 'NULL'),
+                        ('todo', '1', 'due_date', "'2018-01-01'")])
 
     # we should be able to add entries
     c.execute(
@@ -131,6 +133,8 @@ def test_backfill_col_add():
     assert (changes == [('todo', '1', 'name', "'cook'"),
                         ('todo', '1', 'complete', '0'),
                         ('todo', '1', 'list', "'home'"),
+                        ('todo', '1', 'assignee', 'NULL'),
+                        ('todo', '1', 'due_date', "'2018-01-01'"),
                         ('todo', '2', 'name', "'clean'"),
                         ('todo', '2', 'complete', '0'),
                         ('todo', '2', 'list', "'home'"),
@@ -150,9 +154,9 @@ def test_backfill_col_add():
 #     pprint.pprint(changes)
 #     None
 
-
 def test_backfill_clocks_on_rename():
-    # renaming a column should backfill the clock table
+    # renaming a column should backfill the clock table with the new name
+    # and drop entries for the old name
     c = setup_alter_test()
     c.execute("INSERT INTO todo VALUES (2, 'clean', 0, 'home');")
     c.execute("SELECT crsql_begin_alter('todo');")
@@ -161,14 +165,66 @@ def test_backfill_clocks_on_rename():
     c.commit()
     changes = c.execute(changes_query).fetchall()
 
-    # todo: clocks aren't getting backfilled for the renamed col :/
-    # the rename isn't working since there _are_ clock entries for the old row.
-    # but just not for a specific column in that row.
-    # We need to find cells with missing data.
-    # For each row, does a cell exist for each column?
-
-    pprint.pprint(changes)
+    assert (changes == [('todo', '1', 'complete', '0'),
+                        ('todo', '1', 'list', "'home'"),
+                        ('todo', '2', 'complete', '0'),
+                        ('todo', '2', 'list', "'home'"),
+                        ('todo', '1', 'task', "'cook'"),
+                        ('todo', '2', 'task', "'clean'")])
     None
+
+
+def test_delete_sentinels_not_lost():
+    # not lost after alter
+    # nor lost on crr re-application
+    # pk only / create
+    # delete
+    # records
+    c = setup_alter_test()
+    c.execute("DELETE FROM todo WHERE id = 1;")
+    c.commit()
+    changes = c.execute(changes_query).fetchall()
+
+    # starting off correctly
+    assert (changes == [('todo', '1', '__crsql_del', None),
+                        ('todo', '1', '__crsql_del', None),
+                        ('todo', '1', '__crsql_del', None),
+                        ('todo', '1', '__crsql_del', None)])
+
+    c.execute("SELECT crsql_begin_alter('todo');")
+    c.execute("ALTER TABLE todo RENAME name TO task;")
+    c.execute("SELECT crsql_commit_alter('todo');")
+    c.commit()
+
+    changes = c.execute(changes_query).fetchall()
+    assert (changes == [('todo', '1', '__crsql_del', None),
+            ('todo', '1', '__crsql_del', None)])
+
+
+# get a sentinel for PK only table
+# add a column, sentinel removed but column def created
+def test_pk_only_sentinels():
+    c = connect(":memory:")
+    c.execute("CREATE TABLE assoc (id1, id2, PRIMARY KEY (id1, id2));")
+    c.execute("SELECT crsql_as_crr('assoc');")
+    c.execute("INSERT INTO assoc VALUES (1, 2);")
+    c.commit()
+
+    changes = c.execute(changes_query).fetchall()
+    assert (changes == [('assoc', '1|2', '__crsql_pko', None)])
+
+    c.execute("SELECT crsql_begin_alter('assoc');")
+    c.execute("ALTER TABLE assoc ADD COLUMN data;")
+    c.execute("SELECT crsql_commit_alter('assoc');")
+    c.commit()
+
+    changes = c.execute(changes_query).fetchall()
+    pprint.pprint(changes)
+    assert (changes == [('assoc', '1|2', 'data', 'NULL')])
+
+
+# Get a sentinel for PK only table
+# Remove pk column? Impossible in SQLite, right?
 
 # TODO: property based test to flip through different number of cols, col types,
 # differing amounts of rows, differing number of pk columns, etc.

@@ -22,7 +22,7 @@ integration_utils::counter_setup!(4);
 
 #[test]
 fn new_empty_table() {
-    // new_empty_table_impl().unwrap();
+    new_empty_table_impl().unwrap();
     decrement_counter();
 }
 
@@ -34,13 +34,13 @@ fn new_nonempty_table() {
 
 #[test]
 fn reapplied_empty_table() {
-    // reapplied_empty_table_impl().unwrap();
+    reapplied_empty_table_impl().unwrap();
     decrement_counter();
 }
 
 #[test]
 fn reapplied_nonempty_table_with_newdata() {
-    // new_nonempty_table_impl(true).unwrap();
+    new_nonempty_table_impl(true).unwrap();
     decrement_counter();
 }
 

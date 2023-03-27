@@ -159,27 +159,13 @@ fn fill_column(
     // There should never be a partially filled column.
     // If there is there's likely a bug elsewhere.
     let sql = format!(
-        "SELECT {pk_cols} FROM {table} as t1
-            LEFT JOIN \"{table}__crsql_clock\" as t2
-            ON {pk_on_conditions} AND __crsql_col_name = '{non_pk_col}'
-            WHERE t2.\"{first_pk}\" IS NULL",
+        "SELECT {pk_cols} FROM {table} as t1",
         table = crate::escape_ident(table),
         pk_cols = pk_cols
             .iter()
             .map(|f| format!("t1.\"{}\"", crate::escape_ident(f)))
             .collect::<Vec<_>>()
             .join(", "),
-        pk_on_conditions = pk_cols
-            .iter()
-            .map(|f| format!(
-                "t1.\"{}\" = t2.\"{}\"",
-                crate::escape_ident(f),
-                crate::escape_ident(f)
-            ))
-            .collect::<Vec<_>>()
-            .join(" AND "),
-        non_pk_col = crate::escape_value(non_pk_col),
-        first_pk = crate::escape_ident(pk_cols[0])
     );
     let read_stmt = db.prepare_v2(&sql)?;
 

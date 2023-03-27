@@ -13,6 +13,8 @@
 
 extern crate alloc;
 
+use alloc::collections::BTreeSet;
+use alloc::string::ToString;
 // use alloc::string::String;
 // use alloc::vec;
 // use alloc::vec::Vec;
@@ -22,26 +24,71 @@ use core::slice;
 // use sqlite::ResultCode;
 use sqlite_nostd as sqlite;
 
-use sqlite::{args, Value};
+use sqlite::{args, ManagedConnection, Value};
 use sqlite::{strlit, Context};
 use sqlite::{Connection, ResultCode};
 // use sqlite::Value;
 
 /**
+New API:
+"automigrate table"
+
+So schema definition, w/ auto-migration, looks like:
+
+SELECT crsql_automigrate_crr('tbl', 'CREATE TABLE ...');
+
+Kind gross.
+
+CRRs could be in one schema and normal tbls in another?
+
+automigrate_crrs
+
+automigrate_tables
+
+and each take a schema str?
+
+All can be in same file and user can split if desired.
+
+SELECT crsql_create_or_migrate_to(`
+    CREATE TABLE ...
+`);
+
+Kind of annoying given tooling this breaks.
+
+schema.file:
+
+-- Persisted CRRs
+CREATE TABLE ...;
+CREATE TABLE ...;
+-- end Persisted CRRs
+
+-- temp tables are whatever.
+
+CREATE TABLE ...;
+
+end.file
+
+Then we use the files:
+
+SELECT crsql_automigrate_crrs(crr_stmts);
+SELECT crsql_automigrate_tables(tbl_stmts);
+
+Have the user track schema version on their own?
+*/
+
+/**
 * Automigrate args:
-* 0 - the schema version
 * 1 - the schema content
-* 2 - the list of extensions to load
+* Only create table statements shall be present in the provided schema
+* Users are responsible for tracking schema version and applying the migration or not
 */
 pub extern "C" fn crsql_automigrate(
     ctx: *mut sqlite::context,
     argc: c_int,
     argv: *mut *mut sqlite::value,
 ) {
-    // args: schema_version, schema, extension_paths...
-    let _args = sqlite::args!(argc, argv);
-    if argc < 2 {
-        ctx.result_error("expected at least two arguments: schema_version, schema_content");
+    if argc != 1 {
+        ctx.result_error("Expected a single argument -- the schema string of create table statements to migrate to");
         return;
     }
 
@@ -51,50 +98,7 @@ pub extern "C" fn crsql_automigrate(
         return;
     }
 
-    ctx.result_text_transient("fii");
-    // let db = db.unwrap();
-
-    /*
-    Could remove all the crrs statements...
-    Or load the crr extensions back in...
-    Or parse all the things...
-    Have an arg to provide all extensions to load and their paths...
-     */
-
-    /*
-    * The automigrate algorithm:
-    * 1. Pull the supplied schema version of the input string
-    * 2. Ensure it is greater than db's current schema version
-    * 3. open a new in-memory db (w crsqlite loaded in the mem db -- detect via pragma query)
-    * SELECT count(*) FROM pragma_function_list WHERE name = 'crsql_automigrate';
-    * 4. apply supplied schema against the memory db
-    * 5. find dropped tables
-    * 6. find new tables
-    * 7. find modified tables
-    *
-    * Modified tables:
-    * 1. find new columns
-    * 2. find dropped columns
-    * 3. find modified columns -- we can't do this given we don't have a stable identifier for columns
-    *   -- well we could if only type information on the columns changed or primary key participation changed
-    *   -- need to also figure out index changes
-    *
-    * What do when primary key participation changes?
-    * Would necessitate dropping all clock entries and re-creating?
-    *
-    * Test:
-    * - All clock entries for removed columns are dropped
-    * - How shall this interact with your `crsql_migrate_begin` methods?
-    *  - These need testing to ensure proper clock table bookkeeping
-    *  - Resurrect corretness tests?
-    *  - Change py sqlite default config to auto-commit / tx?
-
-    We can use `crsql_begin_alter` to do all the relevant bookkeeping.
-    We only need to gather the diffs here.
-
-    The diffs are gathered by comparing pragmas between both DBs for tables and table infos.
-    */
-    // ctx.result_text_owned(String::from("ello mate!"));
+    ctx.result_text_transient("Migration complete");
 }
 
 fn automigrate_impl(
@@ -102,66 +106,48 @@ fn automigrate_impl(
     args: &[*mut sqlite::value],
 ) -> Result<ResultCode, ResultCode> {
     let local_db = ctx.db_handle();
-    let desired_version = args[0].int();
-    let stmt = local_db.prepare_v2(
-        "SELECT prop.value FROM __crsql_master as m
-            JOIN __crsql_master_prop as prop
-            ON prop.master_id = m.id
-            WHERE
-                m.type = 'schema' AND
-                m.name = 'version' AND
-                prop.key = 'version'",
-    )?;
-    if stmt.step()? == ResultCode::ROW {
-        let local_version = stmt.column_int(0)?;
-        if local_version > desired_version {
-            return Err(ResultCode::ERROR);
+    let desired_schemas = args[0].text();
+
+    let mem_db = sqlite::open(strlit!(":memory:"))?;
+    mem_db.exec_safe(desired_schemas);
+    local_db.exec_safe("SAVEPOINT automigrate_tables;")?;
+    if let Err(e) = migrate_to(local_db, mem_db) {
+        local_db.exec_safe("ROLLBACK TO automigrate_tables")?;
+        return Err(e);
+    }
+    local_db.exec_safe("RELEASE automigrate_tables")?;
+    Ok(())
+}
+
+fn migrate_to(local_db: *mut sqlite3, mem_db: ManagedConnection) -> Result<ResultCode, ResultCode> {
+    let mut mem_tables = BTreeSet::new();
+    let mut local_tables = BTreeSet::new();
+
+    let sql = "SELECT name FROM sqlite_master WHERE type = 'table'";
+    let fetch_mem_tables = mem_db.prepare_v2(sql)?;
+    let fetch_local_tables = local_db.prepare_v2(sql)?;
+
+    while fetch_mem_tables.step()? == ResultCode::ROW {
+        mem_tables.insert(fetch_mem_tables.column_text(0)?.to_string());
+    }
+
+    let mut removed_tables = vec![];
+    let mut added_tables = vec![];
+    let mut maybe_modified_tables = vec![];
+
+    while fetch_local_tables.step()? == ResultCode::ROW {
+        let table_name = fetch_local_tables.column_text(0)?.to_string();
+        local_tables.insert(table_name);
+        if mem_tables.contains(&table_name) {
+            maybe_modified_tables.add(&table_name);
+        } else {
+            removed_tables.add(&table_name);
         }
     }
 
-    // no version issues
-    // go forth
-
-    let desired_schema = args[1].text();
-    let plugin_paths = &args[2..];
-
-    apply_desired_schema(desired_version, desired_schema, plugin_paths)
-}
-
-fn apply_desired_schema(
-    desired_version: i32,
-    desired_schema: &str,
-    plugin_paths: &[*mut sqlite::value],
-) -> Result<ResultCode, ResultCode> {
-    let mem_db = sqlite::open(strlit!(":memory:"))?;
-    for plugin_path in plugin_paths {
-        // split the path to see if we have an entrypoint
-        let text_path = plugin_path.text();
-        let path_parts = text_path.split(",").into_iter().collect::<Vec<_>>();
-
-        // TODO: we need to raise an error if we're not compiled in a way
-        // that we can load extensions...
-        // well a loadable extension cannot load extensions so...
-        // wtf we do?
-        // we can strip out out crr related stufff...
-        // we can do a different sdl...
-        // we can implement auto-migrate in user spsace..
-        // we can have the schema invoke load extension commands itself...
-        // We can expose a function that takes a pointer to the mem db to use
-        // that the user must create for us
-        // this db is pre-configured to be what we need.
-        // the api is then instead a "migrate to" api
-        // where we're migrating to the schema provided by the in-mem db.
-        //
-        // Or simplify and provide "automigrate_table" and "automigrate_crr" methods.
-        // These would just do table to table transforms and create if not exists.
-        // dropping of tables would be done out of band.
-        // this would give us enough info..
-        #[cfg(all(feature = "static", not(feature = "omit_load_extension")))]
-        mem_db.load_extension(text_path, None)
-    }
-
-    Ok(ResultCode::OK)
+    // now to discover added tables
+    // for that we iterate over mem tables
+    // and see which are not present in local tables
 }
 
 // fn find_dropped_tables() -> Result<Vec<String>, ResultCode> {
@@ -183,12 +169,8 @@ fn apply_desired_schema(
 //     Ok(vec![])
 // }
 
-// fn pull_schema_version(schema: &str) {
-//     // pull first line
-// }
-
 #[no_mangle]
-pub extern "C" fn sqlite3_crsqlautomigrate_init(
+pub extern "C" fn sqlite3_automigrate_init(
     db: *mut sqlite::sqlite3,
     _err_msg: *mut *mut c_char,
     api: *mut sqlite::api_routines,
@@ -197,10 +179,10 @@ pub extern "C" fn sqlite3_crsqlautomigrate_init(
 
     db.create_function_v2(
         "crsql_automigrate",
-        -1,
+        1,
         sqlite::UTF8,
         None,
-        Some(crsql_automigrate),
+        Some(automigrate_tables),
         None,
         None,
         None,

@@ -127,11 +127,11 @@ select crsql_finalize();
 
 # Example Apps
 
-Examples apps that use `cr-sqlite` and have a networking layer:
+Example apps that use `cr-sqlite`:
 
-- [Observable Notebook](https://observablehq.com/@tantaman/cr-sqlite-basic-setup)
-- [Tutorials](https://vlcn.io/docs/guide-sync)
+- Basic setup & sync via an [Observable Notebook](https://observablehq.com/@tantaman/cr-sqlite-basic-setup)
 - TodoMVC - https://github.com/vlcn-io/live-examples
+- [Tutorials](https://vlcn.io/docs/guide-sync)
 - [WIP Local-First Presentation Editor](https://github.com/tantaman/strut)
 
 # Packages

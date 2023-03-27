@@ -58,6 +58,7 @@ The full documentation site is available [here](https://vlcn.io/docs/getting-sta
 - Other methods exist for extracting replication metadata which can be found in the main docs.
 
 Application code uses the function extension to enable crr support on tables.
+
 Networking code uses the `crsql_changes` virtual table to fetch and apply changes.
 
 Usage looks like:

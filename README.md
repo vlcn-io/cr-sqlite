@@ -16,7 +16,7 @@ CR-SQLite is a [run-time loadable extension](https://www.sqlite.org/loadext.html
 
 In other words, you can write to your SQLite database while offline. I can write to mine while offline. We can then both come online and merge our databases together, without conflict.
 
-**In technical terms:** we're adding multi-master and partition tolerance to SQLite via conflict free replicated data types ([CRDTs](https://en.wikipedia.org/wiki/Conflict-free_replicated_data_type)) and/or causally ordered event logs.
+**In technical terms:** cr-sqlite adds multi-master and partition tolerance to SQLite via conflict free replicated data types ([CRDTs](https://en.wikipedia.org/wiki/Conflict-free_replicated_data_type)) and/or causally ordered event logs.
 
 # When is this useful?
 

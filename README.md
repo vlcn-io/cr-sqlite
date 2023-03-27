@@ -12,7 +12,7 @@ A component of the [vulcan](https://vlcn.io) project.
 
 # "It's like Git, for your data."
 
-CR-SQLite is a [run-time loadable extension](https://www.sqlite.org/loadext.html) for [SQLite](https://www.sqlite.org/index.html) and [libSQL](https://github.com/libsql/libsql) that allows merging SQLite databases together that have taken independent writes.
+CR-SQLite is a [run-time loadable extension](https://www.sqlite.org/loadext.html) for [SQLite](https://www.sqlite.org/index.html) and [libSQL](https://github.com/libsql/libsql). It allows merging different SQLite databases together that have taken independent writes.
 
 In other words, you can write to your SQLite database while offline. I can write to mine while offline. We can then both come online and merge our databases together, without conflict.
 
@@ -55,7 +55,6 @@ The full documentation site is available [here](https://vlcn.io/docs/getting-sta
     SELECT crsql_alter_commit('table_name');
     ```
     A future version of cr-sqlite may extend the SQL syntax to make this more natural.
-- Other methods exist for extracting replication metadata which can be found in the main docs.
 
 Application code uses the function extension to enable crr support on tables.
 
@@ -147,7 +146,7 @@ Examples apps that use `cr-sqlite` and have a networking layer:
 
 # Building
 
-Until we have a nix flake, you'll need to install Rust and the nightly toolchain.
+You'll need to install Rust and the nightly toolchain.
 
 - Installing Rust: https://www.rust-lang.org/tools/install
 - Adding the nightly toolchain: `rustup toolchain install nightly`
@@ -251,9 +250,9 @@ CREATE CLSet post (
 
 > note: given that extensions can't extend the SQLite syntax this is notional. We are, however, extending the libSQL syntax so this will be available in that fork. In base SQLite you'd run the `select crsql_as_crr` function as seen earlier.
 
-- CLSet - causal length set
-- COUNTER - distributed counter
-- PERITEXT - collaborative text
+- CLSet - [causal length set](https://dl.acm.org/doi/pdf/10.1145/3380787.3393678)
+- COUNTER - [distributed counter](https://www.cs.utexas.edu/~rossbach/cs380p/papers/Counters.html)
+- PERITEXT - [collaborative text](https://www.inkandswitch.com/peritext/)
 
 Under approach 1, merging two tables works roughly like so:
 

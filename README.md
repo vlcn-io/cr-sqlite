@@ -6,9 +6,11 @@
 [![py-tests](https://github.com/vlcn-io/cr-sqlite/actions/workflows/py-tests.yaml/badge.svg)](https://github.com/vlcn-io/cr-sqlite/actions/workflows/py-tests.yaml)
 [![rs-tests](https://github.com/vlcn-io/cr-sqlite/actions/workflows/rs-tests.yml/badge.svg)](https://github.com/vlcn-io/cr-sqlite/actions/workflows/rs-tests.yml)
 
-A component of the [vlcn](https://vlcn.io) project | [discord](https://discord.gg/AtdVY6zDW3).
-
 > # It's like Git, for your data.
+
+A component of the [vulcan](https://vlcn.io) project.
+
+[![](https://dcbadge.vercel.app/api/server/AtdVY6zDW3)](https://discord.gg/AtdVY6zDW3)
 
 CR-SQLite is a [run-time loadable extension](https://www.sqlite.org/loadext.html) for [SQLite](https://www.sqlite.org/index.html) and [libSQL](https://github.com/libsql/libsql) that allows merging SQLite databases together that have taken independent writes.
 

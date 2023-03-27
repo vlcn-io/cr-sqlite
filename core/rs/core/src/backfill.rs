@@ -153,18 +153,31 @@ fn fill_column(
     pk_cols: &Vec<&str>,
     non_pk_col: &str,
 ) -> Result<ResultCode, ResultCode> {
-    // read all rows
-    // invoke `create_clocks_rows_from_stmt with just the single non_pk_col
-    // have to process all the rows, unfortunately.
-    let read_stmt = db.prepare_v2(&format!(
-        "SELECT {pk_cols} FROM {table}",
+    // Only get rows that do not have a clock entry for the desired column
+    let sql = format!(
+        "SELECT {pk_cols} FROM {table} as t1
+            LEFT JOIN \"{table}__crsql_clock\" as t2
+            ON {pk_on_conditions} AND __crsql_col_name = '{non_pk_col}'
+            WHERE t2.\"{first_pk}\" IS NULL",
         table = crate::escape_ident(table),
         pk_cols = pk_cols
             .iter()
-            .map(|f| format!("\"{}\"", crate::escape_ident(f)))
+            .map(|f| format!("t1.\"{}\"", crate::escape_ident(f)))
             .collect::<Vec<_>>()
             .join(", "),
-    ))?;
+        pk_on_conditions = pk_cols
+            .iter()
+            .map(|f| format!(
+                "t1.\"{}\" = t2.\"{}\"",
+                crate::escape_ident(f),
+                crate::escape_ident(f)
+            ))
+            .collect::<Vec<_>>()
+            .join(" AND "),
+        non_pk_col = crate::escape_value(non_pk_col),
+        first_pk = crate::escape_ident(pk_cols[0])
+    );
+    let read_stmt = db.prepare_v2(&sql)?;
 
     let non_pk_cols = vec![non_pk_col];
     create_clock_rows_from_stmt(read_stmt, db, table, pk_cols, &non_pk_cols)

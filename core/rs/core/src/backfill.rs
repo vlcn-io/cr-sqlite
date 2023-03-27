@@ -125,7 +125,9 @@ fn backfill_missing_columns(
         table = table,
     ))?;
     for non_pk_col in non_pk_cols {
+        has_col_stmt.bind_text(1, non_pk_col, Destructor::STATIC)?;
         let exists = has_col(&has_col_stmt)?;
+        has_col_stmt.reset()?;
         if exists {
             continue;
         }
@@ -153,7 +155,9 @@ fn fill_column(
     pk_cols: &Vec<&str>,
     non_pk_col: &str,
 ) -> Result<ResultCode, ResultCode> {
-    // Only get rows that do not have a clock entry for the desired column
+    // We don't technically need this join, right?
+    // There should never be a partially filled column.
+    // If there is there's likely a bug elsewhere.
     let sql = format!(
         "SELECT {pk_cols} FROM {table} as t1
             LEFT JOIN \"{table}__crsql_clock\" as t2

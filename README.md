@@ -121,6 +121,15 @@ a  123  doo  daa
 select crsql_finalize();
 ```
 
+# Example Apps
+
+Examples apps that use `cr-sqlite` and have a networking layer:
+
+- [Observable Notebook](https://observablehq.com/@tantaman/cr-sqlite-basic-setup)
+- [Tutorials](https://vlcn.io/docs/guide-sync)
+- TodoMVC - https://github.com/vlcn-io/live-examples
+- [WIP Local-First Presentation Editor](https://github.com/tantaman/strut)
+
 # Packages
 
 Pre-built binaries of the extension are available in the [releases section](https://github.com/vlcn-io/cr-sqlite/releases).
@@ -135,14 +144,73 @@ For a WASM build that works in the browser, see the [js](./js) directory.
 
 For UI integrations (e.g., React) see the [js](./js) directory.
 
-# Example Apps
+# How does it work?
 
-Examples apps that use `cr-sqlite` and have a networking layer:
+There are two approaches with very different tradeoffs. Both will eventually be supported by `cr-sqlite`. `v1` (and current releases) support the first approach. `v2` will support both approaches.
 
-- [Observable Notebook](https://observablehq.com/@tantaman/cr-sqlite-basic-setup)
-- [Tutorials](https://vlcn.io/docs/guide-sync)
-- TodoMVC - https://github.com/vlcn-io/live-examples
-- [WIP Local-First Presentation Editor](https://github.com/tantaman/strut)
+## Approach 1: History-free CRDTs
+
+Approach 1 is characterized by the following properties:
+
+1. Keeps no history / only keeps the current state
+2. Automatically handles merge conflicts. No options for manual merging.
+3. Tables are Grow Only Sets or variants of Observe-Remove Sets
+4. Rows are maps of CRDTs. The column names being the keys, column values being a specific CRDT type
+5. Columns can be counter, fractional index or last write wins CRDTs.
+   1. multi-value registers, RGA and others to come in future iterations
+
+Tables which should be synced are defined as a composition of other types of CRDTs.
+
+Example table definition:
+
+```sql
+CREATE CLSet post (
+ id INTEGER PRIMARY KEY,
+ views COUNTER,
+ content PERITEXT,
+ owner_id LWW INTEGER
+);
+```
+
+> note: given that extensions can't extend the SQLite syntax this is notional. We are, however, extending the libSQL syntax so this will be available in that fork. In base SQLite you'd run the `select crsql_as_crr` function as seen earlier.
+
+- CLSet - [causal length set](https://dl.acm.org/doi/pdf/10.1145/3380787.3393678)
+- COUNTER - [distributed counter](https://www.cs.utexas.edu/~rossbach/cs380p/papers/Counters.html)
+- PERITEXT - [collaborative text](https://www.inkandswitch.com/peritext/)
+
+Under approach 1, merging two tables works roughly like so:
+
+1. Rows are identified by primary key
+2. Tables are unioned (and a delete log is consulted) such that both tables will have the same rows.
+
+If a row was modified in multiple places, then we merge the row. Merging a row involves merging each column of that row according to the semantics of the CRDT for the column.
+
+1. Last-write wins just picks the lastest write
+2. Counter CRDT sums the values
+3. Multi-value registers keep all conflicting values
+4. Fractional indices are taken as last write
+
+For more background see [this post](https://vlcn.io/blog/gentle-intro-to-crdts.html).
+
+Notes:
+
+- LWW, Fractional Index, Observe-Remove sets are available now.
+- Counter and rich-text CRDTs are still [being implemented](https://github.com/vlcn-io/cr-sqlite/issues/65).
+- Custom SQL syntax will be available in our libSQL integration. The SQLite extension requires a slightly different syntax than what is depicted above.
+
+## Approach 2: Causal Event Log
+
+> To be implemented in v2 of cr-sqlite
+
+Approach 2 has the following properties:
+
+1. A history of every modification that happens to the database is kept
+   1. This history can be garbage collected in certain network topologies
+2. Merge conflicts can be automatically handled (via CRDT style rules) or the developer can define their own conflict resolution plan.
+3. The developer can choose to fork the data on merge conflict rather than merging
+4. Forks can live indefinitely or a specific fork can be chosen and other forks dropped
+
+This is much more akin to git and event sourcing but with the drawback being that it is much more write heavy and much more space intensive.
 
 # Building
 
@@ -220,73 +288,6 @@ JS APIs for using `cr-sqlite` in the browser are not yet documented but exist in
 - [Observable Notebook](https://observablehq.com/@tantaman/cr-sqlite-basic-setup)
 - https://github.com/vlcn-io/live-examples
 
-# How does it work?
-
-There are two approaches with very different tradeoffs. Both will eventually be supported by `cr-sqlite`. `v1` (and current releases) support the first approach. `v2` will support both approaches.
-
-## Approach 1: History-free CRDTs
-
-Approach 1 is characterized by the following properties:
-
-1. Keeps no history / only keeps the current state
-2. Automatically handles merge conflicts. No options for manual merging.
-3. Tables are Grow Only Sets or variants of Observe-Remove Sets
-4. Rows are maps of CRDTs. The column names being the keys, column values being a specific CRDT type
-5. Columns can be counter, fractional index or last write wins CRDTs.
-   1. multi-value registers, RGA and others to come in future iterations
-
-Tables which should be synced are defined as a composition of other types of CRDTs.
-
-Example table definition:
-
-```sql
-CREATE CLSet post (
- id INTEGER PRIMARY KEY,
- views COUNTER,
- content PERITEXT,
- owner_id LWW INTEGER
-);
-```
-
-> note: given that extensions can't extend the SQLite syntax this is notional. We are, however, extending the libSQL syntax so this will be available in that fork. In base SQLite you'd run the `select crsql_as_crr` function as seen earlier.
-
-- CLSet - [causal length set](https://dl.acm.org/doi/pdf/10.1145/3380787.3393678)
-- COUNTER - [distributed counter](https://www.cs.utexas.edu/~rossbach/cs380p/papers/Counters.html)
-- PERITEXT - [collaborative text](https://www.inkandswitch.com/peritext/)
-
-Under approach 1, merging two tables works roughly like so:
-
-1. Rows are identified by primary key
-2. Tables are unioned (and a delete log is consulted) such that both tables will have the same rows.
-
-If a row was modified in multiple places, then we merge the row. Merging a row involves merging each column of that row according to the semantics of the CRDT for the column.
-
-1. Last-write wins just picks the lastest write
-2. Counter CRDT sums the values
-3. Multi-value registers keep all conflicting values
-4. Fractional indices are taken as last write
-
-For more background see [this post](https://vlcn.io/blog/gentle-intro-to-crdts.html).
-
-Notes:
-
-- LWW, Fractional Index, Observe-Remove sets are available now.
-- Counter and rich-text CRDTs are still [being implemented](https://github.com/vlcn-io/cr-sqlite/issues/65).
-- Custom SQL syntax will be available in our libSQL integration. The SQLite extension requires a slightly different syntax than what is depicted above.
-
-## Approach 2: Causal Event Log
-
-> To be implemented in v2 of cr-sqlite
-
-Approach 2 has the following properties:
-
-1. A history of every modification that happens to the database is kept
-   1. This history can be garbage collected in certain network topologies
-2. Merge conflicts can be automatically handled (via CRDT style rules) or the developer can define their own conflict resolution plan.
-3. The developer can choose to fork the data on merge conflict rather than merging
-4. Forks can live indefinitely or a specific fork can be chosen and other forks dropped
-
-This is much more akin to git and event sourcing but with the drawback being that it is much more write heavy and much more space intensive.
 
 # Research & Prior Art
 

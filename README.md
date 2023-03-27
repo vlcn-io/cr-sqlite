@@ -28,6 +28,10 @@ In other words, you can write to your SQLite database while offline. I can write
 
 All of the above involve a merging of independent edits problem. If your database can handle this for you, you don't need custom code in your application to handle those 5 cases.
 
+Discussions of these problems in the application space:
+- [Meta Muse](https://museapp.com/podcast/56-sync/)
+- [FB Messenger re-write](https://softwareengineeringdaily.com/2020/03/31/facebook-messenger-engineering-with-mohsen-agsen/)
+
 # Sponsors
 
 - [![reflect-app](https://reflect.app/_next/image?url=%2Fsite%2Ficons%2F1024x1024.png&w=32&q=100) Reflect](https://reflect.app/)

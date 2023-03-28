@@ -14,67 +14,20 @@
 extern crate alloc;
 
 use alloc::collections::BTreeSet;
+use alloc::format;
+use alloc::string::String;
 use alloc::string::ToString;
-// use alloc::string::String;
-// use alloc::vec;
-// use alloc::vec::Vec;
+use alloc::vec;
 use alloc::vec::Vec;
 use core::ffi::{c_char, c_int};
 use core::slice;
 // use sqlite::ResultCode;
 use sqlite_nostd as sqlite;
 
-use sqlite::{args, ManagedConnection, Value};
+use sqlite::{args, sqlite3, ManagedConnection, Value};
 use sqlite::{strlit, Context};
 use sqlite::{Connection, ResultCode};
 // use sqlite::Value;
-
-/**
-New API:
-"automigrate table"
-
-So schema definition, w/ auto-migration, looks like:
-
-SELECT crsql_automigrate_crr('tbl', 'CREATE TABLE ...');
-
-Kind gross.
-
-CRRs could be in one schema and normal tbls in another?
-
-automigrate_crrs
-
-automigrate_tables
-
-and each take a schema str?
-
-All can be in same file and user can split if desired.
-
-SELECT crsql_create_or_migrate_to(`
-    CREATE TABLE ...
-`);
-
-Kind of annoying given tooling this breaks.
-
-schema.file:
-
--- Persisted CRRs
-CREATE TABLE ...;
-CREATE TABLE ...;
--- end Persisted CRRs
-
--- temp tables are whatever.
-
-CREATE TABLE ...;
-
-end.file
-
-Then we use the files:
-
-SELECT crsql_automigrate_crrs(crr_stmts);
-SELECT crsql_automigrate_tables(tbl_stmts);
-
-Have the user track schema version on their own?
-*/
 
 /**
 * Automigrate args:
@@ -115,8 +68,7 @@ fn automigrate_impl(
         local_db.exec_safe("ROLLBACK TO automigrate_tables")?;
         return Err(e);
     }
-    local_db.exec_safe("RELEASE automigrate_tables")?;
-    Ok(())
+    local_db.exec_safe("RELEASE automigrate_tables")
 }
 
 fn migrate_to(local_db: *mut sqlite3, mem_db: ManagedConnection) -> Result<ResultCode, ResultCode> {
@@ -131,23 +83,56 @@ fn migrate_to(local_db: *mut sqlite3, mem_db: ManagedConnection) -> Result<Resul
         mem_tables.insert(fetch_mem_tables.column_text(0)?.to_string());
     }
 
-    let mut removed_tables = vec![];
-    let mut added_tables = vec![];
-    let mut maybe_modified_tables = vec![];
+    let mut removed_tables: Vec<String> = vec![];
+    let mut added_tables: Vec<String> = vec![];
+    let mut maybe_modified_tables: Vec<String> = vec![];
 
     while fetch_local_tables.step()? == ResultCode::ROW {
-        let table_name = fetch_local_tables.column_text(0)?.to_string();
-        local_tables.insert(table_name);
-        if mem_tables.contains(&table_name) {
-            maybe_modified_tables.add(&table_name);
+        let table_name = fetch_local_tables.column_text(0)?;
+        local_tables.insert(table_name.to_string());
+        if mem_tables.contains(table_name) {
+            maybe_modified_tables.push(table_name.to_string());
         } else {
-            removed_tables.add(&table_name);
+            removed_tables.push(table_name.to_string());
         }
     }
 
-    // now to discover added tables
-    // for that we iterate over mem tables
-    // and see which are not present in local tables
+    for mem_table in mem_tables {
+        if !local_tables.contains(&mem_table) {
+            added_tables.push(mem_table);
+        }
+    }
+
+    drop_tables(local_db, removed_tables)?;
+    create_tables(local_db, added_tables, &mem_db)?;
+    maybe_modify_tables(local_db, maybe_modified_tables, &mem_db)
+}
+
+fn drop_tables(local_db: *mut sqlite3, tables: Vec<String>) -> Result<ResultCode, ResultCode> {
+    for table in tables {
+        local_db.exec_safe(&format!(
+            "DROP TABLE \"{table}\"",
+            table = crate::escape_ident(&table)
+        ))?;
+    }
+
+    Ok(ResultCode::OK)
+}
+
+fn create_tables(
+    local_db: *mut sqlite3,
+    table: Vec<String>,
+    mem_db: &ManagedConnection,
+) -> Result<ResultCode, ResultCode> {
+    Ok(ResultCode::OK)
+}
+
+fn maybe_modify_tables(
+    local_db: *mut sqlite3,
+    tables: Vec<String>,
+    mem_db: &ManagedConnection,
+) -> Result<ResultCode, ResultCode> {
+    Ok(ResultCode::OK)
 }
 
 // fn find_dropped_tables() -> Result<Vec<String>, ResultCode> {
@@ -168,24 +153,3 @@ fn migrate_to(local_db: *mut sqlite3, mem_db: ManagedConnection) -> Result<Resul
 // fn find_modified_tables() -> Result<Vec<ModifiedTable>, ResultCode> {
 //     Ok(vec![])
 // }
-
-#[no_mangle]
-pub extern "C" fn sqlite3_automigrate_init(
-    db: *mut sqlite::sqlite3,
-    _err_msg: *mut *mut c_char,
-    api: *mut sqlite::api_routines,
-) -> c_int {
-    sqlite::EXTENSION_INIT2(api);
-
-    db.create_function_v2(
-        "crsql_automigrate",
-        1,
-        sqlite::UTF8,
-        None,
-        Some(automigrate_tables),
-        None,
-        None,
-        None,
-    )
-    .unwrap_or(sqlite::ResultCode::ERROR) as c_int
-}

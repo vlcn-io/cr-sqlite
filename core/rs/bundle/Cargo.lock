@@ -63,17 +63,9 @@ dependencies = [
 ]
 
 [[package]]
-name = "crsql_automigrate_core"
-version = "0.1.0"
-dependencies = [
- "sqlite_nostd",
-]
-
-[[package]]
 name = "crsql_bundle"
 version = "0.1.0"
 dependencies = [
- "crsql_automigrate_core",
  "crsql_core",
  "crsql_fractindex_core",
  "sqlite_nostd",

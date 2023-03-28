@@ -21,6 +21,7 @@ use alloc::vec;
 use alloc::vec::Vec;
 use core::ffi::{c_char, c_int};
 use core::slice;
+use sqlite::ColumnType;
 // use sqlite::ResultCode;
 use sqlite_nostd as sqlite;
 
@@ -32,17 +33,7 @@ use sqlite::{Connection, ResultCode};
 /**
 * Automigrate args:
 * 1 - the schema content
-* Only create table statements shall be present in the provided schema
-* Users are responsible for tracking schema version and applying the migration or not
-*
-* Index creation statements can be elsewhere and always applied...
-* Well should we drop indices for the users?
-* And maybe create them too as part of auto-migrate?
-*
-* Index migration is rather simple. Just `drop if exists` and `create if not exists`
-* after schema reaches current desired snapshot.
-*
-* So we can ignore this in auto-migrate and stick only to table structure migrations.
+* Users are responsible for tracking schema version and applying the migration or not.
 */
 pub extern "C" fn crsql_automigrate(
     ctx: *mut sqlite::context,
@@ -130,6 +121,23 @@ fn migrate_to(local_db: *mut sqlite3, mem_db: ManagedConnection) -> Result<Resul
     Ok(ResultCode::OK)
 }
 
+/**
+* stripts `select crsql_as_crr` statements
+* from the provided schema.
+* returns which tables were crrs so we can re-apply the statements
+* once migrations are complete.
+*
+* We have to strip the statements given we can't load an extension into an extension
+* in all environment.
+*
+* E.g., if cr-sqlite is running as a runtime loadable ext
+* then it cannot open an in-memory db within itself that loads this same
+* extension.
+*/
+fn strip_crr_statements() -> Result<Vec<String>, ResultCode> {
+    Ok(vec![])
+}
+
 fn drop_tables(local_db: *mut sqlite3, tables: Vec<String>) -> Result<ResultCode, ResultCode> {
     for table in tables {
         local_db.exec_safe(&format!(
@@ -176,7 +184,7 @@ fn maybe_modify_table(
     mem_stmt.bind_text(1, table, sqlite::Destructor::STATIC);
 
     while mem_stmt.step()? == ResultCode::ROW {
-        mem_colums.insert(mem_stmt.column_text(0)?.to_string());
+        mem_columns.insert(mem_stmt.column_text(0)?.to_string());
     }
 
     let mut removed_columns: Vec<String> = vec![];
@@ -203,11 +211,9 @@ fn maybe_modify_table(
         stmt.step()?;
     }
 
-    drop_columns();
-    add_columns(); // this is harder... we need the correct add column sql
-                   // thus we need
-                   // - name, type, deflt value, not null, constraints and such?
-                   // index info....
+    drop_columns(local_db, table, removed_columns)?;
+    add_columns(local_db, table, added_columns, mem_db)?;
+    maybe_update_indices(local_db, table, mem_db)?;
 
     if is_a_crr {
         let stmt = local_db.prepare_v2("SELECT crsql_commit_alter(?)")?;
@@ -218,17 +224,158 @@ fn maybe_modify_table(
     Ok(ResultCode::OK)
 }
 
-fn drop_columns() {}
+fn drop_columns(
+    local_db: *mut sqlite3,
+    table: &str,
+    columns: Vec<String>,
+) -> Result<ResultCode, ResultCode> {
+    for col in columns {
+        local_db.exec_safe(&format!(
+            "ALTER TABLE \"{table}\" DROP \"{column}\"",
+            table = crate::escape_ident(table),
+            column = crate::escape_ident(&col)
+        ))?;
+    }
 
-fn add_columns() {}
+    Ok(ResultCode::OK)
+}
 
-// struct ModifiedTable {
-//     name: String,
-//     new_columns: Vec<String>,
-//     dropped_columns: Vec<String>,
-//     modified_columns: Vec<String>,
-// }
+fn add_columns(
+    local_db: *mut sqlite3,
+    table: &str,
+    columns: Vec<String>,
+    mem_db: &ManagedConnection,
+) -> Result<ResultCode, ResultCode> {
+    let stmt = mem_db.prepare_v2(&format!(
+        "SELECT name, type, notnull, dflt_value, pk FROM pragma_table_info(?) WHERE name IN ({qs})",
+        qs = columns.iter().map(|x| "?").collect::<Vec<_>>().join(", "),
+    ))?;
+    stmt.bind_text(1, table, sqlite::Destructor::STATIC)?;
+    let mut b = 2;
+    for col in columns {
+        stmt.bind_text(b, &col, sqlite::Destructor::STATIC)?;
+        b += 1;
+    }
 
-// fn find_modified_tables() -> Result<Vec<ModifiedTable>, ResultCode> {
-//     Ok(vec![])
-// }
+    while stmt.step()? == ResultCode::ROW {
+        let is_pk = stmt.column_int(4)? == 1;
+
+        if is_pk {
+            // We do not support adding PK columns to existing tables in auto-migration
+            return Err(ResultCode::MISUSE);
+        }
+
+        let name = stmt.column_text(0)?;
+        let col_type = stmt.column_text(1)?;
+        let notnull = stmt.column_int(2)? == 1;
+        let dflt_val = stmt.column_value(3)?;
+
+        add_column(local_db, table, name, col_type, notnull, dflt_val)?;
+    }
+
+    Ok(ResultCode::OK)
+}
+
+fn add_column(
+    local_db: *mut sqlite3,
+    table: &str,
+    name: &str,
+    col_type: &str,
+    notnull: bool,
+    dflt_val: *mut sqlite::value,
+) -> Result<ResultCode, ResultCode> {
+    // ideally we'd extract out the SQL for the specific column
+    // so we can get all constraints
+    // as it is now, we don't support many things in auto-migration
+    let dflt_val_str = if dflt_val.value_type() == ColumnType::Null {
+        String::from("")
+    } else {
+        format!("DEFAULT {}", dflt_val.text())
+    };
+
+    local_db.exec_safe(&format!(
+        "ALTER TABLE \"{table}\" ADD COLUMN \"{name}\" {col_type} {notnull} {dflt}",
+        table = crate::escape_ident(table),
+        name = crate::escape_ident(name),
+        col_type = col_type,
+        notnull = if notnull { "NOT NULL " } else { "" },
+        dflt = dflt_val_str
+    ))
+}
+
+fn maybe_update_indices(
+    local_db: *mut sqlite3,
+    table: &str,
+    mem_db: &ManagedConnection,
+) -> Result<ResultCode, ResultCode> {
+    let sql = "SELECT name FROM pragma_index_list(?);";
+    let local_fetch = local_db.prepare_v2(sql)?;
+    let mem_fetch = mem_db.prepare_v2(sql)?;
+    local_fetch.bind_text(1, table, sqlite::Destructor::STATIC);
+    mem_fetch.bind_text(1, table, sqlite::Destructor::STATIC);
+
+    let mut local_indices = BTreeSet::new();
+    let mut mem_indices = BTreeSet::new();
+
+    while mem_fetch.step()? == ResultCode::ROW {
+        mem_indices.insert(mem_fetch.column_text(0)?.to_string());
+    }
+
+    let mut removed: Vec<String> = vec![];
+    let mut added: Vec<String> = vec![];
+    let mut maybe_modified: Vec<String> = vec![];
+
+    while local_fetch.step()? == ResultCode::ROW {
+        let name = local_fetch.column_text(0)?;
+        local_indices.insert(name.to_string());
+        if !mem_indices.contains(name) {
+            removed.push(name.to_string());
+        } else {
+            maybe_modified.push(name.to_string());
+        }
+    }
+
+    for mem_idx in mem_indices {
+        if !local_indices.contains(&mem_idx) {
+            added.push(mem_idx);
+        }
+    }
+
+    drop_indices(local_db, table, dropped)?;
+    add_indices(local_db, table, added, mem_db)?;
+
+    for idx in maybe_modified {
+        maybe_recreate_index(local_db, table, &idx, mem_db)?;
+    }
+
+    // added indices
+    // removed indices
+    // modified indicies? Same name but different structure...
+    Ok(ResultCode::OK)
+}
+
+fn drop_indices(
+    local_db: *mut sqlite3,
+    table: &str,
+    dropped: Vec<String>,
+) -> Result<ResultCode, ResultCode> {
+    Ok(())
+}
+
+fn add_indices(
+    local_db: *mut sqlite3,
+    table: &str,
+    added: Vec<String>,
+    mem_db: &ManagedConnection,
+) -> Result<ResultCode, ResultCode> {
+    Ok(())
+}
+
+fn maybe_recreate_index(
+    local_db: *mut sqlite3,
+    table: &str,
+    idx: &str,
+    mem_db: &ManagedConnection,
+) -> Result<ResultCode, ResultCode> {
+    Ok(())
+}

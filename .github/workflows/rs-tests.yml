@@ -34,11 +34,6 @@ jobs:
           rustup component add rust-src --toolchain nightly-x86_64-pc-windows-gnu
           rustup default nightly-x86_64-pc-windows-gnu
 
-      - name: Test Automigrate
-        run: |
-          cd core/rs/automigrate-core
-          cargo test --features=loadable_extension
-
       - name: Test Fractindex
         run: |
           cd core/rs/fractindex-core

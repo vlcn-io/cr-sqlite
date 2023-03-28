@@ -33,11 +33,6 @@ jobs:
         run: |
           cargo install cargo-valgrind
 
-      - name: Test Automigrate
-        run: |
-          cd core/rs/automigrate-core
-          cargo valgrind test --features=loadable_extension
-
       - name: Test Fractindex
         run: |
           cd core/rs/fractindex-core

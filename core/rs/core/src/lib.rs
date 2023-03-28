@@ -13,6 +13,7 @@
 
 #![cfg_attr(not(test), no_std)]
 
+mod automigrate;
 mod backfill;
 mod is_crr;
 mod teardown;
@@ -21,6 +22,7 @@ use core::{ffi::c_char, slice};
 extern crate alloc;
 use alloc::string::String;
 use alloc::vec::Vec;
+pub use automigrate::*;
 pub use backfill::*;
 use core::ffi::{c_int, CStr};
 pub use is_crr::*;
@@ -72,6 +74,22 @@ pub extern "C" fn sqlite3_crsqlcore_init(
     api: *mut sqlite::api_routines,
 ) -> c_int {
     sqlite::EXTENSION_INIT2(api);
+
+    let rc = db
+        .create_function_v2(
+            "crsql_automigrate",
+            1,
+            sqlite::UTF8,
+            None,
+            Some(crsql_automigrate),
+            None,
+            None,
+            None,
+        )
+        .unwrap_or(sqlite::ResultCode::ERROR);
+    if rc != ResultCode::OK {
+        return rc as c_int;
+    }
 
     db.create_function_v2(
         "crsql_as_table",

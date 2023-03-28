@@ -46,8 +46,9 @@ pub extern "C" fn crsql_automigrate(
     }
 
     let args = args!(argc, argv);
-    if let Err(_) = automigrate_impl(ctx, args) {
+    if let Err(code) = automigrate_impl(ctx, args) {
         ctx.result_error("failed to apply the updated schema");
+        ctx.result_error_code(code);
         return;
     }
 
@@ -61,21 +62,30 @@ fn automigrate_impl(
     let local_db = ctx.db_handle();
     let desired_schemas = args[0].text();
 
-    let mem_db = sqlite::open(strlit!(":memory:"))?;
-    mem_db.exec_safe(desired_schemas);
-    local_db.exec_safe("SAVEPOINT automigrate_tables;")?;
-    if let Err(e) = migrate_to(local_db, mem_db) {
-        local_db.exec_safe("ROLLBACK TO automigrate_tables")?;
-        return Err(e);
+    let result = sqlite::open(strlit!(":memory:"));
+    if let Ok(mem_db) = result {
+        if let Err(_) = mem_db.exec_safe(desired_schemas) {
+            return Err(ResultCode::SCHEMA);
+        }
+        local_db.exec_safe("SAVEPOINT automigrate_tables;")?;
+        if let Err(e) = migrate_to(local_db, mem_db) {
+            local_db.exec_safe("ROLLBACK TO automigrate_tables")?;
+            return Err(ResultCode::MISMATCH);
+        }
+        local_db.exec_safe("RELEASE automigrate_tables")
+    } else {
+        return Err(ResultCode::CANTOPEN);
     }
-    local_db.exec_safe("RELEASE automigrate_tables")
 }
 
 fn migrate_to(local_db: *mut sqlite3, mem_db: ManagedConnection) -> Result<ResultCode, ResultCode> {
-    let mut mem_tables = BTreeSet::new();
-    let mut local_tables = BTreeSet::new();
+    let mut mem_tables: BTreeSet<String> = BTreeSet::new();
+    let mut local_tables: BTreeSet<String> = BTreeSet::new();
 
-    let sql = "SELECT name FROM sqlite_master WHERE type = 'table'";
+    let sql = "SELECT name FROM sqlite_master WHERE type = 'table'
+        AND name NOT LIKE 'sqlite_%'
+        AND name NOT LIKE 'crsql_%'
+        AND name NOT LIKE '__crsql_%'";
     let fetch_mem_tables = mem_db.prepare_v2(sql)?;
     let fetch_local_tables = local_db.prepare_v2(sql)?;
 
@@ -105,7 +115,10 @@ fn migrate_to(local_db: *mut sqlite3, mem_db: ManagedConnection) -> Result<Resul
 
     drop_tables(local_db, removed_tables)?;
     create_tables(local_db, added_tables, &mem_db)?;
-    maybe_modify_tables(local_db, maybe_modified_tables, &mem_db)
+    for table in maybe_modified_tables {
+        maybe_modify_table(local_db, &table, &mem_db)?;
+    }
+    Ok(ResultCode::OK)
 }
 
 fn drop_tables(local_db: *mut sqlite3, tables: Vec<String>) -> Result<ResultCode, ResultCode> {
@@ -121,17 +134,33 @@ fn drop_tables(local_db: *mut sqlite3, tables: Vec<String>) -> Result<ResultCode
 
 fn create_tables(
     local_db: *mut sqlite3,
-    table: Vec<String>,
-    mem_db: &ManagedConnection,
-) -> Result<ResultCode, ResultCode> {
-    Ok(ResultCode::OK)
-}
-
-fn maybe_modify_tables(
-    local_db: *mut sqlite3,
     tables: Vec<String>,
     mem_db: &ManagedConnection,
 ) -> Result<ResultCode, ResultCode> {
+    let stmt =
+        mem_db.prepare_v2("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?")?;
+    for table in tables {
+        stmt.bind_text(1, &table, sqlite::Destructor::STATIC)?;
+        if stmt.step()? == ResultCode::ROW {
+            local_db.exec_safe(stmt.column_text(0)?)?;
+            stmt.reset()?;
+        } else {
+            return Err(ResultCode::ERROR);
+        }
+    }
+    Ok(ResultCode::OK)
+}
+
+fn maybe_modify_table(
+    local_db: *mut sqlite3,
+    table: &str,
+    mem_db: &ManagedConnection,
+) -> Result<ResultCode, ResultCode> {
+    // let mut local_columns = BTreeSet::new();
+    // let mut mem_columns = BTreeSet::new();
+
+    // xinfo statement or just info?
+
     Ok(ResultCode::OK)
 }
 

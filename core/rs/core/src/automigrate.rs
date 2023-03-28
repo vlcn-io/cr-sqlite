@@ -34,6 +34,15 @@ use sqlite::{Connection, ResultCode};
 * 1 - the schema content
 * Only create table statements shall be present in the provided schema
 * Users are responsible for tracking schema version and applying the migration or not
+*
+* Index creation statements can be elsewhere and always applied...
+* Well should we drop indices for the users?
+* And maybe create them too as part of auto-migrate?
+*
+* Index migration is rather simple. Just `drop if exists` and `create if not exists`
+* after schema reaches current desired snapshot.
+*
+* So we can ignore this in auto-migrate and stick only to table structure migrations.
 */
 pub extern "C" fn crsql_automigrate(
     ctx: *mut sqlite::context,
@@ -151,26 +160,67 @@ fn create_tables(
     Ok(ResultCode::OK)
 }
 
+// TODO: we could potentially track renames...
 fn maybe_modify_table(
     local_db: *mut sqlite3,
     table: &str,
     mem_db: &ManagedConnection,
 ) -> Result<ResultCode, ResultCode> {
-    // let mut local_columns = BTreeSet::new();
-    // let mut mem_columns = BTreeSet::new();
+    let mut local_columns = BTreeSet::new();
+    let mut mem_columns = BTreeSet::new();
 
-    // xinfo statement or just info?
+    let sql = "SELECT name FROM pragma_table_info(?)";
+    let local_stmt = local_db.prepare_v2(sql)?;
+    let mem_stmt = mem_db.prepare_v2(sql)?;
+    local_stmt.bind_text(1, table, sqlite::Destructor::STATIC);
+    mem_stmt.bind_text(1, table, sqlite::Destructor::STATIC);
+
+    while mem_stmt.step()? == ResultCode::ROW {
+        mem_colums.insert(mem_stmt.column_text(0)?.to_string());
+    }
+
+    let mut removed_columns: Vec<String> = vec![];
+    let mut added_columns: Vec<String> = vec![];
+
+    while local_stmt.step()? == ResultCode::ROW {
+        let col_name = local_stmt.column_text(0)?;
+        local_columns.insert(col_name.to_string());
+        if !mem_columns.contains(col_name) {
+            removed_columns.push(col_name.to_string());
+        }
+    }
+
+    for mem_col in mem_columns {
+        if !local_columns.contains(&mem_col) {
+            added_columns.push(mem_col);
+        }
+    }
+
+    let is_a_crr = crate::is_crr(local_db, table)?;
+    if is_a_crr {
+        let stmt = local_db.prepare_v2("SELECT crsql_begin_alter(?)")?;
+        stmt.bind_text(1, table, sqlite::Destructor::STATIC)?;
+        stmt.step()?;
+    }
+
+    drop_columns();
+    add_columns(); // this is harder... we need the correct add column sql
+                   // thus we need
+                   // - name, type, deflt value, not null, constraints and such?
+                   // index info....
+
+    if is_a_crr {
+        let stmt = local_db.prepare_v2("SELECT crsql_commit_alter(?)")?;
+        stmt.bind_text(1, table, sqlite::Destructor::STATIC)?;
+        stmt.step()?;
+    }
 
     Ok(ResultCode::OK)
 }
 
-// fn find_dropped_tables() -> Result<Vec<String>, ResultCode> {
-//     Ok(vec![])
-// }
+fn drop_columns() {}
 
-// fn find_new_tables() -> Result<Vec<String>, ResultCode> {
-//     Ok(vec![])
-// }
+fn add_columns() {}
 
 // struct ModifiedTable {
 //     name: String,

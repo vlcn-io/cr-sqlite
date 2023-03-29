@@ -66,11 +66,11 @@ fn automigrate_impl(
 ) -> Result<ResultCode, ResultCode> {
     let local_db = ctx.db_handle();
     let desired_schema = args[0].text();
-    let (desired_schema, stripped_crr_statements) = strip_crr_statements(desired_schema)?;
+    let (stripped_schema, stripped_crr_statements) = strip_crr_statements(desired_schema)?;
 
     let result = sqlite::open(strlit!(":memory:"));
     if let Ok(mem_db) = result {
-        if let Err(_) = mem_db.exec_safe(&desired_schema) {
+        if let Err(_) = mem_db.exec_safe(&stripped_schema) {
             return Err(ResultCode::SCHEMA);
         }
         local_db.exec_safe("SAVEPOINT automigrate_tables;")?;
@@ -88,10 +88,7 @@ fn automigrate_impl(
         //
         // In this way we simplify this automigrate code.
         // The user's schema thus must then be idemptotent via `IF NOT EXISTS` statements.
-        if let Err(e) = apply_stripped_crr_statements(local_db, stripped_crr_statements) {
-            local_db.exec_safe("ROLLBACK TO automigrate_tables")?;
-            return Err(e);
-        }
+        local_db.exec_safe(desired_schema)?;
         local_db.exec_safe("RELEASE automigrate_tables")
     } else {
         return Err(ResultCode::CANTOPEN);
@@ -100,7 +97,6 @@ fn automigrate_impl(
 
 fn migrate_to(local_db: *mut sqlite3, mem_db: ManagedConnection) -> Result<ResultCode, ResultCode> {
     let mut mem_tables: BTreeSet<String> = BTreeSet::new();
-    let mut local_tables: BTreeSet<String> = BTreeSet::new();
 
     let sql = "SELECT name FROM sqlite_master WHERE type = 'table'
         AND name NOT LIKE 'sqlite_%'
@@ -114,12 +110,10 @@ fn migrate_to(local_db: *mut sqlite3, mem_db: ManagedConnection) -> Result<Resul
     }
 
     let mut removed_tables: Vec<String> = vec![];
-    let mut added_tables: Vec<String> = vec![];
     let mut maybe_modified_tables: Vec<String> = vec![];
 
     while fetch_local_tables.step()? == ResultCode::ROW {
         let table_name = fetch_local_tables.column_text(0)?;
-        local_tables.insert(table_name.to_string());
         if mem_tables.contains(table_name) {
             maybe_modified_tables.push(table_name.to_string());
         } else {
@@ -127,17 +121,11 @@ fn migrate_to(local_db: *mut sqlite3, mem_db: ManagedConnection) -> Result<Resul
         }
     }
 
-    for mem_table in mem_tables {
-        if !local_tables.contains(&mem_table) {
-            added_tables.push(mem_table);
-        }
-    }
-
     drop_tables(local_db, removed_tables)?;
-    create_tables(local_db, added_tables, &mem_db)?;
     for table in maybe_modified_tables {
         maybe_modify_table(local_db, &table, &mem_db)?;
     }
+    // no add tables. Schema file application will add tables.
     Ok(ResultCode::OK)
 }
 
@@ -168,16 +156,6 @@ fn strip_crr_statements(schema: &str) -> Result<(String, Vec<String>), ResultCod
     Ok((stripped, crr_stmts))
 }
 
-fn apply_stripped_crr_statements(
-    local_db: *mut sqlite3,
-    stmts: Vec<String>,
-) -> Result<ResultCode, ResultCode> {
-    for stmt in stmts {
-        local_db.exec_safe(&stmt)?;
-    }
-    Ok(ResultCode::OK)
-}
-
 fn drop_tables(local_db: *mut sqlite3, tables: Vec<String>) -> Result<ResultCode, ResultCode> {
     for table in tables {
         local_db.exec_safe(&format!(
@@ -186,25 +164,6 @@ fn drop_tables(local_db: *mut sqlite3, tables: Vec<String>) -> Result<ResultCode
         ))?;
     }
 
-    Ok(ResultCode::OK)
-}
-
-fn create_tables(
-    local_db: *mut sqlite3,
-    tables: Vec<String>,
-    mem_db: &ManagedConnection,
-) -> Result<ResultCode, ResultCode> {
-    let stmt =
-        mem_db.prepare_v2("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?")?;
-    for table in tables {
-        stmt.bind_text(1, &table, sqlite::Destructor::STATIC)?;
-        if stmt.step()? == ResultCode::ROW {
-            local_db.exec_safe(stmt.column_text(0)?)?;
-            stmt.reset()?;
-        } else {
-            return Err(ResultCode::ERROR);
-        }
-    }
     Ok(ResultCode::OK)
 }
 
@@ -367,7 +326,6 @@ fn maybe_update_indices(
     }
 
     let mut removed: Vec<String> = vec![];
-    let mut added: Vec<String> = vec![];
     let mut maybe_modified: Vec<String> = vec![];
 
     while local_fetch.step()? == ResultCode::ROW {
@@ -380,14 +338,8 @@ fn maybe_update_indices(
         }
     }
 
-    for mem_idx in mem_indices {
-        if !local_indices.contains(&mem_idx) {
-            added.push(mem_idx);
-        }
-    }
-
     drop_indices(local_db, &removed)?;
-    add_indices(local_db, table, &added, mem_db)?;
+    // no add, schema file application will add
 
     for idx in maybe_modified {
         maybe_recreate_index(local_db, table, &idx, mem_db)?;

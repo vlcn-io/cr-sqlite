@@ -13,6 +13,8 @@
 
 extern crate alloc;
 
+// nit: use vecs rather than btreesets. Likely never enough elements
+// for a btreeset to perform better.
 use alloc::collections::BTreeSet;
 use alloc::format;
 use alloc::string::String;
@@ -28,7 +30,7 @@ use sqlite::{args, sqlite3, ManagedConnection, Value};
 use sqlite::{strlit, Context};
 use sqlite::{Connection, ResultCode};
 
-static IS_UNIQUE_IDX_SQL: &str = "SELECT unique FROM pragma_index_list(?) WHERE name = ?";
+static IS_UNIQUE_IDX_SQL: &str = "SELECT \"unique\" FROM pragma_index_list(?) WHERE name = ?";
 static IDX_COLS_SQL: &str = "SELECT name FROM pragma_index_info(?) ORDER BY seqno ASC";
 
 /**
@@ -57,7 +59,7 @@ pub extern "C" fn crsql_automigrate(
         return;
     }
 
-    ctx.result_text_transient("Migration complete");
+    ctx.result_text_transient("migration complete");
 }
 
 fn automigrate_impl(
@@ -66,7 +68,7 @@ fn automigrate_impl(
 ) -> Result<ResultCode, ResultCode> {
     let local_db = ctx.db_handle();
     let desired_schema = args[0].text();
-    let (stripped_schema, stripped_crr_statements) = strip_crr_statements(desired_schema)?;
+    let stripped_schema = strip_crr_statements(desired_schema);
 
     let result = sqlite::open(strlit!(":memory:"));
     if let Ok(mem_db) = result {
@@ -88,7 +90,9 @@ fn automigrate_impl(
         //
         // In this way we simplify this automigrate code.
         // The user's schema thus must then be idemptotent via `IF NOT EXISTS` statements.
-        local_db.exec_safe(desired_schema)?;
+        if !desired_schema.is_empty() {
+            local_db.exec_safe(desired_schema)?;
+        }
         local_db.exec_safe("RELEASE automigrate_tables")
     } else {
         return Err(ResultCode::CANTOPEN);
@@ -101,7 +105,8 @@ fn migrate_to(local_db: *mut sqlite3, mem_db: ManagedConnection) -> Result<Resul
     let sql = "SELECT name FROM sqlite_master WHERE type = 'table'
         AND name NOT LIKE 'sqlite_%'
         AND name NOT LIKE 'crsql_%'
-        AND name NOT LIKE '__crsql_%'";
+        AND name NOT LIKE '__crsql_%'
+        AND name NOT LIKE '%__crsql_clock'";
     let fetch_mem_tables = mem_db.prepare_v2(sql)?;
     let fetch_local_tables = local_db.prepare_v2(sql)?;
 
@@ -142,18 +147,12 @@ fn migrate_to(local_db: *mut sqlite3, mem_db: ManagedConnection) -> Result<Resul
 * then it cannot open an in-memory db within itself that loads this same
 * extension.
 */
-fn strip_crr_statements(schema: &str) -> Result<(String, Vec<String>), ResultCode> {
-    let mut crr_stmts = vec![];
-    let stripped = schema
+fn strip_crr_statements(schema: &str) -> String {
+    schema
         .split("\n")
-        .filter(|line| {
-            let is_crr_stmt = line.to_lowercase().contains("crsql_as_crr");
-            crr_stmts.push(line.to_string());
-            !is_crr_stmt
-        })
+        .filter(|line| !line.to_lowercase().contains("crsql_as_crr"))
         .collect::<Vec<_>>()
-        .join("\n");
-    Ok((stripped, crr_stmts))
+        .join("\n")
 }
 
 fn drop_tables(local_db: *mut sqlite3, tables: Vec<String>) -> Result<ResultCode, ResultCode> {
@@ -245,17 +244,22 @@ fn add_columns(
     columns: Vec<String>,
     mem_db: &ManagedConnection,
 ) -> Result<ResultCode, ResultCode> {
-    let stmt = mem_db.prepare_v2(&format!(
-        "SELECT name, type, notnull, dflt_value, pk FROM pragma_table_info(?) WHERE name IN ({qs})",
+    if columns.is_empty() {
+        return Ok(ResultCode::OK);
+    }
+    let sql = format!(
+        "SELECT name, type, \"notnull\", dflt_value, pk FROM pragma_table_info(?) WHERE name IN ({qs})",
         qs = columns.iter().map(|_| "?").collect::<Vec<_>>().join(", "),
-    ))?;
+    );
+    let stmt = mem_db.prepare_v2(&sql)?;
     stmt.bind_text(1, table, sqlite::Destructor::STATIC)?;
     let mut b = 2;
-    for col in columns {
+    for col in &columns {
         stmt.bind_text(b, &col, sqlite::Destructor::STATIC)?;
         b += 1;
     }
 
+    let mut processed_cols = 0;
     while stmt.step()? == ResultCode::ROW {
         let is_pk = stmt.column_int(4)? == 1;
 
@@ -270,6 +274,10 @@ fn add_columns(
         let dflt_val = stmt.column_value(3)?;
 
         add_column(local_db, table, name, col_type, notnull, dflt_val)?;
+        processed_cols += 1;
+    }
+    if processed_cols != columns.len() {
+        return Err(ResultCode::ERROR_MISSING_COLLSEQ);
     }
 
     Ok(ResultCode::OK)
@@ -349,46 +357,13 @@ fn maybe_update_indices(
 }
 
 fn drop_indices(local_db: *mut sqlite3, dropped: &Vec<String>) -> Result<ResultCode, ResultCode> {
+    // drop if exists given column dropping could have destroyed the index
+    // already.
     for idx in dropped {
-        local_db.exec_safe(&format!("DROP INDEX \"{}\"", crate::escape_ident(&idx)))?;
-    }
-    Ok(ResultCode::OK)
-}
-
-fn add_indices(
-    local_db: *mut sqlite3,
-    table: &str,
-    added: &Vec<String>,
-    mem_db: &ManagedConnection,
-) -> Result<ResultCode, ResultCode> {
-    let fetch_is_unique = mem_db.prepare_v2(IS_UNIQUE_IDX_SQL)?;
-    let fetch_idx_info = mem_db.prepare_v2(IDX_COLS_SQL)?;
-    for idx in added {
-        fetch_is_unique.bind_text(1, table, sqlite::Destructor::STATIC)?;
-        fetch_is_unique.bind_text(2, &idx, sqlite::Destructor::STATIC)?;
-        let step_result = fetch_is_unique.step()?;
-        if step_result == ResultCode::DONE {
-            // the index exists but we could not find it the second time around??
-            return Err(ResultCode::CONSTRAINT);
+        let sql = format!("DROP INDEX IF EXISTS \"{}\"", crate::escape_ident(&idx));
+        if let Err(e) = local_db.exec_safe(&sql) {
+            return Err(e);
         }
-
-        fetch_idx_info.bind_text(1, &idx, sqlite::Destructor::STATIC)?;
-        let mut indexed_columns = vec![];
-        while fetch_idx_info.step()? == ResultCode::ROW {
-            indexed_columns.push(fetch_idx_info.column_text(0)?.to_string());
-        }
-
-        let is_unique = fetch_is_unique.column_int(0)? == 1;
-        local_db.exec_safe(&format!(
-            "CREATE {unique} INDEX {idx} ON {table} ({columns})",
-            unique = if is_unique { "UNIQUE" } else { "" },
-            idx = idx,
-            table = table,
-            columns = indexed_columns.join(", ")
-        ))?;
-
-        fetch_is_unique.reset()?;
-        fetch_idx_info.reset()?;
     }
     Ok(ResultCode::OK)
 }
@@ -407,7 +382,11 @@ fn maybe_recreate_index(
     mem_db: &ManagedConnection,
 ) -> Result<ResultCode, ResultCode> {
     let fetch_is_unique_mem = mem_db.prepare_v2(IS_UNIQUE_IDX_SQL)?;
+    fetch_is_unique_mem.bind_text(1, table, sqlite::Destructor::STATIC)?;
+    fetch_is_unique_mem.bind_text(2, idx, sqlite::Destructor::STATIC)?;
     let fetch_is_unique_local = local_db.prepare_v2(IS_UNIQUE_IDX_SQL)?;
+    fetch_is_unique_local.bind_text(1, table, sqlite::Destructor::STATIC)?;
+    fetch_is_unique_local.bind_text(2, idx, sqlite::Destructor::STATIC)?;
 
     if fetch_is_unique_mem.step()? != ResultCode::ROW
         || fetch_is_unique_local.step()? != ResultCode::ROW
@@ -416,6 +395,10 @@ fn maybe_recreate_index(
     }
 
     if fetch_is_unique_mem.column_int(0) != fetch_is_unique_local.column_int(0) {
+        // We cannot alter a table against which we have open statements
+        // drop to finalize those statements
+        drop(fetch_is_unique_mem);
+        drop(fetch_is_unique_local);
         return recreate_index(local_db, table, idx, mem_db);
     }
 
@@ -426,6 +409,10 @@ fn maybe_recreate_index(
     let local_result = fetch_idx_cols_local.step()?;
     while mem_result == ResultCode::ROW && local_result == ResultCode::ROW {
         if fetch_idx_cols_mem.column_text(0) != fetch_idx_cols_local.column_text(0) {
+            // We cannot alter a table against which we have open statements
+            // drop to finalize those statements
+            drop(fetch_idx_cols_local);
+            drop(fetch_idx_cols_mem);
             return recreate_index(local_db, table, idx, mem_db);
         }
         fetch_idx_cols_mem.step()?;
@@ -445,8 +432,9 @@ fn recreate_index(
     idx: &str,
     mem_db: &ManagedConnection,
 ) -> Result<ResultCode, ResultCode> {
-    let indices = &vec![idx.to_string()];
-    drop_indices(local_db, indices)?;
-    add_indices(local_db, table, indices, mem_db)?;
+    let indices = vec![idx.to_string()];
+    drop_indices(local_db, &indices)?;
+    // no need to call add_indices
+    // they'll be added later with schema reapplication
     Ok(ResultCode::OK)
 }

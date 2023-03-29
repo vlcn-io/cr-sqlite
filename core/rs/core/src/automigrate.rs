@@ -78,6 +78,16 @@ fn automigrate_impl(
             local_db.exec_safe("ROLLBACK TO automigrate_tables")?;
             return Err(ResultCode::MISMATCH);
         }
+        // wait wait. This need not be done.
+        // We will run the schema against the local_db post migration.
+        // To pull in:
+        // - crr application
+        // - new index creation
+        // - new table creation
+        // - anything extra the user did like trigger creation
+        //
+        // In this way we simplify this automigrate code.
+        // The user's schema thus must then be idemptotent via `IF NOT EXISTS` statements.
         if let Err(e) = apply_stripped_crr_statements(local_db, stripped_crr_statements) {
             local_db.exec_safe("ROLLBACK TO automigrate_tables")?;
             return Err(e);

@@ -28,6 +28,9 @@ use sqlite::{args, sqlite3, ManagedConnection, Value};
 use sqlite::{strlit, Context};
 use sqlite::{Connection, ResultCode};
 
+static IS_UNIQUE_IDX_SQL: &str = "SELECT unique FROM pragma_index_list(?) WHERE name = ?";
+static IDX_COLS_SQL: &str = "SELECT name FROM pragma_index_info(?) ORDER BY seqno ASC";
+
 /**
 * Automigrate args:
 * 1 - the schema content
@@ -373,8 +376,8 @@ fn maybe_update_indices(
         }
     }
 
-    drop_indices(local_db, removed)?;
-    add_indices(local_db, table, added, mem_db)?;
+    drop_indices(local_db, &removed)?;
+    add_indices(local_db, table, &added, mem_db)?;
 
     for idx in maybe_modified {
         maybe_recreate_index(local_db, table, &idx, mem_db)?;
@@ -383,7 +386,7 @@ fn maybe_update_indices(
     Ok(ResultCode::OK)
 }
 
-fn drop_indices(local_db: *mut sqlite3, dropped: Vec<String>) -> Result<ResultCode, ResultCode> {
+fn drop_indices(local_db: *mut sqlite3, dropped: &Vec<String>) -> Result<ResultCode, ResultCode> {
     for idx in dropped {
         local_db.exec_safe(&format!("DROP INDEX \"{}\"", crate::escape_ident(&idx)))?;
     }
@@ -393,13 +396,11 @@ fn drop_indices(local_db: *mut sqlite3, dropped: Vec<String>) -> Result<ResultCo
 fn add_indices(
     local_db: *mut sqlite3,
     table: &str,
-    added: Vec<String>,
+    added: &Vec<String>,
     mem_db: &ManagedConnection,
 ) -> Result<ResultCode, ResultCode> {
-    let fetch_is_unique =
-        mem_db.prepare_v2("SELECT unique FROM pragma_index_list(?) WHERE name = ?")?;
-    let fetch_idx_info =
-        mem_db.prepare_v2("SELECT name FROM pragma_index_info(?) ORDER BY seqno ASC")?;
+    let fetch_is_unique = mem_db.prepare_v2(IS_UNIQUE_IDX_SQL)?;
+    let fetch_idx_info = mem_db.prepare_v2(IDX_COLS_SQL)?;
     for idx in added {
         fetch_is_unique.bind_text(1, table, sqlite::Destructor::STATIC)?;
         fetch_is_unique.bind_text(2, &idx, sqlite::Destructor::STATIC)?;
@@ -430,16 +431,60 @@ fn add_indices(
     Ok(ResultCode::OK)
 }
 
+/**
+* SQLite does not support alter index statements.
+* What we are doing here is looking to see if indices with the same
+* name have different definitions.
+*
+* If so, drop the index and re-create it with the new definiton.
+*/
 fn maybe_recreate_index(
-    _local_db: *mut sqlite3,
-    _table: &str,
-    _idx: &str,
-    _mem_db: &ManagedConnection,
+    local_db: *mut sqlite3,
+    table: &str,
+    idx: &str,
+    mem_db: &ManagedConnection,
 ) -> Result<ResultCode, ResultCode> {
-    // SQLite does not support alter index statements
-    // Instead we determine if the index definition changed.
-    // If so, we drop the index and re-create it with the new definition.
-    // compare local_db def against mem_db def.
-    // if differ, recreate.
+    let fetch_is_unique_mem = mem_db.prepare_v2(IS_UNIQUE_IDX_SQL)?;
+    let fetch_is_unique_local = local_db.prepare_v2(IS_UNIQUE_IDX_SQL)?;
+
+    if fetch_is_unique_mem.step()? != ResultCode::ROW
+        || fetch_is_unique_local.step()? != ResultCode::ROW
+    {
+        return Err(ResultCode::CONSTRAINT);
+    }
+
+    if fetch_is_unique_mem.column_int(0) != fetch_is_unique_local.column_int(0) {
+        return recreate_index(local_db, table, idx, mem_db);
+    }
+
+    let fetch_idx_cols_mem = mem_db.prepare_v2(IDX_COLS_SQL)?;
+    let fetch_idx_cols_local = local_db.prepare_v2(IDX_COLS_SQL)?;
+
+    let mem_result = fetch_idx_cols_mem.step()?;
+    let local_result = fetch_idx_cols_local.step()?;
+    while mem_result == ResultCode::ROW && local_result == ResultCode::ROW {
+        if fetch_idx_cols_mem.column_text(0) != fetch_idx_cols_local.column_text(0) {
+            return recreate_index(local_db, table, idx, mem_db);
+        }
+        fetch_idx_cols_mem.step()?;
+        fetch_idx_cols_local.step()?;
+    }
+
+    if mem_result != local_result {
+        return recreate_index(local_db, table, idx, mem_db);
+    }
+
+    Ok(ResultCode::OK)
+}
+
+fn recreate_index(
+    local_db: *mut sqlite3,
+    table: &str,
+    idx: &str,
+    mem_db: &ManagedConnection,
+) -> Result<ResultCode, ResultCode> {
+    let indices = &vec![idx.to_string()];
+    drop_indices(local_db, indices)?;
+    add_indices(local_db, table, indices, mem_db)?;
     Ok(ResultCode::OK)
 }

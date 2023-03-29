@@ -22,18 +22,20 @@ use alloc::vec::Vec;
 use core::ffi::{c_char, c_int};
 use core::slice;
 use sqlite::ColumnType;
-// use sqlite::ResultCode;
 use sqlite_nostd as sqlite;
 
 use sqlite::{args, sqlite3, ManagedConnection, Value};
 use sqlite::{strlit, Context};
 use sqlite::{Connection, ResultCode};
-// use sqlite::Value;
 
 /**
 * Automigrate args:
 * 1 - the schema content
 * Users are responsible for tracking schema version and applying the migration or not.
+*
+* We may want to move automigrate to its own crate.
+* It is rather limited in completeness and may only be
+* useful to myself.
 */
 pub extern "C" fn crsql_automigrate(
     ctx: *mut sqlite::context,
@@ -60,17 +62,22 @@ fn automigrate_impl(
     args: &[*mut sqlite::value],
 ) -> Result<ResultCode, ResultCode> {
     let local_db = ctx.db_handle();
-    let desired_schemas = args[0].text();
+    let desired_schema = args[0].text();
+    let (desired_schema, stripped_crr_statements) = strip_crr_statements(desired_schema)?;
 
     let result = sqlite::open(strlit!(":memory:"));
     if let Ok(mem_db) = result {
-        if let Err(_) = mem_db.exec_safe(desired_schemas) {
+        if let Err(_) = mem_db.exec_safe(&desired_schema) {
             return Err(ResultCode::SCHEMA);
         }
         local_db.exec_safe("SAVEPOINT automigrate_tables;")?;
-        if let Err(e) = migrate_to(local_db, mem_db) {
+        if let Err(_) = migrate_to(local_db, mem_db) {
             local_db.exec_safe("ROLLBACK TO automigrate_tables")?;
             return Err(ResultCode::MISMATCH);
+        }
+        if let Err(e) = apply_stripped_crr_statements(local_db, stripped_crr_statements) {
+            local_db.exec_safe("ROLLBACK TO automigrate_tables")?;
+            return Err(e);
         }
         local_db.exec_safe("RELEASE automigrate_tables")
     } else {
@@ -134,8 +141,28 @@ fn migrate_to(local_db: *mut sqlite3, mem_db: ManagedConnection) -> Result<Resul
 * then it cannot open an in-memory db within itself that loads this same
 * extension.
 */
-fn strip_crr_statements() -> Result<Vec<String>, ResultCode> {
-    Ok(vec![])
+fn strip_crr_statements(schema: &str) -> Result<(String, Vec<String>), ResultCode> {
+    let mut crr_stmts = vec![];
+    let stripped = schema
+        .split("\n")
+        .filter(|line| {
+            let is_crr_stmt = line.to_lowercase().contains("crsql_as_crr");
+            crr_stmts.push(line.to_string());
+            !is_crr_stmt
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    Ok((stripped, crr_stmts))
+}
+
+fn apply_stripped_crr_statements(
+    local_db: *mut sqlite3,
+    stmts: Vec<String>,
+) -> Result<ResultCode, ResultCode> {
+    for stmt in stmts {
+        local_db.exec_safe(&stmt)?;
+    }
+    Ok(ResultCode::OK)
 }
 
 fn drop_tables(local_db: *mut sqlite3, tables: Vec<String>) -> Result<ResultCode, ResultCode> {
@@ -180,8 +207,8 @@ fn maybe_modify_table(
     let sql = "SELECT name FROM pragma_table_info(?)";
     let local_stmt = local_db.prepare_v2(sql)?;
     let mem_stmt = mem_db.prepare_v2(sql)?;
-    local_stmt.bind_text(1, table, sqlite::Destructor::STATIC);
-    mem_stmt.bind_text(1, table, sqlite::Destructor::STATIC);
+    local_stmt.bind_text(1, table, sqlite::Destructor::STATIC)?;
+    mem_stmt.bind_text(1, table, sqlite::Destructor::STATIC)?;
 
     while mem_stmt.step()? == ResultCode::ROW {
         mem_columns.insert(mem_stmt.column_text(0)?.to_string());
@@ -248,7 +275,7 @@ fn add_columns(
 ) -> Result<ResultCode, ResultCode> {
     let stmt = mem_db.prepare_v2(&format!(
         "SELECT name, type, notnull, dflt_value, pk FROM pragma_table_info(?) WHERE name IN ({qs})",
-        qs = columns.iter().map(|x| "?").collect::<Vec<_>>().join(", "),
+        qs = columns.iter().map(|_| "?").collect::<Vec<_>>().join(", "),
     ))?;
     stmt.bind_text(1, table, sqlite::Destructor::STATIC)?;
     let mut b = 2;
@@ -308,11 +335,16 @@ fn maybe_update_indices(
     table: &str,
     mem_db: &ManagedConnection,
 ) -> Result<ResultCode, ResultCode> {
-    let sql = "SELECT name FROM pragma_index_list(?);";
+    // We do not pull PK indices because we do not support alterations that changes
+    // primary key definitions.
+    // User would need to perform a manual migration for that.
+    // This is due to the fact that SQLite itself does not support changing primary key
+    // definitions in alter table statements.
+    let sql = "SELECT name FROM pragma_index_list(?) WHERE origin != 'pk';";
     let local_fetch = local_db.prepare_v2(sql)?;
     let mem_fetch = mem_db.prepare_v2(sql)?;
-    local_fetch.bind_text(1, table, sqlite::Destructor::STATIC);
-    mem_fetch.bind_text(1, table, sqlite::Destructor::STATIC);
+    local_fetch.bind_text(1, table, sqlite::Destructor::STATIC)?;
+    mem_fetch.bind_text(1, table, sqlite::Destructor::STATIC)?;
 
     let mut local_indices = BTreeSet::new();
     let mut mem_indices = BTreeSet::new();
@@ -341,25 +373,21 @@ fn maybe_update_indices(
         }
     }
 
-    drop_indices(local_db, table, dropped)?;
+    drop_indices(local_db, removed)?;
     add_indices(local_db, table, added, mem_db)?;
 
     for idx in maybe_modified {
         maybe_recreate_index(local_db, table, &idx, mem_db)?;
     }
 
-    // added indices
-    // removed indices
-    // modified indicies? Same name but different structure...
     Ok(ResultCode::OK)
 }
 
-fn drop_indices(
-    local_db: *mut sqlite3,
-    table: &str,
-    dropped: Vec<String>,
-) -> Result<ResultCode, ResultCode> {
-    Ok(())
+fn drop_indices(local_db: *mut sqlite3, dropped: Vec<String>) -> Result<ResultCode, ResultCode> {
+    for idx in dropped {
+        local_db.exec_safe(&format!("DROP INDEX \"{}\"", crate::escape_ident(&idx)))?;
+    }
+    Ok(ResultCode::OK)
 }
 
 fn add_indices(
@@ -368,14 +396,50 @@ fn add_indices(
     added: Vec<String>,
     mem_db: &ManagedConnection,
 ) -> Result<ResultCode, ResultCode> {
-    Ok(())
+    let fetch_is_unique =
+        mem_db.prepare_v2("SELECT unique FROM pragma_index_list(?) WHERE name = ?")?;
+    let fetch_idx_info =
+        mem_db.prepare_v2("SELECT name FROM pragma_index_info(?) ORDER BY seqno ASC")?;
+    for idx in added {
+        fetch_is_unique.bind_text(1, table, sqlite::Destructor::STATIC)?;
+        fetch_is_unique.bind_text(2, &idx, sqlite::Destructor::STATIC)?;
+        let step_result = fetch_is_unique.step()?;
+        if step_result == ResultCode::DONE {
+            // the index exists but we could not find it the second time around??
+            return Err(ResultCode::CONSTRAINT);
+        }
+
+        fetch_idx_info.bind_text(1, &idx, sqlite::Destructor::STATIC)?;
+        let mut indexed_columns = vec![];
+        while fetch_idx_info.step()? == ResultCode::ROW {
+            indexed_columns.push(fetch_idx_info.column_text(0)?.to_string());
+        }
+
+        let is_unique = fetch_is_unique.column_int(0)? == 1;
+        local_db.exec_safe(&format!(
+            "CREATE {unique} INDEX {idx} ON {table} ({columns})",
+            unique = if is_unique { "UNIQUE" } else { "" },
+            idx = idx,
+            table = table,
+            columns = indexed_columns.join(", ")
+        ))?;
+
+        fetch_is_unique.reset()?;
+        fetch_idx_info.reset()?;
+    }
+    Ok(ResultCode::OK)
 }
 
 fn maybe_recreate_index(
-    local_db: *mut sqlite3,
-    table: &str,
-    idx: &str,
-    mem_db: &ManagedConnection,
+    _local_db: *mut sqlite3,
+    _table: &str,
+    _idx: &str,
+    _mem_db: &ManagedConnection,
 ) -> Result<ResultCode, ResultCode> {
-    Ok(())
+    // SQLite does not support alter index statements
+    // Instead we determine if the index definition changed.
+    // If so, we drop the index and re-create it with the new definition.
+    // compare local_db def against mem_db def.
+    // if differ, recreate.
+    Ok(ResultCode::OK)
 }

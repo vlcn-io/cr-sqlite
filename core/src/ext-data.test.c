@@ -1,28 +1,16 @@
-/**
- * Copyright 2022 One Law LLC. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *     http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-#include "crsqlite.h"
 #include "ext-data.h"
-#include "consts.h"
+
 #include <assert.h>
-#include <string.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "consts.h"
+#include "crsqlite.h"
 
 int crsql_close(sqlite3 *db);
 
-static void textNewExtData()
-{
+static void textNewExtData() {
   printf("NewExtData\n");
   sqlite3 *db;
   int rc = SQLITE_OK;
@@ -58,8 +46,7 @@ static void textNewExtData()
 
 // valgrind will let us know if we failed to free something
 // mainly testing that we can finalize + free without error
-static void testFreeExtData()
-{
+static void testFreeExtData() {
   printf("FreeExtData\n");
   sqlite3 *db;
   int rc;
@@ -73,8 +60,7 @@ static void testFreeExtData()
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
-static void testFinalize()
-{
+static void testFinalize() {
   printf("FinalizeExtData\n");
   sqlite3 *db;
   int rc;
@@ -93,8 +79,7 @@ static void testFinalize()
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
-static void testFetchPragmaSchemaVersion()
-{
+static void testFetchPragmaSchemaVersion() {
   printf("FetchPragmaSchemaVersion\n");
   sqlite3 *db;
   int rc;
@@ -153,8 +138,7 @@ static void testFetchPragmaSchemaVersion()
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
-static void testFetchPragmaDataVersion()
-{
+static void testFetchPragmaDataVersion() {
   printf("FetchPragmaDataVersion\n");
   remove("testFetchPragmaDataVersion.db");
   sqlite3 *db1;
@@ -215,8 +199,7 @@ static void testFetchPragmaDataVersion()
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
-static void testRecreateDbVersionStmt()
-{
+static void testRecreateDbVersionStmt() {
   printf("RecreateDbVersionStmt\n");
   sqlite3 *db;
   int rc;
@@ -248,8 +231,7 @@ static void testRecreateDbVersionStmt()
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
-static void fetchDbVersionFromStorage()
-{
+static void fetchDbVersionFromStorage() {
   printf("FetchDBVersionFromStorage\n");
   sqlite3 *db;
   int rc;
@@ -262,7 +244,8 @@ static void fetchDbVersionFromStorage()
   assert(pExtData->dbVersion == 0);
   assert(rc == SQLITE_OK);
 
-  // this was a bug where calling twice on a fresh db would fail the second time.
+  // this was a bug where calling twice on a fresh db would fail the second
+  // time.
   rc = crsql_fetchDbVersionFromStorage(db, pExtData, &errmsg);
   // should still return same data on a subsequent call with no schema changes
   assert(pExtData->dbVersion == 0);
@@ -300,8 +283,7 @@ static void fetchDbVersionFromStorage()
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
-void crsqlExtDataTestSuite()
-{
+void crsqlExtDataTestSuite() {
   printf("\e[47m\e[1;30mSuite: crsql_ExtData\e[0m\n");
   textNewExtData();
   testFreeExtData();

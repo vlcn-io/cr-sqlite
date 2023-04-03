@@ -27,6 +27,7 @@ export class TblRx {
   #arbitraryListeners = new Set<(updates: UpdateType[]) => void>();
   __internalRawListener: (updates: [UpdateType, string, bigint][]) => void =
     () => {};
+  #disposeHook: () => void;
 
   // If a listener is subscribed to many events we'll collapse them into one
   // TODO: test that `onUpdate` is not spread across ticks of the event loop.
@@ -40,13 +41,15 @@ export class TblRx {
       this.__internalNotifyListeners(msg.data);
     };
 
-    this.db.onUpdate((updateType, dbName, tblName, rowid) => {
-      // Ignoring updates to internal tables.
-      if (tblName.indexOf("__crsql") !== -1) {
-        return;
+    this.#disposeHook = this.db.onUpdate(
+      (updateType, dbName, tblName, rowid) => {
+        // Ignoring updates to internal tables.
+        if (tblName.indexOf("__crsql") !== -1) {
+          return;
+        }
+        this.#preNotify(updateType, tblName, rowid);
       }
-      this.#preNotify(updateType, tblName, rowid);
-    });
+    );
   }
 
   /**
@@ -180,11 +183,7 @@ export class TblRx {
     this.#pointListeners.clear();
     this.#arbitraryListeners.clear();
     this.#bc.close();
-
-    // This isn't the most convenient thing that it closes the db
-    // but.. we can't deregister our update callback at the moment.
-    // `close` on the db should be made idempotent
-    this.db.close();
+    this.#disposeHook();
   }
 }
 

@@ -1,5 +1,12 @@
 # @vlcn.io/sync-client
 
+## 0.8.2-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/rx-tbl@0.8.2-next.0
+
 ## 0.8.1
 
 ### Patch Changes

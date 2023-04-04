@@ -1,7 +1,7 @@
 {
   "name": "@vlcn.io/nodeno-tests",
   "type": "module",
-  "version": "0.7.1",
+  "version": "0.7.2-next.0",
   "files": [
     "dist"
   ],

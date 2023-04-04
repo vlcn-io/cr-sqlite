@@ -1,5 +1,11 @@
 # @vlcn.io/browser-tests
 
+## 0.7.2-next.0
+
+### Patch Changes
+
+- @vlcn.io/xplat-tests@0.7.2-next.0
+
 ## 0.7.1
 
 ### Patch Changes

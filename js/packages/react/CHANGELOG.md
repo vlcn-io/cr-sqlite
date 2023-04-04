@@ -1,5 +1,12 @@
 # @vlcn.io/react
 
+## 0.9.2-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/rx-tbl@0.8.2-next.0
+
 ## 0.9.1
 
 ### Patch Changes

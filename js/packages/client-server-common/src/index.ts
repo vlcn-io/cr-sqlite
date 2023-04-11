@@ -127,13 +127,13 @@ export function encodeMsg(msg: Msg): Uint8Array {
   switch (msg._tag) {
     case "ack":
       encoding.writeBigInt64(encoder, msg.seqEnd[0]);
-      encoding.writeVarInt(encoder, msg.seqEnd[1]);
+      encoding.writeVarUint(encoder, msg.seqEnd[1]);
       return encoding.toUint8Array(encoder);
     case "establish":
       encoding.writeUint8Array(encoder, msg.from);
       encoding.writeUint8Array(encoder, msg.to);
       encoding.writeBigInt64(encoder, msg.seqStart[0]);
-      encoding.writeVarInt(encoder, msg.seqStart[1]);
+      encoding.writeVarUint(encoder, msg.seqStart[1]);
       if (msg.create) {
         encoding.writeVarString(encoder, msg.create.schemaName);
       }
@@ -141,9 +141,9 @@ export function encodeMsg(msg: Msg): Uint8Array {
     case "receive":
       encoding.writeUint8Array(encoder, msg.from);
       encoding.writeBigInt64(encoder, msg.seqStart[0]);
-      encoding.writeVarInt(encoder, msg.seqStart[1]);
+      encoding.writeVarUint(encoder, msg.seqStart[1]);
       encoding.writeBigInt64(encoder, msg.seqEnd[0]);
-      encoding.writeVarInt(encoder, msg.seqEnd[1]);
+      encoding.writeVarUint(encoder, msg.seqEnd[1]);
       encoding.writeVarUint(encoder, msg.changes.length);
       for (const change of msg.changes) {
         encoding.writeVarString(encoder, change[0]);
@@ -161,7 +161,7 @@ export function encodeMsg(msg: Msg): Uint8Array {
       return encoding.toUint8Array(encoder);
     case "request":
       encoding.writeBigInt64(encoder, msg.seqStart[0]);
-      encoding.writeVarInt(encoder, msg.seqStart[1]);
+      encoding.writeVarUint(encoder, msg.seqStart[1]);
       return encoding.toUint8Array(encoder);
   }
 
@@ -175,7 +175,7 @@ export function decodeMsg(msg: Uint8Array): Msg {
     case 0:
       return {
         _tag: "ack",
-        seqEnd: [decoding.readBigInt64(decoder), decoding.readVarInt(decoder)],
+        seqEnd: [decoding.readBigInt64(decoder), decoding.readVarUint(decoder)],
       };
     case 1:
       return {
@@ -184,7 +184,7 @@ export function decodeMsg(msg: Uint8Array): Msg {
         to: decoding.readUint8Array(decoder, 16),
         seqStart: [
           decoding.readBigInt64(decoder),
-          decoding.readVarInt(decoder),
+          decoding.readVarUint(decoder),
         ],
         create: decoding.hasContent(decoder)
           ? { schemaName: decoding.readVarString(decoder) }
@@ -196,9 +196,9 @@ export function decodeMsg(msg: Uint8Array): Msg {
         from: decoding.readUint8Array(decoder, 16),
         seqStart: [
           decoding.readBigInt64(decoder),
-          decoding.readVarInt(decoder),
+          decoding.readVarUint(decoder),
         ],
-        seqEnd: [decoding.readBigInt64(decoder), decoding.readVarInt(decoder)],
+        seqEnd: [decoding.readBigInt64(decoder), decoding.readVarUint(decoder)],
         changes: Array.from({ length: decoding.readVarUint(decoder) }, () => [
           decoding.readVarString(decoder),
           decoding.readVarString(decoder),
@@ -219,7 +219,7 @@ export function decodeMsg(msg: Uint8Array): Msg {
         _tag: "request",
         seqStart: [
           decoding.readBigInt64(decoder),
-          decoding.readVarInt(decoder),
+          decoding.readVarUint(decoder),
         ],
       };
   }

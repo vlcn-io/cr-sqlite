@@ -7,5 +7,5 @@ cd deps/emsdk
 source ./emsdk_env.sh
 cd ../wa-sqlite
 make
-cp dist/wa-sqlite-async.wasm ../../packages/crsqlite-wasm/dist/crsqlite.wasm
-cp dist/wa-sqlite-async.mjs ../../packages/crsqlite-wasm/src/crsqlite.mjs
+cp dist/crsqlite.wasm ../../packages/crsqlite-wasm/dist/crsqlite.wasm
+cp dist/crsqlite.mjs ../../packages/crsqlite-wasm/src/crsqlite.mjs

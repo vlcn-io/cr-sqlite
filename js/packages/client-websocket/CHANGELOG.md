@@ -1,5 +1,13 @@
 # @vlcn.io/sync-client
 
+## 0.8.2-next.1
+
+### Patch Changes
+
+- nextjs fix and better reconnect on refocus for mobile
+- Updated dependencies
+  - @vlcn.io/crsqlite-wasm@0.9.2-next.0
+
 ## 0.8.2-next.0
 
 ### Patch Changes

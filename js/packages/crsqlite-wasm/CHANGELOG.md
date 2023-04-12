@@ -1,5 +1,13 @@
 # @vlcn.io/wa-crsqlite
 
+## 0.9.2-next.0
+
+### Patch Changes
+
+- nextjs fix and better reconnect on refocus for mobile
+- Updated dependencies
+  - @vlcn.io/wa-sqlite@0.15.2-next.0
+
 ## 0.9.1
 
 ### Patch Changes

@@ -1,5 +1,7 @@
 #! /bin/bash
 
+# cargo clean in core/rs/bundle
+
 mkdir -p packages/crsqlite-wasm/dist
 cd deps/emsdk
 ./emsdk install latest

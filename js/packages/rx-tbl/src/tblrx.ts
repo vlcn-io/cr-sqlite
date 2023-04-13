@@ -23,7 +23,7 @@ export class TblRx {
     string,
     Map<bigint, ((updates: UpdateType[]) => void)[]>
   >();
-  #rangeListeners = new Map<string, ((updates: UpdateType[]) => void)[]>();
+  #rangeListeners = new Map<string, Set<(updates: UpdateType[]) => void>>();
   #arbitraryListeners = new Set<(updates: UpdateType[]) => void>();
   __internalRawListener: (updates: [UpdateType, string, bigint][]) => void =
     () => {};
@@ -124,19 +124,16 @@ export class TblRx {
     for (const tbl of tables) {
       let cbList = this.#rangeListeners.get(tbl);
       if (cbList == null) {
-        cbList = [];
+        cbList = new Set();
         this.#rangeListeners.set(tbl, cbList);
       }
-      cbList.push(cb);
+      cbList.add(cb);
     }
     return () => {
       for (const tbl of tables) {
         const cbList = this.#rangeListeners.get(tbl);
         if (cbList != null) {
-          const idx = cbList.indexOf(cb);
-          if (idx !== -1) {
-            cbList.splice(idx, 1);
-          }
+          cbList.delete(cb);
         }
       }
     };

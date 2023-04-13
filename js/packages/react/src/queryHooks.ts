@@ -69,7 +69,13 @@ export function useQuery<R, M = R[]>(
   _rowid_?: RowID<R>
 ): QueryData<M> {
   const stateMachine = useRef<AsyncResultStateMachine<R, M> | null>(null);
-  if (stateMachine.current == null) {
+  const lastCtx = useRef<CtxAsync | null>(ctx);
+  // A bunch of hoops to jump through to appease react strict mode
+  if (stateMachine.current == null || lastCtx.current !== ctx) {
+    lastCtx.current = ctx;
+    if (stateMachine.current != null) {
+      stateMachine.current.dispose();
+    }
     stateMachine.current = new AsyncResultStateMachine(
       ctx,
       query,
@@ -80,12 +86,12 @@ export function useQuery<R, M = R[]>(
     );
   }
 
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    return () => {
       stateMachine.current?.dispose();
-    },
-    []
-  );
+      stateMachine.current = null;
+    };
+  }, []);
   useEffect(
     () => {
       stateMachine.current?.respondToBindingsChange(bindings || EMPTY_ARRAY);
@@ -212,6 +218,7 @@ class AsyncResultStateMachine<T, M = readonly T[]> {
   // So we can subscribe to adds vs deletes vs updates vs all
   private respondToDatabaseChange = (updates: UpdateType[]) => {
     if (this.disposed) {
+      this.disposeDbSubscription();
       return;
     }
 
@@ -461,10 +468,10 @@ class AsyncResultStateMachine<T, M = readonly T[]> {
   }
 
   dispose() {
-    this.disposed = true;
     this.stmt?.finalize(null);
     this.stmt = null;
     this.disposeDbSubscription();
+    this.disposed = true;
   }
 }
 

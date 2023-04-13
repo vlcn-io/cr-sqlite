@@ -1,5 +1,11 @@
 # @vlcn.io/rx-tbl
 
+## 0.8.2-next.1
+
+### Patch Changes
+
+- comply with react strict mode
+
 ## 0.8.2-next.0
 
 ### Patch Changes

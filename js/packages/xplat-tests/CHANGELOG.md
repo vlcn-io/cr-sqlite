@@ -1,5 +1,12 @@
 # @vlcn.io/xplat-tests
 
+## 0.7.2-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/rx-tbl@0.8.2-next.1
+
 ## 0.7.2-next.0
 
 ### Patch Changes

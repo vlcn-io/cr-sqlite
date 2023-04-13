@@ -1,5 +1,11 @@
 # @vlcn.io/wa-crsqlite
 
+## 0.9.2-next.1
+
+### Patch Changes
+
+- js include for webpack
+
 ## 0.9.2-next.0
 
 ### Patch Changes

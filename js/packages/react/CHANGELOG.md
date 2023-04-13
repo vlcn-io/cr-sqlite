@@ -1,5 +1,14 @@
 # @vlcn.io/react
 
+## 0.9.2
+
+### Patch Changes
+
+- 68ac663: comply with react strict mode
+- Updated dependencies [c1ae5e3]
+- Updated dependencies [68ac663]
+  - @vlcn.io/rx-tbl@0.8.2
+
 ## 0.9.2-next.1
 
 ### Patch Changes

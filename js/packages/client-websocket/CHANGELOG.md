@@ -1,5 +1,17 @@
 # @vlcn.io/sync-client
 
+## 0.8.2
+
+### Patch Changes
+
+- 2bbf074: nextjs fix and better reconnect on refocus for mobile
+- Updated dependencies [2bbf074]
+- Updated dependencies [c1ae5e3]
+- Updated dependencies [68ac663]
+- Updated dependencies [b1b77cf]
+  - @vlcn.io/crsqlite-wasm@0.9.2
+  - @vlcn.io/rx-tbl@0.8.2
+
 ## 0.8.2-next.3
 
 ### Patch Changes

@@ -1,5 +1,14 @@
 # @vlcn.io/browser-tests
 
+## 0.7.2
+
+### Patch Changes
+
+- Updated dependencies [2bbf074]
+- Updated dependencies [b1b77cf]
+  - @vlcn.io/crsqlite-wasm@0.9.2
+  - @vlcn.io/xplat-tests@0.7.2
+
 ## 0.7.2-next.3
 
 ### Patch Changes

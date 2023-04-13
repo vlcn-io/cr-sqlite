@@ -1,5 +1,14 @@
 # @vlcn.io/wa-crsqlite
 
+## 0.9.2
+
+### Patch Changes
+
+- 2bbf074: nextjs fix and better reconnect on refocus for mobile
+- b1b77cf: js include for webpack
+- Updated dependencies [2bbf074]
+  - @vlcn.io/wa-sqlite@0.15.2
+
 ## 0.9.2-next.1
 
 ### Patch Changes

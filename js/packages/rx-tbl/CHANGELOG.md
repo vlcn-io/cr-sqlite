@@ -1,5 +1,12 @@
 # @vlcn.io/rx-tbl
 
+## 0.8.2
+
+### Patch Changes
+
+- c1ae5e3: do not dispose of the db
+- 68ac663: comply with react strict mode
+
 ## 0.8.2-next.1
 
 ### Patch Changes

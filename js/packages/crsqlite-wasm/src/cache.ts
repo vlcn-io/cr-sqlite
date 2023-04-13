@@ -1,4 +1,4 @@
-import log from "./log";
+import log from "./log.js";
 
 const re = /insert\s|update\s|delete\s/;
 const txRe = /begin\s|commit\s|rollback\s|savepoint\s/;

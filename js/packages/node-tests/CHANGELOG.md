@@ -1,5 +1,14 @@
 # @vlcn.io/nodeno-tests
 
+## 0.7.2
+
+### Patch Changes
+
+- Updated dependencies [c1ae5e3]
+- Updated dependencies [68ac663]
+  - @vlcn.io/rx-tbl@0.8.2
+  - @vlcn.io/xplat-tests@0.7.2
+
 ## 0.7.2-next.1
 
 ### Patch Changes

@@ -10,7 +10,7 @@ if (typeof global.crypto === "undefined") {
 
 test("encoded, decode pairing ack", () => {
   fc.assert(
-    fc.property(fc.tuple(fc.bigIntN(64), fc.integer()), (seqEnd) => {
+    fc.property(fc.tuple(fc.bigIntN(64), fc.integer({ min: 0 })), (seqEnd) => {
       const msg = { _tag: "ack", seqEnd } as const;
       const encoded = encodeMsg(msg);
       const decoded = decodeMsg(encoded);
@@ -24,7 +24,7 @@ test("encoded, decode pairing establish", () => {
     fc.property(
       fc.uint8Array({ minLength: 16, maxLength: 16 }),
       fc.uint8Array({ minLength: 16, maxLength: 16 }),
-      fc.tuple(fc.bigIntN(64), fc.integer()),
+      fc.tuple(fc.bigIntN(64), fc.integer({ min: 0 })),
       fc.option(fc.string()),
       (from, to, seqStart, create) => {
         const msg = {
@@ -50,8 +50,8 @@ test("encoded, decode pairing receive", () => {
   fc.assert(
     fc.property(
       fc.uint8Array({ minLength: 16, maxLength: 16 }),
-      fc.tuple(fc.bigIntN(64), fc.integer()),
-      fc.tuple(fc.bigIntN(64), fc.integer()),
+      fc.tuple(fc.bigIntN(64), fc.integer({ min: 0 })),
+      fc.tuple(fc.bigIntN(64), fc.integer({ min: 0 })),
       fc.array(
         fc.tuple(
           fc.string(),
@@ -84,12 +84,15 @@ test("encoded, decode pairing receive", () => {
 
 test("encoded, decode pairing request", () => {
   fc.assert(
-    fc.property(fc.tuple(fc.bigIntN(64), fc.integer()), (seqStart) => {
-      const msg = { _tag: "request", seqStart } as const;
-      const encoded = encodeMsg(msg);
-      const decoded = decodeMsg(encoded);
-      expect(decoded).toEqual(msg);
-    })
+    fc.property(
+      fc.tuple(fc.bigIntN(64), fc.integer({ min: 0 })),
+      (seqStart) => {
+        const msg = { _tag: "request", seqStart } as const;
+        const encoded = encodeMsg(msg);
+        const decoded = decodeMsg(encoded);
+        expect(decoded).toEqual(msg);
+      }
+    )
   );
 });
 

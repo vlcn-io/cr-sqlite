@@ -372,11 +372,15 @@ mod tests {
             None,
             Ok(Some(String::from("zzzzzzzzzzzzzzzzzzzzzzzzzzzV"))),
         );
-        test(Some("a00"), None, Err("Integer part should not end with 0"));
+        test(
+            Some("a00"),
+            None,
+            Err("Fractional part should not end with 0"),
+        );
         test(
             Some("a00"),
             Some("a1"),
-            Err("Integer part should not end with 0"),
+            Err("Fractional part should not end with 0"),
         );
         test(Some("0"), Some("1"), Err("head is out of range"));
         test(

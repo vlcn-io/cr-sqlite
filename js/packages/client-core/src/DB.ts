@@ -20,7 +20,7 @@ export class DB {
   constructor(
     public readonly db: DBAsync,
     public readonly siteId: Uint8Array,
-    private readonly rx: {onAny: (cb: () => void) => () => void;},
+    private readonly rx: { onAny: (cb: () => void) => () => void },
     private readonly pullChangesetStmt: Stmt | StmtAsync,
     private readonly applyChangesetStmt: Stmt | StmtAsync,
     private readonly updatePeerTrackerStmt: Stmt | StmtAsync
@@ -133,7 +133,10 @@ export class DB {
   }
 }
 
-export default async function wrap(db: DBAsync, rx: {onAny: (cb: () => void) => () => void;}): Promise<DB> {
+export default async function wrap(
+  db: DBAsync,
+  rx: { onAny: (cb: () => void) => () => void }
+): Promise<DB> {
   const [pullChangesetStmt, applyChangesetStmt, updatePeerTrackerStmt] =
     await Promise.all([
       db.prepare(

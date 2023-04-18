@@ -1,0 +1,16 @@
+{
+  "name": "sandbox-node",
+  "private": true,
+  "type": "module",
+  "version": "0.0.1",
+  "scripts": {
+    "deep-clean": "rm -rf ./dist || true && rm tsconfig.tsbuildinfo || true"
+  },
+  "dependencies": {
+    "better-sqlite3": "^8.0.1"
+  },
+  "devDependencies": {
+    "@vlcn.io/crsqlite": "workspace:*",
+    "vite": "^3.2.2"
+  }
+}

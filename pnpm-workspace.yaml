@@ -17,5 +17,7 @@ packages:
   - "js/packages/server-websocket"
   - "js/packages/xplat-api"
   - "js/packages/xplat-tests"
+  - "js/packages/sandbox"
+  - "js/packages/sandbox-node"
   - "js/tsbuild-all"
   - "js/deps/wa-sqlite"

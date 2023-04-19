@@ -23,6 +23,10 @@ $(tsbuildinfo): $(wasm-file) FORCE
 test: $(tsbuildinfo) $(wasm-file) FORCE
 	./test.sh
 
+clean:
+	./deep-clean.sh
+	cd deps/wa-sqlite && make clean
+
 FORCE:
 
-.PHONY: all test
+.PHONY: all test clean

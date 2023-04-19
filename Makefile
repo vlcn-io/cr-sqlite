@@ -19,4 +19,8 @@ crsqlite: $(git-deps)
 js: crsqlite $(node-deps)
 	cd js && make all
 
-.PHONY: crsqlite js all
+clean:
+	cd core && make clean
+	cd js && make clean
+
+.PHONY: crsqlite js all clean

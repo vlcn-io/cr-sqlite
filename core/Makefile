@@ -68,6 +68,7 @@ $(dbg_prefix):
 clean:
 	rm -rf $(prefix)
 	rm -rf $(dbg_prefix)
+	cd rs/bundle && cargo clean
 
 
 FORMAT_FILES=$(ext_files) $(ext_headers) ./src/core_init.c

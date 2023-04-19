@@ -83,8 +83,11 @@ class DB {
     since: readonly [Version, number]
   ): Changeset[] {
     // pull changes since the client last saw changes, excluding what the client itself sent us
-    const changes = this.#pullChangesetStmt.all(BigInt(since[0]), requestor);
-    changes.forEach((c: any[]) => {
+    const changes = this.#pullChangesetStmt.all(
+      BigInt(since[0]),
+      requestor
+    ) as any[];
+    changes.forEach((c) => {
       c[4] = BigInt(c[4]);
       c[5] = BigInt(c[5]);
     });

@@ -8,10 +8,10 @@
     "deep-clean": "rm -rf ./dist || true && rm tsconfig.tsbuildinfo || true"
   },
   "dependencies": {
-    "better-sqlite3": "^8.0.1"
+    "better-sqlite3": "^8.3.0"
   },
   "devDependencies": {
     "@vlcn.io/crsqlite": "workspace:*",
-    "vite": "^3.2.2"
+    "vite": "^4.2.2"
   }
 }

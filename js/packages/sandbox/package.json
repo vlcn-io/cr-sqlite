@@ -12,9 +12,8 @@
     "test": "echo 'No tests yet'",
     "deep-clean": "rm -rf ./dist || true && rm tsconfig.tsbuildinfo || true"
   },
-  "dependencies": {},
   "devDependencies": {
     "@vlcn.io/crsqlite-wasm": "workspace:*",
-    "vite": "^3.2.2"
+    "vite": "^4.2.2"
   }
 }

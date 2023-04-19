@@ -4,7 +4,7 @@
   "main": "lib/index.js",
   "type": "module",
   "devDependencies": {
-    "typescript": "^4.8.2"
+    "typescript": "^5.0.4"
   },
   "scripts": {
     "clean": "tsc --build --clean",

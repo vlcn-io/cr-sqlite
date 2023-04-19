@@ -1,5 +1,14 @@
 # @vlcn.io/crsqlite-allinone
 
+## 0.8.2-next.0
+
+### Patch Changes
+
+- fix xcommit deadlock, bump versions on dependencies
+- Updated dependencies
+  - @vlcn.io/crsqlite@0.9.2-next.0
+  - @vlcn.io/xplat-api@0.8.2-next.0
+
 ## 0.8.1
 
 ### Patch Changes

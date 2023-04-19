@@ -1,5 +1,11 @@
 # @vlcn.io/tsbuild-all
 
+## 0.7.2-next.0
+
+### Patch Changes
+
+- fix xcommit deadlock, bump versions on dependencies
+
 ## 0.7.1
 
 ### Patch Changes

@@ -4,6 +4,7 @@
   "type": "module",
   "version": "0.0.1",
   "scripts": {
+    "test": "echo 'No tests yet'",
     "deep-clean": "rm -rf ./dist || true && rm tsconfig.tsbuildinfo || true"
   },
   "dependencies": {

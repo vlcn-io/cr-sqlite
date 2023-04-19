@@ -13,8 +13,8 @@
     "./worker.js": "./dist/worker.js"
   },
   "devDependencies": {
-    "typescript": "^4.9.3",
-    "vitest": "^0.25.0"
+    "typescript": "^5.0.4",
+    "vitest": "^0.30.1"
   },
   "scripts": {
     "build": "tsc --build",
@@ -31,8 +31,8 @@
   "dependencies": {
     "@vlcn.io/client-core": "workspace:*",
     "@vlcn.io/client-server-common": "workspace:*",
+    "@vlcn.io/crsqlite-wasm": "workspace:*",
     "@vlcn.io/rx-tbl": "workspace:*",
-    "@vlcn.io/xplat-api": "workspace:*",
-    "@vlcn.io/crsqlite-wasm": "workspace:*"
+    "@vlcn.io/xplat-api": "workspace:*"
   }
 }

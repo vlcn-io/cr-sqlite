@@ -1,5 +1,14 @@
 # @vlcn.io/wa-crsqlite
 
+## 0.9.3-next.0
+
+### Patch Changes
+
+- fix xcommit deadlock, bump versions on dependencies
+- Updated dependencies
+  - @vlcn.io/wa-sqlite@0.15.3-next.0
+  - @vlcn.io/xplat-api@0.8.2-next.0
+
 ## 0.9.2
 
 ### Patch Changes

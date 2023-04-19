@@ -1,5 +1,11 @@
 # @vlcn.io/client-server-common
 
+## 0.5.2-next.0
+
+### Patch Changes
+
+- fix xcommit deadlock, bump versions on dependencies
+
 ## 0.5.1
 
 ### Patch Changes

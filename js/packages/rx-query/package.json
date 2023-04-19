@@ -1,7 +1,7 @@
 {
   "name": "@vlcn.io/rx-query",
   "type": "module",
-  "version": "0.1.2",
+  "version": "0.1.3-next.0",
   "files": [
     "dist"
   ],

@@ -49,7 +49,9 @@ export default class WebSocketWrapper implements Socket {
       await this.replicator.start(this);
     };
 
-    document.addEventListener("visibilitychange", this.#visChange);
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", this.#visChange);
+    }
   }
 
   #visChange = () => {
@@ -78,7 +80,9 @@ export default class WebSocketWrapper implements Socket {
 
   close(code?: number | undefined, data?: any): void {
     this.ws?.close(code, data);
-    document.removeEventListener("visibilitychange", this.#visChange);
+    if (typeof document !== "undefined") {
+      document.removeEventListener("visibilitychange", this.#visChange);
+    }
   }
 
   removeAllListeners(): void {

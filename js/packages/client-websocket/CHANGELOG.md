@@ -1,5 +1,23 @@
 # @vlcn.io/sync-client
 
+## 0.8.4
+
+### Patch Changes
+
+- @vlcn.io/crsqlite-wasm@0.9.4
+
+## 0.8.3
+
+### Patch Changes
+
+- e5919ae: fix xcommit deadlock, bump versions on dependencies
+- Updated dependencies [e5919ae]
+  - @vlcn.io/client-core@0.8.2
+  - @vlcn.io/client-server-common@0.5.2
+  - @vlcn.io/crsqlite-wasm@0.9.3
+  - @vlcn.io/rx-tbl@0.8.3
+  - @vlcn.io/xplat-api@0.8.2
+
 ## 0.8.3-next.0
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @vlcn.io/xplat-api
 
+## 0.8.2
+
+### Patch Changes
+
+- e5919ae: fix xcommit deadlock, bump versions on dependencies
+
 ## 0.8.2-next.0
 
 ### Patch Changes

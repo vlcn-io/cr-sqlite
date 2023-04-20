@@ -1,5 +1,20 @@
 # @vlcn.io/browser-tests
 
+## 0.7.4
+
+### Patch Changes
+
+- @vlcn.io/crsqlite-wasm@0.9.4
+
+## 0.7.3
+
+### Patch Changes
+
+- e5919ae: fix xcommit deadlock, bump versions on dependencies
+- Updated dependencies [e5919ae]
+  - @vlcn.io/crsqlite-wasm@0.9.3
+  - @vlcn.io/xplat-tests@0.7.3
+
 ## 0.7.3-next.0
 
 ### Patch Changes

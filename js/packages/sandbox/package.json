@@ -2,7 +2,7 @@
   "name": "sandbox",
   "private": true,
   "type": "module",
-  "version": "0.0.2-next.0",
+  "version": "0.0.2",
   "scripts": {
     "start:ui": "vite",
     "tsc": "tsc --noEmit",

@@ -1,5 +1,16 @@
 # @vlcn.io/nodeno-tests
 
+## 0.7.3
+
+### Patch Changes
+
+- e5919ae: fix xcommit deadlock, bump versions on dependencies
+- Updated dependencies [e5919ae]
+  - @vlcn.io/crsqlite-allinone@0.8.2
+  - @vlcn.io/rx-tbl@0.8.3
+  - @vlcn.io/xplat-api@0.8.2
+  - @vlcn.io/xplat-tests@0.7.3
+
 ## 0.7.3-next.0
 
 ### Patch Changes

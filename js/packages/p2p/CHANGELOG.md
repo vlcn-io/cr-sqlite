@@ -1,5 +1,13 @@
 # @vlcn.io/replicator-wholedb
 
+## 0.7.3
+
+### Patch Changes
+
+- e5919ae: fix xcommit deadlock, bump versions on dependencies
+- Updated dependencies [e5919ae]
+  - @vlcn.io/xplat-api@0.8.2
+
 ## 0.7.3-next.0
 
 ### Patch Changes

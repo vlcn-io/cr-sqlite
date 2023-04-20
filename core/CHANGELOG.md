@@ -1,5 +1,11 @@
 # @vlcn.io/crsqlite
 
+## 0.9.3
+
+### Patch Changes
+
+- release lock fix
+
 ## 0.9.2
 
 ### Patch Changes

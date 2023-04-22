@@ -269,11 +269,11 @@ static void teste2e() {
   // printf("db2sid: %s\n", db2siteid);
   // printf("db3sid: %s\n", db3siteid);
   // printf("tempsid: %s\n", tmpSiteid);
-  assert(strcmp(tmpSiteid, db1siteid) == 0);
+  assert(strcmp(tmpSiteid, "NULL") == 0);
 
   rc = sqlite3_step(pStmt3);
   assert(rc == SQLITE_ROW);
-  assert(strcmp((const char *)sqlite3_column_text(pStmt3, 0), db2siteid) == 0);
+  assert(strcmp((const char *)sqlite3_column_text(pStmt3, 0), "NULL") == 0);
   sqlite3_finalize(pStmt3);
 
   rc = sqlite3_prepare_v2(db2, "SELECT * FROM foo ORDER BY a ASC", -1, &pStmt2,
@@ -586,7 +586,7 @@ static void testPullingOnlyLocalChanges() {
   // `IS NOT NULL` also fails to call the virtual table bestIndex function with
   // any constraints p pIdxInfo->nConstraint
   sqlite3_prepare_v2(db,
-                     "SELECT count(*) FROM crsql_changes WHERE site_id = NULL",
+                     "SELECT count(*) FROM crsql_changes WHERE site_id IS NULL",
                      -1, &pStmt, 0);
 
   rc = sqlite3_step(pStmt);
@@ -594,12 +594,13 @@ static void testPullingOnlyLocalChanges() {
 
   int count = sqlite3_column_int(pStmt, 0);
   // we created 2 local changes, we should get 2 changes back
+  printf("count: %d\n", count);
   assert(count == 2);
   sqlite3_finalize(pStmt);
 
-  sqlite3_prepare_v2(db,
-                     "SELECT count(*) FROM crsql_changes WHERE site_id != NULL",
-                     -1, &pStmt, 0);
+  sqlite3_prepare_v2(
+      db, "SELECT count(*) FROM crsql_changes WHERE site_id IS NOT NULL", -1,
+      &pStmt, 0);
   rc = sqlite3_step(pStmt);
   assert(rc == SQLITE_ROW);
   count = sqlite3_column_int(pStmt, 0);

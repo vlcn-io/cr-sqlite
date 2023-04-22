@@ -74,7 +74,6 @@ static void testChangesUnionQuery() {
   sqlite3_free(query);
 
   query = crsql_changesUnionQuery(tblInfos, 2, "site_id IS ? AND db_vrsn > ?");
-  printf("\tquery: %s\n", query);
   assert(
       strcmp(query,
              "SELECT tbl, pks, cid, col_vrsn, db_vrsn, site_id FROM (SELECT    "

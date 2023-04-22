@@ -461,19 +461,18 @@ static int changesBestIndex(sqlite3_vtab *tab, sqlite3_index_info *pIdxInfo) {
         // the clock table has pks split out.
         break;
       case CHANGES_SINCE_VTAB_CID:
-        constraint = "__crsql_col_id";
+        constraint = "cid";
         break;
       case CHANGES_SINCE_VTAB_CVAL:
-        constraint = "__crsql_col_val";
         break;
       case CHANGES_SINCE_VTAB_COL_VRSN:
-        constraint = "__crsql_col_version";
+        constraint = "col_vrsn";
         break;
       case CHANGES_SINCE_VTAB_DB_VRSN:
-        constraint = "__crsql_db_version";
+        constraint = "db_vrsn";
         break;
       case CHANGES_SINCE_VTAB_SITE_ID:
-        constraint = "__crsql_site_id";
+        constraint = "site_id";
         break;
     }
 

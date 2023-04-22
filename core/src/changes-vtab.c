@@ -312,8 +312,9 @@ static int changesColumn(
       break;
     case CHANGES_SINCE_VTAB_SITE_ID:
       if (sqlite3_column_type(pCur->pChangesStmt, SITE_ID) == SQLITE_NULL) {
-        sqlite3_result_blob(ctx, pCur->pTab->pExtData->siteId, SITE_ID_LEN,
-                            SQLITE_STATIC);
+        sqlite3_result_null(ctx);
+        // sqlite3_result_blob(ctx, pCur->pTab->pExtData->siteId, SITE_ID_LEN,
+        //                     SQLITE_STATIC);
       } else {
         sqlite3_result_value(ctx,
                              sqlite3_column_value(pCur->pChangesStmt, SITE_ID));
@@ -374,7 +375,7 @@ static int changesFilter(sqlite3_vtab_cursor *pVtabCursor, int idxNum,
   sqlite3_free(zSql);
   if (rc != SQLITE_OK) {
     pTabBase->zErrMsg = sqlite3_mprintf(
-        "crsql internal error preparing the statement to extract changes.");
+        "error preparing stmt to extract changes %s", sqlite3_errmsg(db));
     sqlite3_finalize(pStmt);
     return rc;
   }
@@ -446,7 +447,7 @@ static int changesBestIndex(sqlite3_vtab *tab, sqlite3_index_info *pIdxInfo) {
   sqlite3_str *pStr = sqlite3_str_new(crsqlTab->db);
 
   int firstConstaint = 1;
-  char *constraint = 0;
+  char *colName = 0;
   int argvIndex = 1;
   for (int i = 0; i < pIdxInfo->nConstraint; i++) {
     const struct sqlite3_index_constraint *pConstraint =
@@ -461,22 +462,22 @@ static int changesBestIndex(sqlite3_vtab *tab, sqlite3_index_info *pIdxInfo) {
         // the clock table has pks split out.
         break;
       case CHANGES_SINCE_VTAB_CID:
-        constraint = "cid";
+        colName = "cid";
         break;
       case CHANGES_SINCE_VTAB_CVAL:
         break;
       case CHANGES_SINCE_VTAB_COL_VRSN:
-        constraint = "col_vrsn";
+        colName = "col_vrsn";
         break;
       case CHANGES_SINCE_VTAB_DB_VRSN:
-        constraint = "db_vrsn";
+        colName = "db_vrsn";
         break;
       case CHANGES_SINCE_VTAB_SITE_ID:
-        constraint = "site_id";
+        colName = "site_id";
         break;
     }
 
-    if (constraint != 0) {
+    if (colName != 0) {
       const char *opString = getOperatorString(pConstraint->op);
       if (opString == 0) {
         continue;
@@ -484,13 +485,21 @@ static int changesBestIndex(sqlite3_vtab *tab, sqlite3_index_info *pIdxInfo) {
       if (firstConstaint) {
         firstConstaint = 0;
       } else {
-        sqlite3_str_append(pStr, " AND ", -1);
+        sqlite3_str_appendall(pStr, " AND ");
       }
-      sqlite3_str_appendf(pStr, "%s %s ?", constraint, opString);
-      constraint = 0;
-      pIdxInfo->aConstraintUsage[i].argvIndex = argvIndex;
-      pIdxInfo->aConstraintUsage[i].omit = 1;
-      argvIndex += 1;
+
+      if (pConstraint->op == SQLITE_INDEX_CONSTRAINT_ISNOTNULL ||
+          pConstraint->op == SQLITE_INDEX_CONSTRAINT_ISNULL) {
+        sqlite3_str_appendf(pStr, "%s %s", colName, opString);
+        pIdxInfo->aConstraintUsage[i].argvIndex = 0;
+        pIdxInfo->aConstraintUsage[i].omit = 1;
+      } else {
+        sqlite3_str_appendf(pStr, "%s %s ?", colName, opString);
+        pIdxInfo->aConstraintUsage[i].argvIndex = argvIndex;
+        pIdxInfo->aConstraintUsage[i].omit = 1;
+        argvIndex += 1;
+      }
+      colName = 0;
     }
 
     switch (pConstraint->iColumn) {

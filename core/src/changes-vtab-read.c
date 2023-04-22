@@ -9,7 +9,7 @@
  * Construct the query to grab the changes made against
  * rows in a given table
  */
-char *crsql_changesQueryForTable(crsql_TableInfo *tableInfo, int idxNum) {
+char *crsql_changesQueryForTable(crsql_TableInfo *tableInfo) {
   if (tableInfo->pksLen == 0) {
     return 0;
   }
@@ -22,13 +22,8 @@ char *crsql_changesQueryForTable(crsql_TableInfo *tableInfo, int idxNum) {
       __crsql_col_version as col_vrsn,\
       __crsql_db_version as db_vrsn,\
       __crsql_site_id as site_id\
-    FROM \"%s__crsql_clock\"\
-    WHERE\
-      site_id IS %s ?\
-    AND\
-      db_vrsn > ?",
-      tableInfo->tblName, crsql_quoteConcat(tableInfo->pks, tableInfo->pksLen),
-      tableInfo->tblName, (idxNum & 8) == 8 ? "" : "NOT");
+    FROM \"%s__crsql_clock\"",
+      tableInfo->tblName, crsql_quoteConcat(tableInfo->pks, tableInfo->pksLen));
 
   return zSql;
 }
@@ -46,14 +41,14 @@ char *crsql_changesQueryForTable(crsql_TableInfo *tableInfo, int idxNum) {
  * set of changes
  */
 char *crsql_changesUnionQuery(crsql_TableInfo **tableInfos, int tableInfosLen,
-                              int idxNum) {
+                              const char *idxStr) {
   char **unionsArr = sqlite3_malloc(tableInfosLen * sizeof(char *));
   char *unionsStr = 0;
   int i = 0;
 
   // TODO: what if there are no table infos?
   for (i = 0; i < tableInfosLen; ++i) {
-    unionsArr[i] = crsql_changesQueryForTable(tableInfos[i], idxNum);
+    unionsArr[i] = crsql_changesQueryForTable(tableInfos[i]);
     if (unionsArr[i] == 0) {
       for (int j = 0; j < i; j++) {
         sqlite3_free(unionsArr[j]);
@@ -76,9 +71,10 @@ char *crsql_changesUnionQuery(crsql_TableInfo **tableInfos, int tableInfosLen,
 
   // compose the final query
   return sqlite3_mprintf(
-      "SELECT tbl, pks, cid, col_vrsn, db_vrsn, site_id FROM (%z) ORDER BY "
+      "SELECT tbl, pks, cid, col_vrsn, db_vrsn, site_id FROM (%z) %s%s ORDER "
+      "BY "
       "db_vrsn, tbl ASC",
-      unionsStr);
+      unionsStr, strlen(idxStr) > 0 ? "WHERE " : "", idxStr);
   // %z frees unionsStr https://www.sqlite.org/printf.html#percentz
 }
 

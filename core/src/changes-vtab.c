@@ -361,7 +361,7 @@ static int changesFilter(sqlite3_vtab_cursor *pVtabCursor, int idxNum,
   }
 
   char *zSql = crsql_changesUnionQuery(pTab->pExtData->zpTableInfos,
-                                       pTab->pExtData->tableInfosLen, idxNum);
+                                       pTab->pExtData->tableInfosLen, idxStr);
 
   if (zSql == 0) {
     pTabBase->zErrMsg = sqlite3_mprintf(
@@ -379,44 +379,57 @@ static int changesFilter(sqlite3_vtab_cursor *pVtabCursor, int idxNum,
     return rc;
   }
 
-  // pull user provided params to `getChanges`
-  int i = 0;
-  sqlite3_int64 versionBound = MIN_POSSIBLE_DB_VERSION;
-  const char *requestorSiteId = "aa";
-  int siteIdType = SQLITE_BLOB;
-  int requestorSiteIdLen = 1;
-  if (idxNum & 2) {
-    versionBound = sqlite3_value_int64(argv[i]);
-    ++i;
-  }
-  if (idxNum & 4) {
-    siteIdType = sqlite3_value_type(argv[i]);
-    requestorSiteIdLen = sqlite3_value_bytes(argv[i]);
-    if (requestorSiteIdLen != 0) {
-      requestorSiteId = (const char *)sqlite3_value_blob(argv[i]);
-    } else {
-      requestorSiteIdLen = 1;
-    }
-    ++i;
-  }
-
   // now bind the params.
-  // for each table info we need to bind 2 params:
-  // 1. the site id
-  // 2. the version
-  int j = 1;
-  for (i = 0; i < pTab->pExtData->tableInfosLen; ++i) {
-    if (siteIdType == SQLITE_NULL) {
-      sqlite3_bind_null(pStmt, j++);
-    } else {
-      sqlite3_bind_blob(pStmt, j++, requestorSiteId, requestorSiteIdLen,
-                        SQLITE_STATIC);
+  // for each arg, bind.
+  for (int i = 0; i < argc; ++i) {
+    rc = sqlite3_bind_value(pStmt, i + 1, argv[i]);
+    if (rc != SQLITE_OK) {
+      pTabBase->zErrMsg = sqlite3_mprintf(
+          "error binding params to the statement to extract "
+          "changes.");
+      sqlite3_finalize(pStmt);
+      return rc;
     }
-    sqlite3_bind_int64(pStmt, j++, versionBound);
   }
 
   pCrsr->pChangesStmt = pStmt;
   return changesNext((sqlite3_vtab_cursor *)pCrsr);
+}
+
+static const char *getOperatorString(unsigned char op) {
+  // SQLITE_INDEX_CONSTRAINT_NE
+  switch (op) {
+    case SQLITE_INDEX_CONSTRAINT_EQ:
+      return "=";
+    case SQLITE_INDEX_CONSTRAINT_GT:
+      return ">";
+    case SQLITE_INDEX_CONSTRAINT_LE:
+      return "<=";
+    case SQLITE_INDEX_CONSTRAINT_LT:
+      return "<";
+    case SQLITE_INDEX_CONSTRAINT_GE:
+      return ">=";
+    case SQLITE_INDEX_CONSTRAINT_MATCH:
+      return "MATCH";
+    case SQLITE_INDEX_CONSTRAINT_LIKE:
+      return "LIKE";
+    case SQLITE_INDEX_CONSTRAINT_GLOB:
+      return "GLOB";
+    case SQLITE_INDEX_CONSTRAINT_REGEXP:
+      return "REGEXP";
+    case SQLITE_INDEX_CONSTRAINT_NE:
+      return "!=";
+    case SQLITE_INDEX_CONSTRAINT_ISNOT:
+      return "IS NOT";
+    case SQLITE_INDEX_CONSTRAINT_ISNOTNULL:
+      return "IS NOT NULL";
+    case SQLITE_INDEX_CONSTRAINT_ISNULL:
+      return "IS NULL";
+    case SQLITE_INDEX_CONSTRAINT_IS:
+      return "IS";
+    default:
+      return 0;
+  }
 }
 
 /*
@@ -481,8 +494,6 @@ static int changesBestIndex(sqlite3_vtab *tab, sqlite3_index_info *pIdxInfo) {
       argvIndex += 1;
     }
 
-    const struct sqlite3_index_constraint *pConstraint =
-        &pIdxInfo->aConstraint[i];
     switch (pConstraint->iColumn) {
       case CHANGES_SINCE_VTAB_DB_VRSN:
         idxNum |= 2;
@@ -518,42 +529,6 @@ static int changesBestIndex(sqlite3_vtab *tab, sqlite3_index_info *pIdxInfo) {
   pIdxInfo->idxStr = sqlite3_str_finish(pStr);
   pIdxInfo->needToFreeIdxStr = 1;
   return SQLITE_OK;
-}
-
-static const char *getOperatorString(unsigned char op) {
-  // SQLITE_INDEX_CONSTRAINT_NE
-  switch (op) {
-    case SQLITE_INDEX_CONSTRAINT_EQ:
-      return "=";
-    case SQLITE_INDEX_CONSTRAINT_GT:
-      return ">";
-    case SQLITE_INDEX_CONSTRAINT_LE:
-      return "<=";
-    case SQLITE_INDEX_CONSTRAINT_LT:
-      return "<";
-    case SQLITE_INDEX_CONSTRAINT_GE:
-      return ">=";
-    case SQLITE_INDEX_CONSTRAINT_MATCH:
-      return "MATCH";
-    case SQLITE_INDEX_CONSTRAINT_LIKE:
-      return "LIKE";
-    case SQLITE_INDEX_CONSTRAINT_GLOB:
-      return "GLOB";
-    case SQLITE_INDEX_CONSTRAINT_REGEXP:
-      return "REGEXP";
-    case SQLITE_INDEX_CONSTRAINT_NE:
-      return "!=";
-    case SQLITE_INDEX_CONSTRAINT_ISNOT:
-      return "IS NOT";
-    case SQLITE_INDEX_CONSTRAINT_ISNOTNULL:
-      return "IS NOT NULL";
-    case SQLITE_INDEX_CONSTRAINT_ISNULL:
-      return "IS NULL";
-    case SQLITE_INDEX_CONSTRAINT_IS:
-      return "IS";
-    default:
-      return 0;
-  }
 }
 
 static int changesApply(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,

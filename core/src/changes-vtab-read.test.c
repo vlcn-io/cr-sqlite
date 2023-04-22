@@ -23,7 +23,7 @@ static void testChangesQueryForTable() {
   rc += crsql_getTableInfo(db, "foo", &tblInfo, &err);
   assert(rc == SQLITE_OK);
 
-  char *query = crsql_changesQueryForTable(tblInfo, 6);
+  char *query = crsql_changesQueryForTable(tblInfo);
 
   assert(strcmp(query,
                 "SELECT      \'foo\' as tbl,      quote(\"a\") as pks,      "
@@ -33,7 +33,7 @@ static void testChangesQueryForTable() {
                 "WHERE      site_id IS NOT ?    AND      db_vrsn > ?") == 0);
   sqlite3_free(query);
 
-  query = crsql_changesQueryForTable(tblInfo, 8);
+  query = crsql_changesQueryForTable(tblInfo);
   assert(strcmp(query,
                 "SELECT      \'foo\' as tbl,      quote(\"a\") as pks,      "
                 "__crsql_col_name as cid,      __crsql_col_version as "
@@ -68,7 +68,7 @@ static void testChangesUnionQuery() {
   rc += crsql_getTableInfo(db, "bar", &tblInfos[1], &err);
   assert(rc == SQLITE_OK);
 
-  char *query = crsql_changesUnionQuery(tblInfos, 2, 6);
+  char *query = crsql_changesUnionQuery(tblInfos, 2, "");
   assert(
       strcmp(
           query,
@@ -84,7 +84,7 @@ static void testChangesUnionQuery() {
           "NOT ?    AND      db_vrsn > ?) ORDER BY db_vrsn, tbl ASC") == 0);
   sqlite3_free(query);
 
-  query = crsql_changesUnionQuery(tblInfos, 2, 8);
+  query = crsql_changesUnionQuery(tblInfos, 2, "");
   assert(
       strcmp(
           query,

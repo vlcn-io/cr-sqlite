@@ -23,7 +23,8 @@ char *crsql_changesQueryForTable(crsql_TableInfo *tableInfo) {
       __crsql_db_version as db_vrsn,\
       __crsql_site_id as site_id\
     FROM \"%s__crsql_clock\"",
-      tableInfo->tblName, crsql_quoteConcat(tableInfo->pks, tableInfo->pksLen));
+      tableInfo->tblName, crsql_quoteConcat(tableInfo->pks, tableInfo->pksLen),
+      tableInfo->tblName);
 
   return zSql;
 }

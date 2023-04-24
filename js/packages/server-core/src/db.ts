@@ -46,7 +46,7 @@ class DB {
       this.#applySchema(create.schemaName);
     }
     this.#pullChangesetStmt = this.#db.prepare(
-      `SELECT "table", "pk", "cid", "val", "col_version", "db_version" FROM crsql_changes WHERE db_version > ? AND site_id != ?`
+      `SELECT "table", "pk", "cid", "val", "col_version", "db_version" FROM crsql_changes WHERE db_version > ? AND site_id IS NOT ?`
     );
     this.#pullChangesetStmt.raw(true);
 

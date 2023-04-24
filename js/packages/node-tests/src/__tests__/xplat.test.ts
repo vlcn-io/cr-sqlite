@@ -1,4 +1,4 @@
-(global as any).navigator = {};
+import "../fill.js";
 
 import { test, expect } from "vitest";
 import { DBAsync, DB as DBSync } from "@vlcn.io/xplat-api";

@@ -66,6 +66,50 @@ accumulating impacted rows:
 
 ---
 
+# rga
+
+Simplest RGA is row for each char.
+
+How would we insert against the RGA? The insert must know the parent position it is inserting against. Thus we need
+some integration with text editors and things...
+
+Maybe no RGA? Just tell them to use Yjs or Automerge and save the blobs into the db...
+A table of blobs or incremental blobs and occasional compaction.
+
+# Better syntax:
+
+Lets us easily define:
+
+- counter
+- lww
+- fract index
+
+for columns
+
+- CL set or other
+
+for tables
+
+# Rest POKE protocol and SSEvents
+
+https://github.com/jcubic/wayne/blob/gh-pages/docs/demo/sw.js
+
+As simple as the p2p protocol. Server pokes via SSEvents. Simpler deployment than websockets.
+
+Client pokes too? Or client streams to server?
+
+Wayne support for SSE in ServiceWorker? https://blog.logrocket.com/comparing-wayne-js-express-js-service-worker-routing/
+
+rest api can have schema application and upgrade endpoints (as needed for community server).
+these can be auth gated or not (optional). For demos, just open? To allow client to force a schema.
+
+# p2p
+
+pi lab, discovery, ring connection vs pub-sub bus.
+
+Pub-sub bus and gaps... where to go to fill the gaps? Broadcast need?
+Broadcast max contiguous range held? Can keep in DHT and ask that person with the right range.
+
 ---
 
 rlwrap

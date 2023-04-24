@@ -1,5 +1,16 @@
 # @vlcn.io/rx-query
 
+## 0.2.0-next.0
+
+### Minor Changes
+
+- ANSI SQL compliance for crsql_changes, all filters available for crsql_changes, removal of tracked_peers, simplified crsql_master table
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/xplat-api@0.9.0-next.0
+
 ## 0.1.3
 
 ### Patch Changes

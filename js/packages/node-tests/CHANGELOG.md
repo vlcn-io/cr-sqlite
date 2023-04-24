@@ -1,5 +1,19 @@
 # @vlcn.io/nodeno-tests
 
+## 0.8.0-next.0
+
+### Minor Changes
+
+- ANSI SQL compliance for crsql_changes, all filters available for crsql_changes, removal of tracked_peers, simplified crsql_master table
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/xplat-tests@0.8.0-next.0
+  - @vlcn.io/crsqlite-allinone@0.9.0-next.0
+  - @vlcn.io/rx-tbl@0.9.0-next.0
+  - @vlcn.io/xplat-api@0.9.0-next.0
+
 ## 0.7.4
 
 ### Patch Changes

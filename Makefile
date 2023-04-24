@@ -20,7 +20,6 @@ js: crsqlite $(node-deps)
 	cd js && make all
 
 clean:
-	cd core && make clean
 	cd js && make clean
 
 .PHONY: crsqlite js all clean

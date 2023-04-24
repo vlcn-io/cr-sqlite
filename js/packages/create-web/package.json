@@ -1,6 +1,6 @@
 {
   "name": "@vlcn.io/create-web",
-  "version": "0.2.0-next.1",
+  "version": "0.2.0",
   "description": "scaffold a web project with crdt support",
   "homepage": "https://vlcn.io",
   "type": "module",

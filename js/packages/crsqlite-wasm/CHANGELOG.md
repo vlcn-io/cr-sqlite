@@ -1,5 +1,14 @@
 # @vlcn.io/wa-crsqlite
 
+## 0.10.0-next.1
+
+### Patch Changes
+
+- npm is not updating on package publish -- bump versions to try to force it
+- Updated dependencies
+  - @vlcn.io/xplat-api@0.9.0-next.1
+  - @vlcn.io/wa-sqlite@0.16.0-next.1
+
 ## 0.10.0-next.0
 
 ### Minor Changes

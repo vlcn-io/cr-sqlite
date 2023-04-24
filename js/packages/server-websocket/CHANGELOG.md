@@ -1,5 +1,15 @@
 # @vlcn.io/sync-server
 
+## 0.9.0-next.1
+
+### Patch Changes
+
+- npm is not updating on package publish -- bump versions to try to force it
+- Updated dependencies
+  - @vlcn.io/client-server-common@0.6.0-next.1
+  - @vlcn.io/server-core@0.9.0-next.1
+  - @vlcn.io/crsqlite@0.10.0-next.1
+
 ## 0.9.0-next.0
 
 ### Minor Changes

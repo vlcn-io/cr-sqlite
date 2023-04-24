@@ -1,5 +1,11 @@
 # @vlcn.io/crsqlite
 
+## 0.10.0-next.1
+
+### Patch Changes
+
+- npm is not updating on package publish -- bump versions to try to force it
+
 ## 0.10.0-next.0
 
 ### Minor Changes

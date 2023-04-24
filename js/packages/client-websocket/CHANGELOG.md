@@ -1,5 +1,20 @@
 # @vlcn.io/sync-client
 
+## 0.9.0-next.0
+
+### Minor Changes
+
+- ANSI SQL compliance for crsql_changes, all filters available for crsql_changes, removal of tracked_peers, simplified crsql_master table
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/client-core@0.9.0-next.0
+  - @vlcn.io/client-server-common@0.6.0-next.0
+  - @vlcn.io/crsqlite-wasm@0.10.0-next.0
+  - @vlcn.io/rx-tbl@0.9.0-next.0
+  - @vlcn.io/xplat-api@0.9.0-next.0
+
 ## 0.8.4
 
 ### Patch Changes

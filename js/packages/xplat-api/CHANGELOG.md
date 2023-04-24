@@ -1,5 +1,11 @@
 # @vlcn.io/xplat-api
 
+## 0.9.0-next.0
+
+### Minor Changes
+
+- ANSI SQL compliance for crsql_changes, all filters available for crsql_changes, removal of tracked_peers, simplified crsql_master table
+
 ## 0.8.2
 
 ### Patch Changes

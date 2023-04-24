@@ -1,7 +1,7 @@
 from crsql_correctness import connect, close, min_db_v
 import pprint
 
-# js_tests included a Fast-Check driven merge test which is much more complete than what we have here
+# js_tests includes a Fast-Check driven merge test which is much more complete than what we have here
 
 
 def init():

@@ -2,7 +2,7 @@
   "name": "sandbox-node",
   "private": true,
   "type": "module",
-  "version": "0.1.0-next.0",
+  "version": "0.1.0-next.1",
   "scripts": {
     "test": "echo 'No tests yet'",
     "deep-clean": "rm -rf ./dist || true && rm tsconfig.tsbuildinfo || true"

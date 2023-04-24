@@ -26,6 +26,7 @@
     "@vlcn.io/py-correctness": "0.7.2"
   },
   "changesets": [
+    "beige-pets-drive",
     "thin-bats-doubt"
   ]
 }

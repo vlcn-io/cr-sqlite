@@ -56,7 +56,7 @@ def delete_data(c):
 
 def get_changes_since(c, version, requestor):
     return c.execute(
-        "SELECT * FROM crsql_changes WHERE db_version > {v} AND site_id != {r}".format(
+        "SELECT * FROM crsql_changes WHERE db_version > {v} AND site_id IS NOT X'{r}'".format(
             v=version, r=requestor)
     ).fetchall()
 
@@ -68,8 +68,9 @@ def apply_patches():
 def test_changes_since():
     dbs = init()
 
-    rows = get_changes_since(dbs[0], 0, -1)
-    siteid = dbs[0].execute("select crsql_siteid()").fetchone()[0]
+    rows = get_changes_since(dbs[0], 0, "FF")
+    # siteid = dbs[0].execute("select crsql_siteid()").fetchone()[0]
+    siteid = None
     expected = [
         ("component", "1", "content", "'wootwoot'", 1, 1, siteid),
         ("component", "1", "slide_id", "1", 1, 1, siteid),
@@ -91,11 +92,12 @@ def test_changes_since():
         ("user", "1", "name", "'Javi'", 1, 1, siteid),
     ]
 
+    # pprint.pprint(rows)
     assert (rows == expected)
 
     update_data(dbs[0])
 
-    rows = get_changes_since(dbs[0], 1, -1)
+    rows = get_changes_since(dbs[0], 1, 'FF')
 
     assert (rows == [("deck", "1", "title", "'Presto'", 2, 2,
             siteid), ("user", "1", "name", "'Maestro'", 2, 2, siteid)])
@@ -108,8 +110,8 @@ def test_delete():
 
     delete_data(db)
 
-    rows = get_changes_since(db, 1, -1)
-    siteid = db.execute("select crsql_siteid()").fetchone()[0]
+    rows = get_changes_since(db, 1, 'FF')
+    siteid = None
     # Deletes are marked with a sentinel id
     assert (rows == [('component', '1', '__crsql_del', None, 1, 2, siteid)])
 
@@ -118,7 +120,7 @@ def test_delete():
     db.execute("DELETE FROM slide")
     db.commit()
 
-    rows = get_changes_since(db, 0, -1)
+    rows = get_changes_since(db, 0, 'FF')
     # pprint.pprint(rows)
     # TODO: we should have the network layer collapse these events or do it ourselves.
     # given we have past events that we're missing data for, they're now marked off as deletes

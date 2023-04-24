@@ -1,3 +1,5 @@
+(global as any).navigator = {};
+
 import { test, expect } from "vitest";
 import { DBAsync, DB as DBSync } from "@vlcn.io/xplat-api";
 type DB = DBAsync | DBSync;
@@ -20,7 +22,6 @@ function runTests(tests: {
   });
 }
 
-(global as any).navigator = {};
 // import { wdbTests } from "@vlcn.io/xplat-tests";
 // runTests(wdbTests);
 

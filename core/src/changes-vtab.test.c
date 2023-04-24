@@ -109,6 +109,12 @@ static void testFilters() {
               "db_version < 2",
               1);
 
+  printf("OR condition\n");
+  assertCount(db,
+              "SELECT count(*) FROM crsql_changes WHERE db_version > 2 OR "
+              "site_id IS NULL",
+              3);
+
   // compare on pks, table name, other not perfectly supported columns
 
   crsql_close(db);

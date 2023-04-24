@@ -86,6 +86,7 @@ static void testFilters() {
   // 0 rows is actually correct ANSI sql behavior. NULLs are never equal, or not
   // equal, to anything in ANSI SQL. So users must use `IS NOT` to check rather
   // than !=.
+  //
   // https://stackoverflow.com/questions/60017275/why-null-is-not-equal-to-anything-is-a-false-statement
   printf("not equals\n");
   assertCount(
@@ -100,6 +101,13 @@ static void testFilters() {
       3);
 
   // compare on db_version _and_ site_id
+
+  // compare upper and lower bound on db_version
+  printf("double bounded version\n");
+  assertCount(db,
+              "SELECT count(*) FROM crsql_changes WHERE db_version >= 1 AND "
+              "db_version < 2",
+              1);
 
   // compare on pks, table name, other not perfectly supported columns
 

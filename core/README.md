@@ -49,7 +49,7 @@ The full documentation site is available [here](https://vlcn.io/docs/getting-sta
   - `SELECT crsql_as_crr('table_name')`
 - A virtual table (`crsql_changes`) to ask the database for changesets or to apply changesets from another database
   - `SELECT * FROM crsql_changes WHERE db_version > x AND site_id IS NULL` -- to get local changes
-  - `SELECT * FROM crsql_changes WHERE db_version > x AND site_id != some_site` -- to get all changes excluding those synced from some site
+  - `SELECT * FROM crsql_changes WHERE db_version > x AND site_id IS NOT some_site` -- to get all changes excluding those synced from some site
   - `INSERT INTO crsql_changes VALUES ([patches receied from select on another peer])`
 - And `crsql_alter_begin('table_name')` & `crsql_alter_commit('table_name')` primitives to allow altering table definitions that have been upgraded to `crr`s.
   - Until we move forward with extending the syntax of SQLite to be CRR aware, altering CRRs looks like:

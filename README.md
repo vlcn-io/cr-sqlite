@@ -29,6 +29,7 @@ In other words, you can write to your SQLite database while offline. I can write
 All of the above involve a merging of independent edits problem. If your database can handle this for you, you don't need custom code in your application to handle those 5 cases.
 
 Discussions of these problems in the application space:
+
 - [Meta Muse](https://museapp.com/podcast/56-sync/)
 - [FB Messenger re-write](https://softwareengineeringdaily.com/2020/03/31/facebook-messenger-engineering-with-mohsen-agsen/)
 
@@ -48,7 +49,7 @@ The full documentation site is available [here](https://vlcn.io/docs/getting-sta
   - `SELECT crsql_as_crr('table_name')`
 - A virtual table (`crsql_changes`) to ask the database for changesets or to apply changesets from another database
   - `SELECT * FROM crsql_changes WHERE db_version > x AND site_id IS NULL` -- to get local changes
-  - `SELECT * FROM crsql_changes WHERE db_version > x AND site_id != some_site` -- to get all changes excluding those synced from some site
+  - `SELECT * FROM crsql_changes WHERE db_version > x AND site_id IS NOT some_site` -- to get all changes excluding those synced from some site
   - `INSERT INTO crsql_changes VALUES ([patches receied from select on another peer])`
 - And `crsql_alter_begin('table_name')` & `crsql_alter_commit('table_name')` primitives to allow altering table definitions that have been upgraded to `crr`s.
   - Until we move forward with extending the syntax of SQLite to be CRR aware, altering CRRs looks like:
@@ -291,7 +292,6 @@ JS APIs for using `cr-sqlite` in the browser are not yet documented but exist in
 
 - [Observable Notebook](https://observablehq.com/@tantaman/cr-sqlite-basic-setup)
 - https://github.com/vlcn-io/live-examples
-
 
 # Research & Prior Art
 

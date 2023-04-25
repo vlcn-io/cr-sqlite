@@ -20,3 +20,6 @@ Each entrypoint will call an auth hook before executing the operation.
 - createDatabaseIfNotExists(dbid, schema): ask the server to create the database if it does not exist. Applies the schema string supplied.
 - createOrMigrateDatabase(dbid, schema): ask the server to create the database or, if it exists, migrate it to the supplied schema. If the current DB schema matches the supplied schema this is a no-op.
 - 🦺 getChangesForQueries(dbid, since, queries[]): ask the server to run N queries and return changes for data retrieved by those queries.
+
+As a sync lib to be dropped into anything?
+How would it handle peer and re-broadcast? We only re-broadcast to nodes that aren't the sending node and only send changes that aren't from the node we're broadcasting to?

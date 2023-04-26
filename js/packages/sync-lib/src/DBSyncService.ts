@@ -1,6 +1,11 @@
 import InboundStream from "./InboundStream";
 import OutboundStream from "./OutboundStream";
-import { ApplyChangesMsg, Change, GetChangesMsg } from "./Types";
+import {
+  ApplyChangesMsg,
+  Change,
+  EstablishOutboundStreamMsg,
+  GetChangesMsg,
+} from "./Types";
 
 type TODO = any;
 
@@ -21,7 +26,7 @@ export default class DBSyncService {
     return [];
   }
 
-  startOutboundStream(): OutboundStream {
+  startOutboundStream(msg: EstablishOutboundStreamMsg): OutboundStream {
     // Constructs an outbound stream
     // Registers it with FSListener
     // Returns it.
@@ -31,5 +36,7 @@ export default class DBSyncService {
     throw new Error();
   }
 
-  startInboundStream(): InboundStream {}
+  // startInboundStream(): InboundStream {
+  //   throw new Error();
+  // }
 }

@@ -24,21 +24,15 @@ export type TableName = string;
 export type Version = bigint;
 export type Val = string | null;
 
-export type Tag = {
-  applyChanges: 0;
-  getChanges: 1;
-  establishStream: 2;
-  ackChanges: 3;
-  receiveStreamingChanges: 4;
-};
-
-export const tags: Tag = {
+export const tags = {
   applyChanges: 0,
   getChanges: 1,
-  establishStream: 2,
+  establishOutboundStream: 2,
   ackChanges: 3,
   receiveStreamingChanges: 4,
-};
+} as const;
+
+export type Tag = typeof tags;
 
 export type Change = readonly [
   TableName,
@@ -56,7 +50,7 @@ export type Change = readonly [
 export type Msg =
   | ApplyChangesMsg
   | GetChangesMsg
-  | EstablishStreamMsg
+  | EstablishOutboundStreamMsg
   | AckChangesMsg;
 
 export type ApplyChangesMsg = {
@@ -122,8 +116,8 @@ export type GetChangesMsg = {
  * Start streaming changes to made to dbid to the client.
  * Starting from the version indicated by seqStart.
  */
-export type EstablishStreamMsg = {
-  readonly _tag: Tag["establishStream"];
+export type EstablishOutboundStreamMsg = {
+  readonly _tag: Tag["establishOutboundStream"];
   readonly localDbid: string;
   readonly remoteDbid: string;
   readonly seqStart: Seq;
@@ -133,6 +127,17 @@ export type EstablishStreamMsg = {
    */
   readonly queryIds?: readonly string[];
 };
+
+/**
+ * Should the sender know what the receiver has received?
+ * Or should the sender negotiate where to start?
+ * The receiver telling it what it last had.
+ *
+ * Inbound is a  "you need changes from me, tell me since when"
+ *
+ * If there's acking the sender could maintain such info...
+ */
+export type EstablishInboundStreamMsg = {};
 
 export type AckChangesMsg = {
   readonly _tag: Tag["ackChanges"];

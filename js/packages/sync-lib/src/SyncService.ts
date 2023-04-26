@@ -5,7 +5,7 @@ import {
   ApplyChangesMsg,
   Change,
   Config,
-  EstablishStreamMsg,
+  EstablishOutboundStreamMsg,
   GetChangesMsg,
 } from "./Types";
 
@@ -69,7 +69,7 @@ export default class SyncService {
    * such that the client does not have to issue a request
    * for changes.
    */
-  startOutboundStream(msg: EstablishStreamMsg): OutboundStream {
+  startOutboundStream(msg: EstablishOutboundStreamMsg): OutboundStream {
     throw new Error();
   }
 
@@ -90,7 +90,8 @@ export default class SyncService {
    * The returned inbound stream can be hooked into your msg handler
    * to apply changes to the db.
    */
-  startInboundStream(msg: EstablishInboundStream): InboundStream {
-    throw new Error();
-  }
+  // startInboundStream(): InboundStream {
+  //   // unclear how inbound stream should work...
+  //   throw new Error();
+  // }
 }

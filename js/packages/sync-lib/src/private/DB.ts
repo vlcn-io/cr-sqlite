@@ -13,5 +13,7 @@ export default class DB {
 
   constructor(config: Config, dbid: string) {
     this.db = new SQLiteDB(config.getDbFilename(dbid));
+    this.db.pragma("journal_mode = WAL");
+    this.db.pragma("synchronous = NORMAL");
   }
 }

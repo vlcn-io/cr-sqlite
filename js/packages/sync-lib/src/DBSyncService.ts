@@ -2,9 +2,11 @@ import InboundStream from "./InboundStream";
 import OutboundStream from "./OutboundStream";
 import {
   ApplyChangesMsg,
+  ApplyChangesResponse,
   Change,
   EstablishOutboundStreamMsg,
   GetChangesMsg,
+  tags,
 } from "./Types";
 
 type TODO = any;
@@ -20,7 +22,18 @@ export default class DBSyncService {
 
   maybeMigrate(schemaName: string) {}
 
-  applyChanges(msg: ApplyChangesMsg) {}
+  /**
+   * Applies changes with sanity checking to esnure contiguity of messages.
+   *
+   *
+   * @param msg
+   */
+  applyChanges(msg: ApplyChangesMsg): ApplyChangesResponse {
+    return {
+      _tag: tags.applyChangesResponse,
+      status: "ok",
+    };
+  }
 
   getChanges(msg: GetChangesMsg): Change[] {
     return [];
@@ -39,4 +52,9 @@ export default class DBSyncService {
   // startInboundStream(): InboundStream {
   //   throw new Error();
   // }
+
+  close() {
+    // closes all associated outbound streams and this db.
+    // removes from DB cache as well.
+  }
 }

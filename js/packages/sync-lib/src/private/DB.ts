@@ -1,6 +1,7 @@
 import SQLiteDB from "better-sqlite3";
 import type { Database } from "better-sqlite3";
 import { Config } from "../Types";
+import OutboundStream from "../OutboundStream";
 
 /**
  * Wraps a normal better-sqlite3 connection to provide
@@ -16,4 +17,8 @@ export default class DB {
     this.db.pragma("journal_mode = WAL");
     this.db.pragma("synchronous = NORMAL");
   }
+
+  addReference(stream: OutboundStream) {}
+
+  removeReference(stream: OutboundStream) {}
 }

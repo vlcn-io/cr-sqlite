@@ -21,5 +21,7 @@ import { AckChangesMsg, ReceiveStreamingChangesMsg } from "./Types";
 export default class InboundStream {
   constructor() {}
 
-  receiveChanges(changes: ReceiveStreamingChangesMsg): AckChangesMsg {}
+  receiveChanges(changes: ReceiveStreamingChangesMsg): AckChangesMsg {
+    throw new Error();
+  }
 }

@@ -94,6 +94,10 @@ export type EstablishStreamMsg = {
   readonly dbid: string;
   readonly seqStart: Seq;
   readonly schemaVersion: string;
+  /**
+   * For query based sync, the query id(s) to get changes for.
+   */
+  readonly queryIds?: readonly string[];
 };
 
 export default class SyncService {

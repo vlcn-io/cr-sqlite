@@ -1,3 +1,5 @@
+import OutboundStream from "./OutboundStream";
+
 type TODO = any;
 
 /**
@@ -13,5 +15,5 @@ export default class DBSync {
 
   getChanges(since: Seq): [Seq, Seq, TODO] {
     throw new Error();
-  }
+  }}
 }

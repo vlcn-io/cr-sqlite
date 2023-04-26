@@ -19,6 +19,9 @@ importers:
       '@web/dev-server':
         specifier: ^0.1.38
         version: 0.1.38
+      comlink:
+        specifier: ^4.4.1
+        version: 4.4.1
       jasmine-core:
         specifier: ^4.6.0
         version: 4.6.0
@@ -44,6 +47,8 @@ importers:
         specifier: ^5.0.4
         version: 5.0.4
     dependenciesMeta:
+      comlink@4.4.1:
+        unplugged: true
       monaco-editor@0.34.1:
         unplugged: true
       sinon@15.0.1:
@@ -358,6 +363,28 @@ importers:
       '@types/uuid':
         specifier: ^9.0.1
         version: 9.0.1
+      typescript:
+        specifier: ^5.0.4
+        version: 5.0.4
+      vitest:
+        specifier: ^0.30.1
+        version: 0.30.1
+
+  js/packages/server-http:
+    dependencies:
+      '@vlcn.io/crsqlite':
+        specifier: workspace:*
+        version: link:../../../core
+      better-sqlite3:
+        specifier: ^8.3.0
+        version: 8.3.0
+    devDependencies:
+      '@types/better-sqlite3':
+        specifier: ^7.6.4
+        version: 7.6.4
+      '@types/node':
+        specifier: ^18.15.11
+        version: 18.15.11
       typescript:
         specifier: ^5.0.4
         version: 5.0.4
@@ -2764,7 +2791,6 @@ packages:
 
   /comlink@4.4.1:
     resolution: {integrity: sha512-+1dlx0aY5Jo1vHy/tSsIGpSkN4tS9rZSW8FIhG0JH/crs9wwweswIo/POr451r7bZww3hFbPAKnTpimzL/mm4Q==}
-    dev: false
 
   /command-line-args@5.2.1:
     resolution: {integrity: sha512-H4UfQhZyakIjC74I9d34fGYDwk3XpSr17QhEd0Q3I9Xq1CETHo4Hcuo87WyWHpAF1aSLjLRf5lD9ZGX2qStUvg==}

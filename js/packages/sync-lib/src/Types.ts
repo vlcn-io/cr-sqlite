@@ -12,8 +12,6 @@ export type Config = {
    * Where SQLite databases should be created and persisted.
    */
   readonly dbsDir: string;
-
-  // readonly connectionProvider: (path: string) => DB | DBAsync
 };
 
 export type Seq = readonly [bigint, number];
@@ -29,6 +27,7 @@ export type Tag = {
   getChanges: 1;
   establishStream: 2;
   ackChanges: 3;
+  receiveStreamingChanges: 4;
 };
 
 export const tags: Tag = {
@@ -36,6 +35,7 @@ export const tags: Tag = {
   getChanges: 1,
   establishStream: 2,
   ackChanges: 3,
+  receiveStreamingChanges: 4,
 };
 
 export type Change = readonly [
@@ -51,7 +51,7 @@ export type Change = readonly [
   // is disallowed in p2p topologies.
 ];
 
-export type MSg =
+export type Msg =
   | ApplyChangesMsg
   | GetChangesMsg
   | EstablishStreamMsg
@@ -86,6 +86,14 @@ export type ApplyChangesMsg = {
   readonly changes: readonly Change[];
 };
 
+export type ReceiveStreamingChangesMsg = {
+  readonly _tag: Tag["receiveStreamingChanges"];
+  readonly seqStart: Seq;
+  readonly changes: readonly Change[];
+  // streams are stateful so the stream already knows the from and to dbids
+  // as well as schema version. These are negotiated on stream startup.
+};
+
 export type GetChangesMsg = {
   readonly _tag: Tag["getChanges"];
   /**
@@ -114,7 +122,8 @@ export type GetChangesMsg = {
  */
 export type EstablishStreamMsg = {
   readonly _tag: Tag["establishStream"];
-  readonly dbid: string;
+  readonly localDbid: string;
+  readonly remoteDbid: string;
   readonly seqStart: Seq;
   readonly schemaVersion: string;
   /**

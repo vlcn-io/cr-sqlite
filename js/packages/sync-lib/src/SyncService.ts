@@ -48,7 +48,7 @@ export default class SyncService {
     return [];
   }
 
-  applyChanges(msg: ApplyChangesMsg): AckChangesMsg {}
+  applyChanges(msg: ApplyChangesMsg): void {}
 
   /**
    * Clients should only ever have 1 outstanding `getChanges` request to the same DBID at a time.
@@ -66,5 +66,7 @@ export default class SyncService {
    * such that the client does not have to issue a request
    * for changes.
    */
-  startOutboundStream(msg: EstablishStreamMsg): OutboundStream {}
+  startOutboundStream(msg: EstablishStreamMsg): OutboundStream {
+    return new OutboundStream();
+  }
 }

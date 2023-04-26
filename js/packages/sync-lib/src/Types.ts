@@ -12,6 +12,8 @@ export type Config = {
    * Where SQLite databases should be created and persisted.
    */
   readonly dbsDir: string;
+
+  getDbFilename(dbid: string): string;
 };
 
 export type Seq = readonly [bigint, number];

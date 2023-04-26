@@ -30,6 +30,7 @@ export const tags = {
   establishOutboundStream: 2,
   ackChanges: 3,
   receiveStreamingChanges: 4,
+  applyChangesResponse: 5,
 } as const;
 
 export type Tag = typeof tags;
@@ -51,7 +52,8 @@ export type Msg =
   | ApplyChangesMsg
   | GetChangesMsg
   | EstablishOutboundStreamMsg
-  | AckChangesMsg;
+  | AckChangesMsg
+  | ApplyChangesMsg;
 
 export type ApplyChangesMsg = {
   readonly _tag: Tag["applyChanges"];
@@ -80,6 +82,11 @@ export type ApplyChangesMsg = {
    * The changes to apply
    */
   readonly changes: readonly Change[];
+};
+
+export type ApplyChangesResponse = {
+  readonly _tag: Tag["applyChangesResponse"];
+  readonly status: "ok" | "schemaMismatch" | "outOfOrder";
 };
 
 export type ReceiveStreamingChangesMsg = {

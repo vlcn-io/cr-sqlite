@@ -19,5 +19,6 @@ packages:
   - "js/packages/xplat-tests"
   - "js/packages/sandbox"
   - "js/packages/sandbox-node"
+  - "js/packages/sync-lib"
   - "js/tsbuild-all"
   - "js/deps/wa-sqlite"

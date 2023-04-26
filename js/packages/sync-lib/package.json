@@ -1,5 +1,5 @@
 {
-  "name": "@vlcn.io/server-rest",
+  "name": "@vlcn.io/sync-lib",
   "type": "module",
   "version": "0.9.0",
   "files": [
@@ -9,8 +9,7 @@
   "module": "dist/index.js",
   "main": "dist/index.js",
   "devDependencies": {
-    "@types/better-sqlite3": "^7.6.4",
-    "@types/node": "^18.15.11",
+    "@types/node": "^19.0.0",
     "typescript": "^5.0.4",
     "vitest": "^0.30.1"
   },
@@ -23,7 +22,10 @@
   "repository": {
     "type": "git",
     "url": "git@github.com:vlcn-io/cr-sqlite.git",
-    "directory": "https://github.com/vlcn-io/cr-sqlite/tree/main/js/packages/server-rest"
+    "directory": "https://github.com/vlcn-io/cr-sqlite/tree/main/js/packages/server-http"
   },
-  "dependencies": {}
+  "dependencies": {
+    "@vlcn.io/crsqlite": "workspace:*",
+    "@vlcn.io/xplat-api": "workspace:*"
+  }
 }

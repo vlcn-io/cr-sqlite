@@ -85,11 +85,6 @@ export default class DB {
       .pluck()
       .get();
 
-    if (storedVersion === version) {
-      // no-op, no need to apply schema
-      return "noop";
-    }
-
     if (
       !ignoreNameMismatch &&
       storedName != null &&
@@ -100,28 +95,31 @@ export default class DB {
       );
     }
 
-    const schema = await util.readSchema(this.config, schemaName);
-    if (storedVersion == null) {
-      // first ever application of the schema
-      this.db.exec(schema);
-      return "apply";
-    } else {
-      // some version of the schema already exists. Run auto-migrate.
-      this.db.transaction(() => {
-        this.db.prepare(`SELECT crsql_automigrate(?)`).run(schema);
-        this.db
-          .prepare(
-            `INSERT OR REPLACE INTO crsql_master (key, value) VALUES (?, ?)`
-          )
-          .run("schema_version", version);
-        this.db
-          .prepare(
-            `INSERT OR REPLATE INTO crsql_master (key, value) VALUES (?, ?)`
-          )
-          .run("schema_name", schemaName);
-      })();
-      return "migrate";
+    if (storedVersion === version) {
+      // no-op, no need to apply schema
+      return "noop";
     }
+
+    const schema = await util.readSchema(this.config, schemaName);
+    // some version of the schema already exists. Run auto-migrate.
+    this.db.transaction(() => {
+      if (storedVersion == null) {
+        this.db.exec(schema);
+      } else {
+        this.db.prepare(`SELECT crsql_automigrate(?)`).run(schema);
+      }
+      this.db
+        .prepare(
+          `INSERT OR REPLACE INTO crsql_master (key, value) VALUES (?, ?)`
+        )
+        .run("schema_version", version);
+      this.db
+        .prepare(
+          `INSERT OR REPLACE INTO crsql_master (key, value) VALUES (?, ?)`
+        )
+        .run("schema_name", schemaName);
+    })();
+    return storedVersion == null ? "apply" : "migrate";
   }
 
   applyChanges(from: Uint8Array, changes: readonly Change[]) {

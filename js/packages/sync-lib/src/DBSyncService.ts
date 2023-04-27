@@ -5,10 +5,10 @@ import {
   Change,
   EstablishOutboundStreamMsg,
   GetChangesMsg,
+  MigrateToResponse,
   tags,
 } from "./Types.js";
-
-type TODO = any;
+import DB from "./private/DB.js";
 
 /**
  * Sync interface once you have a DB instance in-hand.
@@ -17,9 +17,18 @@ type TODO = any;
  * on every request.
  */
 export default class DBSyncService {
-  constructor(db: TODO) {}
+  constructor(private readonly db: DB) {}
 
-  maybeMigrate(schemaName: string) {}
+  async maybeMigrate(
+    schemaName: string,
+    version: string
+  ): Promise<MigrateToResponse> {
+    const status = await this.db.migrateTo(schemaName, version);
+    return {
+      _tag: tags.createOrMigrateResponse,
+      status,
+    };
+  }
 
   /**
    * Applies changes with sanity checking to esnure contiguity of messages.
@@ -28,6 +37,9 @@ export default class DBSyncService {
    * @param msg
    */
   applyChanges(msg: ApplyChangesMsg): ApplyChangesResponse {
+    // 1. ensure contiguity of messages by checking seqStart against seen_peers
+    // 2. apply changes in a transaction and update seen_peers
+    // 3. return status
     return {
       _tag: tags.applyChangesResponse,
       status: "ok",

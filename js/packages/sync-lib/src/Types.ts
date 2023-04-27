@@ -33,6 +33,8 @@ export const tags = {
   ackChanges: 3,
   receiveStreamingChanges: 4,
   applyChangesResponse: 5,
+  createOrMigrateResponse: 6,
+  createOrMigrate: 7,
 } as const;
 
 export type Tag = typeof tags;
@@ -86,9 +88,21 @@ export type ApplyChangesMsg = {
   readonly changes: readonly Change[];
 };
 
+export type CreateOrMigrateMsg = {
+  readonly _tag: Tag["createOrMigrate"];
+  readonly dbid: string;
+  readonly schemaName: string;
+  readonly schemaVersion: string;
+};
+
 export type ApplyChangesResponse = {
   readonly _tag: Tag["applyChangesResponse"];
   readonly status: "ok" | "schemaMismatch" | "outOfOrder";
+};
+
+export type CreateOrMigrateResponse = {
+  readonly _tag: Tag["createOrMigrateResponse"];
+  readonly status: "noop" | "apply" | "migrate";
 };
 
 export type ReceiveStreamingChangesMsg = {

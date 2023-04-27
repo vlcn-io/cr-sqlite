@@ -38,7 +38,7 @@ export default class FSNotify {
         if (listeners != null) {
           for (const listener of listeners) {
             try {
-              listener(this.cache.getDb(dbid));
+              listener(this.cache.get(dbid));
             } catch (e) {
               console.error(e);
             }

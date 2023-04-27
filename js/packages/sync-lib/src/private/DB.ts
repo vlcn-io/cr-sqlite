@@ -3,6 +3,7 @@ import type { Database } from "better-sqlite3";
 import { Change, Config } from "../Types.js";
 import { extensionPath } from "@vlcn.io/crsqlite";
 import util from "../util.js";
+import touchHack from "./touchHack.js";
 
 /**
  * Wraps a normal better-sqlite3 connection to provide
@@ -15,7 +16,7 @@ export default class DB {
   readonly #pullChangesetStmt: SQLiteDB.Statement;
   readonly #applyChangesTx: SQLiteDB.Transaction;
 
-  constructor(config: Config, dbid: string) {
+  constructor(private readonly config: Config, private readonly dbid: string) {
     this.db = new SQLiteDB(util.getDbFilename(config, dbid));
     this.db.pragma("journal_mode = WAL");
     this.db.pragma("synchronous = NORMAL");
@@ -52,6 +53,9 @@ export default class DB {
     // as well as update the last seen version?
     // not here. DBSyncService should do that I think.
     this.#applyChangesTx(from, changes);
+
+    // probably in the future just set up some msg queue service.
+    touchHack(this.config, this.dbid);
   }
 
   pullChangeset(

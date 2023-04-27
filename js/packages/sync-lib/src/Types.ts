@@ -14,6 +14,8 @@ export type Config = {
   readonly dbsDir: string;
 
   readonly cacheTtlInSeconds: number;
+
+  readonly notifyLatencyInMs: number;
 };
 
 export type Seq = readonly [bigint, number];

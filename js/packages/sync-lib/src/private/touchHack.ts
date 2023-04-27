@@ -2,7 +2,7 @@ import { Config } from "../Types.js";
 import { throttle } from "throttle-debounce";
 import util from "../util.js";
 
-const apply = throttle(50, (config: Config, dbid: string) => {
+const apply = throttle(25, (config: Config, dbid: string) => {
   util.touchFile(config, dbid);
 });
 

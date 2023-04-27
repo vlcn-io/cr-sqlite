@@ -5,6 +5,7 @@ const TestConfig: Config = {
   dbsDir: "./dbs-test",
   schemasDir: "./schemas-test",
   cacheTtlInSeconds: 60,
+  notifyLatencyInMs: 10,
 };
 
 export default TestConfig;

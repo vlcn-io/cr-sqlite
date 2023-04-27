@@ -52,6 +52,13 @@ const ex = {
     }
     return true;
   },
+
+  readSchema(config: Config, schemaName: string): Promise<string> {
+    return fs.promises.readFile(
+      path.join(config.schemasDir, schemaName),
+      "utf8"
+    );
+  },
 };
 
 export default ex;

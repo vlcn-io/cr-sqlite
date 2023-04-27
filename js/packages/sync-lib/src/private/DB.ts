@@ -61,8 +61,67 @@ export default class DB {
     );
   }
 
-  migrateTo(schemaName: string, version: string) {
+  __testsOnly(): Database {
+    return this.db;
+  }
+
+  // TODO: when we're on litestream and have different nodes processing live streams
+  // we'll need to tell them to check for schema changes.
+  // We can do that before they pull changes for their stream and check schema version.
+  // Maybe just do that by default? If schema version changes from last pull in stream, re-stablish a connection?
+  // there's obvi the pragma to retrieve current schema version from sqlite.
+  async migrateTo(
+    schemaName: string,
+    version: string,
+    ignoreNameMismatch: boolean = false
+  ): Promise<"noop" | "apply" | "migrate"> {
     // get current schema version
+    const storedVersion = this.db
+      .prepare(`SELECT value FROM crsql_master WHERE key = 'schema_version'`)
+      .pluck()
+      .get();
+    const storedName = this.db
+      .prepare(`SELECT value FROM crsql_master WHERE key = 'schema_name'`)
+      .pluck()
+      .get();
+
+    if (storedVersion === version) {
+      // no-op, no need to apply schema
+      return "noop";
+    }
+
+    if (
+      !ignoreNameMismatch &&
+      storedName != null &&
+      storedName !== schemaName
+    ) {
+      throw new Error(
+        `Cannot migrate between completely different schemas. from ${storedName} to ${schemaName}`
+      );
+    }
+
+    const schema = await util.readSchema(this.config, schemaName);
+    if (storedVersion == null) {
+      // first ever application of the schema
+      this.db.exec(schema);
+      return "apply";
+    } else {
+      // some version of the schema already exists. Run auto-migrate.
+      this.db.transaction(() => {
+        this.db.prepare(`SELECT crsql_automigrate(?)`).run(schema);
+        this.db
+          .prepare(
+            `INSERT OR REPLACE INTO crsql_master (key, value) VALUES (?, ?)`
+          )
+          .run("schema_version", version);
+        this.db
+          .prepare(
+            `INSERT OR REPLATE INTO crsql_master (key, value) VALUES (?, ?)`
+          )
+          .run("schema_name", schemaName);
+      })();
+      return "migrate";
+    }
   }
 
   applyChanges(from: Uint8Array, changes: readonly Change[]) {

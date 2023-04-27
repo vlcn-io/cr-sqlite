@@ -1,15 +1,19 @@
-import DBCache from "../DBCache";
-import { Config } from "../Types";
-import util from "../util";
-import DB from "./DB";
+import DBCache from "../DBCache.js";
+import { Config } from "../Types.js";
+import util from "../util.js";
+import DB from "./DB.js";
 import chokidar from "chokidar";
+import { collect } from "./collapser.js";
 
-// notifies outbound streams when db change events occur for a given db.
-// watches the db directory for filesystem changes.
-// debounces and collects over some time?
+/**
+ * Notifies outbound streams of changes to the database file.
+ *
+ * These changes could be made by other connections, processes or even other regions when running on litefs.
+ */
 export default class FSNotify {
   private readonly watcher: chokidar.FSWatcher;
   private readonly listeners = new Map<string, Set<(db: DB) => void>>();
+  private readonly fileChanged;
 
   constructor(
     private readonly config: Config,
@@ -24,6 +28,23 @@ export default class FSNotify {
       interval: 100,
       binaryInterval: 300,
       ignoreInitial: true,
+    });
+    this.fileChanged = collect(config.notifyLatencyInMs, (paths: string[]) => {
+      const dedupedDbids = new Set(
+        paths.map((p) => util.fileEventNameToDbId(p))
+      );
+      for (const dbid of dedupedDbids) {
+        const listeners = this.listeners.get(dbid);
+        if (listeners != null) {
+          for (const listener of listeners) {
+            try {
+              listener(this.cache.getDb(dbid));
+            } catch (e) {
+              console.error(e);
+            }
+          }
+        }
+      }
     });
     this.watcher.on("change", this.fileChanged);
   }
@@ -50,20 +71,4 @@ export default class FSNotify {
   shutdown() {
     this.watcher.close();
   }
-
-  // TODO: we should collect all paths over a given interval and then notify
-  private fileChanged = (path: string) => {
-    console.log("file changes: ", path);
-    const dbid = util.fileEventNameToDbId(path);
-    const listeners = this.listeners.get(dbid);
-    if (listeners != null) {
-      for (const listener of listeners) {
-        try {
-          listener(this.cache.getDb(dbid));
-        } catch (e) {
-          console.error(e);
-        }
-      }
-    }
-  };
 }

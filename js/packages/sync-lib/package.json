@@ -10,7 +10,6 @@
   "main": "dist/index.js",
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.4",
-    "@types/fb-watchman": "^2.0.1",
     "@types/node": "^18.16.1",
     "chokidar-cli": "^3.0.0",
     "typescript": "^5.0.4",
@@ -30,6 +29,6 @@
   "dependencies": {
     "@vlcn.io/crsqlite": "workspace:*",
     "better-sqlite3": "^8.3.0",
-    "fb-watchman": "^2.0.2"
+    "chokidar": "^3.5.3"
   }
 }

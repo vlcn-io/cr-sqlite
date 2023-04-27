@@ -1,9 +1,9 @@
 import { test, expect, afterAll } from "vitest";
-import { createFsNotify } from "../FSNotify.js";
 import TestConfig from "../../TestConfig.js";
 import DBCache from "../../DBCache.js";
 import util from "../../util.js";
 import SQLiteDB from "better-sqlite3";
+import FSNotify from "../FSNotify.js";
 import fs from "fs";
 
 test("writes to the database notify fs listeners", async () => {
@@ -11,10 +11,15 @@ test("writes to the database notify fs listeners", async () => {
   const db = new SQLiteDB(util.getDbFilename(TestConfig, dbid));
   db.pragma("journal_mode = WAL");
   db.pragma("synchronous = NORMAL");
-  db.exec("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)");
+  db.exec("CREATE TABLE IF NOT EXISTS test2 (a, b)");
+  if (util.isDarwin()) {
+    await util.touchFile(TestConfig, dbid);
+  }
+  await sleep(500);
 
   const cache = new DBCache(TestConfig);
-  const fsNotify = await createFsNotify(TestConfig, cache);
+  console.log("starting notify");
+  const fsNotify = new FSNotify(TestConfig, cache);
   let notified = false;
   fsNotify.addListener(dbid, () => {
     notified = true;
@@ -26,10 +31,13 @@ test("writes to the database notify fs listeners", async () => {
   // Should not be notified on creation of fsNotify
   expect(notified).toBe(false);
 
-  db.exec("INSERT INTO test VALUES (1, 'test')");
+  db.exec("INSERT INTO test2 VALUES (1, 2)");
+  if (util.isDarwin()) {
+    await util.touchFile(TestConfig, dbid);
+  }
 
   // sleep for some time for fs events to propagate
-  await sleep(3000);
+  await sleep(500);
   // Should be notified on later writes.
   expect(notified).toBe(true);
 
@@ -43,8 +51,8 @@ async function sleep(ms: number) {
 
 afterAll(() => {
   // remove all files from dbs directory
-  // const dir = TestConfig.dbsDir;
-  // fs.readdirSync(dir).forEach((file) => {
-  //   fs.unlinkSync(dir + "/" + file);
-  // });
+  const dir = TestConfig.dbsDir;
+  fs.readdirSync(dir).forEach((file) => {
+    fs.unlinkSync(dir + "/" + file);
+  });
 });

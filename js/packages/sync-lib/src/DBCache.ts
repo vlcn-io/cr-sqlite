@@ -17,6 +17,10 @@ export default class DBCache {
     }, config.cacheTtlInSeconds * 1000);
   }
 
+  __testsOnly() {
+    return this.activeDBs;
+  }
+
   /**
    * DBCache evicts after some TTL. Thus users should not hold onto
    * references to DBs for long periods of time. Instead, they should

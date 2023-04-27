@@ -48,11 +48,3 @@ test("writes to the database notify fs listeners", async () => {
 async function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
-
-afterAll(() => {
-  // remove all files from dbs directory
-  const dir = TestConfig.dbsDir;
-  fs.readdirSync(dir).forEach((file) => {
-    fs.unlinkSync(dir + "/" + file);
-  });
-});

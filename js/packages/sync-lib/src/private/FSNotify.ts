@@ -1,8 +1,9 @@
-import DBCache from "../DBCache";
-import { Config } from "../Types";
-import util from "../util";
-import DB from "./DB";
+import DBCache from "../DBCache.js";
+import { Config } from "../Types.js";
+import util from "../util.js";
+import DB from "./DB.js";
 import watchman from "fb-watchman";
+import path from "path";
 
 // notifies outbound streams when db change events occur for a given db.
 // watches the db directory for filesystem changes.
@@ -45,7 +46,7 @@ class FSNotify {
   }
 
   private filesChanged = (resp: any) => {
-    console.log(resp);
+    console.log("CHANGE EVENT!: ", resp);
     if (resp.subscription !== this.subscriptionName) {
       return;
     }
@@ -81,33 +82,38 @@ export function createFsNotify(
         required: ["relative_root"],
       },
       (err, resp) => {
+        console.log("capabilioty", resp);
         if (err) {
           console.error(err);
           client.end();
           reject(err);
           return;
         }
-        client.command(["watch-project", config.dbsDir], (err, resp) => {
-          if (err) {
-            console.error(err);
-            reject(err);
-            return;
-          }
+        client.command(
+          ["watch-project", path.resolve(config.dbsDir)],
+          (err, resp) => {
+            if (err) {
+              console.error(err);
+              reject(err);
+              return;
+            }
 
-          if ("warning" in resp) {
-            console.warn(resp.warning);
-          }
+            if ("warning" in resp) {
+              console.warn(resp.warning);
+            }
 
-          makeTimeConstraintedSubscription(
-            config,
-            cache,
-            client,
-            resp.watch,
-            resp.relative_path,
-            resolve,
-            reject
-          );
-        });
+            console.log("watch project", resp);
+            makeTimeConstraintedSubscription(
+              config,
+              cache,
+              client,
+              resp.watch,
+              resp.relative_path,
+              resolve,
+              reject
+            );
+          }
+        );
       }
     );
   });
@@ -131,8 +137,14 @@ function makeTimeConstraintedSubscription(
     }
 
     const sub = {
-      expression: ["allof", ["match", "*.db"]],
-      fields: ["name"],
+      // expression: [
+      //   "anyof",
+      //   ["match", "*.db"],
+      //   ["match", "*.db-wal"],
+      //   ["match", "*.db-shm"],
+      // ],
+      expression: ["type", "f"],
+      fields: ["name", "mtime_ms", "size"],
       since: resp.clock,
     };
 

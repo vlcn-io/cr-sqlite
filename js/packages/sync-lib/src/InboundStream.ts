@@ -1,4 +1,4 @@
-import { AckChangesMsg, ReceiveStreamingChangesMsg } from "./Types";
+import { AckChangesMsg, ReceiveStreamingChangesMsg } from "./Types.js";
 
 /**
  * Takes the results of an outbound stream and

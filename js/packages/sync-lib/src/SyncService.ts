@@ -1,5 +1,4 @@
-import InboundStream from "./InboundStream";
-import OutboundStream from "./OutboundStream";
+import OutboundStream from "./OutboundStream.js";
 import {
   AckChangesMsg,
   ApplyChangesMsg,

@@ -1,8 +1,8 @@
 import { test, expect, afterAll } from "vitest";
-import { createFsNotify } from "../FSNotify";
-import TestConfig from "../../TestConfig";
-import DBCache from "../../DBCache";
-import util from "../../util";
+import { createFsNotify } from "../FSNotify.js";
+import TestConfig from "../../TestConfig.js";
+import DBCache from "../../DBCache.js";
+import util from "../../util.js";
 import SQLiteDB from "better-sqlite3";
 import fs from "fs";
 
@@ -43,8 +43,8 @@ async function sleep(ms: number) {
 
 afterAll(() => {
   // remove all files from dbs directory
-  const dir = TestConfig.dbsDir;
-  fs.readdirSync(dir).forEach((file) => {
-    fs.unlinkSync(dir + "/" + file);
-  });
+  // const dir = TestConfig.dbsDir;
+  // fs.readdirSync(dir).forEach((file) => {
+  //   fs.unlinkSync(dir + "/" + file);
+  // });
 });

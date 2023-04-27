@@ -442,6 +442,9 @@ importers:
       chokidar:
         specifier: ^3.5.3
         version: 3.5.3
+      throttle-debounce:
+        specifier: ^5.0.0
+        version: 5.0.0
     devDependencies:
       '@types/better-sqlite3':
         specifier: ^7.6.4
@@ -449,6 +452,9 @@ importers:
       '@types/node':
         specifier: ^18.16.1
         version: 18.16.1
+      '@types/throttle-debounce':
+        specifier: ^5.0.0
+        version: 5.0.0
       chokidar-cli:
         specifier: ^3.0.0
         version: 3.0.0

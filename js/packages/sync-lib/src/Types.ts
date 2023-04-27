@@ -13,7 +13,7 @@ export type Config = {
    */
   readonly dbsDir: string;
 
-  getDbFilename(dbid: string): string;
+  readonly cacheTtlInSeconds: number;
 };
 
 export type Seq = readonly [bigint, number];

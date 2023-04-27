@@ -1,10 +1,12 @@
 import { Config } from "./Types";
+import path from "path";
 
 export default {
   getDbFilename(config: Config, dbid: string): string {
-    return config.dbsDir + "/" + dbid;
+    return path.join(config.dbsDir, dbid + ".db");
   },
+
   fileEventNameToDbId(filename: string): string {
-    return filename.replaceAll(".db", "").replaceAll("-wal", "");
+    return path.parse(filename).name;
   },
 };

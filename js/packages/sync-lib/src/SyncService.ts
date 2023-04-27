@@ -1,9 +1,12 @@
+import DBCache from "./DBCache.js";
+import DBSyncService from "./DBSyncService.js";
 import OutboundStream from "./OutboundStream.js";
 import {
   AckChangesMsg,
   ApplyChangesMsg,
   Change,
   Config,
+  CreateOrMigrateMsg,
   EstablishOutboundStreamMsg,
   GetChangesMsg,
 } from "./Types";
@@ -11,7 +14,10 @@ import {
 // TODO: add a DB cache with a TTL so as not to re-create
 // dbs on every request?
 export default class SyncService {
-  constructor(public readonly config: Config) {}
+  constructor(
+    public readonly config: Config,
+    private readonly dbCache: DBCache
+  ) {}
 
   /**
    * Will create the database if it does not exist and apply the schema.
@@ -26,7 +32,11 @@ export default class SyncService {
    * @param dbid
    * @param schema
    */
-  createOrMigrateDatabase(dbid: string, schemaName: string) {}
+  createOrMigrateDatabase(msg: CreateOrMigrateMsg): void {
+    const db = this.dbCache.get(msg.dbid);
+    const svc = new DBSyncService(db);
+    svc.maybeMigrate(msg.schemaName, msg.schemaVersion);
+  }
 
   /**
    * Upload a new schema to the server.

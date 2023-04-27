@@ -8,7 +8,7 @@ test("cache evicts", () => {
   const cache = new DBCache(TestConfig);
 
   const dbid = "dbid";
-  const db = cache.getDb(dbid);
+  const db = cache.get(dbid);
   const internalMap = cache.__testsOnly();
 
   expect(internalMap.size).toBe(1);
@@ -28,7 +28,7 @@ test("cache bumps to now on usage", () => {
   const cache = new DBCache(TestConfig);
 
   const dbid = "dbid";
-  const db = cache.getDb(dbid);
+  const db = cache.get(dbid);
   const internalMap = cache.__testsOnly();
 
   expect(internalMap.size).toBe(1);
@@ -36,7 +36,7 @@ test("cache bumps to now on usage", () => {
   vi.advanceTimersByTime(TestConfig.cacheTtlInSeconds * 1000 + 10);
   expect(internalMap.size).toBe(1);
   expect(internalMap.get(dbid)?.[1]).toBe(db);
-  const cacheddb = cache.getDb(dbid);
+  const cacheddb = cache.get(dbid);
   expect(cacheddb).toBe(db);
 
   vi.advanceTimersByTime(TestConfig.cacheTtlInSeconds * 1000 + 10);

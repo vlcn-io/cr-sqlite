@@ -1,6 +1,7 @@
 import { Config } from "./Types.js";
 import DB from "./private/DB.js";
 
+// TODO: have a size limit on the cache?
 export default class DBCache {
   private readonly activeDBs = new Map<string, [number, DB]>();
   private readonly intervalHandle: NodeJS.Timeout;
@@ -28,7 +29,7 @@ export default class DBCache {
    * @param dbid
    * @returns
    */
-  getDb(dbid: string): DB {
+  get(dbid: string): DB {
     let entry = this.activeDBs.get(dbid);
     if (entry == null) {
       entry = [Date.now(), new DB(this.config, dbid)];

@@ -1,4 +1,4 @@
-import { Config } from "./Types";
+import { Config } from "./Types.js";
 import path from "path";
 
 export default {

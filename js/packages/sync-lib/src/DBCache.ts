@@ -1,5 +1,5 @@
-import { Config } from "./Types";
-import DB from "./private/DB";
+import { Config } from "./Types.js";
+import DB from "./private/DB.js";
 
 export default class DBCache {
   private readonly activeDBs = new Map<string, [number, DB]>();

@@ -1,8 +1,8 @@
 import SQLiteDB from "better-sqlite3";
 import type { Database } from "better-sqlite3";
-import { Change, Config } from "../Types";
+import { Change, Config } from "../Types.js";
 import { extensionPath } from "@vlcn.io/crsqlite";
-import util from "../util";
+import util from "../util.js";
 
 /**
  * Wraps a normal better-sqlite3 connection to provide

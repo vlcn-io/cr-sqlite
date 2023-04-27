@@ -1,5 +1,4 @@
-import InboundStream from "./InboundStream";
-import OutboundStream from "./OutboundStream";
+import OutboundStream from "./OutboundStream.js";
 import {
   ApplyChangesMsg,
   ApplyChangesResponse,
@@ -7,7 +6,7 @@ import {
   EstablishOutboundStreamMsg,
   GetChangesMsg,
   tags,
-} from "./Types";
+} from "./Types.js";
 
 type TODO = any;
 

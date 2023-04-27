@@ -1,4 +1,4 @@
-import { Config } from "./Types";
+import { Config } from "./Types.js";
 
 const TestConfig: Config = {
   serviceName: "test",

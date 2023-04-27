@@ -51,6 +51,7 @@ export default class FSNotify {
     this.watcher.close();
   }
 
+  // TODO: we should collect all paths over a given interval and then notify
   private fileChanged = (path: string) => {
     console.log("file changes: ", path);
     const dbid = util.fileEventNameToDbId(path);

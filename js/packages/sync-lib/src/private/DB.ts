@@ -20,13 +20,26 @@ export default class DB {
     this.db = new SQLiteDB(util.getDbFilename(config, dbid));
     this.db.pragma("journal_mode = WAL");
     this.db.pragma("synchronous = NORMAL");
-    this.db.loadExtension(extensionPath);
 
+    // check if siteid table exists
+    const siteidTableExists = this.db
+      .prepare(
+        "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='__crsql_siteid'"
+      )
+      .pluck()
+      .get();
+    if (siteidTableExists == 0) {
+      this.db.exec(`CREATE TABLE __crsql_siteid (site_id)`);
+      this.db
+        .prepare(`INSERT INTO "__crsql_siteid" VALUES (?)`)
+        .run(util.uuidToBytes(dbid));
+    }
+
+    this.db.loadExtension(extensionPath);
     this.#pullChangesetStmt = this.db.prepare(
       `SELECT "table", "pk", "cid", "val", "col_version", "db_version" FROM crsql_changes WHERE db_version > ? AND site_id IS NOT ?`
     );
     this.#pullChangesetStmt.raw(true);
-
     const applyChangesetStmt = this.db.prepare(
       `INSERT INTO crsql_changes ("table", "pk", "cid", "val", "col_version", "db_version", "site_id") VALUES (?, ?, ?, ?, ?, ?, ?)`
     );
@@ -46,6 +59,10 @@ export default class DB {
         }
       }
     );
+  }
+
+  migrateTo(schemaName: string, version: string) {
+    // get current schema version
   }
 
   applyChanges(from: Uint8Array, changes: readonly Change[]) {

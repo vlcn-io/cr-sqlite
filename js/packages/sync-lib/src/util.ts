@@ -31,6 +31,27 @@ const ex = {
         return fd.close();
       });
   },
+
+  uuidToBytes(uuid: string) {
+    const hex = uuid.replaceAll("-", "");
+    const ret = new Uint8Array(hex.length / 2);
+    for (let c = 0; c < hex.length; c += 2) {
+      ret[c / 2] = parseInt(hex.substring(c, c + 2), 16);
+    }
+    return ret;
+  },
+
+  dbidsAreEqual(a: Uint8Array, b: Uint8Array) {
+    if (a.length !== b.length) {
+      return false;
+    }
+    for (let c = 0; c < a.length; c++) {
+      if (a[c] !== b[c]) {
+        return false;
+      }
+    }
+    return true;
+  },
 };
 
 export default ex;

@@ -66,6 +66,7 @@ export default class DB {
   }
 
   close() {
+    this.db.exec("SELECT crsql_finalize()");
     this.db.close();
   }
 }

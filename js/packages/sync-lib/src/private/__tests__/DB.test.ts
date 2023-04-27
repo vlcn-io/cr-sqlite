@@ -89,11 +89,3 @@ test("db can read and write a changeset", async () => {
   const changesFrom1 = [...db1.pullChangeset(util.uuidToBytes(dbid2), 0)];
   db2.applyChanges(util.uuidToBytes(dbid1), changesFrom1);
 });
-
-afterAll(() => {
-  // remove all files from dbs directory
-  const dir = TestConfig.dbsDir;
-  fs.readdirSync(dir).forEach((file) => {
-    fs.unlinkSync(dir + "/" + file);
-  });
-});

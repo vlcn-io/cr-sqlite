@@ -15,9 +15,12 @@ test("db bootstraps with correct dbid", () => {
   const dbid = crypto.randomUUID();
   const db = new DB(TestConfig, dbid);
 
-  expect(
-    db.__testsOnly().prepare("SELECT crsql_siteid()").pluck().get()
-  ).toEqual(util.uuidToBytes(dbid));
+  const dbidFromDb = db
+    .__testsOnly()
+    .prepare("SELECT crsql_siteid()")
+    .pluck()
+    .get();
+  expect(Uint8Array.from(dbidFromDb as any)).toEqual(util.uuidToBytes(dbid));
 });
 
 test("db can bootstrap a new schema", async () => {
@@ -40,6 +43,7 @@ test("migrating to the same schema & version is a no-op", async () => {
   const dbid = crypto.randomUUID();
   const db = new DB(TestConfig, dbid);
 
+  console.log("migrate 2");
   const result1 = await db.migrateTo("test.sql", "1");
   const result2 = await db.migrateTo("test.sql", "1");
 

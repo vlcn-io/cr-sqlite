@@ -1,5 +1,5 @@
 {
-  "name": "@vlcn.io/sync-lib",
+  "name": "@vlcn.io/lib-rest",
   "type": "module",
   "version": "0.9.0",
   "files": [

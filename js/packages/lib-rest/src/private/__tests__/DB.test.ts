@@ -1,8 +1,8 @@
 import { test, expect, afterAll } from "vitest";
 import DB from "../DB";
-import TestConfig from "../../TestConfig";
+import TestConfig from "../../config/TestConfig";
 import fs from "fs";
-import util from "../../util";
+import util from "../util";
 
 test("db loads", () => {
   const dbid = crypto.randomUUID();

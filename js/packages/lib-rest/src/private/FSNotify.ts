@@ -1,6 +1,6 @@
-import DBCache from "../DBCache.js";
+import DBCache from "./DBCache.js";
 import { Config } from "../Types.js";
-import util from "../util.js";
+import util from "./util.js";
 import DB from "./DB.js";
 import chokidar from "chokidar";
 import { collect } from "./collapser.js";

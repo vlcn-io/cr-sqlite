@@ -2,7 +2,7 @@ import SQLiteDB from "better-sqlite3";
 import type { Database } from "better-sqlite3";
 import { Change, Config } from "../Types.js";
 import { extensionPath } from "@vlcn.io/crsqlite";
-import util from "../util.js";
+import util from "./util.js";
 import touchHack from "./touchHack.js";
 
 /**
@@ -15,13 +15,14 @@ export default class DB {
   private readonly db: Database;
   readonly #pullChangesetStmt: SQLiteDB.Statement;
   readonly #applyChangesTx;
-  lastUsed: number;
+
+  public readonly getSinceLastApplyStmt: SQLiteDB.Statement;
+  public readonly setSinceLastApplyStmt: SQLiteDB.Statement;
 
   constructor(private readonly config: Config, private readonly dbid: string) {
     this.db = new SQLiteDB(util.getDbFilename(config, dbid));
     this.db.pragma("journal_mode = WAL");
     this.db.pragma("synchronous = NORMAL");
-    this.lastUsed = Date.now();
 
     // check if siteid table exists
     const siteidTableExists = this.db
@@ -66,24 +67,22 @@ export default class DB {
         return [maxVersion, 0] as [bigint, number];
       }
     );
+
+    this.getSinceLastApplyStmt = this.db.prepare(
+      `SELECT version, seq FROM crsql_tracked_peers WHERE site_id = ? AND tag = 0 AND event = 0`
+    );
+    this.getSinceLastApplyStmt.raw(true);
+    this.setSinceLastApplyStmt = this.db.prepare(
+      `INSERT OR REPLACE INTO crsql_tracked_peers (site_id, tag, event, version, seq) VALUES (?, 0, 0, ?, ?)`
+    );
   }
 
   prepare(stmt: string): SQLiteDB.Statement {
-    this.lastUsed = Date.now();
     return this.db.prepare(stmt);
   }
 
   transaction(fn: (...args: any[]) => void): SQLiteDB.Transaction {
-    this.lastUsed = Date.now();
-    return this.db.transaction((...args: any[]) => {
-      this.lastUsed = Date.now();
-      fn(...args);
-    });
-  }
-
-  run<T>(fn: () => T): T {
-    this.lastUsed = Date.now();
-    return fn();
+    return this.db.transaction(fn);
   }
 
   __testsOnly(): Database {
@@ -100,7 +99,6 @@ export default class DB {
     version: string,
     ignoreNameMismatch: boolean = false
   ): Promise<"noop" | "apply" | "migrate"> {
-    this.lastUsed = Date.now();
     // get current schema version
     const storedVersion = this.db
       .prepare(`SELECT value FROM crsql_master WHERE key = 'schema_version'`)
@@ -149,7 +147,6 @@ export default class DB {
   }
 
   applyChanges(from: Uint8Array, changes: readonly Change[]): [bigint, number] {
-    this.lastUsed = Date.now();
     // TODO: do we not need to check that the application is contiguous?
     // as well as update the last seen version?
     // not here. DBSyncService should do that I think.
@@ -161,16 +158,8 @@ export default class DB {
     return ret;
   }
 
-  pullChangeset(
-    requestor: Uint8Array,
-    since: number
-  ): IterableIterator<Change> {
-    this.lastUsed = Date.now();
-    const iter = this.#pullChangesetStmt.iterate(
-      since,
-      requestor
-    ) as IterableIterator<Change>;
-    return iter;
+  getChanges(requestor: Uint8Array, since: bigint): Change[] {
+    return this.#pullChangesetStmt.all(since, requestor) as Change[];
   }
 
   close() {

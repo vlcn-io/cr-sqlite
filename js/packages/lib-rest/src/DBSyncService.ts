@@ -1,4 +1,4 @@
-import OutboundStream from "./OutboundStream.js";
+import OutboundStream from "./private/OutboundStream.js";
 import {
   ApplyChangesMsg,
   ApplyChangesResponse,
@@ -6,12 +6,14 @@ import {
   CreateOrMigrateResponse,
   EstablishOutboundStreamMsg,
   GetChangesMsg,
+  GetChangesResponse,
   GetLastSeenMsg,
   GetLastSeenResponse,
+  Seq,
   tags,
 } from "./Types.js";
 import DB from "./private/DB.js";
-import util from "./util.js";
+import util from "./private/util.js";
 
 /**
  * Sync interface once you have a DB instance in-hand.
@@ -19,33 +21,18 @@ import util from "./util.js";
  * Useful for stateful sync services that do not re-create db connections
  * on every request.
  */
-export default class DBSyncService {
-  readonly #applyChangesTx;
-  readonly #getSinceLastApplyStmt;
-  readonly #setSinceLastApplyStmt;
-
-  constructor(private readonly db: DB) {
-    this.#applyChangesTx = db.transaction(this.#applyChangesInternal);
-    this.#getSinceLastApplyStmt = db.prepare(
-      `SELECT version, seq FROM crsql_tracked_peers WHERE site_id = ? AND tag = 0 AND event = 0`
-    );
-    this.#getSinceLastApplyStmt.raw(true);
-    // TODO: you should only update the tracking if the new version is later than the prior version.
-    this.#setSinceLastApplyStmt = db.prepare(
-      `INSERT OR REPLACE INTO crsql_tracked_peers (site_id, tag, event, version, seq) VALUES (?, 0, 0, ?, ?)`
-    );
-  }
-
+const DBSyncService = {
   async maybeMigrate(
+    db: DB,
     schemaName: string,
     version: string
   ): Promise<CreateOrMigrateResponse> {
-    const status = await this.db.migrateTo(schemaName, version);
+    const status = await db.migrateTo(schemaName, version);
     return {
       _tag: tags.createOrMigrateResponse,
       status,
     };
-  }
+  },
 
   /**
    * Allows one client to ask another what version it last saw from it.
@@ -55,15 +42,15 @@ export default class DBSyncService {
    * @param msg
    * @returns
    */
-  getLastSeen(msg: GetLastSeenMsg): GetLastSeenResponse {
-    const lastSeen = this.#getSinceLastApplyStmt.get(
+  getLastSeen(db: DB, msg: GetLastSeenMsg): GetLastSeenResponse {
+    const lastSeen = db.getSinceLastApplyStmt.get(
       util.uuidToBytes(msg.fromDbid)
     ) as [bigint, number];
     return {
       _tag: tags.getLastSeenResponse,
       seq: lastSeen,
     };
-  }
+  },
 
   /**
    * Applies changes with sanity checking to esnure contiguity of messages.
@@ -83,12 +70,12 @@ export default class DBSyncService {
    * Pt 3 would need to be done via a shared worker or leader election.
    * @param msg
    */
-  applyChanges(msg: ApplyChangesMsg): ApplyChangesResponse {
+  applyChanges(db: DB, msg: ApplyChangesMsg): ApplyChangesResponse {
     // 1. ensure contiguity of messages by checking seqStart against seen_peers
     // 2. apply changes in a transaction and update seen_peers
     // 3. return status
     try {
-      this.#applyChangesTx(msg);
+      db.transaction(applyChangesInternal)(db, msg);
       return {
         _tag: tags.applyChangesResponse,
         seqEnd: msg.seqEnd,
@@ -103,11 +90,27 @@ export default class DBSyncService {
         status: e.status || "uncaught",
       };
     }
-  }
+  },
 
-  getChanges(msg: GetChangesMsg): Change[] {
-    return [];
-  }
+  getChanges(db: DB, msg: GetChangesMsg): GetChangesResponse {
+    const changes = db.getChanges(
+      util.uuidToBytes(msg.requestorDbid),
+      msg.since[0]
+    );
+    let seqEnd: Seq;
+    if (changes.length === 0) {
+      seqEnd = msg.since;
+    } else {
+      const lastChange = changes[changes.length - 1];
+      seqEnd = [lastChange[5], 0];
+    }
+    return {
+      _tag: tags.getChangesResponse,
+      changes,
+      seqStart: msg.since,
+      seqEnd,
+    };
+  },
 
   startOutboundStream(msg: EstablishOutboundStreamMsg): OutboundStream {
     // Constructs an outbound stream
@@ -118,45 +121,40 @@ export default class DBSyncService {
     // Outbound streams need to be closed when the user is done with them.
     // Can use Sever Sent Events for this rather than websockets.
     throw new Error("Unimplemented");
-  }
+  },
 
   // startInboundStream(): InboundStream {
   //   throw new Error();
   // }
+};
 
-  close() {
-    // closes all associated outbound streams and this db.
+function applyChangesInternal(db: DB, msg: ApplyChangesMsg) {
+  const fromDbidAsBytes = util.uuidToBytes(msg.fromDbid);
+  const [version, seq] = db.getSinceLastApplyStmt.get(fromDbidAsBytes) as [
+    bigint,
+    number
+  ];
+
+  // if their supplied version is <= the version we already have then we can process the msg.
+  if (msg.seqStart[0] > version) {
+    throw {
+      msg: `Cannot apply changes from ${msg.seqStart[0]} when last seen version was ${version}`,
+      seqEnd: [version, seq],
+      status: "outOfOrder",
+    };
   }
 
-  #applyChangesInternal = (msg: ApplyChangesMsg) => {
-    const fromDbidAsBytes = util.uuidToBytes(msg.fromDbid);
-    const [version, seq] = this.#getSinceLastApplyStmt.get(fromDbidAsBytes) as [
-      bigint,
-      number
-    ];
+  if (msg.seqStart[1] > seq) {
+    throw {
+      msg: `Cannot apply changes from ${msg.seqStart[0]} when last seen seq was ${seq}`,
+      seqEnd: [version, seq],
+      status: "outOfOrder",
+    };
+  }
 
-    // if their supplied version is <= the version we already have then we can process the msg.
-    if (msg.seqStart[0] > version) {
-      throw {
-        msg: `Cannot apply changes from ${msg.seqStart[0]} when last seen version was ${version}`,
-        seqEnd: [version, seq],
-        status: "outOfOrder",
-      };
-    }
+  const [newVersion, newSeq] = db.applyChanges(fromDbidAsBytes, msg.changes);
 
-    if (msg.seqStart[1] > seq) {
-      throw {
-        msg: `Cannot apply changes from ${msg.seqStart[0]} when last seen seq was ${seq}`,
-        seqEnd: [version, seq],
-        status: "outOfOrder",
-      };
-    }
-
-    const [newVersion, newSeq] = this.db.applyChanges(
-      fromDbidAsBytes,
-      msg.changes
-    );
-
-    this.#setSinceLastApplyStmt.run(fromDbidAsBytes, newVersion, newSeq);
-  };
+  db.setSinceLastApplyStmt.run(fromDbidAsBytes, newVersion, newSeq);
 }
+
+export default DBSyncService;

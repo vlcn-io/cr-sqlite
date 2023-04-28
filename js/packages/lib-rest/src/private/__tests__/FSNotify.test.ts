@@ -1,7 +1,7 @@
 import { test, expect, afterAll } from "vitest";
-import TestConfig from "../../TestConfig.js";
-import DBCache from "../../DBCache.js";
-import util from "../../util.js";
+import TestConfig from "../../config/TestConfig.js";
+import DBCache from "../DBCache.js";
+import util from "../util.js";
 import SQLiteDB from "better-sqlite3";
 import FSNotify from "../FSNotify.js";
 import fs from "fs";

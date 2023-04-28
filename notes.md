@@ -54,6 +54,18 @@ pi lab, discovery, ring connection vs pub-sub bus.
 Pub-sub bus and gaps... where to go to fill the gaps? Broadcast need?
 Broadcast max contiguous range held? Can keep in DHT and ask that person with the right range.
 
+Compact on deletes. You have clock entries in there that need not exist after a row is deleted!!!
+
+---
+
+accumulating impacted rows:
+
+- if many inserts to crsql_changes within the same tx... is xBegin called for each or only once for the
+  entire tx?
+- If the latter, we will return the _total_ accumulation across the entire TX.
+
+---
+
 ---
 
 rlwrap

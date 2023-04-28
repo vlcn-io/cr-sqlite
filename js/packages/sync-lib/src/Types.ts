@@ -35,6 +35,8 @@ export const tags = {
   applyChangesResponse: 5,
   createOrMigrateResponse: 6,
   createOrMigrate: 7,
+  getLastSeen: 8,
+  getLastSeenResponse: 9,
 } as const;
 
 export type Tag = typeof tags;
@@ -81,6 +83,7 @@ export type ApplyChangesMsg = {
    * The versioning information of the database sending the changes.
    */
   readonly seqStart: Seq;
+  readonly seqEnd: Seq;
 
   /**
    * The changes to apply
@@ -97,6 +100,8 @@ export type CreateOrMigrateMsg = {
 
 export type ApplyChangesResponse = {
   readonly _tag: Tag["applyChangesResponse"];
+  readonly msg?: string;
+  readonly seqEnd?: Seq;
   readonly status: "ok" | "schemaMismatch" | "outOfOrder";
 };
 
@@ -133,6 +138,16 @@ export type GetChangesMsg = {
    * TODO: do we need a seq per query id?
    */
   readonly queryIds?: readonly string[];
+};
+
+export type GetLastSeenMsg = {
+  readonly _tag: Tag["getLastSeen"];
+  readonly fromDbid: string;
+};
+
+export type GetLastSeenResponse = {
+  readonly _tag: Tag["getLastSeenResponse"];
+  readonly seq: Seq;
 };
 
 /**

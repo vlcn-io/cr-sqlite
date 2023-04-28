@@ -14,12 +14,14 @@ import touchHack from "./touchHack.js";
 export default class DB {
   private readonly db: Database;
   readonly #pullChangesetStmt: SQLiteDB.Statement;
-  readonly #applyChangesTx: SQLiteDB.Transaction;
+  readonly #applyChangesTx;
+  lastUsed: number;
 
   constructor(private readonly config: Config, private readonly dbid: string) {
     this.db = new SQLiteDB(util.getDbFilename(config, dbid));
     this.db.pragma("journal_mode = WAL");
     this.db.pragma("synchronous = NORMAL");
+    this.lastUsed = Date.now();
 
     // check if siteid table exists
     const siteidTableExists = this.db
@@ -46,7 +48,11 @@ export default class DB {
 
     this.#applyChangesTx = this.db.transaction(
       (from: Uint8Array, changes: readonly Change[]) => {
+        let maxVersion = 0n;
         for (const cs of changes) {
+          if (cs[5] > maxVersion) {
+            maxVersion = cs[5];
+          }
           applyChangesetStmt.run(
             cs[0],
             cs[1],
@@ -57,8 +63,27 @@ export default class DB {
             from
           );
         }
+        return [maxVersion, 0] as [bigint, number];
       }
     );
+  }
+
+  prepare(stmt: string): SQLiteDB.Statement {
+    this.lastUsed = Date.now();
+    return this.db.prepare(stmt);
+  }
+
+  transaction(fn: (...args: any[]) => void): SQLiteDB.Transaction {
+    this.lastUsed = Date.now();
+    return this.db.transaction((...args: any[]) => {
+      this.lastUsed = Date.now();
+      fn(...args);
+    });
+  }
+
+  run<T>(fn: () => T): T {
+    this.lastUsed = Date.now();
+    return fn();
   }
 
   __testsOnly(): Database {
@@ -75,6 +100,7 @@ export default class DB {
     version: string,
     ignoreNameMismatch: boolean = false
   ): Promise<"noop" | "apply" | "migrate"> {
+    this.lastUsed = Date.now();
     // get current schema version
     const storedVersion = this.db
       .prepare(`SELECT value FROM crsql_master WHERE key = 'schema_version'`)
@@ -122,20 +148,24 @@ export default class DB {
     return storedVersion == null ? "apply" : "migrate";
   }
 
-  applyChanges(from: Uint8Array, changes: readonly Change[]) {
+  applyChanges(from: Uint8Array, changes: readonly Change[]): [bigint, number] {
+    this.lastUsed = Date.now();
     // TODO: do we not need to check that the application is contiguous?
     // as well as update the last seen version?
     // not here. DBSyncService should do that I think.
-    this.#applyChangesTx(from, changes);
+    const ret = this.#applyChangesTx(from, changes);
 
     // probably in the future just set up some msg queue service.
     touchHack(this.config, this.dbid);
+
+    return ret;
   }
 
   pullChangeset(
     requestor: Uint8Array,
     since: number
   ): IterableIterator<Change> {
+    this.lastUsed = Date.now();
     const iter = this.#pullChangesetStmt.iterate(
       since,
       requestor

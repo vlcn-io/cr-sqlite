@@ -475,6 +475,12 @@ static void crsqlFinalize(sqlite3_context *context, int argc,
   crsql_finalize(pExtData);
 }
 
+static void crsqlRowsImpacted(sqlite3_context *context, int argc,
+                              sqlite3_value **argv) {
+  crsql_ExtData *pExtData = (crsql_ExtData *)sqlite3_user_data(context);
+  sqlite3_result_int(context, pExtData->rowsImpacted);
+}
+
 static int commitHook(void *pUserData) {
   crsql_ExtData *pExtData = (crsql_ExtData *)pUserData;
 
@@ -562,6 +568,12 @@ __declspec(dllexport)
     rc = sqlite3_create_function(db, "crsql_finalize", -1,
                                  SQLITE_UTF8 | SQLITE_DIRECTONLY, pExtData,
                                  crsqlFinalize, 0, 0);
+  }
+
+  if (rc == SQLITE_OK) {
+    rc = sqlite3_create_function(db, "crsql_rows_impacted", 0,
+                                 SQLITE_UTF8 | SQLITE_INNOCUOUS, pExtData,
+                                 crsqlRowsImpacted, 0, 0);
   }
 
   if (rc == SQLITE_OK) {

@@ -122,7 +122,8 @@ static int changesClose(sqlite3_vtab_cursor *cur) {
 
 /**
  * version is guaranteed to be unique (it increases on every write)
- * thus we use it for the rowid.
+ * thus we use it for the rowid. -- it isn't unique given we increment
+ * version once per transaction!
  *
  * Depending on how sqlite treats calls to `xUpdate` we may
  * shift to a `without rowid` table and use `table + pk` concated
@@ -131,6 +132,7 @@ static int changesClose(sqlite3_vtab_cursor *cur) {
  */
 static int changesRowid(sqlite3_vtab_cursor *cur, sqlite_int64 *pRowid) {
   crsql_Changes_cursor *pCur = (crsql_Changes_cursor *)cur;
+  // TODO: add invocation of rowid slab algorithm here
   *pRowid = pCur->dbVersion;
   return SQLITE_OK;
 }
@@ -567,6 +569,15 @@ static int changesApply(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
   return SQLITE_OK;
 }
 
+// If xBegin is not defined xCommit is not called.
+static int xBegin(sqlite3_vtab *pVTab) { return SQLITE_OK; }
+
+static int xCommit(sqlite3_vtab *pVTab) {
+  crsql_Changes_vtab *crsqlTab = (crsql_Changes_vtab *)pVTab;
+  crsqlTab->pExtData->rowsImpacted = 0;
+  return SQLITE_OK;
+}
+
 sqlite3_module crsql_changesModule = {
     /* iVersion    */ 0,
     /* xCreate     */ 0,
@@ -582,9 +593,9 @@ sqlite3_module crsql_changesModule = {
     /* xColumn     */ changesColumn,
     /* xRowid      */ changesRowid,
     /* xUpdate     */ changesApply,
-    /* xBegin      */ 0,
+    /* xBegin      */ xBegin,
     /* xSync       */ 0,
-    /* xCommit     */ 0,
+    /* xCommit     */ xCommit,
     /* xRollback   */ 0,
     /* xFindMethod */ 0,
     /* xRename     */ 0,

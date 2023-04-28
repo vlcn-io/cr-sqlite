@@ -62,7 +62,7 @@ const ex = {
     schemaVersion: string
   ): Promise<string> {
     return fs.promises.readFile(
-      path.join(config.schemasDir, schemaName + "-" + schemaVersion + ".sql"),
+      path.join(config.schemasDir, schemaName + "." + schemaVersion + ".sql"),
       "utf8"
     );
   },

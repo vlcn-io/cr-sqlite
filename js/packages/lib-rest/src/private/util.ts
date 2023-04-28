@@ -53,9 +53,13 @@ const ex = {
     return true;
   },
 
-  readSchema(config: Config, schemaName: string): Promise<string> {
+  readSchema(
+    config: Config,
+    schemaName: string,
+    schemaVersion: string
+  ): Promise<string> {
     return fs.promises.readFile(
-      path.join(config.schemasDir, schemaName),
+      path.join(config.schemasDir, schemaName + "-" + schemaVersion + ".sql"),
       "utf8"
     );
   },

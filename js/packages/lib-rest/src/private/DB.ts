@@ -124,7 +124,7 @@ export default class DB {
       return "noop";
     }
 
-    const schema = await util.readSchema(this.config, schemaName);
+    const schema = await util.readSchema(this.config, schemaName, version);
     // some version of the schema already exists. Run auto-migrate.
     this.db.transaction(() => {
       if (storedVersion == null) {

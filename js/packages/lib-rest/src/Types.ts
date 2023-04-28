@@ -67,11 +67,11 @@ export type ApplyChangesMsg = {
   /**
    * The database to apply the changes to.
    */
-  readonly toDbid: string;
+  readonly toDbid: Uint8Array;
   /**
    * The database sending the changes.
    */
-  readonly fromDbid: string;
+  readonly fromDbid: Uint8Array;
   /**
    * Given the protocol is stateless, we need to pass the schema version
    * on every request.
@@ -94,7 +94,7 @@ export type ApplyChangesMsg = {
 
 export type CreateOrMigrateMsg = {
   readonly _tag: Tag["createOrMigrate"];
-  readonly dbid: string;
+  readonly dbid: Uint8Array;
   readonly schemaName: string;
   readonly schemaVersion: string;
 };
@@ -124,7 +124,7 @@ export type GetChangesMsg = {
   /**
    * The db from which to get the changes
    */
-  readonly dbid: string;
+  readonly dbid: Uint8Array;
   readonly requestorDbid: string;
   /**
    * Since when?
@@ -151,7 +151,7 @@ export type GetChangesResponse = {
 
 export type GetLastSeenMsg = {
   readonly _tag: Tag["getLastSeen"];
-  readonly fromDbid: string;
+  readonly fromDbid: Uint8Array;
 };
 
 export type GetLastSeenResponse = {
@@ -165,8 +165,8 @@ export type GetLastSeenResponse = {
  */
 export type EstablishOutboundStreamMsg = {
   readonly _tag: Tag["establishOutboundStream"];
-  readonly localDbid: string;
-  readonly remoteDbid: string;
+  readonly localDbid: Uint8Array;
+  readonly remoteDbid: Uint8Array;
   readonly seqStart: Seq;
   readonly schemaVersion: string;
   /**

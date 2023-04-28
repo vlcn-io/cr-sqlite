@@ -416,6 +416,8 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
   // the table.
   // Is it fine if we prevent anyone from using `rowid` on a vtab?
   // or must we convert to `without rowid`?
+  // TODO: add invocation of rowid slab algorithm here.
   *pRowid = insertDbVrsn;
+  pTab->pExtData->rowsImpacted += 1;
   return rc;
 }

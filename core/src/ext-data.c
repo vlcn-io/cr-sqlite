@@ -39,6 +39,7 @@ crsql_ExtData *crsql_newExtData(sqlite3 *db) {
   pExtData->pDbVersionStmt = 0;
   pExtData->zpTableInfos = 0;
   pExtData->tableInfosLen = 0;
+  pExtData->rowsImpacted = 0;
 
   rc = crsql_fetchPragmaDataVersion(db, pExtData);
   if (rc == -1) {

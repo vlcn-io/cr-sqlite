@@ -1,4 +1,4 @@
-import { AckChangesMsg, ReceiveStreamingChangesMsg } from "../Types.js";
+import { AckChangesMsg, StreamingChangesMsg } from "../Types.js";
 
 /**
  * Takes the results of an outbound stream and
@@ -21,7 +21,7 @@ import { AckChangesMsg, ReceiveStreamingChangesMsg } from "../Types.js";
 export default class InboundStream {
   constructor() {}
 
-  receiveChanges(changes: ReceiveStreamingChangesMsg): AckChangesMsg {
+  receiveChanges(changes: StreamingChangesMsg): AckChangesMsg {
     throw new Error();
   }
 }

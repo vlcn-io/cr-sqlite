@@ -19,7 +19,10 @@ export default class DB {
   public readonly getSinceLastApplyStmt: SQLiteDB.Statement;
   public readonly setSinceLastApplyStmt: SQLiteDB.Statement;
 
-  constructor(private readonly config: Config, private readonly dbid: string) {
+  constructor(
+    private readonly config: Config,
+    private readonly dbid: Uint8Array
+  ) {
     this.db = new SQLiteDB(util.getDbFilename(config, dbid));
     this.db.pragma("journal_mode = WAL");
     this.db.pragma("synchronous = NORMAL");
@@ -33,9 +36,7 @@ export default class DB {
       .get();
     if (siteidTableExists == 0) {
       this.db.exec(`CREATE TABLE __crsql_siteid (site_id)`);
-      this.db
-        .prepare(`INSERT INTO "__crsql_siteid" VALUES (?)`)
-        .run(util.uuidToBytes(dbid));
+      this.db.prepare(`INSERT INTO "__crsql_siteid" VALUES (?)`).run(dbid);
     }
 
     this.db.loadExtension(extensionPath);

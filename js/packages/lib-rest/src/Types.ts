@@ -31,7 +31,7 @@ export const tags = {
   getChanges: 1,
   establishOutboundStream: 2,
   ackChanges: 3,
-  receiveStreamingChanges: 4,
+  streamingChanges: 4,
   applyChangesResponse: 5,
   createOrMigrateResponse: 6,
   createOrMigrate: 7,
@@ -60,7 +60,13 @@ export type Msg =
   | GetChangesMsg
   | EstablishOutboundStreamMsg
   | AckChangesMsg
-  | ApplyChangesMsg;
+  | StreamingChangesMsg
+  | ApplyChangesResponse
+  | CreateOrMigrateResponse
+  | CreateOrMigrateMsg
+  | GetLastSeenMsg
+  | GetLastSeenResponse
+  | GetChangesResponse;
 
 export type ApplyChangesMsg = {
   readonly _tag: Tag["applyChanges"];
@@ -111,9 +117,10 @@ export type CreateOrMigrateResponse = {
   readonly status: "noop" | "apply" | "migrate";
 };
 
-export type ReceiveStreamingChangesMsg = {
-  readonly _tag: Tag["receiveStreamingChanges"];
+export type StreamingChangesMsg = {
+  readonly _tag: Tag["streamingChanges"];
   readonly seqStart: Seq;
+  readonly seqEnd: Seq;
   readonly changes: readonly Change[];
   // streams are stateful so the stream already knows the from and to dbids
   // as well as schema version. These are negotiated on stream startup.
@@ -125,7 +132,7 @@ export type GetChangesMsg = {
    * The db from which to get the changes
    */
   readonly dbid: Uint8Array;
-  readonly requestorDbid: string;
+  readonly requestorDbid: Uint8Array;
   /**
    * Since when?
    */

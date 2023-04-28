@@ -1,7 +1,8 @@
-import { GetChangesResponse } from "../Types";
+import { GetChangesResponse, StreamingChangesMsg, tags } from "../Types";
 import { Seq } from "../Types";
 import DB from "./DB";
 import FSNotify from "./FSNotify";
+import util from "./util";
 
 /**
  * We could use this in our p2p setup too.
@@ -9,23 +10,42 @@ import FSNotify from "./FSNotify";
  * or only local writes that took place on the db.
  */
 export default class OutboundStream {
-  private readonly listeners = new Set<(changes: GetChangesResponse) => void>();
+  private readonly listeners = new Set<
+    (changes: StreamingChangesMsg) => void
+  >();
   constructor(
     private readonly fsnotify: FSNotify,
-    toDbid: string,
+    private readonly toDbid: Uint8Array,
     private since: Seq,
     type: "LOCAL_WRITES" | "ALL_WRITES" = "ALL_WRITES"
   ) {}
 
   start() {
-    this.fsnotify.addListener(this.toDbid, this.#dbChanged);
+    this.fsnotify.addListener(util.bytesToHex(this.toDbid), this.#dbChanged);
   }
 
   #dbChanged = (db: DB) => {
-    // pull changeset from db
-    // update since
-    // notify listeners of this outbound stream
-    db.getChanges(this.since[0]);
+    const changes = db.getChanges(this.toDbid, this.since[0]);
+    if (changes.length == 0) {
+      return;
+    }
+
+    const msg: StreamingChangesMsg = {
+      _tag: tags.streamingChanges,
+      seqStart: this.since,
+      seqEnd: [changes[changes.length - 1][5], 0],
+      changes,
+    };
+    for (const l of this.listeners) {
+      try {
+        l(msg);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    // next message in the stream picks up from where this left off.
+    this.since = msg.seqEnd;
   };
 
   // registers with FSNotify
@@ -34,6 +54,6 @@ export default class OutboundStream {
   // if receiver ends up out of order, receiver should tear down sse stream
   // and restart it.
   close() {
-    this.fsnotify.removeListener(this.toDbid, this.#dbChanged);
+    this.fsnotify.removeListener(util.bytesToHex(this.toDbid), this.#dbChanged);
   }
 }

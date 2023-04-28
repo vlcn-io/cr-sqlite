@@ -1,5 +1,6 @@
 import { Config } from "../Types.js";
 import DB from "./DB.js";
+import util from "./util.js";
 
 // TODO: have a size limit on the cache?
 export default class DBCache {
@@ -29,11 +30,16 @@ export default class DBCache {
    * @param dbid
    * @returns
    */
-  get(dbid: string): DB {
-    let entry = this.activeDBs.get(dbid);
+  get(dbid: Uint8Array): DB {
+    let dbidStr = util.bytesToHex(dbid);
+    return this.getStr(dbidStr);
+  }
+
+  getStr(dbidStr: string): DB {
+    let entry = this.activeDBs.get(dbidStr);
     if (entry == null) {
-      entry = [Date.now(), new DB(this.config, dbid)];
-      this.activeDBs.set(dbid, entry);
+      entry = [Date.now(), new DB(this.config, util.hexToBytes(dbidStr))];
+      this.activeDBs.set(dbidStr, entry);
     } else {
       entry[0] = Date.now();
     }

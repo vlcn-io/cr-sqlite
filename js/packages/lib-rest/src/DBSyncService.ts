@@ -13,7 +13,6 @@ import {
   tags,
 } from "./Types.js";
 import DB from "./private/DB.js";
-import util from "./private/util.js";
 
 /**
  * Sync interface once you have a DB instance in-hand.
@@ -43,9 +42,10 @@ const DBSyncService = {
    * @returns
    */
   getLastSeen(db: DB, msg: GetLastSeenMsg): GetLastSeenResponse {
-    const lastSeen = db.getSinceLastApplyStmt.get(
-      util.uuidToBytes(msg.fromDbid)
-    ) as [bigint, number];
+    const lastSeen = db.getSinceLastApplyStmt.get(msg.fromDbid) as [
+      bigint,
+      number
+    ];
     return {
       _tag: tags.getLastSeenResponse,
       seq: lastSeen,
@@ -93,10 +93,7 @@ const DBSyncService = {
   },
 
   getChanges(db: DB, msg: GetChangesMsg): GetChangesResponse {
-    const changes = db.getChanges(
-      util.uuidToBytes(msg.requestorDbid),
-      msg.since[0]
-    );
+    const changes = db.getChanges(msg.requestorDbid, msg.since[0]);
     let seqEnd: Seq;
     if (changes.length === 0) {
       seqEnd = msg.since;
@@ -129,8 +126,7 @@ const DBSyncService = {
 };
 
 function applyChangesInternal(db: DB, msg: ApplyChangesMsg) {
-  const fromDbidAsBytes = util.uuidToBytes(msg.fromDbid);
-  const [version, seq] = db.getSinceLastApplyStmt.get(fromDbidAsBytes) as [
+  const [version, seq] = db.getSinceLastApplyStmt.get(msg.fromDbid) as [
     bigint,
     number
   ];
@@ -152,9 +148,9 @@ function applyChangesInternal(db: DB, msg: ApplyChangesMsg) {
     };
   }
 
-  const [newVersion, newSeq] = db.applyChanges(fromDbidAsBytes, msg.changes);
+  const [newVersion, newSeq] = db.applyChanges(msg.fromDbid, msg.changes);
 
-  db.setSinceLastApplyStmt.run(fromDbidAsBytes, newVersion, newSeq);
+  db.setSinceLastApplyStmt.run(msg.fromDbid, newVersion, newSeq);
 }
 
 export default DBSyncService;

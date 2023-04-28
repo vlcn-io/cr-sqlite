@@ -1,14 +1,17 @@
-import DBCache from "./DBCache.js";
+import DBCache from "./private/DBCache.js";
 import DBSyncService from "./DBSyncService.js";
-import OutboundStream from "./OutboundStream.js";
+import OutboundStream from "./private/OutboundStream.js";
 import {
   AckChangesMsg,
   ApplyChangesMsg,
+  ApplyChangesResponse,
   Change,
   Config,
   CreateOrMigrateMsg,
+  CreateOrMigrateResponse,
   EstablishOutboundStreamMsg,
   GetChangesMsg,
+  GetChangesResponse,
 } from "./Types";
 
 // TODO: add a DB cache with a TTL so as not to re-create
@@ -18,25 +21,6 @@ export default class SyncService {
     public readonly config: Config,
     private readonly dbCache: DBCache
   ) {}
-
-  /**
-   * Will create the database if it does not exist and apply the schema.
-   * If the database does exist, it will migrate the schema.
-   * If there was no schema update this is a no-op.
-   *
-   * If we need to migrate the DB, any streaming connections to it
-   * are closed.
-   *
-   * Any new connections are refused until the migration completes.
-   *
-   * @param dbid
-   * @param schema
-   */
-  createOrMigrateDatabase(msg: CreateOrMigrateMsg): void {
-    const db = this.dbCache.get(msg.dbid);
-    const svc = new DBSyncService(db);
-    svc.maybeMigrate(msg.schemaName, msg.schemaVersion);
-  }
 
   /**
    * Upload a new schema to the server.
@@ -60,7 +44,30 @@ export default class SyncService {
     return [];
   }
 
-  applyChanges(msg: ApplyChangesMsg): void {}
+  /**
+   * Will create the database if it does not exist and apply the schema.
+   * If the database does exist, it will migrate the schema.
+   * If there was no schema update this is a no-op.
+   *
+   * If we need to migrate the DB, any streaming connections to it
+   * are closed.
+   *
+   * Any new connections are refused until the migration completes.
+   *
+   * @param dbid
+   * @param schema
+   */
+  createOrMigrateDatabase(
+    msg: CreateOrMigrateMsg
+  ): Promise<CreateOrMigrateResponse> {
+    const db = this.dbCache.get(msg.dbid);
+    return DBSyncService.maybeMigrate(db, msg.schemaName, msg.schemaVersion);
+  }
+
+  applyChanges(msg: ApplyChangesMsg): ApplyChangesResponse {
+    const db = this.dbCache.get(msg.toDbid);
+    return DBSyncService.applyChanges(db, msg);
+  }
 
   /**
    * Clients should only ever have 1 outstanding `getChanges` request to the same DBID at a time.
@@ -69,8 +76,9 @@ export default class SyncService {
    * @param msg
    * @returns
    */
-  getChanges(msg: GetChangesMsg): Change[] {
-    return [];
+  getChanges(msg: GetChangesMsg): GetChangesResponse {
+    const db = this.dbCache.get(msg.dbid);
+    return DBSyncService.getChanges(db, msg);
   }
 
   /**
@@ -79,7 +87,7 @@ export default class SyncService {
    * for changes.
    */
   startOutboundStream(msg: EstablishOutboundStreamMsg): OutboundStream {
-    throw new Error();
+    throw new Error("not implemented");
   }
 
   /**

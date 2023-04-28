@@ -1,6 +1,6 @@
 import { Config } from "../Types.js";
 import { throttle } from "throttle-debounce";
-import util from "../util.js";
+import util from "./util.js";
 
 const apply = throttle(25, (config: Config, dbid: string) => {
   util.touchFile(config, dbid);

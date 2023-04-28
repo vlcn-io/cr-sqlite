@@ -37,6 +37,7 @@ export const tags = {
   createOrMigrate: 7,
   getLastSeen: 8,
   getLastSeenResponse: 9,
+  getChangesResponse: 10,
 } as const;
 
 export type Tag = typeof tags;
@@ -124,6 +125,7 @@ export type GetChangesMsg = {
    * The db from which to get the changes
    */
   readonly dbid: string;
+  readonly requestorDbid: string;
   /**
    * Since when?
    */
@@ -138,6 +140,13 @@ export type GetChangesMsg = {
    * TODO: do we need a seq per query id?
    */
   readonly queryIds?: readonly string[];
+};
+
+export type GetChangesResponse = {
+  readonly _tag: Tag["getChangesResponse"];
+  readonly seqStart: Seq;
+  readonly seqEnd: Seq;
+  readonly changes: readonly Change[];
 };
 
 export type GetLastSeenMsg = {

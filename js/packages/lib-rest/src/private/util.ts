@@ -1,4 +1,4 @@
-import { Config } from "./Types.js";
+import { Config } from "../Types.js";
 import path from "path";
 import os from "os";
 import fs from "fs";

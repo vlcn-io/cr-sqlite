@@ -13,7 +13,6 @@ export type SchemaRow = {
 
 export default class ServiceDB {
   private readonly db: Database;
-  private readonly currentSchemaVersionStmt: SQLiteDB.Statement;
   private readonly getSchemaStmt: SQLiteDB.Statement;
   private readonly listSchemasStmt: SQLiteDB.Statement;
 
@@ -24,14 +23,11 @@ export default class ServiceDB {
     if (bootstrap) {
       this.bootstrap();
     }
-    this.currentSchemaVersionStmt = this.db.prepare(
-      `SELECT version FROM schema WHERE namespace = ? AND name = ? ORDER BY creation_time DESC LIMIT 1`
-    );
     this.getSchemaStmt = this.db.prepare(
       `SELECT namespace, name, version, active, content FROM schema WHERE namespace = ? AND name = ? AND version = ?`
     );
     this.listSchemasStmt = this.db.prepare(
-      `SELECT name, version, active FROM schema WHERE namespace = ?`
+      `SELECT name, version, active, creation_time FROM schema WHERE namespace = ? ORDER BY creation_time, version DESC`
     );
   }
 
@@ -95,6 +91,18 @@ export default class ServiceDB {
     version: string
   ) {
     this.db.transaction(() => {
+      // make sure the schema exists that we'd like to activate
+      const exists = this.db
+        .prepare(
+          `SELECT 1 FROM schema WHERE namespace = ? AND name = ? AND version = ?`
+        )
+        .pluck()
+        .get(namespace, schemaName, version);
+      if (!exists) {
+        throw new Error(
+          `Attempted to activate a schema or version ${namespace}:${schemaName}:${version} which does not exist`
+        );
+      }
       this.db
         .prepare(
           `UPDATE schema SET active = FALSE WHERE namespace = ? AND name = ?`

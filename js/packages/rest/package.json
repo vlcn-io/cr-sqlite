@@ -19,7 +19,8 @@
   "scripts": {
     "build": "tsc --build",
     "watch": "tsc --build --watch",
-    "test": "vitest run && rm dbs-test/*",
+    "test": "vitest run",
+    "rmtdata": "rm dbs-test/*",
     "deep-clean": "rm -rf ./dist || true && rm tsconfig.tsbuildinfo || true"
   },
   "repository": {

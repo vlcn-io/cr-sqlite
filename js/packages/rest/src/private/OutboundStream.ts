@@ -20,7 +20,10 @@ export default class OutboundStream {
     (changes: StreamingChangesMsg) => void
   >();
 
-  private toDbid: Uint8Array;
+  // Stream changes from local
+  private localDbid: Uint8Array;
+  // To remote
+  private remoteDbid: Uint8Array;
   private since: Seq;
 
   constructor(
@@ -29,7 +32,8 @@ export default class OutboundStream {
     establishMsg: EstablishOutboundStreamMsg,
     type: "LOCAL_WRITES" | "ALL_WRITES" = "ALL_WRITES"
   ) {
-    this.toDbid = establishMsg.remoteDbid;
+    this.localDbid = establishMsg.toDbid;
+    this.remoteDbid = establishMsg.fromDbid;
     this.since = establishMsg.seqStart;
 
     // do schema version check here.
@@ -37,11 +41,11 @@ export default class OutboundStream {
   }
 
   start() {
-    this.fsnotify.addListener(util.bytesToHex(this.toDbid), this.#dbChanged);
+    this.fsnotify.addListener(util.bytesToHex(this.localDbid), this.#dbChanged);
   }
 
   #dbChanged = (db: DB) => {
-    const changes = db.getChanges(this.toDbid, this.since[0]);
+    const changes = db.getChanges(this.remoteDbid, this.since[0]);
     if (changes.length == 0) {
       return;
     }
@@ -70,6 +74,9 @@ export default class OutboundStream {
   // if receiver ends up out of order, receiver should tear down sse stream
   // and restart it.
   close() {
-    this.fsnotify.removeListener(util.bytesToHex(this.toDbid), this.#dbChanged);
+    this.fsnotify.removeListener(
+      util.bytesToHex(this.localDbid),
+      this.#dbChanged
+    );
   }
 }

@@ -31,14 +31,15 @@ export default function decode(msg: string): Msg {
     case tags.establishOutboundStream:
       return {
         _tag: tags.establishOutboundStream,
-        localDbid: util.hexToBytes(parsed.localDbid),
-        remoteDbid: util.hexToBytes(parsed.remoteDbid),
+        toDbid: util.hexToBytes(parsed.toDbid),
+        fromDbid: util.hexToBytes(parsed.fromDbid),
         schemaVersion: parsed.schemaName,
         seqStart: [BigInt(parsed.seqStart[0]), parsed.seqStart[1]],
       };
     case tags.getLastSeen:
       return {
         _tag: tags.getLastSeen,
+        toDbid: util.hexToBytes(parsed.toDbid),
         fromDbid: util.hexToBytes(parsed.fromDbid),
       };
     case tags.getLastSeenResponse:

@@ -21,12 +21,12 @@ import DB from "./private/DB.js";
  * on every request.
  */
 const DBSyncService = {
-  async maybeMigrate(
+  maybeMigrate(
     db: DB,
     schemaName: string,
     version: string
-  ): Promise<CreateOrMigrateResponse> {
-    const status = await db.migrateTo(schemaName, version);
+  ): CreateOrMigrateResponse {
+    const status = db.migrateTo(schemaName, version);
     return {
       _tag: tags.createOrMigrateResponse,
       status,

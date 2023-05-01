@@ -285,6 +285,40 @@ importers:
         specifier: ^0.30.1
         version: 0.30.1
 
+  js/packages/rest:
+    dependencies:
+      '@vlcn.io/crsqlite':
+        specifier: workspace:*
+        version: link:../../../core
+      better-sqlite3:
+        specifier: ^8.3.0
+        version: 8.3.0
+      chokidar:
+        specifier: ^3.5.3
+        version: 3.5.3
+      throttle-debounce:
+        specifier: ^5.0.0
+        version: 5.0.0
+    devDependencies:
+      '@types/better-sqlite3':
+        specifier: ^7.6.4
+        version: 7.6.4
+      '@types/node':
+        specifier: ^18.16.1
+        version: 18.16.1
+      '@types/throttle-debounce':
+        specifier: ^5.0.0
+        version: 5.0.0
+      chokidar-cli:
+        specifier: ^3.0.0
+        version: 3.0.0
+      typescript:
+        specifier: ^5.0.4
+        version: 5.0.4
+      vitest:
+        specifier: ^0.30.1
+        version: 0.30.1
+
   js/packages/rx-query:
     dependencies:
       '@vlcn.io/xplat-api':
@@ -318,7 +352,7 @@ importers:
         version: link:../crsqlite-wasm
       vite:
         specifier: ^4.2.2
-        version: 4.2.2(@types/node@18.15.11)
+        version: 4.2.2(@types/node@18.16.1)
 
   js/packages/sandbox-node:
     dependencies:
@@ -331,7 +365,7 @@ importers:
         version: link:../../../core
       vite:
         specifier: ^4.2.2
-        version: 4.2.2(@types/node@18.15.11)
+        version: 4.2.2(@types/node@18.16.1)
 
   js/packages/server-core:
     dependencies:
@@ -424,40 +458,6 @@ importers:
       '@types/ws':
         specifier: ^8.5.4
         version: 8.5.4
-      typescript:
-        specifier: ^5.0.4
-        version: 5.0.4
-      vitest:
-        specifier: ^0.30.1
-        version: 0.30.1
-
-  js/packages/sync-lib:
-    dependencies:
-      '@vlcn.io/crsqlite':
-        specifier: workspace:*
-        version: link:../../../core
-      better-sqlite3:
-        specifier: ^8.3.0
-        version: 8.3.0
-      chokidar:
-        specifier: ^3.5.3
-        version: 3.5.3
-      throttle-debounce:
-        specifier: ^5.0.0
-        version: 5.0.0
-    devDependencies:
-      '@types/better-sqlite3':
-        specifier: ^7.6.4
-        version: 7.6.4
-      '@types/node':
-        specifier: ^18.16.1
-        version: 18.16.1
-      '@types/throttle-debounce':
-        specifier: ^5.0.0
-        version: 5.0.0
-      chokidar-cli:
-        specifier: ^3.0.0
-        version: 3.0.0
       typescript:
         specifier: ^5.0.4
         version: 5.0.4

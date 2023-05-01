@@ -9,8 +9,11 @@ export default class ServiceDB {
   private readonly getSchemaStmt: SQLiteDB.Statement;
   private readonly listSchemasStmt: SQLiteDB.Statement;
 
-  constructor(config: Config) {
+  constructor(config: Config, bootstrap: boolean = false) {
     this.db = new SQLiteDB(config.serviceDbPath);
+    if (bootstrap) {
+      this.bootstrap();
+    }
     this.currentSchemaVersionStmt = this.db.prepare(
       `SELECT version FROM schema WHERE namespace = ? AND name = ? ORDER BY creation_time DESC LIMIT 1`
     );
@@ -29,7 +32,7 @@ export default class ServiceDB {
         name TEXT NOT NULL,
         version TEXT NOT NULL,
         content TEXT NOT NULL,
-        creation_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        creation_time INTEGER DEFAULT (strftime('%s', 'now')),
         PRIMARY KEY (namespace, name, version)
       ) STRICT;
       CREATE INDEX IF NOT EXISTS schema_creation_time ON schema (creation_time DESC);

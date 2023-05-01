@@ -6,8 +6,7 @@ import ServiceDB from "../ServiceDB";
 
 test("cache evicts", () => {
   vi.useFakeTimers();
-  const sdb = new ServiceDB(TestConfig);
-  sdb.bootstrap();
+  const sdb = new ServiceDB(TestConfig, true);
   const cache = new DBCache(TestConfig, (name, version) =>
     sdb.getSchema("ns", name, version)
   );
@@ -32,8 +31,7 @@ test("cache evicts", () => {
 
 test("cache bumps to now on usage", () => {
   vi.useFakeTimers();
-  const sdb = new ServiceDB(TestConfig);
-  sdb.bootstrap();
+  const sdb = new ServiceDB(TestConfig, true);
   const cache = new DBCache(TestConfig, (name, version) =>
     sdb.getSchema("ns", name, version)
   );

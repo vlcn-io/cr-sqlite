@@ -8,25 +8,29 @@ let sdb: ServiceDB;
 
 beforeAll(() => {
   sdb = new ServiceDB(TestConfig, true);
-  sdb.addSchema(
-    "ns",
-    "test.sql",
-    "1",
-    `CREATE TABLE foo (a primary key, b);
-    SELECT crsql_as_crr('foo');`
-  );
-  sdb.addSchema(
-    "ns",
-    "test.sql",
-    "2",
-    `CREATE TABLE IF NOT EXISTS foo (
-      a primary key,
-      b,
-      c
+  try {
+    sdb.addSchema(
+      "ns",
+      "test.sql",
+      "1",
+      `CREATE TABLE foo (a primary key, b);
+      SELECT crsql_as_crr('foo');`
     );
-    
-    SELECT crsql_as_crr('foo');`
-  );
+    sdb.addSchema(
+      "ns",
+      "test.sql",
+      "2",
+      `CREATE TABLE IF NOT EXISTS foo (
+        a primary key,
+        b,
+        c
+      );
+      
+      SELECT crsql_as_crr('foo');`
+    );
+  } catch (e) {
+    console.error(e);
+  }
 });
 
 test("db loads", () => {
@@ -76,7 +80,6 @@ test("migrating to the same schema & version is a no-op", async () => {
     sdb.getSchema("ns", name, version)
   );
 
-  console.log("migrate 2");
   const result1 = await db.migrateTo("test.sql", "1");
   const result2 = await db.migrateTo("test.sql", "1");
 

@@ -18,8 +18,6 @@ import {
 import ServiceDB from "./private/ServiceDB.js";
 import FSNotify from "./private/FSNotify.js";
 
-// TODO: add a DB cache with a TTL so as not to re-create
-// dbs on every request?
 export default class SyncService {
   constructor(
     public readonly config: Config,

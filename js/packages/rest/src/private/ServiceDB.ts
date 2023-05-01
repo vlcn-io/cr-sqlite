@@ -58,6 +58,10 @@ export default class ServiceDB {
     return this.getSchemaStmt.get(namespace, schemaName, version) as any;
   }
 
+  defaultSchemaProvider = (name: string, version: string) => {
+    return this.getSchema("default", name, version);
+  };
+
   listSchemas(namespace: string): Omit<SchemaRow, "content">[] {
     return this.listSchemasStmt.all(namespace) as any;
   }

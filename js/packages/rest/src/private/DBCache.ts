@@ -7,7 +7,10 @@ export default class DBCache {
   private readonly activeDBs = new Map<string, [number, DB]>();
   private readonly intervalHandle: NodeJS.Timeout;
 
-  constructor(private readonly config: Config) {
+  constructor(
+    private readonly config: Config,
+    private readonly schemaProvider: (name: string, version: string) => string
+  ) {
     this.intervalHandle = setInterval(() => {
       const now = Date.now();
       for (const [dbid, entry] of this.activeDBs.entries()) {
@@ -38,7 +41,10 @@ export default class DBCache {
   getStr(dbidStr: string): DB {
     let entry = this.activeDBs.get(dbidStr);
     if (entry == null) {
-      entry = [Date.now(), new DB(this.config, util.hexToBytes(dbidStr))];
+      entry = [
+        Date.now(),
+        new DB(this.config, util.hexToBytes(dbidStr), this.schemaProvider),
+      ];
       this.activeDBs.set(dbidStr, entry);
     } else {
       entry[0] = Date.now();

@@ -21,7 +21,8 @@ export default class DB {
 
   constructor(
     private readonly config: Config,
-    private readonly dbid: Uint8Array
+    private readonly dbid: Uint8Array,
+    private readonly schemaProvider: (name: string, version: string) => string
   ) {
     this.db = new SQLiteDB(util.getDbFilename(config, dbid));
     this.db.pragma("journal_mode = WAL");
@@ -95,11 +96,11 @@ export default class DB {
   // We can do that before they pull changes for their stream and check schema version.
   // Maybe just do that by default? If schema version changes from last pull in stream, re-stablish a connection?
   // there's obvi the pragma to retrieve current schema version from sqlite.
-  async migrateTo(
+  migrateTo(
     schemaName: string,
     version: string,
     ignoreNameMismatch: boolean = false
-  ): Promise<"noop" | "apply" | "migrate"> {
+  ): "noop" | "apply" | "migrate" {
     // get current schema version
     const storedVersion = this.db
       .prepare(`SELECT value FROM crsql_master WHERE key = 'schema_version'`)
@@ -125,7 +126,7 @@ export default class DB {
       return "noop";
     }
 
-    const schema = await util.readSchema(this.config, schemaName, version);
+    const schema = this.schemaProvider(schemaName, version);
     // some version of the schema already exists. Run auto-migrate.
     this.db.transaction(() => {
       if (storedVersion == null) {

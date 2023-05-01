@@ -12,7 +12,7 @@ import {
   EstablishOutboundStreamMsg,
   GetChangesMsg,
   GetChangesResponse,
-} from "./Types";
+} from "./Types.js";
 
 // TODO: add a DB cache with a TTL so as not to re-create
 // dbs on every request?
@@ -57,9 +57,7 @@ export default class SyncService {
    * @param dbid
    * @param schema
    */
-  createOrMigrateDatabase(
-    msg: CreateOrMigrateMsg
-  ): Promise<CreateOrMigrateResponse> {
+  createOrMigrateDatabase(msg: CreateOrMigrateMsg): CreateOrMigrateResponse {
     const db = this.dbCache.get(msg.dbid);
     return DBSyncService.maybeMigrate(db, msg.schemaName, msg.schemaVersion);
   }

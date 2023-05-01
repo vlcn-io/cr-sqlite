@@ -5,17 +5,12 @@ export type Config = {
    */
   readonly serviceName: string;
   /**
-   * Where schema files should be uploaded to on your server.
-   */
-  readonly schemasDir: string;
-  /**
    * Where SQLite databases should be created and persisted.
    */
   readonly dbsDir: string;
-
   readonly cacheTtlInSeconds: number;
-
   readonly notifyLatencyInMs: number;
+  readonly serviceDbPath: string;
 };
 
 export type Seq = readonly [bigint, number];

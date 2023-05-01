@@ -6,7 +6,11 @@ import fs from "fs";
 const isDarwin = os.platform() === "darwin";
 const ex = {
   getDbFilename(config: Config, dbid: Uint8Array): string {
-    return path.join(config.dbsDir, bytesToHex(dbid) + ".db");
+    const ret = path.join(config.dbsDir, bytesToHex(dbid) + ".db");
+    if (ret === config.serviceDbPath) {
+      throw new Error("Service dbid is reserved");
+    }
+    return ret;
   },
 
   getTouchFilename(config: Config, dbid: Uint8Array): string {
@@ -55,42 +59,7 @@ const ex = {
     }
     return true;
   },
-
-  readSchema(
-    config: Config,
-    schemaName: string,
-    schemaVersion: string
-  ): Promise<string> {
-    return fs.promises.readFile(
-      path.join(config.schemasDir, schemaName + "." + schemaVersion + ".sql"),
-      "utf8"
-    );
-  },
-
-  noFsChars,
 };
-
-function noFsChars(str: string) {
-  // ensure the filename does not contain any restricted characters
-
-  if (
-    str.includes("/") ||
-    str.includes("\\") ||
-    str.includes(":") ||
-    str.includes("*") ||
-    str.includes("?") ||
-    str.includes('"') ||
-    str.includes("<") ||
-    str.includes(">") ||
-    str.includes("|")
-  ) {
-    throw new Error(
-      'Schema name/version cannot contain any of: / \\ : * ? " < > |'
-    );
-  }
-
-  return str;
-}
 
 function hexToBytes(hex: string) {
   const ret = new Uint8Array(hex.length / 2);

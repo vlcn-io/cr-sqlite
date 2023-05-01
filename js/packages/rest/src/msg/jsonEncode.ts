@@ -30,8 +30,8 @@ export default function encode(msg: Msg): string {
     case tags.establishOutboundStream:
       return JSON.stringify({
         _tag: tags.establishOutboundStream,
-        localDbid: util.bytesToHex(msg.localDbid),
-        remoteDbid: util.bytesToHex(msg.remoteDbid),
+        toDbid: util.bytesToHex(msg.toDbid),
+        fromDbid: util.bytesToHex(msg.fromDbid),
         schemaName: msg.schemaVersion,
         seqStart: [msg.seqStart[0].toString(), msg.seqStart[1]],
       });

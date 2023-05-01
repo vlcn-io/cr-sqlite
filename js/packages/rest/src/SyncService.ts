@@ -13,6 +13,8 @@ import {
   EstablishOutboundStreamMsg,
   GetChangesMsg,
   GetChangesResponse,
+  GetLastSeenMsg,
+  GetLastSeenResponse,
   UploadSchemaMsg,
 } from "./Types.js";
 import ServiceDB from "./private/ServiceDB.js";
@@ -76,6 +78,9 @@ export default class SyncService {
     return DBSyncService.maybeMigrate(db, msg.schemaName, msg.schemaVersion);
   }
 
+  /**
+   * Take in a set of changes, apply them, return acknolwedgement.
+   */
   applyChanges(msg: ApplyChangesMsg): ApplyChangesResponse {
     const db = this.dbCache.get(msg.toDbid);
     return DBSyncService.applyChanges(db, msg);
@@ -91,6 +96,11 @@ export default class SyncService {
   getChanges(msg: GetChangesMsg): GetChangesResponse {
     const db = this.dbCache.get(msg.dbid);
     return DBSyncService.getChanges(db, msg);
+  }
+
+  getLastSeen(msg: GetLastSeenMsg): GetLastSeenResponse {
+    const db = this.dbCache.get(msg.toDbid);
+    return DBSyncService.getLastSeen(db, msg);
   }
 
   /**

@@ -171,6 +171,7 @@ export type GetChangesResponse = {
 
 export type GetLastSeenMsg = {
   readonly _tag: Tag["getLastSeen"];
+  readonly toDbid: Uint8Array;
   readonly fromDbid: Uint8Array;
 };
 
@@ -185,8 +186,10 @@ export type GetLastSeenResponse = {
  */
 export type EstablishOutboundStreamMsg = {
   readonly _tag: Tag["establishOutboundStream"];
-  readonly localDbid: Uint8Array;
-  readonly remoteDbid: Uint8Array;
+  // The DB that should generate the outbound stream
+  readonly toDbid: Uint8Array;
+  // The db requesting the outbound stream
+  readonly fromDbid: Uint8Array;
   readonly seqStart: Seq;
   readonly schemaVersion: string;
   /**

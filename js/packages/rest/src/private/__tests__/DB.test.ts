@@ -8,18 +8,14 @@ let sdb: ServiceDB;
 
 beforeAll(() => {
   sdb = new ServiceDB(TestConfig, true);
-  try {
-    sdb.addSchema(
-      "ns",
-      "test.sql",
-      "1",
-      `CREATE TABLE foo (a primary key, b);
+  sdb.addSchema(
+    "ns",
+    "test.sql",
+    "1",
+    `CREATE TABLE foo (a primary key, b);
       SELECT crsql_as_crr('foo');`,
-      true
-    );
-  } catch (e) {
-    console.error(e);
-  }
+    true
+  );
 });
 
 test("db loads", () => {
@@ -88,6 +84,15 @@ test("migrating to an unrelated schema is an error", async () => {
 });
 
 test("db can migrate to a new schema", async () => {
+  const sdb = new ServiceDB(TestConfig, true);
+  sdb.addSchema(
+    "ns",
+    "test.sql",
+    "1",
+    `CREATE TABLE foo (a primary key, b);
+      SELECT crsql_as_crr('foo');`,
+    true
+  );
   const dbid = util.uuidToBytes(crypto.randomUUID());
   const db = new DB(TestConfig, dbid, (name, version) =>
     sdb.getSchema("ns", name, version)

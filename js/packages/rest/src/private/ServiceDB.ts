@@ -19,6 +19,8 @@ export default class ServiceDB {
 
   constructor(config: Config, bootstrap: boolean = false) {
     this.db = new SQLiteDB(config.serviceDbPath);
+    this.db.pragma("journal_mode = WAL");
+    this.db.pragma("synchronous = NORMAL");
     if (bootstrap) {
       this.bootstrap();
     }
@@ -29,7 +31,7 @@ export default class ServiceDB {
       `SELECT namespace, name, version, active, content FROM schema WHERE namespace = ? AND name = ? AND version = ?`
     );
     this.listSchemasStmt = this.db.prepare(
-      `SELECT name, version FROM schema WHERE namespace = ?`
+      `SELECT name, version, active FROM schema WHERE namespace = ?`
     );
   }
 
@@ -56,8 +58,8 @@ export default class ServiceDB {
     return this.getSchemaStmt.get(namespace, schemaName, version) as any;
   }
 
-  listSchemas(namespace: string) {
-    return this.listSchemasStmt.all(namespace);
+  listSchemas(namespace: string): Omit<SchemaRow, "content">[] {
+    return this.listSchemasStmt.all(namespace) as any;
   }
 
   addSchema(

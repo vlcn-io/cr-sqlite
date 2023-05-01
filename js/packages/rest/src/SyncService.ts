@@ -16,6 +16,7 @@ import {
   UploadSchemaMsg,
 } from "./Types.js";
 import ServiceDB from "./private/ServiceDB.js";
+import FSNotify from "./private/FSNotify.js";
 
 // TODO: add a DB cache with a TTL so as not to re-create
 // dbs on every request?
@@ -23,7 +24,8 @@ export default class SyncService {
   constructor(
     public readonly config: Config,
     private readonly dbCache: DBCache,
-    private readonly serviceDB: ServiceDB
+    private readonly serviceDB: ServiceDB,
+    private readonly fsNotify?: FSNotify
   ) {}
 
   /**
@@ -51,11 +53,11 @@ export default class SyncService {
   }
 
   listSchemas(): {
-    schemaName: string;
-    schemaVersion: string;
+    name: string;
+    version: string;
     active: boolean;
   }[] {
-    return [];
+    return this.serviceDB.listSchemas("default");
   }
 
   /**
@@ -99,7 +101,9 @@ export default class SyncService {
    * for changes.
    */
   startOutboundStream(msg: EstablishOutboundStreamMsg): OutboundStream {
-    throw new Error("not implemented");
+    // 1. create the outbound stream
+    // 2. return it
+    return new OutboundStream(this.fsNotify!, this.serviceDB, msg);
   }
 
   shutdown() {

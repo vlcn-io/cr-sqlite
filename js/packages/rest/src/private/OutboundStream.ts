@@ -1,7 +1,13 @@
-import { GetChangesResponse, StreamingChangesMsg, tags } from "../Types";
+import {
+  EstablishOutboundStreamMsg,
+  GetChangesResponse,
+  StreamingChangesMsg,
+  tags,
+} from "../Types";
 import { Seq } from "../Types";
 import DB from "./DB";
 import FSNotify from "./FSNotify";
+import ServiceDB from "./ServiceDB";
 import util from "./util";
 
 /**
@@ -13,12 +19,22 @@ export default class OutboundStream {
   private readonly listeners = new Set<
     (changes: StreamingChangesMsg) => void
   >();
+
+  private toDbid: Uint8Array;
+  private since: Seq;
+
   constructor(
     private readonly fsnotify: FSNotify,
-    private readonly toDbid: Uint8Array,
-    private since: Seq,
+    private readonly serviceDb: ServiceDB,
+    establishMsg: EstablishOutboundStreamMsg,
     type: "LOCAL_WRITES" | "ALL_WRITES" = "ALL_WRITES"
-  ) {}
+  ) {
+    this.toDbid = establishMsg.remoteDbid;
+    this.since = establishMsg.seqStart;
+
+    // do schema version check here.
+    // throw if mismatch.
+  }
 
   start() {
     this.fsnotify.addListener(util.bytesToHex(this.toDbid), this.#dbChanged);

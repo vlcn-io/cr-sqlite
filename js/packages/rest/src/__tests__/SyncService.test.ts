@@ -29,7 +29,7 @@ test("uploading and listing schemas", () => {
     _tag: tags.uploadSchema,
     name: "test",
     version: "1",
-    contents: "test",
+    content: "test",
     activate: true,
   });
 
@@ -46,7 +46,7 @@ test("uploading and listing schemas", () => {
     _tag: tags.uploadSchema,
     name: "test",
     version: "2",
-    contents: "test",
+    content: "test",
     activate: true,
   });
 
@@ -68,7 +68,7 @@ test("uploading and listing schemas", () => {
     _tag: tags.uploadSchema,
     name: "test",
     version: "3",
-    contents: "test",
+    content: "test",
     activate: false,
   });
 
@@ -97,7 +97,7 @@ test("uploading and listing schemas", () => {
       _tag: tags.uploadSchema,
       name: "test",
       version: "3",
-      contents: "test",
+      content: "test",
       activate: false,
     });
   }).toThrow();
@@ -112,7 +112,7 @@ test("activating a schema", () => {
     _tag: tags.uploadSchema,
     name: "test",
     version: "1",
-    contents: "test",
+    content: "test",
     activate: false,
   });
 
@@ -159,7 +159,7 @@ test("creating a database", () => {
     _tag: tags.uploadSchema,
     name: "test",
     version: "1",
-    contents: "CREATE TABLE IF NOT EXISTS foo (a primary key, b);",
+    content: "CREATE TABLE IF NOT EXISTS foo (a primary key, b);",
     activate: true,
   });
 
@@ -209,7 +209,7 @@ test("creating a database", () => {
     _tag: tags.uploadSchema,
     name: "test",
     version: "2",
-    contents: "CREATE TABLE IF NOT EXISTS foo (a primary key, b, c);",
+    content: "CREATE TABLE IF NOT EXISTS foo (a primary key, b, c);",
     activate: false,
   });
 
@@ -249,7 +249,7 @@ test("apply changes", () => {
     _tag: tags.uploadSchema,
     name: "test",
     version: "1",
-    contents: `
+    content: `
     CREATE TABLE IF NOT EXISTS foo (a primary key, b);
     SELECT crsql_as_crr('foo');
     `,
@@ -303,6 +303,8 @@ test("apply changes", () => {
     _tag: tags.getLastSeenResponse,
     seq: [1, 0],
   });
+
+  // write some more changes and ensure we only receive the ones we expect
 });
 
 test("get changes", () => {
@@ -314,7 +316,7 @@ test("get changes", () => {
     _tag: tags.uploadSchema,
     name: "test",
     version: "1",
-    contents: `
+    content: `
     CREATE TABLE IF NOT EXISTS foo (a primary key, b);
     SELECT crsql_as_crr('foo');
     `,

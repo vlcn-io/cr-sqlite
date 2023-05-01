@@ -129,7 +129,7 @@ export type UploadSchemaMsg = {
   readonly _tag: Tag["uploadSchema"];
   readonly name: string;
   readonly version: string;
-  readonly contents: string;
+  readonly content: string;
   readonly activate: boolean;
 };
 

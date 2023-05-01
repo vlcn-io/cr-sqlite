@@ -46,6 +46,10 @@ export default class ServiceDB {
     `);
   }
 
+  __internal_getDb(): Database {
+    return this.db;
+  }
+
   getSchema(
     namespace: string,
     schemaName: string,

@@ -43,7 +43,7 @@ export default class SyncService {
       "default",
       msg.name,
       msg.version,
-      msg.contents,
+      msg.content,
       msg.activate
     );
   }

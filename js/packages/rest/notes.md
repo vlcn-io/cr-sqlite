@@ -7,3 +7,4 @@
 
 - Get changes with a limit!
   - add artificial limit if one is not provided.
+  - allow specifying upper version too so we can fetch gaps!

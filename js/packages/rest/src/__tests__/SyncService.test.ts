@@ -1,4 +1,4 @@
-import { test, expect } from "vitest";
+import { test, expect, vi } from "vitest";
 import SyncService from "../SyncService";
 import TestConfig from "../config/TestConfig";
 import DBCache from "../private/DBCache";
@@ -33,12 +33,12 @@ test("uploading and listing schemas", () => {
     activate: true,
   });
 
-  const schemas = svc.listSchemas();
+  const schemas = removeTime(svc.listSchemas());
   expect(schemas).toEqual([
     {
       name: "test",
       version: "1",
-      active: true,
+      active: 1,
     },
   ]);
 
@@ -50,17 +50,17 @@ test("uploading and listing schemas", () => {
     activate: true,
   });
 
-  const schemas2 = svc.listSchemas();
+  const schemas2 = removeTime(svc.listSchemas());
   expect(schemas2).toEqual([
     {
       name: "test",
       version: "2",
-      active: true,
+      active: 1,
     },
     {
       name: "test",
       version: "1",
-      active: false,
+      active: 0,
     },
   ]);
 
@@ -72,26 +72,26 @@ test("uploading and listing schemas", () => {
     activate: false,
   });
 
-  const schemas3 = svc.listSchemas();
+  const schemas3 = removeTime(svc.listSchemas());
   expect(schemas3).toEqual([
     {
       name: "test",
       version: "3",
-      active: false,
+      active: 0,
     },
     {
       name: "test",
       version: "2",
-      active: true,
+      active: 1,
     },
     {
       name: "test",
       version: "1",
-      active: false,
+      active: 0,
     },
   ]);
 
-  // upload a schema version that alreaddy exists fails
+  // upload a schema version that already exists fails
   expect(() => {
     svc.uploadSchema({
       _tag: tags.uploadSchema,
@@ -116,12 +116,12 @@ test("activating a schema", () => {
     activate: false,
   });
 
-  const schemas = svc.listSchemas();
+  const schemas = removeTime(svc.listSchemas());
   expect(schemas).toEqual([
     {
       name: "test",
       version: "1",
-      active: false,
+      active: 0,
     },
   ]);
 
@@ -131,12 +131,12 @@ test("activating a schema", () => {
     version: "1",
   });
 
-  const schemas2 = svc.listSchemas();
+  const schemas2 = removeTime(svc.listSchemas());
   expect(schemas2).toEqual([
     {
       name: "test",
       version: "1",
-      active: true,
+      active: 1,
     },
   ]);
 
@@ -289,6 +289,7 @@ test("apply changes", () => {
   });
   expect(resp).toEqual({
     _tag: tags.applyChangesResponse,
+    seqEnd: [1n, 0],
     status: "ok",
   });
 
@@ -300,7 +301,7 @@ test("apply changes", () => {
 
   expect(since).toEqual({
     _tag: tags.getLastSeenResponse,
-    seq: [1n, 0],
+    seq: [1, 0],
   });
 });
 
@@ -350,3 +351,8 @@ test("get changes", () => {
 test("start outbound stream", () => {});
 
 // last seen test?
+
+function removeTime(c: any) {
+  c.forEach((x: any) => delete x.creation_time);
+  return c;
+}

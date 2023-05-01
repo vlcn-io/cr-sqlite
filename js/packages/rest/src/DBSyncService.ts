@@ -42,13 +42,12 @@ const DBSyncService = {
    * @returns
    */
   getLastSeen(db: DB, msg: GetLastSeenMsg): GetLastSeenResponse {
-    const lastSeen = db.getSinceLastApplyStmt.get(msg.fromDbid) as [
-      bigint,
-      number
-    ];
+    const lastSeen = db.getSinceLastApplyStmt.get(msg.fromDbid) as
+      | [bigint, number]
+      | undefined;
     return {
       _tag: tags.getLastSeenResponse,
-      seq: lastSeen,
+      seq: lastSeen || [0n, 0],
     };
   },
 
@@ -126,10 +125,10 @@ const DBSyncService = {
 };
 
 function applyChangesInternal(db: DB, msg: ApplyChangesMsg) {
-  const [version, seq] = db.getSinceLastApplyStmt.get(msg.fromDbid) as [
-    bigint,
-    number
-  ];
+  const [version, seq] = (db.getSinceLastApplyStmt.get(msg.fromDbid) || [
+    0n,
+    0,
+  ]) as [bigint, number];
 
   // if their supplied version is <= the version we already have then we can process the msg.
   if (msg.seqStart[0] > version) {

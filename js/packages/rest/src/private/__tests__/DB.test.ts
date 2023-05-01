@@ -14,19 +14,8 @@ beforeAll(() => {
       "test.sql",
       "1",
       `CREATE TABLE foo (a primary key, b);
-      SELECT crsql_as_crr('foo');`
-    );
-    sdb.addSchema(
-      "ns",
-      "test.sql",
-      "2",
-      `CREATE TABLE IF NOT EXISTS foo (
-        a primary key,
-        b,
-        c
-      );
-      
-      SELECT crsql_as_crr('foo');`
+      SELECT crsql_as_crr('foo');`,
+      true
     );
   } catch (e) {
     console.error(e);
@@ -105,6 +94,21 @@ test("db can migrate to a new schema", async () => {
   );
 
   const result1 = await db.migrateTo("test.sql", "1");
+
+  sdb.addSchema(
+    "ns",
+    "test.sql",
+    "2",
+    `CREATE TABLE IF NOT EXISTS foo (
+      a primary key,
+      b,
+      c
+    );
+    
+    SELECT crsql_as_crr('foo');`,
+    true
+  );
+
   const result2 = await db.migrateTo("test.sql", "2");
 
   expect(result1).toBe("apply");
@@ -115,6 +119,8 @@ test("db can migrate to a new schema", async () => {
     db.__testsOnly().prepare(`INSERT INTO foo (a, b, c) VALUES (1, 2, 3)`).run()
   ).not.toThrow();
 });
+
+// test("can not migrate to a non-active version");
 
 test("db can read and write a changeset", async () => {
   const dbid1 = util.uuidToBytes(crypto.randomUUID());

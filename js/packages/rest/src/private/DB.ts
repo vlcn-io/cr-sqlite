@@ -4,6 +4,7 @@ import { Change, Config } from "../Types.js";
 import { extensionPath } from "@vlcn.io/crsqlite";
 import util from "./util.js";
 import touchHack from "./touchHack.js";
+import { SchemaRow } from "./ServiceDB.js";
 
 /**
  * Wraps a normal better-sqlite3 connection to provide
@@ -22,7 +23,10 @@ export default class DB {
   constructor(
     private readonly config: Config,
     private readonly dbid: Uint8Array,
-    private readonly schemaProvider: (name: string, version: string) => string
+    private readonly schemaProvider: (
+      name: string,
+      version: string
+    ) => SchemaRow | undefined
   ) {
     this.db = new SQLiteDB(util.getDbFilename(config, dbid));
     this.db.pragma("journal_mode = WAL");
@@ -127,10 +131,16 @@ export default class DB {
     }
 
     const schema = this.schemaProvider(schemaName, version);
+    if (schema == null || schema.active == false) {
+      throw {
+        msg: `Schema ${schemaName} version ${version} is not active or does not exists`,
+        status: "fatal",
+      };
+    }
     // some version of the schema already exists. Run auto-migrate.
     this.db.transaction(() => {
       if (storedVersion == null) {
-        this.db.exec(schema);
+        this.db.exec(schema.content);
       } else {
         this.db.prepare(`SELECT crsql_automigrate(?)`).run(schema);
       }

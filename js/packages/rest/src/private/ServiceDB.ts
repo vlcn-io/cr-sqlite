@@ -3,6 +3,14 @@ import type { Database } from "better-sqlite3";
 
 import { Config } from "../Types";
 
+export type SchemaRow = {
+  namespace: string;
+  name: string;
+  version: string;
+  content: string;
+  active: boolean;
+};
+
 export default class ServiceDB {
   private readonly db: Database;
   private readonly currentSchemaVersionStmt: SQLiteDB.Statement;
@@ -18,7 +26,7 @@ export default class ServiceDB {
       `SELECT version FROM schema WHERE namespace = ? AND name = ? ORDER BY creation_time DESC LIMIT 1`
     );
     this.getSchemaStmt = this.db.prepare(
-      `SELECT content FROM schema WHERE namespace = ? AND name = ? AND version = ?`
+      `SELECT namespace, name, version, active, content FROM schema WHERE namespace = ? AND name = ? AND version = ?`
     );
     this.listSchemasStmt = this.db.prepare(
       `SELECT name, version FROM schema WHERE namespace = ?`
@@ -40,21 +48,12 @@ export default class ServiceDB {
     `);
   }
 
-  /**
-   *
-   * @param namespace
-   * @param schemaName
-   */
-  getCurrentSchemaVersion(namespace: string, schemaName: string) {
-    return this.currentSchemaVersionStmt
-      .pluck()
-      .get(namespace, schemaName) as string;
-  }
-
-  getSchema(namespace: string, schemaName: string, version: string) {
-    return this.getSchemaStmt
-      .pluck()
-      .get(namespace, schemaName, version) as string;
+  getSchema(
+    namespace: string,
+    schemaName: string,
+    version: string
+  ): SchemaRow | undefined {
+    return this.getSchemaStmt.get(namespace, schemaName, version) as any;
   }
 
   listSchemas(namespace: string) {

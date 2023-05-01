@@ -41,7 +41,7 @@ export default class ServiceDB {
         version TEXT NOT NULL,
         content TEXT NOT NULL,
         creation_time INTEGER DEFAULT (strftime('%s', 'now')),
-        active BOOLEAN DEFAULT FALSE,
+        active INTEGER DEFAULT FALSE,
         PRIMARY KEY (namespace, name, version)
       ) STRICT;
       CREATE INDEX IF NOT EXISTS schema_creation_time ON schema (creation_time DESC);
@@ -79,7 +79,7 @@ export default class ServiceDB {
         .prepare(
           `INSERT INTO schema (namespace, name, version, content, active) VALUES (?, ?, ?, ?, ?)`
         )
-        .run(namespace, schemaName, version, content, activate);
+        .run(namespace, schemaName, version, content, activate ? 1 : 0);
     })();
   }
 

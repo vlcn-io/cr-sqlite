@@ -132,17 +132,16 @@ export default class DB {
 
     const schema = this.schemaProvider(schemaName, version);
     if (schema == null || schema.active == false) {
-      throw {
-        msg: `Schema ${schemaName} version ${version} is not active or does not exists`,
-        status: "fatal",
-      };
+      throw new Error(
+        `Schema ${schemaName} version ${version} is not active or does not exists`
+      );
     }
     // some version of the schema already exists. Run auto-migrate.
     this.db.transaction(() => {
       if (storedVersion == null) {
         this.db.exec(schema.content);
       } else {
-        this.db.prepare(`SELECT crsql_automigrate(?)`).run(schema);
+        this.db.prepare(`SELECT crsql_automigrate(?)`).run(schema.content);
       }
       this.db
         .prepare(

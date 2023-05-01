@@ -33,6 +33,7 @@ export default class ServiceDB {
         version TEXT NOT NULL,
         content TEXT NOT NULL,
         creation_time INTEGER DEFAULT (strftime('%s', 'now')),
+        active BOOLEAN DEFAULT FALSE,
         PRIMARY KEY (namespace, name, version)
       ) STRICT;
       CREATE INDEX IF NOT EXISTS schema_creation_time ON schema (creation_time DESC);
@@ -64,12 +65,45 @@ export default class ServiceDB {
     namespace: string,
     schemaName: string,
     version: string,
-    content: string
+    content: string,
+    activate: boolean
   ) {
-    this.db
-      .prepare(
-        `INSERT INTO schema (namespace, name, version, content) VALUES (?, ?, ?, ?)`
-      )
-      .run(namespace, schemaName, version, content);
+    this.db.transaction(() => {
+      if (activate) {
+        this.db
+          .prepare(
+            `UPDATE schema SET active = FALSE WHERE namespace = ? AND name = ?`
+          )
+          .run(namespace, schemaName);
+      }
+      this.db
+        .prepare(
+          `INSERT INTO schema (namespace, name, version, content, active) VALUES (?, ?, ?, ?, ?)`
+        )
+        .run(namespace, schemaName, version, content, activate);
+    })();
+  }
+
+  activateSchemaVersion(
+    namespace: string,
+    schemaName: string,
+    version: string
+  ) {
+    this.db.transaction(() => {
+      this.db
+        .prepare(
+          `UPDATE schema SET active = FALSE WHERE namespace = ? AND name = ?`
+        )
+        .run(namespace, schemaName);
+      this.db
+        .prepare(
+          `UPDATE schema SET active = TRUE WHERE namespace = ? AND name = ? AND version = ?`
+        )
+        .run(namespace, schemaName, version);
+    })();
+  }
+
+  close() {
+    this.db.close();
   }
 }

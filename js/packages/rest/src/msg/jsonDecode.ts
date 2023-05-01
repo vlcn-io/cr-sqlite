@@ -84,6 +84,10 @@ export default function decode(msg: string): Msg {
         seqEnd: [BigInt(parsed.seqEnd[0]), parsed.seqEnd[1]],
         changes: decodeChanges(parsed.changes),
       };
+    case tags.uploadSchema:
+      return parsed;
+    case tags.activateSchema:
+      return parsed;
   }
 }
 

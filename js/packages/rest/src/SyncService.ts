@@ -3,6 +3,7 @@ import DBSyncService from "./DBSyncService.js";
 import OutboundStream from "./private/OutboundStream.js";
 import {
   AckChangesMsg,
+  ActivateSchemaMsg,
   ApplyChangesMsg,
   ApplyChangesResponse,
   Change,
@@ -12,14 +13,17 @@ import {
   EstablishOutboundStreamMsg,
   GetChangesMsg,
   GetChangesResponse,
+  UploadSchemaMsg,
 } from "./Types.js";
+import ServiceDB from "./private/ServiceDB.js";
 
 // TODO: add a DB cache with a TTL so as not to re-create
 // dbs on every request?
 export default class SyncService {
   constructor(
     public readonly config: Config,
-    private readonly dbCache: DBCache
+    private readonly dbCache: DBCache,
+    private readonly serviceDB: ServiceDB
   ) {}
 
   /**
@@ -32,15 +36,25 @@ export default class SyncService {
    * You can remove old copies of the schema through the `listSchemas` and
    * `deleteSchema` methods.
    */
-  uploadSchema(
-    schemaName: string,
-    schemaContents: string,
-    schemaVersion: string
-  ) {
-    throw new Error();
+  uploadSchema(msg: UploadSchemaMsg) {
+    this.serviceDB.addSchema(
+      "default",
+      msg.name,
+      msg.version,
+      msg.contents,
+      msg.activate
+    );
   }
 
-  listSchemas(): string[] {
+  activateSchemaVersion(msg: ActivateSchemaMsg) {
+    this.serviceDB.activateSchemaVersion("default", msg.name, msg.version);
+  }
+
+  listSchemas(): {
+    schemaName: string;
+    schemaVersion: string;
+    active: boolean;
+  }[] {
     return [];
   }
 
@@ -86,6 +100,11 @@ export default class SyncService {
    */
   startOutboundStream(msg: EstablishOutboundStreamMsg): OutboundStream {
     throw new Error("not implemented");
+  }
+
+  shutdown() {
+    this.dbCache.destroy();
+    this.serviceDB.close();
   }
 
   /**

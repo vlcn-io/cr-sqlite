@@ -33,6 +33,8 @@ export const tags = {
   getLastSeen: 8,
   getLastSeenResponse: 9,
   getChangesResponse: 10,
+  uploadSchema: 11,
+  activateSchema: 12,
 } as const;
 
 export type Tag = typeof tags;
@@ -61,7 +63,9 @@ export type Msg =
   | CreateOrMigrateMsg
   | GetLastSeenMsg
   | GetLastSeenResponse
-  | GetChangesResponse;
+  | GetChangesResponse
+  | UploadSchemaMsg
+  | ActivateSchemaMsg;
 
 export type ApplyChangesMsg = {
   readonly _tag: Tag["applyChanges"];
@@ -119,6 +123,20 @@ export type StreamingChangesMsg = {
   readonly changes: readonly Change[];
   // streams are stateful so the stream already knows the from and to dbids
   // as well as schema version. These are negotiated on stream startup.
+};
+
+export type UploadSchemaMsg = {
+  readonly _tag: Tag["uploadSchema"];
+  readonly name: string;
+  readonly version: string;
+  readonly contents: string;
+  readonly activate: boolean;
+};
+
+export type ActivateSchemaMsg = {
+  readonly _tag: Tag["activateSchema"];
+  readonly name: string;
+  readonly version: string;
 };
 
 export type GetChangesMsg = {

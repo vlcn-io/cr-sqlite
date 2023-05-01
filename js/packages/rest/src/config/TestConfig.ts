@@ -5,7 +5,7 @@ const TestConfig: Config = {
   dbsDir: "./dbs-test",
   cacheTtlInSeconds: 60,
   notifyLatencyInMs: 10,
-  serviceDbPath: "./dbs-test/service.db",
+  serviceDbPath: ":memory:",
 };
 
 export default TestConfig;

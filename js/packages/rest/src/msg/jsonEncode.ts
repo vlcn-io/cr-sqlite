@@ -86,6 +86,10 @@ export default function encode(msg: Msg): string {
             : undefined,
         msg: msg.msg,
       });
+    case tags.uploadSchema:
+      return JSON.stringify(msg);
+    case tags.activateSchema:
+      return JSON.stringify(msg);
   }
 }
 

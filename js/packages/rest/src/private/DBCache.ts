@@ -1,5 +1,6 @@
 import { Config } from "../Types.js";
 import DB from "./DB.js";
+import { SchemaRow } from "./ServiceDB.js";
 import util from "./util.js";
 
 // TODO: have a size limit on the cache?
@@ -9,7 +10,10 @@ export default class DBCache {
 
   constructor(
     private readonly config: Config,
-    private readonly schemaProvider: (name: string, version: string) => string
+    private readonly schemaProvider: (
+      name: string,
+      version: string
+    ) => SchemaRow | undefined
   ) {
     this.intervalHandle = setInterval(() => {
       const now = Date.now();

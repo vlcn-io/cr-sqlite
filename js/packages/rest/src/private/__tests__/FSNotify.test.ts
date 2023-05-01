@@ -4,10 +4,12 @@ import DBCache from "../DBCache.js";
 import util from "../util.js";
 import SQLiteDB from "better-sqlite3";
 import FSNotify from "../FSNotify.js";
-import fs from "fs";
+import ServiceDB from "../ServiceDB.js";
 
 test("writes to the database notify fs listeners", async () => {
-  const dbid = crypto.randomUUID();
+  const uuid = crypto.randomUUID();
+  const dbid = util.uuidToBytes(uuid);
+  const dbidStr = util.bytesToHex(dbid);
   const db = new SQLiteDB(util.getDbFilename(TestConfig, dbid));
   db.pragma("journal_mode = WAL");
   db.pragma("synchronous = NORMAL");
@@ -17,11 +19,14 @@ test("writes to the database notify fs listeners", async () => {
   }
   await sleep(500);
 
-  const cache = new DBCache(TestConfig);
+  const sdb = new ServiceDB(TestConfig, true);
+  const cache = new DBCache(TestConfig, (name, version) =>
+    sdb.getSchema("ns", name, version)
+  );
   console.log("starting notify");
   const fsNotify = new FSNotify(TestConfig, cache);
   let notified = false;
-  fsNotify.addListener(dbid, () => {
+  fsNotify.addListener(dbidStr, () => {
     notified = true;
   });
 

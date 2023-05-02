@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "@vlcn.io/rx-tbl": "workspace:*",
-    "@vlcn.io/xplat-api": "workspace:*"
+    "@vlcn.io/xplat-api": "workspace:*",
+    "@vlcn.io/crsqlite-wasm": "workspace:*"
   }
 }

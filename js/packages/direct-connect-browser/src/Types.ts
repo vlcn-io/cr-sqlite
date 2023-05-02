@@ -31,3 +31,11 @@ export type SyncedRemoteMsg = {
   dbid: string;
   collectedChanges: [UpdateType, string, bigint][];
 };
+
+type DBID = string & {
+  readonly DBID: unique symbol; // this is the phantom type
+};
+
+export function newDbid() {
+  return crypto.randomUUID().replaceAll("-", "") as DBID;
+}

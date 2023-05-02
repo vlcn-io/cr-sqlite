@@ -18,13 +18,15 @@
 
 import { DB, DBAsync, UpdateType } from "@vlcn.io/xplat-api";
 
+export type Src = "thisTab" | "otherTab" | "sync";
+
 export class TblRx {
   #pointListeners = new Map<
     string,
     Map<bigint, ((updates: UpdateType[]) => void)[]>
   >();
   #rangeListeners = new Map<string, Set<(updates: UpdateType[]) => void>>();
-  #arbitraryListeners = new Set<(updates: UpdateType[]) => void>();
+  #arbitraryListeners = new Set<(updates: UpdateType[], src: Src) => void>();
   __internalRawListener: (updates: [UpdateType, string, bigint][]) => void =
     () => {};
   #disposeHook: () => void;
@@ -38,7 +40,7 @@ export class TblRx {
   constructor(private readonly db: DB | DBAsync) {
     this.#bc = new BroadcastChannel(db.siteid);
     this.#bc.onmessage = (msg) => {
-      this.__internalNotifyListeners(msg.data);
+      this.__internalNotifyListeners(msg.data, "otherTab");
     };
 
     this.#disposeHook = this.db.onUpdate(
@@ -56,12 +58,15 @@ export class TblRx {
    * Exposed to one connection (e.g., connection in web-workers)
    * to notify another connection about database changes.
    */
-  __internalNotifyListeners(data: [UpdateType, string, bigint][]) {
+  __internalNotifyListeners(data: [UpdateType, string, bigint][], src: Src) {
     this.__internalRawListener(data);
     // toNotify map exists to de-dupe listeners.
     // If you register for many events you'll only get called once even if many
     // of those events fire.
-    const toNotify = new Map<(updates: UpdateType[]) => void, UpdateType[]>();
+    const toNotify = new Map<
+      (updates: UpdateType[], src: Src) => void,
+      UpdateType[]
+    >();
     for (const [updateType, tbl, rowid] of data) {
       const cbList = this.#rangeListeners.get(tbl);
       if (cbList != null) {
@@ -100,7 +105,7 @@ export class TblRx {
     }
 
     for (const [cb, updates] of toNotify) {
-      cb(updates);
+      cb(updates, src);
     }
   }
 
@@ -115,7 +120,7 @@ export class TblRx {
     setTimeout(() => {
       const data = this.#pendingNotification!;
       this.#pendingNotification = null;
-      this.__internalNotifyListeners(data);
+      this.__internalNotifyListeners(data, "thisTab");
       this.#bc.postMessage(data);
     }, 0);
   }
@@ -168,7 +173,7 @@ export class TblRx {
     };
   }
 
-  onAny(cb: () => void) {
+  onAny(cb: (updates: UpdateType[], src: Src) => void) {
     this.#arbitraryListeners.add(cb);
     return () => {
       this.#arbitraryListeners.delete(cb);

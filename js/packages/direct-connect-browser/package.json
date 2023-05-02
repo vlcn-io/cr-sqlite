@@ -22,5 +22,7 @@
     "url": "git@github.com:vlcn-io/cr-sqlite.git",
     "directory": "https://github.com/vlcn-io/cr-sqlite/tree/main/js/packages/direct-connect-browser"
   },
-  "dependencies": {}
+  "dependencies": {
+    "@vlcn.io/rx-tbl": "workspace:*"
+  }
 }

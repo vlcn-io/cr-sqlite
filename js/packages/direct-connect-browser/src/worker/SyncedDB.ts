@@ -23,6 +23,11 @@ export default class SyncedDB {
     // to the server we're connected to via endpoints
     // should we also use this to re-broadcast to other tabs?
     // probably... but in that case the tab should not call us back on localDbChanged
+    // rx-tbl alrdy does broadcasting for us so we don't need to do anything here
+    // since rx-tbl should work indep. of sync.
+    // --
+    // we do, however, have to broadcast up (to all port) on remote db change / on sync.
+    // can we do this thru rx-tbl?
   }
 
   stop(port: MessagePort): boolean {

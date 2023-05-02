@@ -1,23 +1,17 @@
+import { UpdateType } from "@vlcn.io/xplat-api";
+
 export type Endpoints = {
-  getChanges: string;
-  applyChanges: string;
-  establishOutboundStream: string;
-  getLastSeen: string;
+  getChanges: URL;
+  applyChanges: URL;
+  establishOutboundStream: URL;
+  getLastSeen: URL;
 };
 
-export type Msg =
-  | LocalDBChangedMsg
-  | SyncedRemoteMsg
-  | StartSyncMsg
-  | StopSyncMsg;
+export type ToWorkerMsg = LocalDBChangedMsg | StartSyncMsg | StopSyncMsg;
+export type FromWorkerMsg = SyncedRemoteMsg;
 
 export type LocalDBChangedMsg = {
   _tag: "LocalDBChanged";
-  dbid: string;
-};
-
-export type SyncedRemoteMsg = {
-  _tag: "SyncedRemote";
   dbid: string;
 };
 
@@ -30,4 +24,10 @@ export type StartSyncMsg = {
 export type StopSyncMsg = {
   _tag: "StopSync";
   dbid: string;
+};
+
+export type SyncedRemoteMsg = {
+  _tag: "SyncedRemote";
+  dbid: string;
+  collectedChanges: [UpdateType, string, bigint][];
 };

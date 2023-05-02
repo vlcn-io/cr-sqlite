@@ -1,10 +1,9 @@
 import { Endpoints, FromWorkerMsg, SyncedRemoteMsg } from "./Types";
-import tblrx from "@vlcn.io/rx-tbl";
+import tblrx, { Src } from "@vlcn.io/rx-tbl";
 
 export default class WorkerInterface {
   private readonly worker;
   private readonly syncs = new Map<string, ReturnType<typeof tblrx>>();
-  private ignoreNotif: boolean = false;
   private disposables = new Map<string, () => void>();
 
   constructor(workerUri: string) {
@@ -35,21 +34,11 @@ export default class WorkerInterface {
 
     this.disposables.set(
       dbid,
-      rx.onAny(() => this._localDbChanged(dbid))
+      // TODO: onAny should tell us if broadcast channel event or not
+      // we should ignore broadcast channel events as those tabs will call the shared worker
+      // on their own.
+      rx.onAny((updates, src) => this._localDbChanged(dbid, src))
     );
-  }
-
-  _localDbChanged(dbid: string) {
-    if (this.ignoreNotif) {
-      console.log("ignoreing changes from sync layer itself");
-      return;
-    }
-
-    const msg = {
-      _tag: "LocalDBChanged",
-      dbid,
-    };
-    this.worker.port.postMessage(msg);
   }
 
   stopSync(dbid: string) {
@@ -73,20 +62,25 @@ export default class WorkerInterface {
   }
 
   private _onSyncedRemote(msg: SyncedRemoteMsg) {
-    // integrate with the correct rx-tbl instance
-    //
-    // __internalNotifyListeners
     const rx = this.syncs.get(msg.dbid);
     if (!rx) {
       console.error(`No rx-tbl instance for ${msg.dbid}`);
       return;
     }
 
-    this.ignoreNotif = true;
-    try {
-      rx.__internalNotifyListeners(msg.collectedChanges);
-    } finally {
-      this.ignoreNotif = false;
+    rx.__internalNotifyListeners(msg.collectedChanges, "sync");
+  }
+
+  private _localDbChanged(dbid: string, src: Src) {
+    if (src !== "thisTab") {
+      console.log("ignoreing changes from sync layer itself");
+      return;
     }
+
+    const msg = {
+      _tag: "LocalDBChanged",
+      dbid,
+    };
+    this.worker.port.postMessage(msg);
   }
 }

@@ -190,6 +190,9 @@ importers:
       '@vlcn.io/rx-tbl':
         specifier: workspace:*
         version: link:../rx-tbl
+      '@vlcn.io/xplat-api':
+        specifier: workspace:*
+        version: link:../xplat-api
     devDependencies:
       typescript:
         specifier: ^5.0.4

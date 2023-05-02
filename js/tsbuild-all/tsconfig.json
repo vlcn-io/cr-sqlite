@@ -10,6 +10,7 @@
     { "path": "../packages/client-server-common" },
     { "path": "../packages/client-websocket" },
     { "path": "../packages/direct-connect-nodejs" },
+    { "path": "../packages/direct-connect-browser" },
     { "path": "../packages/node-allinone" },
     { "path": "../packages/node-tests" },
     { "path": "../packages/p2p" },

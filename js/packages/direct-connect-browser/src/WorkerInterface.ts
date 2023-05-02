@@ -37,7 +37,7 @@ export default class WorkerInterface {
       // TODO: onAny should tell us if broadcast channel event or not
       // we should ignore broadcast channel events as those tabs will call the shared worker
       // on their own.
-      rx.onAny((updates, src) => this._localDbChanged(dbid, src))
+      rx.onAny((_updates, src) => this._localDbChanged(dbid, src))
     );
   }
 

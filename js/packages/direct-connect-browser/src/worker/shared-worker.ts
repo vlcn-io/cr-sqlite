@@ -28,6 +28,8 @@ function msgReceived(e: MessageEvent<ToWorkerMsg>, port: MessagePort) {
       svc.startSync(msg, port);
       break;
     case "LocalDBChanged":
+      // TODO: we should collect all `LocalDBChanged` messages that occur within a short period of time
+      // So throttle invocations here or just collect all over a given tick of the event loop.
       svc.localDbChanged(msg);
       break;
     case "StopSync":

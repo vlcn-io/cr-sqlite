@@ -1,4 +1,6 @@
 import { Endpoints } from "../Types";
+import { Version } from "./DB";
+import { SyncedDB } from "./SyncedDB";
 
 export default class InboundStream {
   // from the server into us.
@@ -8,7 +10,7 @@ export default class InboundStream {
   // TODO: can we apply back-pressure so the server doesn't overwhelm us with sync events?
   private started: boolean = false;
 
-  constructor(dbid: string, endpoints: Endpoints) {}
+  constructor(dbid: string, endpoints: Endpoints, db: SyncedDB) {}
 
   start() {
     if (this.started) {
@@ -17,5 +19,12 @@ export default class InboundStream {
     this.started = true;
 
     // ask the server for changes
+  }
+
+  _applyChangeset(seqEnd: readonly [Version, number]) {
+    // ensure we're contiguous
+    // then update peer tracker
+    // now update our record of the server
+    // await this.updatePeerTracker(tx, from, RECEIVE, seqEnd);
   }
 }

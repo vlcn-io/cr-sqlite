@@ -6,5 +6,9 @@
     "allowSyntheticDefaultImports": true
   },
   "include": ["./src/"],
-  "references": [{ "path": "../rx-tbl" }, { "path": "../xplat-api" }]
+  "references": [
+    { "path": "../rx-tbl" },
+    { "path": "../xplat-api" },
+    { "path": "../crsqlite-wasm" }
+  ]
 }

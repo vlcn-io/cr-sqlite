@@ -127,9 +127,11 @@ export class DB {
   dispose() {
     this.disposed = true;
     this.dispoables.forEach((d) => d());
-    this.pullChangesetStmt.finalize(null);
-    this.applyChangesetStmt.finalize(null);
-    this.updatePeerTrackerStmt.finalize(null);
+    return Promise.all([
+      this.pullChangesetStmt.finalize(null),
+      this.applyChangesetStmt.finalize(null),
+      this.updatePeerTrackerStmt.finalize(null),
+    ]);
   }
 }
 

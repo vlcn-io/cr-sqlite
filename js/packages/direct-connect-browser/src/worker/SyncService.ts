@@ -4,7 +4,7 @@ import {
   StartSyncMsg,
   StopSyncMsg,
 } from "../Types.js";
-import SyncedDB from "./SyncedDB.js";
+import { SyncedDB } from "./SyncedDB.js";
 
 export default class SyncService {
   /**
@@ -30,13 +30,13 @@ export default class SyncService {
     db.start(port);
   }
 
-  localDbChanged(msg: LocalDBChangedMsg) {
+  localDbChangedFromMainThread(msg: LocalDBChangedMsg) {
     // push out changes for the given db
     const db = this.dbs.get(msg.dbid);
     if (db == null) {
       console.warn(`got a local db changed event for unknown db ${msg.dbid}`);
     }
-    db?.localDbChanged();
+    db?.localDbChangedFromMainThread();
   }
 
   stopSync(msg: StopSyncMsg, port: MessagePort) {

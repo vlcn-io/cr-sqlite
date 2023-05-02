@@ -1,6 +1,5 @@
 import { Endpoints } from "../Types.js";
-
-type Seq = [bigint, number];
+import { Seq } from "./DB.js";
 
 export default class OutboundStream {
   private started: boolean = false;
@@ -19,5 +18,9 @@ export default class OutboundStream {
 
   nextTick() {
     // pull changes from the local DB
+    if (this.seq == null) {
+      // init not yet complete
+      return;
+    }
   }
 }

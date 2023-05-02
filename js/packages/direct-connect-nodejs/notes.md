@@ -6,5 +6,8 @@
   - will migrate other dbs as they open
 
 - Get changes with a limit!
+
   - add artificial limit if one is not provided.
   - allow specifying upper version too so we can fetch gaps!
+
+- Live re-slurp on nextjs schema file changes!

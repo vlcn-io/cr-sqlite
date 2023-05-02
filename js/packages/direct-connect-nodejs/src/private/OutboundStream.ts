@@ -3,12 +3,12 @@ import {
   GetChangesResponse,
   StreamingChangesMsg,
   tags,
-} from "../Types";
-import { Seq } from "../Types";
-import DB from "./DB";
-import FSNotify from "./FSNotify";
-import ServiceDB from "./ServiceDB";
-import util from "./util";
+} from "../Types.js";
+import { Seq } from "../Types.js";
+import DB from "./DB.js";
+import FSNotify from "./FSNotify.js";
+import ServiceDB from "./ServiceDB.js";
+import util from "./util.js";
 
 /**
  * We could use this in our p2p setup too.

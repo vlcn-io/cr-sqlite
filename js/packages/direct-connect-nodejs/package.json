@@ -1,5 +1,5 @@
 {
-  "name": "@vlcn.io/rest",
+  "name": "@vlcn.io/direct-connect-server",
   "type": "module",
   "version": "0.9.0",
   "files": [

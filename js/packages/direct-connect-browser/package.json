@@ -1,7 +1,7 @@
 {
-  "name": "@vlcn.io/direct-connect-nodejs",
+  "name": "@vlcn.io/direct-connect-browser",
   "type": "module",
-  "version": "0.9.0",
+  "version": "0.0.1",
   "files": [
     "dist",
     "src"
@@ -26,7 +26,7 @@
   "repository": {
     "type": "git",
     "url": "git@github.com:vlcn-io/cr-sqlite.git",
-    "directory": "https://github.com/vlcn-io/cr-sqlite/tree/main/js/packages/direct-connect-nodejs"
+    "directory": "https://github.com/vlcn-io/cr-sqlite/tree/main/js/packages/server-http"
   },
   "dependencies": {
     "@vlcn.io/crsqlite": "workspace:*",

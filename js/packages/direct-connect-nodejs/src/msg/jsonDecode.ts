@@ -7,8 +7,7 @@
 import { Change, Msg, Tag, tags } from "../Types.js";
 import util from "../private/util.js";
 
-export default function decode(msg: string): Msg {
-  const parsed = JSON.parse(msg);
+export default function decode(parsed: any): Msg {
   switch (parsed._tag as Tag[keyof Tag]) {
     case tags.applyChanges:
       return {

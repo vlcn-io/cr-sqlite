@@ -6,11 +6,11 @@
 import { Change, Msg, Tag, tags } from "../Types.js";
 import util from "../private/util.js";
 
-export default function encode(msg: Msg): string {
+export default function encode(msg: Msg): Object {
   // implement encode
   switch (msg._tag) {
     case tags.applyChanges:
-      return JSON.stringify({
+      return {
         _tag: tags.applyChanges,
         toDbid: util.bytesToHex(msg.toDbid),
         fromDbid: util.bytesToHex(msg.fromDbid),
@@ -18,66 +18,66 @@ export default function encode(msg: Msg): string {
         seqStart: [msg.seqStart[0].toString(), msg.seqStart[1]],
         seqEnd: [msg.seqEnd[0].toString(), msg.seqEnd[1]],
         changes: encodeChanges(msg.changes),
-      });
+      };
     case tags.getChanges:
-      return JSON.stringify({
+      return {
         _tag: tags.getChanges,
         dbid: util.bytesToHex(msg.dbid),
         requestorDbid: util.bytesToHex(msg.requestorDbid),
         schemaName: msg.schemaVersion,
         since: [msg.since[0].toString(), msg.since[1]],
-      });
+      };
     case tags.establishOutboundStream:
-      return JSON.stringify({
+      return {
         _tag: tags.establishOutboundStream,
         toDbid: util.bytesToHex(msg.toDbid),
         fromDbid: util.bytesToHex(msg.fromDbid),
         schemaName: msg.schemaVersion,
         seqStart: [msg.seqStart[0].toString(), msg.seqStart[1]],
-      });
+      };
     case tags.getLastSeen:
-      return JSON.stringify({
+      return {
         _tag: tags.getLastSeen,
         fromDbid: util.bytesToHex(msg.fromDbid),
-      });
+      };
     case tags.getLastSeenResponse:
-      return JSON.stringify({
+      return {
         _tag: tags.getLastSeenResponse,
         seq: [msg.seq[0].toString(), msg.seq[1]],
-      });
+      };
     case tags.getChangesResponse:
-      return JSON.stringify({
+      return {
         _tag: tags.getChangesResponse,
         seqStart: [msg.seqStart[0].toString(), msg.seqStart[1]],
         seqEnd: [msg.seqEnd[0].toString(), msg.seqEnd[1]],
         changes: encodeChanges(msg.changes),
-      });
+      };
     case tags.createOrMigrate:
-      return JSON.stringify({
+      return {
         _tag: tags.createOrMigrate,
         dbid: util.bytesToHex(msg.dbid),
         schemaName: msg.schemaName,
         schemaVersion: msg.schemaVersion,
-      });
+      };
     case tags.createOrMigrateResponse:
-      return JSON.stringify({
+      return {
         _tag: tags.createOrMigrateResponse,
         status: msg.status,
-      });
+      };
     case tags.ackChanges:
-      return JSON.stringify({
+      return {
         _tag: tags.ackChanges,
         seqEnd: [msg.seqEnd[0].toString(), msg.seqEnd[1]],
-      });
+      };
     case tags.streamingChanges:
-      return JSON.stringify({
+      return {
         _tag: tags.streamingChanges,
         seqStart: [msg.seqStart[0].toString(), msg.seqStart[1]],
         seqEnd: [msg.seqEnd[0].toString(), msg.seqEnd[1]],
         changes: encodeChanges(msg.changes),
-      });
+      };
     case tags.applyChangesResponse:
-      return JSON.stringify({
+      return {
         _tag: tags.applyChangesResponse,
         status: msg.status,
         seqEnd:
@@ -85,11 +85,11 @@ export default function encode(msg: Msg): string {
             ? [msg.seqEnd[0].toString(), msg.seqEnd[1]]
             : undefined,
         msg: msg.msg,
-      });
+      };
     case tags.uploadSchema:
-      return JSON.stringify(msg);
+      return msg;
     case tags.activateSchema:
-      return JSON.stringify(msg);
+      return msg;
   }
 }
 

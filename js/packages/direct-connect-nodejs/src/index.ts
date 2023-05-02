@@ -6,3 +6,5 @@ export { default as ServiceDB } from "./private/ServiceDB.js";
 export { default as FSNotify } from "./private/FSNotify.js";
 export { default as DBCache } from "./private/DBCache.js";
 export type { SchemaRow } from "./private/ServiceDB.js";
+export { default as jsonDecode } from "./msg/jsonDecode.js";
+export { default as jsonEncode } from "./msg/jsonEncode.js";

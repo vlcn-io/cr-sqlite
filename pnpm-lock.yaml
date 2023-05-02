@@ -185,6 +185,50 @@ importers:
         specifier: ^0.30.1
         version: 0.30.1
 
+  js/packages/direct-connect-browser:
+    dependencies:
+      '@vlcn.io/rx-tbl':
+        specifier: workspace:*
+        version: link:../rx-tbl
+    devDependencies:
+      typescript:
+        specifier: ^5.0.4
+        version: 5.0.4
+
+  js/packages/direct-connect-nodejs:
+    dependencies:
+      '@vlcn.io/crsqlite':
+        specifier: workspace:*
+        version: link:../../../core
+      better-sqlite3:
+        specifier: ^8.3.0
+        version: 8.3.0
+      chokidar:
+        specifier: ^3.5.3
+        version: 3.5.3
+      throttle-debounce:
+        specifier: ^5.0.0
+        version: 5.0.0
+    devDependencies:
+      '@types/better-sqlite3':
+        specifier: ^7.6.4
+        version: 7.6.4
+      '@types/node':
+        specifier: ^18.16.1
+        version: 18.16.1
+      '@types/throttle-debounce':
+        specifier: ^5.0.0
+        version: 5.0.0
+      chokidar-cli:
+        specifier: ^3.0.0
+        version: 3.0.0
+      typescript:
+        specifier: ^5.0.4
+        version: 5.0.4
+      vitest:
+        specifier: ^0.30.1
+        version: 0.30.1
+
   js/packages/node-allinone:
     dependencies:
       '@vlcn.io/crsqlite':
@@ -278,40 +322,6 @@ importers:
       react:
         specifier: ^18.2.0
         version: 18.2.0
-      typescript:
-        specifier: ^5.0.4
-        version: 5.0.4
-      vitest:
-        specifier: ^0.30.1
-        version: 0.30.1
-
-  js/packages/rest:
-    dependencies:
-      '@vlcn.io/crsqlite':
-        specifier: workspace:*
-        version: link:../../../core
-      better-sqlite3:
-        specifier: ^8.3.0
-        version: 8.3.0
-      chokidar:
-        specifier: ^3.5.3
-        version: 3.5.3
-      throttle-debounce:
-        specifier: ^5.0.0
-        version: 5.0.0
-    devDependencies:
-      '@types/better-sqlite3':
-        specifier: ^7.6.4
-        version: 7.6.4
-      '@types/node':
-        specifier: ^18.16.1
-        version: 18.16.1
-      '@types/throttle-debounce':
-        specifier: ^5.0.0
-        version: 5.0.0
-      chokidar-cli:
-        specifier: ^3.0.0
-        version: 3.0.0
       typescript:
         specifier: ^5.0.4
         version: 5.0.4

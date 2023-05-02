@@ -1,4 +1,4 @@
-import { Msg } from "../Types.js";
+import { ToWorkerMsg } from "../Types.js";
 import SyncService from "./SyncService.js";
 
 type Self = {
@@ -20,7 +20,7 @@ glob.onconnect = (e: MessageEvent) => {
   // port.start? supposidly implicitly called
 };
 
-function msgReceived(e: MessageEvent<Msg>, port: MessagePort) {
+function msgReceived(e: MessageEvent<ToWorkerMsg>, port: MessagePort) {
   const msg = e.data;
 
   switch (msg._tag) {

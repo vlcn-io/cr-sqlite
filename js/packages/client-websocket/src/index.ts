@@ -75,15 +75,20 @@ function startSyncInWorker(
         // todo: test this ignoreNotif logic so it doesn't break (e.g., by new microtask enqueueing) in the future.
         ignoreNotif = true;
         // tell rx about the changes from a different connection
-        args.rx.__internalNotifyListeners(msg.collectedChanges);
-        ignoreNotif = false;
+        try {
+          args.rx.__internalNotifyListeners(msg.collectedChanges);
+        } finally {
+          ignoreNotif = false;
+        }
         break;
     }
   };
 
   disposables.push(
     args.rx.onAny(() => {
-      // ignore changes coming from the sync layer itself?
+      // ignore changes coming from the sync layer itself.
+      // This is because RX calls into sync layer telling it there was a change.
+      // But if change came from sync layer  itself, we don't need to tell sync layer this.
       if (ignoreNotif) {
         console.log("ignoring changes from sync layer itself");
         return;

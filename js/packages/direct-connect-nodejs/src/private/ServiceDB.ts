@@ -1,7 +1,7 @@
 import SQLiteDB from "better-sqlite3";
 import type { Database } from "better-sqlite3";
 
-import { Config } from "../Types";
+import { Config } from "../Types.js";
 
 export type SchemaRow = {
   namespace: string;

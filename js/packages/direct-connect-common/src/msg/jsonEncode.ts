@@ -38,6 +38,7 @@ export default function encode(msg: Msg): Object {
     case tags.getLastSeen:
       return {
         _tag: tags.getLastSeen,
+        toDbid: bytesToHex(msg.toDbid),
         fromDbid: bytesToHex(msg.fromDbid),
       };
     case tags.getLastSeenResponse:

@@ -206,6 +206,9 @@ importers:
 
   js/packages/direct-connect-common:
     devDependencies:
+      fast-check:
+        specifier: ^3.8.0
+        version: 3.8.0
       typescript:
         specifier: ^5.0.4
         version: 5.0.4
@@ -386,7 +389,7 @@ importers:
         version: link:../crsqlite-wasm
       vite:
         specifier: ^4.2.2
-        version: 4.2.2(@types/node@18.16.1)
+        version: 4.2.2(@types/node@18.15.11)
 
   js/packages/sandbox-node:
     dependencies:
@@ -399,7 +402,7 @@ importers:
         version: link:../../../core
       vite:
         specifier: ^4.2.2
-        version: 4.2.2(@types/node@18.16.1)
+        version: 4.2.2(@types/node@18.15.11)
 
   js/packages/server-core:
     dependencies:

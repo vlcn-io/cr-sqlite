@@ -7,6 +7,10 @@ export default class JsonSerializer implements ISerializer {
     private readonly parse: boolean = false
   ) {}
 
+  get contentType(): "json" {
+    return "json";
+  }
+
   encode(msg: Msg): any {
     const encoded = jsonEncode(msg);
     if (this.stringify) {

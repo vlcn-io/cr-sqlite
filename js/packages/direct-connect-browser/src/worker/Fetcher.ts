@@ -1,9 +1,16 @@
 import { DBID, Endpoints } from "../Types.js";
+import {
+  CreateOrMigrateMsg,
+  ISerializer,
+} from "@vlcn.io/direct-connect-common";
 
 export default class Fetcher {
-  constructor(private readonly endpoints: Endpoints) {}
+  constructor(
+    private readonly endpoints: Endpoints,
+    private readonly serializer: ISerializer
+  ) {}
 
-  createOrMigrate(remoteDbid: DBID, localDbid: DBID) {
+  createOrMigrate(msg: CreateOrMigrateMsg) {
     return fetch(this.endpoints.createOrMigrate, {
       method: "POST",
       body: JSON.stringify({ remoteDbid, localDbid }),

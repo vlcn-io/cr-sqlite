@@ -3,7 +3,7 @@
 // - converts uint8array to hex string
 // - converts bigint to string
 
-import { Change, Msg, tags } from "../index.js";
+import { Change, Msg, tags } from "../types.js";
 import { bytesToHex } from "../util.js";
 
 export default function encode(msg: Msg): Object {

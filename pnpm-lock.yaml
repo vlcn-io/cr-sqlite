@@ -190,6 +190,9 @@ importers:
       '@vlcn.io/crsqlite-wasm':
         specifier: workspace:*
         version: link:../crsqlite-wasm
+      '@vlcn.io/direct-connect-common':
+        specifier: workspace:*
+        version: link:../direct-connect-common
       '@vlcn.io/rx-tbl':
         specifier: workspace:*
         version: link:../rx-tbl

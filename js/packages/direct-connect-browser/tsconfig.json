@@ -9,6 +9,7 @@
   "references": [
     { "path": "../rx-tbl" },
     { "path": "../xplat-api" },
-    { "path": "../crsqlite-wasm" }
+    { "path": "../crsqlite-wasm" },
+    { "path": "../direct-connect-common" }
   ]
 }

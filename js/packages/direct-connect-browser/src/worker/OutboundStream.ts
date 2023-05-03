@@ -1,16 +1,17 @@
 import { Endpoints } from "../Types.js";
-import { Seq } from "./DB.js";
+import { DB, Seq } from "./DB.js";
 
 export default class OutboundStream {
   private started: boolean = false;
+  private shutdown: boolean = false;
   private seq: Seq | null = null;
 
   // from our DB to the server.
   // The server should tell us from which point to start.
-  constructor(dbid: string, endpoints: Endpoints) {}
+  constructor(db: DB, endpoints: Endpoints) {}
 
   start() {
-    if (this.started) {
+    if (this.started || this.shutdown) {
       return;
     }
     this.started = true;
@@ -22,5 +23,10 @@ export default class OutboundStream {
       // init not yet complete
       return;
     }
+  }
+
+  stop() {
+    this.shutdown = true;
+    this.started = false;
   }
 }

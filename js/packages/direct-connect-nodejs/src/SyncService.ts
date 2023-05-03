@@ -2,12 +2,9 @@ import DBCache from "./private/DBCache.js";
 import DBSyncService from "./DBSyncService.js";
 import OutboundStream from "./private/OutboundStream.js";
 import {
-  AckChangesMsg,
   ActivateSchemaMsg,
   ApplyChangesMsg,
   ApplyChangesResponse,
-  Change,
-  Config,
   CreateOrMigrateMsg,
   CreateOrMigrateResponse,
   EstablishOutboundStreamMsg,
@@ -16,9 +13,10 @@ import {
   GetLastSeenMsg,
   GetLastSeenResponse,
   UploadSchemaMsg,
-} from "./Types.js";
+} from "@vlcn.io/direct-connect-common";
 import ServiceDB from "./private/ServiceDB.js";
 import FSNotify from "./private/FSNotify.js";
+import { Config } from "./Types.js";
 
 export default class SyncService {
   constructor(
@@ -75,7 +73,12 @@ export default class SyncService {
    */
   createOrMigrateDatabase(msg: CreateOrMigrateMsg): CreateOrMigrateResponse {
     const db = this.dbCache.get(msg.dbid);
-    return DBSyncService.maybeMigrate(db, msg.schemaName, msg.schemaVersion);
+    return DBSyncService.maybeMigrate(
+      db,
+      msg.schemaName,
+      msg.schemaVersion,
+      msg.requestorDbid
+    );
   }
 
   /**

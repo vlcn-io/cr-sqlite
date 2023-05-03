@@ -1,6 +1,7 @@
 import { UpdateType } from "@vlcn.io/xplat-api";
 
 export type Endpoints = {
+  createOrMigrate: URL;
   getChanges: URL;
   applyChanges: URL;
   establishOutboundStream: URL;
@@ -12,27 +13,27 @@ export type FromWorkerMsg = SyncedRemoteMsg;
 
 export type LocalDBChangedMsg = {
   _tag: "LocalDBChanged";
-  dbid: string;
+  dbid: DBID;
 };
 
 export type StartSyncMsg = {
   _tag: "StartSync";
-  dbid: string;
+  dbid: DBID;
   endpoints: Endpoints;
 };
 
 export type StopSyncMsg = {
   _tag: "StopSync";
-  dbid: string;
+  dbid: DBID;
 };
 
 export type SyncedRemoteMsg = {
   _tag: "SyncedRemote";
-  dbid: string;
+  dbid: DBID;
   collectedChanges: [UpdateType, string, bigint][];
 };
 
-type DBID = string & {
+export type DBID = string & {
   readonly DBID: unique symbol; // this is the phantom type
 };
 

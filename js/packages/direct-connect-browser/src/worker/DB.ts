@@ -3,6 +3,7 @@ import initWasm from "@vlcn.io/crsqlite-wasm";
 import wasmUrl from "@vlcn.io/crsqlite-wasm/crsqlite.wasm?url";
 import { DBAsync, StmtAsync } from "@vlcn.io/xplat-api";
 import { TXAsync } from "@vlcn.io/xplat-api";
+import { DBID } from "../Types.js";
 
 export type CID = string;
 export type QuoteConcatedPKs = string;
@@ -111,7 +112,7 @@ export class DB {
   }
 }
 
-export default async function getDB(dbid: string) {
+export default async function getDB(dbid: DBID) {
   const sqlite = await initWasm(() => wasmUrl);
   const db = await sqlite.open(dbid);
 

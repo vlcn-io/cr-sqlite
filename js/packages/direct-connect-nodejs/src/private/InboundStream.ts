@@ -1,4 +1,7 @@
-import { AckChangesMsg, StreamingChangesMsg } from "../Types.js";
+import {
+  AckChangesMsg,
+  StreamingChangesMsg,
+} from "@vlcn.io/direct-connect-common";
 
 /**
  * Takes the results of an outbound stream and

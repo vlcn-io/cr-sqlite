@@ -5,11 +5,12 @@ import util from "../util.js";
 import SQLiteDB from "better-sqlite3";
 import FSNotify from "../FSNotify.js";
 import ServiceDB from "../ServiceDB.js";
+import { bytesToHex } from "@vlcn.io/direct-connect-common";
 
 test("writes to the database notify fs listeners", async () => {
   const uuid = crypto.randomUUID();
   const dbid = util.uuidToBytes(uuid);
-  const dbidStr = util.bytesToHex(dbid);
+  const dbidStr = bytesToHex(dbid);
   const db = new SQLiteDB(util.getDbFilename(TestConfig, dbid));
   db.pragma("journal_mode = WAL");
   db.pragma("synchronous = NORMAL");

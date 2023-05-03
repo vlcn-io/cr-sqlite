@@ -1,7 +1,7 @@
+import { bytesToHex, hexToBytes } from "@vlcn.io/direct-connect-common";
 import { Config } from "../Types.js";
 import DB from "./DB.js";
 import { SchemaRow } from "./ServiceDB.js";
-import util from "./util.js";
 
 // TODO: have a size limit on the cache?
 export default class DBCache {
@@ -38,7 +38,7 @@ export default class DBCache {
    * @returns
    */
   get(dbid: Uint8Array): DB {
-    let dbidStr = util.bytesToHex(dbid);
+    let dbidStr = bytesToHex(dbid);
     return this.getStr(dbidStr);
   }
 
@@ -47,7 +47,7 @@ export default class DBCache {
     if (entry == null) {
       entry = [
         Date.now(),
-        new DB(this.config, util.hexToBytes(dbidStr), this.schemaProvider),
+        new DB(this.config, hexToBytes(dbidStr), this.schemaProvider),
       ];
       this.activeDBs.set(dbidStr, entry);
     } else {

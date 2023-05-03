@@ -3,8 +3,8 @@
 // - converts uint8array to hex string
 // - converts bigint to string
 
-import { Change, Msg, Tag, tags } from "../Types.js";
-import util from "../private/util.js";
+import { Change, Msg, tags } from "../index.js";
+import { bytesToHex } from "../util.js";
 
 export default function encode(msg: Msg): Object {
   // implement encode
@@ -12,8 +12,8 @@ export default function encode(msg: Msg): Object {
     case tags.applyChanges:
       return {
         _tag: tags.applyChanges,
-        toDbid: util.bytesToHex(msg.toDbid),
-        fromDbid: util.bytesToHex(msg.fromDbid),
+        toDbid: bytesToHex(msg.toDbid),
+        fromDbid: bytesToHex(msg.fromDbid),
         schemaName: msg.schemaVersion,
         seqStart: [msg.seqStart[0].toString(), msg.seqStart[1]],
         seqEnd: [msg.seqEnd[0].toString(), msg.seqEnd[1]],
@@ -22,23 +22,23 @@ export default function encode(msg: Msg): Object {
     case tags.getChanges:
       return {
         _tag: tags.getChanges,
-        dbid: util.bytesToHex(msg.dbid),
-        requestorDbid: util.bytesToHex(msg.requestorDbid),
+        dbid: bytesToHex(msg.dbid),
+        requestorDbid: bytesToHex(msg.requestorDbid),
         schemaName: msg.schemaVersion,
         since: [msg.since[0].toString(), msg.since[1]],
       };
     case tags.establishOutboundStream:
       return {
         _tag: tags.establishOutboundStream,
-        toDbid: util.bytesToHex(msg.toDbid),
-        fromDbid: util.bytesToHex(msg.fromDbid),
+        toDbid: bytesToHex(msg.toDbid),
+        fromDbid: bytesToHex(msg.fromDbid),
         schemaName: msg.schemaVersion,
         seqStart: [msg.seqStart[0].toString(), msg.seqStart[1]],
       };
     case tags.getLastSeen:
       return {
         _tag: tags.getLastSeen,
-        fromDbid: util.bytesToHex(msg.fromDbid),
+        fromDbid: bytesToHex(msg.fromDbid),
       };
     case tags.getLastSeenResponse:
       return {
@@ -55,7 +55,8 @@ export default function encode(msg: Msg): Object {
     case tags.createOrMigrate:
       return {
         _tag: tags.createOrMigrate,
-        dbid: util.bytesToHex(msg.dbid),
+        dbid: bytesToHex(msg.dbid),
+        requestorDbid: bytesToHex(msg.requestorDbid),
         schemaName: msg.schemaName,
         schemaVersion: msg.schemaVersion,
       };
@@ -63,6 +64,7 @@ export default function encode(msg: Msg): Object {
       return {
         _tag: tags.createOrMigrateResponse,
         status: msg.status,
+        seq: [msg.seq[0].toString(), msg.seq[1]],
       };
     case tags.ackChanges:
       return {

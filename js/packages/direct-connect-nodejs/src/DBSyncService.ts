@@ -11,7 +11,7 @@ import {
   GetLastSeenResponse,
   Seq,
   tags,
-} from "./Types.js";
+} from "@vlcn.io/direct-connect-common";
 import DB from "./private/DB.js";
 
 /**
@@ -24,11 +24,16 @@ const DBSyncService = {
   maybeMigrate(
     db: DB,
     schemaName: string,
-    version: string
+    version: string,
+    requestorDbid: Uint8Array
   ): CreateOrMigrateResponse {
     const status = db.migrateTo(schemaName, version);
+    const lastSeen = db.getSinceLastApplyStmt.get(requestorDbid) as
+      | [bigint, number]
+      | undefined;
     return {
       _tag: tags.createOrMigrateResponse,
+      seq: lastSeen || [0n, 0],
       status,
     };
   },

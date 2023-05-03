@@ -1,6 +1,7 @@
 import SQLiteDB from "better-sqlite3";
 import type { Database } from "better-sqlite3";
-import { Change, Config } from "../Types.js";
+import { Config } from "../Types.js";
+import { Change } from "@vlcn.io/direct-connect-common";
 import { extensionPath } from "@vlcn.io/crsqlite";
 import util from "./util.js";
 import touchHack from "./touchHack.js";

@@ -4,7 +4,7 @@ import TestConfig from "../config/TestConfig";
 import DBCache from "../private/DBCache";
 import ServiceDB from "../private/ServiceDB";
 import FSNotify from "../private/FSNotify";
-import { Change, tags } from "../Types";
+import { Change, tags } from "@vlcn.io/direct-connect-common";
 import util from "../private/util";
 
 test("constructing", () => {
@@ -164,9 +164,11 @@ test("creating a database", () => {
   });
 
   const dbid = util.uuidToBytes(crypto.randomUUID());
+  const requestorDbid = util.uuidToBytes(crypto.randomUUID());
   let resp = svc.createOrMigrateDatabase({
     _tag: tags.createOrMigrate,
     dbid,
+    requestorDbid,
     schemaName: "test",
     schemaVersion: "1",
   });
@@ -177,6 +179,7 @@ test("creating a database", () => {
   resp = svc.createOrMigrateDatabase({
     _tag: tags.createOrMigrate,
     dbid,
+    requestorDbid,
     schemaName: "test",
     schemaVersion: "1",
   });
@@ -190,6 +193,7 @@ test("creating a database", () => {
     svc.createOrMigrateDatabase({
       _tag: tags.createOrMigrate,
       dbid,
+      requestorDbid,
       schemaName: "test",
       schemaVersion: "2",
     });
@@ -200,6 +204,7 @@ test("creating a database", () => {
     svc.createOrMigrateDatabase({
       _tag: tags.createOrMigrate,
       dbid,
+      requestorDbid,
       schemaName: "best",
       schemaVersion: "1",
     });
@@ -218,6 +223,7 @@ test("creating a database", () => {
     svc.createOrMigrateDatabase({
       _tag: tags.createOrMigrate,
       dbid,
+      requestorDbid,
       schemaName: "test",
       schemaVersion: "2",
     });
@@ -231,6 +237,7 @@ test("creating a database", () => {
   resp = svc.createOrMigrateDatabase({
     _tag: tags.createOrMigrate,
     dbid,
+    requestorDbid,
     schemaName: "test",
     schemaVersion: "2",
   });
@@ -257,10 +264,12 @@ test("apply changes", () => {
   });
 
   const dbid = util.uuidToBytes(crypto.randomUUID());
+  const requestorDbid = util.uuidToBytes(crypto.randomUUID());
   const fromDbid = util.uuidToBytes(crypto.randomUUID());
   svc.createOrMigrateDatabase({
     _tag: tags.createOrMigrate,
     dbid,
+    requestorDbid,
     schemaName: "test",
     schemaVersion: "1",
   });
@@ -324,10 +333,12 @@ test("get changes", () => {
   });
 
   const dbid = util.uuidToBytes(crypto.randomUUID());
+  const requestorDbid = util.uuidToBytes(crypto.randomUUID());
   const fromDbid = util.uuidToBytes(crypto.randomUUID());
   svc.createOrMigrateDatabase({
     _tag: tags.createOrMigrate,
     dbid,
+    requestorDbid,
     schemaName: "test",
     schemaVersion: "1",
   });

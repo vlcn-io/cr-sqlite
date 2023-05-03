@@ -1,7 +1,7 @@
 {
   "name": "@vlcn.io/direct-connect-nodejs",
   "type": "module",
-  "version": "0.9.0",
+  "version": "0.1.0",
   "files": [
     "dist",
     "src"
@@ -30,6 +30,7 @@
   },
   "dependencies": {
     "@vlcn.io/crsqlite": "workspace:*",
+    "@vlcn.io/direct-connect-common": "workspace:*",
     "better-sqlite3": "^8.3.0",
     "chokidar": "^3.5.3",
     "throttle-debounce": "^5.0.0"

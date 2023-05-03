@@ -3,6 +3,7 @@ import DBCache from "../DBCache";
 import TestConfig from "../../config/TestConfig";
 import util from "../util";
 import ServiceDB from "../ServiceDB";
+import { bytesToHex } from "@vlcn.io/direct-connect-common";
 
 test("cache evicts", () => {
   vi.useFakeTimers();
@@ -13,7 +14,7 @@ test("cache evicts", () => {
 
   const uuid = crypto.randomUUID();
   const dbid = util.uuidToBytes(uuid);
-  const dbidStr = util.bytesToHex(dbid);
+  const dbidStr = bytesToHex(dbid);
   const db = cache.get(dbid);
   const internalMap = cache.__testsOnly();
 
@@ -38,7 +39,7 @@ test("cache bumps to now on usage", () => {
 
   const uuid = crypto.randomUUID();
   const dbid = util.uuidToBytes(uuid);
-  const dbidStr = util.bytesToHex(dbid);
+  const dbidStr = bytesToHex(dbid);
   const db = cache.get(dbid);
   const internalMap = cache.__testsOnly();
 

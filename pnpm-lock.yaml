@@ -201,11 +201,23 @@ importers:
         specifier: ^5.0.4
         version: 5.0.4
 
+  js/packages/direct-connect-common:
+    devDependencies:
+      typescript:
+        specifier: ^5.0.4
+        version: 5.0.4
+      vitest:
+        specifier: ^0.30.1
+        version: 0.30.1
+
   js/packages/direct-connect-nodejs:
     dependencies:
       '@vlcn.io/crsqlite':
         specifier: workspace:*
         version: link:../../../core
+      '@vlcn.io/direct-connect-common':
+        specifier: workspace:*
+        version: link:../direct-connect-common
       better-sqlite3:
         specifier: ^8.3.0
         version: 8.3.0

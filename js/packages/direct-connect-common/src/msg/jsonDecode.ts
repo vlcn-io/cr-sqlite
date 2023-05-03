@@ -4,16 +4,16 @@
 // - schema names
 // - bigint conversions
 
-import { Change, Msg, Tag, tags } from "../Types.js";
-import util from "../private/util.js";
+import { Change, Msg, Tag, tags } from "../index.js";
+import { hexToBytes } from "../util.js";
 
 export default function decode(parsed: any): Msg {
   switch (parsed._tag as Tag[keyof Tag]) {
     case tags.applyChanges:
       return {
         _tag: tags.applyChanges,
-        toDbid: util.hexToBytes(parsed.toDbid),
-        fromDbid: util.hexToBytes(parsed.fromDbid),
+        toDbid: hexToBytes(parsed.toDbid),
+        fromDbid: hexToBytes(parsed.fromDbid),
         schemaVersion: parsed.schemaName,
         seqStart: [BigInt(parsed.seqStart[0]), parsed.seqStart[1]],
         seqEnd: [BigInt(parsed.seqEnd[0]), parsed.seqEnd[1]],
@@ -22,24 +22,24 @@ export default function decode(parsed: any): Msg {
     case tags.getChanges:
       return {
         _tag: tags.getChanges,
-        dbid: util.hexToBytes(parsed.dbid),
-        requestorDbid: util.hexToBytes(parsed.requestorDbid),
+        dbid: hexToBytes(parsed.dbid),
+        requestorDbid: hexToBytes(parsed.requestorDbid),
         schemaVersion: parsed.schemaName,
         since: [BigInt(parsed.since[0]), parsed.since[1]],
       };
     case tags.establishOutboundStream:
       return {
         _tag: tags.establishOutboundStream,
-        toDbid: util.hexToBytes(parsed.toDbid),
-        fromDbid: util.hexToBytes(parsed.fromDbid),
+        toDbid: hexToBytes(parsed.toDbid),
+        fromDbid: hexToBytes(parsed.fromDbid),
         schemaVersion: parsed.schemaName,
         seqStart: [BigInt(parsed.seqStart[0]), parsed.seqStart[1]],
       };
     case tags.getLastSeen:
       return {
         _tag: tags.getLastSeen,
-        toDbid: util.hexToBytes(parsed.toDbid),
-        fromDbid: util.hexToBytes(parsed.fromDbid),
+        toDbid: hexToBytes(parsed.toDbid),
+        fromDbid: hexToBytes(parsed.fromDbid),
       };
     case tags.getLastSeenResponse:
       return {
@@ -56,7 +56,8 @@ export default function decode(parsed: any): Msg {
     case tags.createOrMigrate:
       return {
         _tag: tags.createOrMigrate,
-        dbid: util.hexToBytes(parsed.dbid),
+        dbid: hexToBytes(parsed.dbid),
+        requestorDbid: hexToBytes(parsed.requestorDbid),
         schemaName: parsed.schemaName,
         schemaVersion: parsed.schemaName,
       };
@@ -64,6 +65,7 @@ export default function decode(parsed: any): Msg {
       return {
         _tag: tags.createOrMigrateResponse,
         status: parsed.status,
+        seq: [BigInt(parsed.seq[0]), parsed.seq[1]],
       };
     case tags.ackChanges:
       return {

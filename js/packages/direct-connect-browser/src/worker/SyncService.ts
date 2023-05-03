@@ -4,7 +4,7 @@ import {
   StartSyncMsg,
   StopSyncMsg,
 } from "../Types.js";
-import { SyncedDB } from "./SyncedDB.js";
+import createSyncedDB, { SyncedDB } from "./SyncedDB.js";
 
 export default class SyncService {
   /**
@@ -20,14 +20,14 @@ export default class SyncService {
    * @param endpoints
    * @param port Used to communicate back out to the thread that created this service
    */
-  startSync(msg: StartSyncMsg, port: MessagePort) {
+  async startSync(msg: StartSyncMsg, port: MessagePort) {
     let db = this.dbs.get(msg.dbid);
     if (!db) {
-      db = new SyncedDB(msg.dbid, msg.endpoints);
+      db = await createSyncedDB(msg.dbid, msg.endpoints);
       this.dbs.set(msg.dbid, db);
     }
 
-    db.start(port);
+    db.start(port, msg.endpoints);
   }
 
   localDbChangedFromMainThread(msg: LocalDBChangedMsg) {

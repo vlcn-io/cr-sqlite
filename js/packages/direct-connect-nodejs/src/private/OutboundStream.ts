@@ -3,8 +3,9 @@ import {
   GetChangesResponse,
   StreamingChangesMsg,
   tags,
-} from "../Types.js";
-import { Seq } from "../Types.js";
+  Seq,
+  bytesToHex,
+} from "@vlcn.io/direct-connect-common";
 import DB from "./DB.js";
 import FSNotify from "./FSNotify.js";
 import ServiceDB from "./ServiceDB.js";
@@ -41,7 +42,7 @@ export default class OutboundStream {
   }
 
   start() {
-    this.fsnotify.addListener(util.bytesToHex(this.localDbid), this.#dbChanged);
+    this.fsnotify.addListener(bytesToHex(this.localDbid), this.#dbChanged);
   }
 
   #dbChanged = (db: DB) => {
@@ -74,9 +75,6 @@ export default class OutboundStream {
   // if receiver ends up out of order, receiver should tear down sse stream
   // and restart it.
   close() {
-    this.fsnotify.removeListener(
-      util.bytesToHex(this.localDbid),
-      this.#dbChanged
-    );
+    this.fsnotify.removeListener(bytesToHex(this.localDbid), this.#dbChanged);
   }
 }

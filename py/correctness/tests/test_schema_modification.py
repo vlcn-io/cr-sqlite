@@ -3,6 +3,8 @@ import pprint
 import pytest
 
 changes_query = "SELECT [table], [pk], [cid], [val] FROM crsql_changes"
+changes_with_versions_query = "SELECT [table], [pk], [cid], [val], [db_version], [col_version] FROM crsql_changes"
+full_changes_query = "SELECT [table], [pk], [cid], [val], [db_version], [col_version], [site_id] FROM crsql_changes"
 clock_query = "SELECT rowid, __crsql_col_version, __crsql_db_version, __crsql_col_name, __crsql_site_id FROM todo__crsql_clock"
 
 
@@ -142,18 +144,6 @@ def test_backfill_col_add():
                         ('todo', '2', 'due_date', "'2018-01-01'")])
 
 
-# sqlite doesn't allow altering primary key def in an existing schema. Not even renames.
-# def test_clock_nuke_on_pk_schema_alter():
-#     c = setup_alter_test()
-#     c.execute("SELECT crsql_begin_alter('todo');")
-#     c.execute("ALTER TABLE todo RENAME id TO todo_id;")
-#     c.execute("SELECT crsql_commit_alter('todo');")
-#     c.commit()
-#     changes = c.execute(changes_query).fetchall()
-
-#     pprint.pprint(changes)
-#     None
-
 def test_backfill_clocks_on_rename():
     # renaming a column should backfill the clock table with the new name
     # and drop entries for the old name
@@ -163,14 +153,18 @@ def test_backfill_clocks_on_rename():
     c.execute("ALTER TABLE todo RENAME name TO task;")
     c.execute("SELECT crsql_commit_alter('todo');")
     c.commit()
-    changes = c.execute(changes_query).fetchall()
+    changes = c.execute(changes_with_versions_query).fetchall()
 
-    assert (changes == [('todo', '1', 'complete', '0'),
-                        ('todo', '1', 'list', "'home'"),
-                        ('todo', '2', 'complete', '0'),
-                        ('todo', '2', 'list', "'home'"),
-                        ('todo', '1', 'task', "'cook'"),
-                        ('todo', '2', 'task', "'clean'")])
+    assert (changes == [('todo', '1', 'complete', '0', 1, 1),
+                        ('todo', '1', 'list', "'home'", 1, 1),
+                        ('todo', '2', 'complete', '0', 2, 1),
+                        ('todo', '2', 'list', "'home'", 2, 1),
+                        # the original task got its db_version bumped because the column name changed.
+                        # not sure we actually want to do this if it is a rename.. but we can't actually track a rename. A rename looks like a
+                        # drop followed by an add to us.
+                        # On completion of https://github.com/vlcn-io/cr-sqlite/issues/181 we could track renames.
+                        ('todo', '1', 'task', "'cook'", 2, 1),
+                        ('todo', '2', 'task', "'clean'", 2, 1)])
     None
 
 
@@ -219,7 +213,6 @@ def test_pk_only_sentinels():
     c.commit()
 
     changes = c.execute(changes_query).fetchall()
-    pprint.pprint(changes)
     assert (changes == [('assoc', '1|2', 'data', 'NULL')])
 
 
@@ -248,5 +241,226 @@ def test_backfill_existing_data():
                         ('foo', '3', 'name', 'NULL')])
 
 
-# TODO: test that we are not compacting out sentinel clock rows
-# post alter.
+# This creates table which have existing data.
+# Converting a table that already has data to a `crr` should:
+# 1. backfill metadata for existing row
+# 2. that backfilled metadata should get the _next_ db version assigned to it
+def test_backfill_moves_dbversion():
+    c = connect(":memory:")
+    # First table which'll get db_version 1 for all rows backfilled
+    c.execute("CREATE TABLE foo (id PRIMARY KEY, name);")
+    c.execute("INSERT INTO foo VALUES (1, 'bar');")
+    c.execute("INSERT INTO foo VALUES (2, 'baz');")
+    c.commit()
+
+    c.execute("SELECT crsql_as_crr('foo');")
+    c.commit()
+
+    # Next table which should get db_Version 2 for all rows backfilled
+    c.execute("CREATE TABLE bar (id PRIMARY KEY, name);")
+    c.execute("INSERT INTO bar VALUES (1, 'bar');")
+    c.execute("INSERT INTO bar (id) VALUES (3);")
+
+    c.execute("SELECT crsql_as_crr('bar');")
+    c.commit()
+
+    changes = c.execute(changes_with_versions_query).fetchall()
+    assert (changes == [('foo', '1', 'name', "'bar'", 1, 1),  # first 2 are db_version 1
+                        ('foo', '2', 'name', "'baz'", 1, 1),
+                        # next 2 are db_version 2
+                        ('bar', '1', 'name', "'bar'", 2, 1),
+                        ('bar', '3', 'name', 'NULL', 2, 1)])
+
+
+# Similar to the above test but checks that `crsql_alter` does the right thing.
+def test_backfill_for_alter_moves_dbversion():
+    c = connect(":memory:")
+    c.execute("CREATE TABLE foo (id PRIMARY KEY, name TEXT DEFAULT NULL);")
+    c.execute("INSERT INTO foo VALUES (1, 'bar');")
+    c.execute("SELECT crsql_as_crr('foo');")
+    c.commit()
+
+    # - change name to have a default value
+    # - add an age column (nullable)
+    # - add a row with a name and age
+    c.execute("SELECT crsql_begin_alter('foo');")
+    c.execute(
+        "CREATE TABLE new_foo(id PRIMARY KEY, name TEXT DEFAULT 'none', age INTEGER DEFAULT NULL);")
+    # copy over old data
+    c.execute("INSERT INTO new_foo (id, name) SELECT id, name FROM foo;")
+    # insert a new row during the migration
+    c.execute("INSERT INTO new_foo (id, name, age) VALUES (2, 'baz', 33);")
+    c.execute("DROP TABLE foo;")
+    c.execute("ALTER TABLE new_foo RENAME TO foo;")
+    c.execute("SELECT crsql_commit_alter('foo');")
+
+    # now:
+    # - check that the old row has the old db_version
+    # - check that the new row has the new db_version
+    # - check that the old row has the old site_id <-- this case isn't covered yet. Need to do a merge.
+    # - check that the new row has a null siteid
+    changes = c.execute(full_changes_query).fetchall()
+    assert (changes ==
+            # Existing rows have their existing db_version (1).
+            [('foo', '1', 'name', "'bar'", 1, 1, None),
+             # There are no entries for new nullable columns for old rows
+             # New row gets new db version (2).
+             ('foo', '2', 'name', "'baz'", 2, 1, None),
+             ('foo', '2', 'age', '33', 2, 1, None)])
+
+
+def test_add_col_with_default():
+    c = connect(":memory:")
+    c.execute("CREATE TABLE foo (id PRIMARY KEY, name TEXT DEFAULT NULL);")
+    c.execute("INSERT INTO foo VALUES (1, 'bar');")
+    c.execute("SELECT crsql_as_crr('foo');")
+    c.commit()
+
+    c.execute("SELECT crsql_begin_alter('foo');")
+    c.execute("ALTER TABLE foo ADD COLUMN age INTEGER DEFAULT 0;")
+    c.execute("SELECT crsql_commit_alter('foo');")
+
+    changes = c.execute(full_changes_query).fetchall()
+    assert (changes == [('foo', '1', 'name', "'bar'", 1, 1, None),
+                        # TODO: where is the metadata from the default value column?
+                        # the presence of a new column with a default value causes a new metadata row at the next db_version
+                        ('foo', '1', 'age', '0', 2, 1, None)])
+    None
+
+
+def test_add_col_nullable():
+    c = connect(":memory:")
+    c.execute("CREATE TABLE foo (id PRIMARY KEY, name TEXT DEFAULT NULL);")
+    c.execute("INSERT INTO foo VALUES (1, 'bar');")
+    c.execute("SELECT crsql_as_crr('foo');")
+    c.commit()
+
+    c.execute("SELECT crsql_begin_alter('foo');")
+    c.execute("ALTER TABLE foo ADD COLUMN age INTEGER DEFAULT NULL;")
+    c.execute("SELECT crsql_commit_alter('foo');")
+
+    changes = c.execute(full_changes_query).fetchall()
+    assert (changes == [('foo', '1', 'name', "'bar'", 1, 1, None),
+                        ('foo', '1', 'age', 'NULL', 2, 1, None)])
+
+
+def test_add_col_implicit_nullable():
+    c = connect(":memory:")
+    c.execute("CREATE TABLE foo (id PRIMARY KEY, name TEXT DEFAULT NULL);")
+    c.execute("INSERT INTO foo VALUES (1, 'bar');")
+    c.execute("SELECT crsql_as_crr('foo');")
+    c.commit()
+
+    c.execute("SELECT crsql_begin_alter('foo');")
+    c.execute("ALTER TABLE foo ADD COLUMN age INTEGER;")
+    c.execute("SELECT crsql_commit_alter('foo');")
+
+    changes = c.execute(full_changes_query).fetchall()
+    assert (changes == [('foo', '1', 'name', "'bar'", 1, 1, None),
+                        ('foo', '1', 'age', 'NULL', 2, 1, None)])
+
+
+def test_add_col_through_12step():
+    c = connect(":memory:")
+    c.execute("CREATE TABLE foo (id PRIMARY KEY, name TEXT DEFAULT NULL);")
+    c.execute("INSERT INTO foo VALUES (1, 'bar');")
+    c.execute("INSERT INTO foo VALUES (2, 'baz');")
+    c.execute("INSERT INTO foo (id) VALUES (3);")
+    c.execute("SELECT crsql_as_crr('foo');")
+    c.commit()
+
+    c.execute("SELECT crsql_begin_alter('foo');")
+    c.execute(
+        "CREATE TABLE new_foo(id PRIMARY KEY, name TEXT DEFAULT NULL, age INTEGER DEFAULT NULL);")
+    # copy over old data
+    c.execute("INSERT INTO new_foo (id, name) SELECT id, name FROM foo;")
+    # TODO: this insert below changes how defaults are backfilled!!!
+    # should we even backfill default values? seems useless.
+    # c.execute("INSERT INTO new_foo (id, name, age) VALUES (22, 'baz', 33);")
+    c.execute("DROP TABLE foo;")
+    c.execute("ALTER TABLE new_foo RENAME TO foo;")
+    c.execute("SELECT crsql_commit_alter('foo');")
+
+    changes = c.execute(full_changes_query).fetchall()
+    pprint.pprint(changes)
+    pprint.pprint(c.execute("SELECT * FROM foo__crsql_clock").fetchall())
+
+    # altering a table via create new, copy, drop old, rename new should be equivalent to an alter table
+    # assert (changes == [('foo', '1', 'name', "'bar'", 1, 1, None),
+    #                     ('foo', '1', 'age', 'NULL', 2, 1, None)])
+
+
+# TODO: if we do optimize to not set columns with default values
+# then we could miss an insert of just the pk column.
+
+def test_pk_only_table_backfill():
+    None
+
+
+# Imagine the case where we have a table:
+# CREATE TABLE foo (a primary key, b DEFAULT NULL)
+# With inserts:
+# INSERT INTO foo (a) VALUES (1);
+#
+# If we optimize backfill to ignore columns with default values
+# we may never record the insert of the row with just the pk column.
+def test_pk_and_default_backfill():
+    None
+
+
+# Someone adds a column (with no default) then sets the value
+# for that column for all rows.
+def test_add_column_and_set_column():
+    # if we do this and then do the `inert into new_foo` do we end
+    # up missing these updates?
+    None
+
+
+def test_backfill_for_table_with_defaults():
+    # do default null columns get any metadata?
+    # do default values columns get metadata?
+    None
+
+
+def test_remove_rows_on_alter():
+    None
+
+
+def test_change_existing_values_on_alter():
+    None
+
+
+def test_remove_pk_column():
+    None
+
+
+def test_add_pk_column():
+    None
+
+
+def test_rename_pk_column():
+    None
+
+
+def test_changing_primary_key_columns():
+
+    # sqlite doesn't allow altering primary key def in an existing schema. Not even renames.
+    # def test_clock_nuke_on_pk_schema_alter():
+    #     c = setup_alter_test()
+    #     c.execute("SELECT crsql_begin_alter('todo');")
+    #     c.execute("ALTER TABLE todo RENAME id TO todo_id;")
+    #     c.execute("SELECT crsql_commit_alter('todo');")
+    #     c.commit()
+    #     changes = c.execute(changes_query).fetchall()
+
+    None
+
+
+def test_12step_backfill_retains_siteid():
+    None
+
+    # TODO: test that we are not compacting out sentinel clock rows
+    # post alter.
+
+    # Do we ever actually backfill? New columns with new data brought over from 12 step, yes we'd need to backfill
+    # in those cases.

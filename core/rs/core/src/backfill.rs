@@ -99,7 +99,7 @@ fn create_clock_rows_from_stmt(
 * If not, fill the data in for it for each row.
 *
 * Can we optimize and skip cases where it is equivalent to the default value?
-* E.g., adding a new column should not require a backfill...
+* E.g., adding a new column set to default values should not require a backfill...
 */
 fn backfill_missing_columns(
     db: *mut sqlite3,
@@ -145,6 +145,8 @@ fn fill_column(
     // We don't technically need this join, right?
     // There should never be a partially filled column.
     // If there is there's likely a bug elsewhere.
+    // Actually partially filled columns can happen during the 12 step migration
+    // process if someone adds rows to the table while the migration is running.
     let sql = format!(
         "SELECT {pk_cols} FROM {table} as t1",
         table = crate::escape_ident(table),

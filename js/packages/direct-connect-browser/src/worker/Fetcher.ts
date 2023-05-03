@@ -19,6 +19,11 @@ const defaultRetryConfig: RetryConfig = {
   retryDelay: 1000,
 };
 
+const noRetryConfig: RetryConfig = {
+  retryCount: 0,
+  retryDelay: 0,
+};
+
 export default class Fetcher {
   constructor(
     private readonly endpoints: Endpoints,
@@ -29,7 +34,12 @@ export default class Fetcher {
     msg: CreateOrMigrateMsg,
     retry: RetryConfig = defaultRetryConfig
   ) {
-    return this._post(this.endpoints.createOrMigrate, msg);
+    return this._fetchWithRetry(
+      this.endpoints.createOrMigrate,
+      msg,
+      this._post,
+      retry
+    );
   }
 
   getChanges(msg: GetChangesMsg) {
@@ -55,11 +65,38 @@ export default class Fetcher {
     });
   }
 
-  _get(uri: URL, msg: Msg) {
-    const uriCopy = new URL(uri.toString());
-    uriCopy.searchParams.set("msg", this.serializer.encode(msg));
-    return fetch(uriCopy, {
-      method: "GET",
+  _fetchWithRetry(
+    uri: URL,
+    msg: Msg,
+    verbFn: (uri: URL, msg: Msg) => Promise<Response>,
+    retry: RetryConfig = noRetryConfig
+  ): Promise<Response> {
+    // fetch doesn't support retries, so we have to do it ourselves
+    let retryCount = retry.retryCount;
+    let retryDelay = retry.retryDelay;
+    return verbFn(uri, msg).then((res) => {
+      if (res.ok) {
+        return res;
+      }
+      if (retryCount <= 0) {
+        return res;
+      }
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          resolve(
+            this._fetchWithRetry(uri, msg, verbFn, {
+              retryCount: retryCount - 1,
+              retryDelay: retryDelay * 2,
+            })
+          );
+        }, retryDelay);
+      });
     });
   }
+
+  _get = (uri: URL, msg: Msg) => {
+    const uriCopy = new URL(uri.toString());
+    uriCopy.searchParams.set("msg", this.serializer.encode(msg));
+    return fetch(uriCopy);
+  };
 }

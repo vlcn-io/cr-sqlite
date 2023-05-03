@@ -14,7 +14,7 @@ export default function decode(parsed: { [key: string]: any }): Msg {
         _tag: tags.applyChanges,
         toDbid: hexToBytes(parsed.toDbid),
         fromDbid: hexToBytes(parsed.fromDbid),
-        schemaVersion: parsed.schemaName,
+        schemaVersion: BigInt(parsed.schemaVersion),
         seqStart: [BigInt(parsed.seqStart[0]), parsed.seqStart[1]],
         seqEnd: [BigInt(parsed.seqEnd[0]), parsed.seqEnd[1]],
         changes: decodeChanges(parsed.changes),
@@ -24,7 +24,7 @@ export default function decode(parsed: { [key: string]: any }): Msg {
         _tag: tags.getChanges,
         dbid: hexToBytes(parsed.dbid),
         requestorDbid: hexToBytes(parsed.requestorDbid),
-        schemaVersion: parsed.schemaName,
+        schemaVersion: BigInt(parsed.schemaVersion),
         since: [BigInt(parsed.since[0]), parsed.since[1]],
       };
     case tags.establishOutboundStream:
@@ -32,7 +32,7 @@ export default function decode(parsed: { [key: string]: any }): Msg {
         _tag: tags.establishOutboundStream,
         toDbid: hexToBytes(parsed.toDbid),
         fromDbid: hexToBytes(parsed.fromDbid),
-        schemaVersion: parsed.schemaName,
+        schemaVersion: BigInt(parsed.schemaVersion),
         seqStart: [BigInt(parsed.seqStart[0]), parsed.seqStart[1]],
       };
     case tags.getLastSeen:
@@ -59,7 +59,7 @@ export default function decode(parsed: { [key: string]: any }): Msg {
         dbid: hexToBytes(parsed.dbid),
         requestorDbid: hexToBytes(parsed.requestorDbid),
         schemaName: parsed.schemaName,
-        schemaVersion: parsed.schemaName,
+        schemaVersion: BigInt(parsed.schemaVersion),
       };
     case tags.createOrMigrateResponse:
       return {

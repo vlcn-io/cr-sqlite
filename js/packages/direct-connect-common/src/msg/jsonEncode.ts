@@ -14,7 +14,7 @@ export default function encode(msg: Msg): Object {
         _tag: tags.applyChanges,
         toDbid: bytesToHex(msg.toDbid),
         fromDbid: bytesToHex(msg.fromDbid),
-        schemaName: msg.schemaVersion,
+        schemaVersion: msg.schemaVersion.toString(),
         seqStart: [msg.seqStart[0].toString(), msg.seqStart[1]],
         seqEnd: [msg.seqEnd[0].toString(), msg.seqEnd[1]],
         changes: encodeChanges(msg.changes),
@@ -24,7 +24,7 @@ export default function encode(msg: Msg): Object {
         _tag: tags.getChanges,
         dbid: bytesToHex(msg.dbid),
         requestorDbid: bytesToHex(msg.requestorDbid),
-        schemaName: msg.schemaVersion,
+        schemaVersion: msg.schemaVersion.toString(),
         since: [msg.since[0].toString(), msg.since[1]],
       };
     case tags.establishOutboundStream:
@@ -32,7 +32,7 @@ export default function encode(msg: Msg): Object {
         _tag: tags.establishOutboundStream,
         toDbid: bytesToHex(msg.toDbid),
         fromDbid: bytesToHex(msg.fromDbid),
-        schemaName: msg.schemaVersion,
+        schemaVersion: msg.schemaVersion.toString(),
         seqStart: [msg.seqStart[0].toString(), msg.seqStart[1]],
       };
     case tags.getLastSeen:
@@ -58,7 +58,7 @@ export default function encode(msg: Msg): Object {
         dbid: bytesToHex(msg.dbid),
         requestorDbid: bytesToHex(msg.requestorDbid),
         schemaName: msg.schemaName,
-        schemaVersion: msg.schemaVersion,
+        schemaVersion: msg.schemaVersion.toString(),
       };
     case tags.createOrMigrateResponse:
       return {

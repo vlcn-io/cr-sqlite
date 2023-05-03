@@ -70,16 +70,25 @@ export default class Fetcher {
     msg: Msg,
     verbFn: (uri: URL, msg: Msg) => Promise<Response>,
     retry: RetryConfig = noRetryConfig
-  ): Promise<Response> {
+  ): Promise<Msg> {
     // fetch doesn't support retries, so we have to do it ourselves
     let retryCount = retry.retryCount;
     let retryDelay = retry.retryDelay;
     return verbFn(uri, msg).then((res) => {
       if (res.ok) {
-        return res;
+        switch (this.serializer.contentType) {
+          case "json":
+            return res.json().then((json) => {
+              this.serializer.decode(json);
+            });
+          case "binary":
+            return res.arrayBuffer().then((buffer) => {
+              this.serializer.decode(buffer);
+            });
+        }
       }
       if (retryCount <= 0) {
-        return res;
+        throw new Error("Failed to fetch");
       }
       return new Promise((resolve) => {
         setTimeout(() => {
@@ -91,7 +100,7 @@ export default class Fetcher {
           );
         }, retryDelay);
       });
-    });
+    }) as any;
   }
 
   _get = (uri: URL, msg: Msg) => {

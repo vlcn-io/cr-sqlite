@@ -7,6 +7,7 @@ export type Version = bigint;
 export type Val = string | null;
 
 export interface ISerializer {
+  readonly contentType: "json" | "binary";
   encode(msg: Msg): any;
   decode(msg: any): Msg;
 }

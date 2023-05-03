@@ -4,10 +4,10 @@
 // - schema names
 // - bigint conversions
 
-import { Change, Msg, Tag, tags } from "../index.js";
+import { Change, Msg, Tag, tags } from "../types.js";
 import { hexToBytes } from "../util.js";
 
-export default function decode(parsed: any): Msg {
+export default function decode(parsed: { [key: string]: any }): Msg {
   switch (parsed._tag as Tag[keyof Tag]) {
     case tags.applyChanges:
       return {
@@ -87,9 +87,9 @@ export default function decode(parsed: any): Msg {
         changes: decodeChanges(parsed.changes),
       };
     case tags.uploadSchema:
-      return parsed;
+      return parsed as Msg;
     case tags.activateSchema:
-      return parsed;
+      return parsed as Msg;
   }
 }
 

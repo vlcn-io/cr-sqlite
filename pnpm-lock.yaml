@@ -221,6 +221,9 @@ importers:
       '@vlcn.io/direct-connect-common':
         specifier: workspace:*
         version: link:../direct-connect-common
+      '@vlcn.io/xplat-api':
+        specifier: workspace:*
+        version: link:../xplat-api
       better-sqlite3:
         specifier: ^8.3.0
         version: 8.3.0

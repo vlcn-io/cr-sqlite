@@ -6,6 +6,7 @@ import {
   UpdateType,
   TXAsync,
 } from "@vlcn.io/xplat-api";
+export { first, firstPick, pick } from "@vlcn.io/xplat-api";
 import { CtxAsync } from "./context.js";
 import { RowID } from "./rowid.js";
 
@@ -486,24 +487,4 @@ function usedTables(db: DBAsync, query: string): Promise<string[]> {
     .then((rows) => {
       return rows.map((r) => r[0]);
     });
-}
-
-export function first<T>(data: T[]): T | undefined {
-  if (!data) {
-    return undefined;
-  }
-  return data[0];
-}
-
-export function firstPick<T>(data: any[]): T | undefined {
-  const d = data[0];
-  if (d == null) {
-    return undefined;
-  }
-
-  return d[Object.keys(d)[0]];
-}
-
-export function pick<T extends any, R>(data: T[]): R[] {
-  return data.map((d: any) => d[Object.keys(d)[0] as any]);
 }

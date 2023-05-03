@@ -31,6 +31,7 @@
   "dependencies": {
     "@vlcn.io/crsqlite": "workspace:*",
     "@vlcn.io/direct-connect-common": "workspace:*",
+    "@vlcn.io/xplat-api": "workspace:*",
     "better-sqlite3": "^8.3.0",
     "chokidar": "^3.5.3",
     "throttle-debounce": "^5.0.0"

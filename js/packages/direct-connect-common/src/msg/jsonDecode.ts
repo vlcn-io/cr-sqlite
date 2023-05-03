@@ -70,7 +70,7 @@ export default function decode(parsed: { [key: string]: any }): Msg {
     case tags.ackChanges:
       return {
         _tag: tags.ackChanges,
-        seqEnd: [BigInt(parsed.seq[0]), parsed.seq[1]],
+        seqEnd: [BigInt(parsed.seqEnd[0]), parsed.seqEnd[1]],
       };
     case tags.applyChangesResponse:
       return {

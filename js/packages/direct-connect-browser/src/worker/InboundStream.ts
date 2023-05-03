@@ -2,7 +2,6 @@ import { ISerializer, hexToBytes, tags } from "@vlcn.io/direct-connect-common";
 import { Endpoints } from "../Types";
 import { DB, Version } from "./DB";
 import Fetcher from "./Fetcher";
-import { SyncedDB } from "./SyncedDB";
 
 export default class InboundStream {
   // from the server into us.

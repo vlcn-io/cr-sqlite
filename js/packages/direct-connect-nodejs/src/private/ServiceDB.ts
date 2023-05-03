@@ -36,7 +36,7 @@ export default class ServiceDB {
       CREATE TABLE IF NOT EXISTS schema (
         namespace TEXT NOT NULL,
         name TEXT NOT NULL,
-        version TEXT NOT NULL,
+        version INTEGER NOT NULL,
         content TEXT NOT NULL,
         creation_time INTEGER DEFAULT (strftime('%s', 'now')),
         active INTEGER DEFAULT FALSE,
@@ -53,12 +53,12 @@ export default class ServiceDB {
   getSchema(
     namespace: string,
     schemaName: string,
-    version: string
+    version: bigint
   ): SchemaRow | undefined {
     return this.getSchemaStmt.get(namespace, schemaName, version) as any;
   }
 
-  defaultSchemaProvider = (name: string, version: string) => {
+  defaultSchemaProvider = (name: string, version: bigint) => {
     return this.getSchema("default", name, version);
   };
 
@@ -69,7 +69,7 @@ export default class ServiceDB {
   addSchema(
     namespace: string,
     schemaName: string,
-    version: string,
+    version: bigint,
     content: string,
     activate: boolean
   ) {
@@ -92,7 +92,7 @@ export default class ServiceDB {
   activateSchemaVersion(
     namespace: string,
     schemaName: string,
-    version: string
+    version: bigint
   ) {
     this.db.transaction(() => {
       // make sure the schema exists that we'd like to activate

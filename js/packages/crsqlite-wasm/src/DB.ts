@@ -27,7 +27,11 @@ export class DB implements DBAsync {
   #closed = false;
   #tx: TX;
 
-  constructor(public api: SQLiteAPI, public db: number, public readonly filename: string) {
+  constructor(
+    public api: SQLiteAPI,
+    public db: number,
+    public readonly filename: string
+  ) {
     this.#tx = new TX(
       api,
       db,
@@ -47,6 +51,8 @@ export class DB implements DBAsync {
     }
     this.#siteid = siteid;
   }
+
+  automigrateTo(schemaName: string, schemaVersion: bigint) {}
 
   execMany(sql: string[]): Promise<any> {
     return this.#tx.execMany(sql);

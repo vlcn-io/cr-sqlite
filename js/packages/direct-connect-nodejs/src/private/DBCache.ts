@@ -12,7 +12,7 @@ export default class DBCache {
     private readonly config: Config,
     private readonly schemaProvider: (
       name: string,
-      version: string
+      version: bigint
     ) => SchemaRow | undefined
   ) {
     this.intervalHandle = setInterval(() => {

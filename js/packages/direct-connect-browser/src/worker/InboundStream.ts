@@ -1,5 +1,7 @@
+import { ISerializer, hexToBytes, tags } from "@vlcn.io/direct-connect-common";
 import { Endpoints } from "../Types";
 import { DB, Version } from "./DB";
+import Fetcher from "./Fetcher";
 import { SyncedDB } from "./SyncedDB";
 
 export default class InboundStream {
@@ -10,8 +12,15 @@ export default class InboundStream {
   // TODO: can we apply back-pressure so the server doesn't overwhelm us with sync events?
   private started: boolean = false;
   private shutdown: boolean = false;
+  private readonly fetcher: Fetcher;
 
-  constructor(db: DB, endpoints: Endpoints) {}
+  constructor(
+    private readonly db: DB,
+    endpoints: Endpoints,
+    serializer: ISerializer
+  ) {
+    this.fetcher = new Fetcher(endpoints, serializer);
+  }
 
   async start() {
     if (this.started || this.shutdown) {
@@ -19,7 +28,16 @@ export default class InboundStream {
     }
     this.started = true;
 
-    // ask the server for changes
+    // ensure the db on the server is set up.
+    const createOrMigrateResp = await this.fetcher.createOrMigrate({
+      _tag: tags.createOrMigrate,
+      dbid: hexToBytes(this.db.remoteDbid),
+      requestorDbid: hexToBytes(this.db.localDbid),
+      schemaName: this.db.schemaName,
+      schemaVersion: this.db.schemaVersion,
+    });
+
+    // now start the outbound stream from the server to us.
   }
 
   stop() {

@@ -28,7 +28,7 @@ test("uploading and listing schemas", () => {
   svc.uploadSchema({
     _tag: tags.uploadSchema,
     name: "test",
-    version: "1",
+    version: 1n,
     content: "test",
     activate: true,
   });
@@ -37,7 +37,7 @@ test("uploading and listing schemas", () => {
   expect(schemas).toEqual([
     {
       name: "test",
-      version: "1",
+      version: 1n,
       active: 1,
     },
   ]);
@@ -45,7 +45,7 @@ test("uploading and listing schemas", () => {
   svc.uploadSchema({
     _tag: tags.uploadSchema,
     name: "test",
-    version: "2",
+    version: 2n,
     content: "test",
     activate: true,
   });
@@ -54,12 +54,12 @@ test("uploading and listing schemas", () => {
   expect(schemas2).toEqual([
     {
       name: "test",
-      version: "2",
+      version: 2n,
       active: 1,
     },
     {
       name: "test",
-      version: "1",
+      version: 1n,
       active: 0,
     },
   ]);
@@ -67,7 +67,7 @@ test("uploading and listing schemas", () => {
   svc.uploadSchema({
     _tag: tags.uploadSchema,
     name: "test",
-    version: "3",
+    version: 3n,
     content: "test",
     activate: false,
   });
@@ -81,12 +81,12 @@ test("uploading and listing schemas", () => {
     },
     {
       name: "test",
-      version: "2",
+      version: 2n,
       active: 1,
     },
     {
       name: "test",
-      version: "1",
+      version: 1n,
       active: 0,
     },
   ]);
@@ -96,7 +96,7 @@ test("uploading and listing schemas", () => {
     svc.uploadSchema({
       _tag: tags.uploadSchema,
       name: "test",
-      version: "3",
+      version: 3n,
       content: "test",
       activate: false,
     });
@@ -111,7 +111,7 @@ test("activating a schema", () => {
   svc.uploadSchema({
     _tag: tags.uploadSchema,
     name: "test",
-    version: "1",
+    version: 1n,
     content: "test",
     activate: false,
   });
@@ -120,7 +120,7 @@ test("activating a schema", () => {
   expect(schemas).toEqual([
     {
       name: "test",
-      version: "1",
+      version: 1n,
       active: 0,
     },
   ]);
@@ -128,14 +128,14 @@ test("activating a schema", () => {
   svc.activateSchemaVersion({
     _tag: tags.activateSchema,
     name: "test",
-    version: "1",
+    version: 1n,
   });
 
   const schemas2 = removeTime(svc.listSchemas());
   expect(schemas2).toEqual([
     {
       name: "test",
-      version: "1",
+      version: 1n,
       active: 1,
     },
   ]);
@@ -145,7 +145,7 @@ test("activating a schema", () => {
     svc.activateSchemaVersion({
       _tag: tags.activateSchema,
       name: "test",
-      version: "2",
+      version: 2n,
     });
   }).toThrow();
 });
@@ -158,7 +158,7 @@ test("creating a database", () => {
   svc.uploadSchema({
     _tag: tags.uploadSchema,
     name: "test",
-    version: "1",
+    version: 1n,
     content: "CREATE TABLE IF NOT EXISTS foo (a primary key, b);",
     activate: true,
   });
@@ -170,7 +170,7 @@ test("creating a database", () => {
     dbid,
     requestorDbid,
     schemaName: "test",
-    schemaVersion: "1",
+    schemaVersion: 1n,
   });
   expect(resp).toEqual({
     _tag: tags.createOrMigrateResponse,
@@ -181,7 +181,7 @@ test("creating a database", () => {
     dbid,
     requestorDbid,
     schemaName: "test",
-    schemaVersion: "1",
+    schemaVersion: 1n,
   });
   expect(resp).toEqual({
     _tag: tags.createOrMigrateResponse,
@@ -195,7 +195,7 @@ test("creating a database", () => {
       dbid,
       requestorDbid,
       schemaName: "test",
-      schemaVersion: "2",
+      schemaVersion: 2n,
     });
   }).toThrow();
 
@@ -206,14 +206,14 @@ test("creating a database", () => {
       dbid,
       requestorDbid,
       schemaName: "best",
-      schemaVersion: "1",
+      schemaVersion: 1n,
     });
   }).toThrow();
 
   svc.uploadSchema({
     _tag: tags.uploadSchema,
     name: "test",
-    version: "2",
+    version: 2n,
     content: "CREATE TABLE IF NOT EXISTS foo (a primary key, b, c);",
     activate: false,
   });
@@ -225,21 +225,21 @@ test("creating a database", () => {
       dbid,
       requestorDbid,
       schemaName: "test",
-      schemaVersion: "2",
+      schemaVersion: 2n,
     });
   }).toThrow();
 
   svc.activateSchemaVersion({
     _tag: tags.activateSchema,
     name: "test",
-    version: "2",
+    version: 2n,
   });
   resp = svc.createOrMigrateDatabase({
     _tag: tags.createOrMigrate,
     dbid,
     requestorDbid,
     schemaName: "test",
-    schemaVersion: "2",
+    schemaVersion: 2n,
   });
   expect(resp).toEqual({
     _tag: tags.createOrMigrateResponse,
@@ -255,7 +255,7 @@ test("apply changes", () => {
   svc.uploadSchema({
     _tag: tags.uploadSchema,
     name: "test",
-    version: "1",
+    version: 1n,
     content: `
     CREATE TABLE IF NOT EXISTS foo (a primary key, b);
     SELECT crsql_as_crr('foo');
@@ -271,7 +271,7 @@ test("apply changes", () => {
     dbid,
     requestorDbid,
     schemaName: "test",
-    schemaVersion: "1",
+    schemaVersion: 1n,
   });
 
   const changes: Change[] = [["foo", "1", "b", "2", 1n, 1n]];
@@ -291,7 +291,7 @@ test("apply changes", () => {
     _tag: tags.applyChanges,
     toDbid: dbid,
     fromDbid,
-    schemaVersion: "1",
+    schemaVersion: 1n,
     seqStart: [0n, 0],
     seqEnd: [1n, 0],
     changes,
@@ -324,7 +324,7 @@ test("get changes", () => {
   svc.uploadSchema({
     _tag: tags.uploadSchema,
     name: "test",
-    version: "1",
+    version: 1n,
     content: `
     CREATE TABLE IF NOT EXISTS foo (a primary key, b);
     SELECT crsql_as_crr('foo');
@@ -340,7 +340,7 @@ test("get changes", () => {
     dbid,
     requestorDbid,
     schemaName: "test",
-    schemaVersion: "1",
+    schemaVersion: 1n,
   });
 
   let resp = svc.getChanges({
@@ -348,7 +348,7 @@ test("get changes", () => {
     dbid: dbid,
     requestorDbid: fromDbid,
     since: [0n, 0],
-    schemaVersion: "1",
+    schemaVersion: 1n,
   });
 
   expect(resp).toEqual({

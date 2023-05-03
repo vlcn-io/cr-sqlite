@@ -20,18 +20,19 @@ const cache = new DBCache(DefaultConfig, svcDb.defaultSchemaProvider);
 let svc = new SyncService(DefaultConfig, cache, svcDb);
 
 app.get("/changes", (req, res) => {
-  const msg = jsonDecode(req.body);
+  const query = url.parse(req.url).query;
+  const msg = jsonDecode(JSON.parse(decodeURIComponent(query)));
   res.json(svc.getChanges(msg));
 });
 app.post("/changes", (req, res) => {
   const msg = jsonDecode(req.body);
   res.json(svc.applyChanges(msg));
 });
-app.get("/last-seen", (req, res) => {
+app.post("/last-seen", (req, res) => {
   const msg = jsonDecode(req.body);
   res.json(svc.getLastSeen(msg));
 });
-app.get("/change-stream", (req, res) => {
+app.post("/change-stream", (req, res) => {
   const msg = jsonDecode(req.body);
   const stream = svc.startOutboundStream(msg);
   // set up server sent event stream

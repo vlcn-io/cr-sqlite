@@ -51,13 +51,13 @@ The full documentation site is available [here](https://vlcn.io/docs/getting-sta
   - `SELECT "table", "pk", "cid", "val", "col_version", "db_version", COALESCE("site_id", crsql_siteid()) FROM crsql_changes WHERE db_version > x AND site_id IS NULL` -- to get local changes
   - `SELECT "table", "pk", "cid", "val", "col_version", "db_version", COALESCE("site_id", crsql_siteid()) FROM crsql_changes WHERE db_version > x AND site_id IS NOT some_site` -- to get all changes excluding those synced from some site
   - `INSERT INTO crsql_changes VALUES ([patches receied from select on another peer])`
-- And `crsql_alter_begin('table_name')` & `crsql_alter_commit('table_name')` primitives to allow altering table definitions that have been upgraded to `crr`s.
+- And `crsql_begin_alter('table_name')` & `crsql_alter_commit('table_name')` primitives to allow altering table definitions that have been upgraded to `crr`s.
   - Until we move forward with extending the syntax of SQLite to be CRR aware, altering CRRs looks like:
     ```sql
-    SELECT crsql_alter_begin('table_name');
+    SELECT crsql_begin_alter('table_name');
     -- 1 or more alterations to `table_name`
     ALTER TABLE table_name ...;
-    SELECT crsql_alter_commit('table_name');
+    SELECT crsql_commit_alter('table_name');
     ```
     A future version of cr-sqlite may extend the SQL syntax to make this more natural.
 

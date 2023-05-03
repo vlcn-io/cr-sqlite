@@ -26,7 +26,7 @@ export default class DB {
     private readonly dbid: Uint8Array,
     private readonly schemaProvider: (
       name: string,
-      version: string
+      version: bigint
     ) => SchemaRow | undefined
   ) {
     this.db = new SQLiteDB(util.getDbFilename(config, dbid));
@@ -103,7 +103,7 @@ export default class DB {
   // there's obvi the pragma to retrieve current schema version from sqlite.
   migrateTo(
     schemaName: string,
-    version: string,
+    version: bigint,
     ignoreNameMismatch: boolean = false
   ): "noop" | "apply" | "migrate" {
     // get current schema version

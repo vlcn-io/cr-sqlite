@@ -4,6 +4,7 @@ import wasmUrl from "@vlcn.io/crsqlite-wasm/crsqlite.wasm?url";
 import { DBAsync, StmtAsync } from "@vlcn.io/xplat-api";
 import { TXAsync } from "@vlcn.io/xplat-api";
 import { DBID } from "../Types.js";
+import { SCHEMA_NAME, SCHEMA_VERSION } from "@vlcn.io/direct-connect-common";
 
 export type CID = string;
 export type QuoteConcatedPKs = string;
@@ -32,7 +33,10 @@ export type Changeset = [
 export class DB {
   constructor(
     private readonly db: DBAsync,
-    public readonly dbid: string,
+    public readonly localDbid: DBID,
+    public readonly remoteDbid: DBID,
+    public readonly schemaName: string,
+    public readonly schemaVersion: bigint,
     private readonly pullChangesetStmt: StmtAsync,
     private readonly applyChangesetStmt: StmtAsync,
     private readonly updatePeerTrackerStmt: StmtAsync
@@ -134,9 +138,28 @@ export default async function getDB(dbid: DBID) {
   let siteid = (await db.execA(`SELECT quote(crsql_siteid())`))[0][0];
   siteid = siteid.slice(2, -1); // remove X'' quoting
 
+  const schemaNameResult = await db.execA(
+    `SELECT value FROM crsql_master WHERE key = ${SCHEMA_NAME}`
+  );
+  const schemaVersionResult = await db.execA(
+    `SELECT value FROM crsql_master WHERE key = ${SCHEMA_VERSION}`
+  );
+
+  if (schemaNameResult.length == 0 || schemaVersionResult.length == 0) {
+    throw new Error(
+      `DB must have had a schema applied to it to do sync.
+        No schema name or version found.
+        Either apply one via "db.automigrateTo" or manually set schema name and verison in crsql_master.
+        E.g., INSERT INTO crsql_master VALUES ('schema_name', 'name'), ('schema_version', 1)`
+    );
+  }
+
   return new DB(
     db,
     siteid,
+    dbid,
+    schemaNameResult[0][0],
+    BigInt(schemaVersionResult[0][0]),
     pullChangesetStmt,
     applyChangesetStmt,
     updatePeerTrackerStmt

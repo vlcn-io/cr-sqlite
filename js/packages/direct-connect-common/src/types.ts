@@ -74,7 +74,7 @@ export type ApplyChangesMsg = {
    * This ensures the client does not try to sync changes to the server
    * during a schema mismatch.
    */
-  readonly schemaVersion: string;
+  readonly schemaVersion: bigint;
   /**
    * The versioning information of the database sending the changes.
    */
@@ -92,7 +92,7 @@ export type CreateOrMigrateMsg = {
   readonly dbid: Uint8Array;
   readonly requestorDbid: Uint8Array;
   readonly schemaName: string;
-  readonly schemaVersion: string;
+  readonly schemaVersion: bigint;
 };
 
 export type ApplyChangesResponse = {
@@ -120,7 +120,7 @@ export type StreamingChangesMsg = {
 export type UploadSchemaMsg = {
   readonly _tag: Tag["uploadSchema"];
   readonly name: string;
-  readonly version: string;
+  readonly version: bigint;
   readonly content: string;
   readonly activate: boolean;
 };
@@ -128,7 +128,7 @@ export type UploadSchemaMsg = {
 export type ActivateSchemaMsg = {
   readonly _tag: Tag["activateSchema"];
   readonly name: string;
-  readonly version: string;
+  readonly version: bigint;
 };
 
 export type GetChangesMsg = {
@@ -146,7 +146,7 @@ export type GetChangesMsg = {
    * The schema version of the requestor.
    * Changes will not be sent if there is a mismatch.
    */
-  readonly schemaVersion: string;
+  readonly schemaVersion: bigint;
   /**
    * For query based sync, the query id(s) to get changes for.
    * TODO: do we need a seq per query id?
@@ -183,7 +183,7 @@ export type EstablishOutboundStreamMsg = {
   // The db requesting the outbound stream
   readonly fromDbid: Uint8Array;
   readonly seqStart: Seq;
-  readonly schemaVersion: string;
+  readonly schemaVersion: bigint;
   /**
    * For query based sync, the query id(s) to get changes for.
    */

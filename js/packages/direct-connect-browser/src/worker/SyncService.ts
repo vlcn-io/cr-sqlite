@@ -1,3 +1,4 @@
+import { JsonSerializer } from "@vlcn.io/direct-connect-common";
 import {
   Endpoints,
   LocalDBChangedMsg,
@@ -23,7 +24,11 @@ export default class SyncService {
   async startSync(msg: StartSyncMsg, port: MessagePort) {
     let db = this.dbs.get(msg.dbid);
     if (!db) {
-      db = await createSyncedDB(msg.dbid, msg.endpoints);
+      db = await createSyncedDB(
+        msg.dbid,
+        msg.endpoints,
+        new JsonSerializer(true, true)
+      );
       this.dbs.set(msg.dbid, db);
     }
 

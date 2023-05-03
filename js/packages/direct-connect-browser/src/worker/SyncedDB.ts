@@ -1,3 +1,4 @@
+import { ISerializer } from "@vlcn.io/direct-connect-common";
 import { DBID, Endpoints } from "../Types.js";
 import createDb, { DB } from "./DB.js";
 import InboundStream from "./InboundStream.js";
@@ -10,10 +11,14 @@ export class SyncedDB {
   private readonly inboundStream: InboundStream;
   private shutdown = false;
 
-  constructor(private readonly db: DB, private readonly endpoints: Endpoints) {
+  constructor(
+    private readonly db: DB,
+    private readonly endpoints: Endpoints,
+    serializer: ISerializer
+  ) {
     this.ports = new Set();
-    this.outboundStream = new OutboundStream(db, endpoints);
-    this.inboundStream = new InboundStream(db, endpoints);
+    this.outboundStream = new OutboundStream(db, endpoints, serializer);
+    this.inboundStream = new InboundStream(db, endpoints, serializer);
   }
 
   // port is for communicating back out to the thread that asked us to start sync
@@ -66,9 +71,13 @@ export class SyncedDB {
   }
 }
 
-export default async function createSyncedDB(dbid: DBID, endpoints: Endpoints) {
+export default async function createSyncedDB(
+  dbid: DBID,
+  endpoints: Endpoints,
+  serializer: ISerializer
+) {
   const db = await createDb(dbid);
-  return new SyncedDB(db, endpoints);
+  return new SyncedDB(db, endpoints, serializer);
 }
 
 /**

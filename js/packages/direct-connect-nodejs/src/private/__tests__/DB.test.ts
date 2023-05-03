@@ -11,7 +11,7 @@ beforeAll(() => {
   sdb.addSchema(
     "ns",
     "test.sql",
-    "1",
+    1n,
     `CREATE TABLE foo (a primary key, b);
       SELECT crsql_as_crr('foo');`,
     true
@@ -47,7 +47,7 @@ test("db can bootstrap a new schema", async () => {
     sdb.getSchema("ns", name, version)
   );
 
-  await db.migrateTo("test.sql", "1");
+  await db.migrateTo("test.sql", 1n);
 
   const footbl = db
     .__testsOnly()
@@ -65,8 +65,8 @@ test("migrating to the same schema & version is a no-op", async () => {
     sdb.getSchema("ns", name, version)
   );
 
-  const result1 = await db.migrateTo("test.sql", "1");
-  const result2 = await db.migrateTo("test.sql", "1");
+  const result1 = await db.migrateTo("test.sql", 1n);
+  const result2 = await db.migrateTo("test.sql", 1n);
 
   expect(result1).toBe("apply");
   expect(result2).toBe("noop");
@@ -78,9 +78,9 @@ test("migrating to an unrelated schema is an error", async () => {
     sdb.getSchema("ns", name, version)
   );
 
-  await db.migrateTo("test.sql", "1");
+  await db.migrateTo("test.sql", 1n);
 
-  await expect(() => db.migrateTo("test2.sql", "1")).toThrow();
+  await expect(() => db.migrateTo("test2.sql", 1n)).toThrow();
 });
 
 test("db can migrate to a new schema", async () => {
@@ -88,7 +88,7 @@ test("db can migrate to a new schema", async () => {
   sdb.addSchema(
     "ns",
     "test.sql",
-    "1",
+    1n,
     `CREATE TABLE foo (a primary key, b);
       SELECT crsql_as_crr('foo');`,
     true
@@ -98,12 +98,12 @@ test("db can migrate to a new schema", async () => {
     sdb.getSchema("ns", name, version)
   );
 
-  const result1 = await db.migrateTo("test.sql", "1");
+  const result1 = await db.migrateTo("test.sql", 1n);
 
   sdb.addSchema(
     "ns",
     "test.sql",
-    "2",
+    2n,
     `CREATE TABLE IF NOT EXISTS foo (
       a primary key,
       b,
@@ -114,7 +114,7 @@ test("db can migrate to a new schema", async () => {
     true
   );
 
-  const result2 = await db.migrateTo("test.sql", "2");
+  const result2 = await db.migrateTo("test.sql", 2n);
 
   expect(result1).toBe("apply");
   expect(result2).toBe("migrate");
@@ -137,8 +137,8 @@ test("db can read and write a changeset", async () => {
     sdb.getSchema("ns", name, version)
   );
 
-  await db1.migrateTo("test.sql", "1");
-  await db2.migrateTo("test.sql", "1");
+  await db1.migrateTo("test.sql", 1n);
+  await db2.migrateTo("test.sql", 1n);
   db1.__testsOnly().exec(`INSERT INTO foo VALUES (1, 2)`);
 
   const changesFrom1 = [...db1.getChanges(dbid2, 0n)];

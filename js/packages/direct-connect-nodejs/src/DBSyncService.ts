@@ -24,7 +24,7 @@ const DBSyncService = {
   maybeMigrate(
     db: DB,
     schemaName: string,
-    version: string,
+    version: bigint,
     requestorDbid: Uint8Array
   ): CreateOrMigrateResponse {
     const status = db.migrateTo(schemaName, version);

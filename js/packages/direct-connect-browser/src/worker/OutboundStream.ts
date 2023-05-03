@@ -1,3 +1,4 @@
+import { ISerializer } from "@vlcn.io/direct-connect-common";
 import { Endpoints } from "../Types.js";
 import { DB, Seq } from "./DB.js";
 
@@ -8,7 +9,11 @@ export default class OutboundStream {
 
   // from our DB to the server.
   // The server should tell us from which point to start.
-  constructor(db: DB, endpoints: Endpoints) {}
+  constructor(
+    db: DB,
+    endpoints: Endpoints,
+    private readonly serializer: ISerializer
+  ) {}
 
   start() {
     if (this.started || this.shutdown) {

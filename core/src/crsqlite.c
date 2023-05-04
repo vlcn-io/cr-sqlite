@@ -408,17 +408,43 @@ static void crsqlBeginAlterFunc(sqlite3_context *context, int argc,
   }
 }
 
-int crsql_compactPostAlter(sqlite3 *db, const char *tblName, char **errmsg) {
-  // 1. remove all entries in the clock table that have a column
-  // name that does not exist
-  // NOTE!: this is bugged, right? Doesn't this compact out pk_only and delete
-  // sentinels?
+int crsql_compactPostAlter(sqlite3 *db, const char *tblName,
+                           crsql_ExtData *pExtData, char **errmsg) {
+  int rc = SQLITE_OK;
+  rc = crsql_getDbVersion(db, pExtData, errmsg);
+  if (rc != SQLITE_OK) {
+    return rc;
+  }
+  sqlite3_int64 currentDbVersion = pExtData->dbVersion;
+
   char *zSql = sqlite3_mprintf(
       "DELETE FROM \"%w__crsql_clock\" WHERE \"__crsql_col_name\" NOT IN "
-      "(SELECT name FROM pragma_table_info(%Q))",
-      tblName, tblName);
-  int rc = sqlite3_exec(db, zSql, 0, 0, errmsg);
+      "(SELECT name FROM pragma_table_info(%Q) UNION SELECT '%s' UNION SELECT "
+      "'%s')",
+      tblName, tblName, DELETE_CID_SENTINEL, PKS_ONLY_CID_SENTINEL);
+  rc = sqlite3_exec(db, zSql, 0, 0, errmsg);
   sqlite3_free(zSql);
+  if (rc != SQLITE_OK) {
+    return rc;
+  }
+
+  // we're in a tx so this likely never gets the new version
+  rc = crsql_getDbVersion(db, pExtData, errmsg);
+  if (rc != SQLITE_OK) {
+    return rc;
+  }
+
+  sqlite3_stmt *pStmt;
+  rc = sqlite3_prepare_v2(db,
+                          "INSERT OR REPLACE INTO crsql_master (key, value) "
+                          "VALUES ('pre_compact_dbversion', ?)",
+                          -1, &pStmt, 0);
+  rc += sqlite3_bind_int64(pStmt, 1, currentDbVersion);
+  rc += sqlite3_step(pStmt);
+  if (rc != SQLITE_DONE) {
+    return rc;
+  }
+  rc = sqlite3_finalize(pStmt);
 
   return rc;
 }
@@ -448,7 +474,8 @@ static void crsqlCommitAlterFunc(sqlite3_context *context, int argc,
     tblName = (const char *)sqlite3_value_text(argv[0]);
   }
 
-  rc = crsql_compactPostAlter(db, tblName, &errmsg);
+  crsql_ExtData *pExtData = (crsql_ExtData *)sqlite3_user_data(context);
+  rc = crsql_compactPostAlter(db, tblName, pExtData, &errmsg);
   if (rc == SQLITE_OK) {
     rc = createCrr(context, db, schemaName, tblName, &errmsg);
   }
@@ -559,7 +586,7 @@ __declspec(dllexport)
 
   if (rc == SQLITE_OK) {
     rc = sqlite3_create_function(db, "crsql_commit_alter", -1,
-                                 SQLITE_UTF8 | SQLITE_DIRECTONLY, 0,
+                                 SQLITE_UTF8 | SQLITE_DIRECTONLY, pExtData,
                                  crsqlCommitAlterFunc, 0, 0);
   }
 

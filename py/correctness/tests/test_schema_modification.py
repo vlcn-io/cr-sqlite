@@ -165,7 +165,6 @@ def test_backfill_clocks_on_rename():
                         # On completion of https://github.com/vlcn-io/cr-sqlite/issues/181 we could track renames.
                         ('todo', '1', 'task', "'cook'", 2, 1),
                         ('todo', '2', 'task', "'clean'", 2, 1)])
-    None
 
 
 def test_delete_sentinels_not_lost():
@@ -187,11 +186,10 @@ def test_delete_sentinels_not_lost():
 
     changes = c.execute(changes_query).fetchall()
     assert (changes == [('todo', '1', '__crsql_del', None),
-            ('todo', '1', '__crsql_del', None)])
+                        ('todo', '1', '__crsql_del', None),
+                        ('todo', '1', '__crsql_del', None)])
 
 
-# get a sentinel for PK only table
-# add a column, sentinel removed but column def created
 def test_pk_only_sentinels():
     c = connect(":memory:")
     c.execute("CREATE TABLE assoc (id1, id2, PRIMARY KEY (id1, id2));")
@@ -207,8 +205,10 @@ def test_pk_only_sentinels():
     c.execute("SELECT crsql_commit_alter('assoc');")
     c.commit()
 
+    # TODO: should we compact out pko sentinels on column add?
     changes = c.execute(changes_query).fetchall()
-    assert (changes == [('assoc', '1|2', 'data', 'NULL')])
+    assert (changes == [('assoc', '1|2', '__crsql_pko',
+            None), ('assoc', '1|2', 'data', 'NULL')])
 
 
 # Get a sentinel for PK only table
@@ -460,9 +460,9 @@ def test_add_column_and_set_column():
     c.commit()
 
     changes = c.execute(full_changes_query).fetchall()
-    # TODO: where'd the PKO record go? We compacted it? o_O
-    # TODO: db version should be 2!
-    assert (changes == [('foo', '3', 'age', '44', 1, 1, None)])
+    # TODO: test that we merge appropriately. Would be creating empty row followed by update
+    assert (changes == [('foo', '3', '__crsql_pko', None, 1, 1, None),
+                        ('foo', '3', 'age', '44', 2, 1, None)])
 
 
 def test_remove_rows_on_alter():
@@ -483,6 +483,7 @@ def test_remove_rows_on_alter():
 
     changes = c.execute(full_changes_query).fetchall()
     # TODO: db version is wrong here. Should be 2, no?
+    # TODO: clock tabl itself should be cleared too!
     assert (changes == [('foo', '1', '__crsql_del', None, 1, 1, None),
                         ('foo', '3', '__crsql_del', None, 1, 1, None)])
 
@@ -540,6 +541,10 @@ def test_add_pk_column():
 
 
 def test_rename_pk_column():
+    None
+
+
+def test_pk_only_table_pk_membership():
     None
 
 

@@ -169,11 +169,6 @@ def test_backfill_clocks_on_rename():
 
 
 def test_delete_sentinels_not_lost():
-    # not lost after alter
-    # nor lost on crr re-application
-    # pk only / create
-    # delete
-    # records
     c = setup_alter_test()
     c.execute("DELETE FROM todo WHERE id = 1;")
     c.commit()
@@ -399,7 +394,8 @@ def test_pk_only_table_backfill():
     c.commit()
 
     changes = c.execute(full_changes_query).fetchall()
-    # TODO: we fail to backfill pk only tables!!
+    assert (changes == [('foo', '1', '__crsql_pko', None, 1, 1, None),
+                        ('foo', '2', '__crsql_pko', None, 1, 1, None)])
 
 
 # Imagine the case where we have a table:
@@ -481,7 +477,7 @@ def test_rename_pk_column():
     None
 
 
-def test_changing_primary_key_columns():
+def test_changing_values_in_primary_key_columns():
 
     # sqlite doesn't allow altering primary key def in an existing schema. Not even renames.
     # def test_clock_nuke_on_pk_schema_alter():

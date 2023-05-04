@@ -131,8 +131,10 @@ fn fill_column(
     non_pk_col: &str,
 ) -> Result<ResultCode, ResultCode> {
     // Only return rows for which
-    // - a row does not exist for that pk combo _and_ cid in the clock table
-    // an optimization would be to filter out rows which are set to the default value.
+    // - a row does not exist for that pk combo _and_ cid in the clock table.
+    // An optimization would be to filter out rows which are set to the default value.
+    // We can get the default value from the pragma and add a WHERE clause against
+    // t1.{col_name} where t1.{col_name} != {default_value}
     let sql = format!(
         "SELECT {pk_cols} FROM {table} as t1
           LEFT JOIN \"{table}__crsql_clock\" as t2 ON {pk_on_conditions} AND t2.__crsql_col_name = ?

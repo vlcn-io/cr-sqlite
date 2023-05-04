@@ -377,8 +377,10 @@ def test_add_col_through_12step():
 
     changes = c.execute(full_changes_query).fetchall()
     assert (changes == [('foo', '3', 'name', 'NULL', 1, 1, None),
+                        # New row (22) appropriately gets new db version
                         ('foo', '22', 'name', "'baz'", 2, 1, None),
                         ('foo', '22', 'age', '33', 2, 1, None),
+                        # age was updated to a new value during migration so db_version appropriately incremented
                         ('foo', '3', 'age', '44', 2, 1, None)])
 
 

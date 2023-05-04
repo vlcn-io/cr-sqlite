@@ -82,6 +82,8 @@ fn create_clock_rows_from_stmt(
             write_stmt.bind_value(i as i32 + 1, value)?;
         }
 
+        // TODO: handle the case here where the _are no_ non_pk_cols!!!
+        // just insert the pk only sentinel.
         for col in non_pk_cols.iter() {
             // We even backfill default values since we can't differentiate between an explicit
             // reset to a default vs an implicit set to default on create.
@@ -107,30 +109,11 @@ fn backfill_missing_columns(
     pk_cols: &Vec<&str>,
     non_pk_cols: &Vec<&str>,
 ) -> Result<ResultCode, ResultCode> {
-    let has_col_stmt = db.prepare_v2(&format!(
-        "SELECT 1 FROM \"{table}__crsql_clock\" WHERE \"__crsql_col_name\" = ? LIMIT 1",
-        table = table,
-    ))?;
     for non_pk_col in non_pk_cols {
-        has_col_stmt.bind_text(1, non_pk_col, Destructor::STATIC)?;
-        let exists = has_col(&has_col_stmt)?;
-        has_col_stmt.reset()?;
-        if exists {
-            continue;
-        }
         fill_column(db, table, &pk_cols, non_pk_col)?;
     }
 
     Ok(ResultCode::OK)
-}
-
-fn has_col(stmt: &ManagedStmt) -> Result<bool, ResultCode> {
-    let step_result = stmt.step()?;
-    if step_result == ResultCode::DONE {
-        Ok(false)
-    } else {
-        Ok(true)
-    }
 }
 
 /**
@@ -142,21 +125,32 @@ fn fill_column(
     pk_cols: &Vec<&str>,
     non_pk_col: &str,
 ) -> Result<ResultCode, ResultCode> {
-    // We don't technically need this join, right?
-    // There should never be a partially filled column.
-    // If there is there's likely a bug elsewhere.
-    // Actually partially filled columns can happen during the 12 step migration
-    // process if someone adds rows to the table while the migration is running.
+    // Only return rows for which
+    // - a row does not exist for that pk combo _and_ cid in the clock table
+    // an optimization would be to filter out rows which are set to the default value.
     let sql = format!(
-        "SELECT {pk_cols} FROM {table} as t1",
+        "SELECT {pk_cols} FROM {table} as t1
+          LEFT JOIN \"{table}__crsql_clock\" as t2 ON {pk_on_conditions} AND t2.__crsql_col_name = ?
+          WHERE t2.\"{first_pk}\" IS NULL",
         table = crate::escape_ident(table),
         pk_cols = pk_cols
             .iter()
             .map(|f| format!("t1.\"{}\"", crate::escape_ident(f)))
             .collect::<Vec<_>>()
             .join(", "),
+        pk_on_conditions = pk_cols
+            .iter()
+            .map(|f| format!(
+                "t1.\"{}\" = t2.\"{}\"",
+                crate::escape_ident(f),
+                crate::escape_ident(f)
+            ))
+            .collect::<Vec<_>>()
+            .join(" AND "),
+        first_pk = crate::escape_ident(pk_cols[0])
     );
     let read_stmt = db.prepare_v2(&sql)?;
+    read_stmt.bind_text(1, non_pk_col, Destructor::STATIC)?;
 
     let non_pk_cols = vec![non_pk_col];
     create_clock_rows_from_stmt(read_stmt, db, table, pk_cols, &non_pk_cols)

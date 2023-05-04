@@ -441,31 +441,97 @@ def test_pk_and_default_backfill_post12step_with_new_rows():
     assert (changes == [('foo', '1', 'b', 'NULL', 1, 1,
             None), ('foo', '2', 'b', 'NULL', 1, 1, None)])
 
-# Someone adds a column (with no default) then sets the value
-# for that column for all rows.
-
 
 def test_add_column_and_set_column():
-    # if we do this and then do the `inert into new_foo` do we end
+    # if we do this and then do the `insert into new_foo` do we end
     # up missing these updates?
-    None
+    c = connect(":memory:")
+    c.execute("CREATE TABLE foo (id PRIMARY KEY);")
+    c.execute("INSERT INTO foo (id) VALUES (3);")
+    c.execute("SELECT crsql_as_crr('foo');")
+    c.commit()
+    changes = c.execute(full_changes_query).fetchall()
 
+    c.execute("SELECT crsql_begin_alter('foo');")
+    c.execute(
+        "ALTER TABLE foo ADD COLUMN age INTEGER DEFAULT NULL;")
+    c.execute("UPDATE foo SET age = 44 WHERE id = 3;")
+    c.execute("SELECT crsql_commit_alter('foo');")
+    c.commit()
 
-def test_backfill_for_table_with_defaults():
-    # do default null columns get any metadata?
-    # do default values columns get metadata?
-    None
+    changes = c.execute(full_changes_query).fetchall()
+    # TODO: where'd the PKO record go? We compacted it? o_O
+    # TODO: db version should be 2!
+    assert (changes == [('foo', '3', 'age', '44', 1, 1, None)])
 
 
 def test_remove_rows_on_alter():
-    None
+    c = connect(":memory:")
+    c.execute("CREATE TABLE foo (a PRIMARY KEY, b);")
+    c.execute("SELECT crsql_as_crr('foo');")
+    c.execute("INSERT INTO foo VALUES (1, 2);")
+    c.execute("INSERT INTO foo VALUES (3, 4);")
+    c.commit()
+
+    c.execute("SELECT crsql_begin_alter('foo');")
+    c.execute(
+        "ALTER TABLE foo ADD COLUMN c INTEGER DEFAULT NULL;")
+    c.execute("DELETE FROM foo WHERE a = 1;")
+    c.execute("DELETE FROM foo WHERE a = 3;")
+    c.execute("SELECT crsql_commit_alter('foo');")
+    c.commit()
+
+    changes = c.execute(full_changes_query).fetchall()
+    # TODO: db version is wrong here. Should be 2, no?
+    assert (changes == [('foo', '1', '__crsql_del', None, 1, 1, None),
+                        ('foo', '3', '__crsql_del', None, 1, 1, None)])
 
 
+# TODO: this doesn't work at the moment. We do not have a way to diff
+# table contents.
+# This is the case where:
+# User modifies existing cells of existing rows during a migration with no changes
+# to the schemas of those cells.
 def test_change_existing_values_on_alter():
     None
 
 
+# Table structures are identical but we change primary key membership
+def test_remove_col_from_pk():
+    c = connect(":memory:")
+    c.execute("CREATE TABLE foo (a, b, c, PRIMARY KEY (a, b));")
+    c.execute("SELECT crsql_as_crr('foo');")
+    c.execute("INSERT INTO foo VALUES (1, 2, 3);")
+    c.execute("INSERT INTO foo VALUES (4, 5, 6);")
+    c.commit()
+
+    changes = c.execute(full_changes_query).fetchall()
+
+    c.execute("SELECT crsql_begin_alter('foo');")
+    c.execute(
+        "CREATE TABLE new_foo(a PRIMARY KEY, b, c);")
+    c.execute("INSERT INTO new_foo SELECT * FROM foo;")
+    c.execute("DROP TABLE foo;")
+    c.execute("ALTER TABLE new_foo RENAME TO foo;")
+    c.execute("SELECT crsql_commit_alter('foo');")
+    c.commit()
+
+    changes = c.execute(full_changes_query).fetchall()
+    # TODO: this is wrong, right?
+    # DB version for the first two rows should be 2.....
+    # Why is it 1 here?
+    assert (changes == [('foo', '1', 'c', '3', 1, 1, None),
+                        ('foo', '4', 'c', '6', 1, 1, None),
+                        ('foo', '1', 'b', '2', 2, 1, None),
+                        ('foo', '4', 'b', '5', 2, 1, None)])
+    None
+
+
 def test_remove_pk_column():
+    None
+
+
+def test_add_existing_col_to_pk():
     None
 
 

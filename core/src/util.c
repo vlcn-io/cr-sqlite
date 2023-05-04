@@ -324,7 +324,10 @@ char *crsql_getDbVersionUnionQuery(int numRows, char **tableNames) {
 
   // compose the final query
   // and update the pointer to the string to point to it.
-  ret = sqlite3_mprintf("SELECT max(version) as version FROM (%z)", unionsStr);
+  ret = sqlite3_mprintf(
+      "SELECT max(version) as version FROM (%z UNION SELECT value as version "
+      "FROM crsql_master WHERE key = 'pre_compact_dbversion')",
+      unionsStr);
   // %z frees unionsStr https://www.sqlite.org/printf.html#percentz
   return ret;
 }

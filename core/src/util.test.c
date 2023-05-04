@@ -30,17 +30,23 @@ static void testGetVersionUnionQuery() {
   printf("GetVersionUnionQuery\n");
 
   query = crsql_getDbVersionUnionQuery(numRows_tc1, tableNames_tc1);
-  assert(strcmp(query,
-                "SELECT max(version) as version FROM (SELECT "
-                "max(__crsql_db_version) as version FROM \"foo\"  )") == 0);
+  assert(
+      strcmp(
+          query,
+          "SELECT max(version) as version FROM (SELECT max(__crsql_db_version) "
+          "as version FROM \"foo\"   UNION SELECT value as version FROM "
+          "crsql_master WHERE key = 'pre_compact_dbversion')") == 0);
   sqlite3_free(query);
 
   query = crsql_getDbVersionUnionQuery(numRows_tc2, tableNames_tc2);
-  assert(strcmp(query,
-                "SELECT max(version) as version FROM (SELECT "
-                "max(__crsql_db_version) as version FROM \"foo\" UNION SELECT "
-                "max(__crsql_db_version) as version FROM \"bar\" UNION SELECT "
-                "max(__crsql_db_version) as version FROM \"baz\"  )") == 0);
+  assert(
+      strcmp(
+          query,
+          "SELECT max(version) as version FROM (SELECT max(__crsql_db_version) "
+          "as version FROM \"foo\" UNION SELECT max(__crsql_db_version) as "
+          "version FROM \"bar\" UNION SELECT max(__crsql_db_version) as "
+          "version FROM \"baz\"   UNION SELECT value as version FROM "
+          "crsql_master WHERE key = 'pre_compact_dbversion')") == 0);
   sqlite3_free(query);
 
   printf("\t\e[0;32mSuccess\e[0m\n");

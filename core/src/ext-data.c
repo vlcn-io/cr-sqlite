@@ -222,7 +222,7 @@ int crsql_fetchDbVersionFromStorage(sqlite3 *db, crsql_ExtData *pExtData,
 }
 
 /**
- * This will return the db version if it exists in `pExtData`
+ * This fills the dbVersion into `pExtData` if it is not already cached there
  *
  * If it does not exist there, it will fetch the current db version
  * from the database.

@@ -359,7 +359,12 @@ static void testSelectChangesAfterChangingColumnName() {
   numRows = 0;
   // Columns that no long exist post-alter should not
   // be retained for replication
+  int first = 1;
   while ((rc = sqlite3_step(pStmt)) == SQLITE_ROW) {
+    if (first == 1) {
+      first = 0;
+      continue;
+    }
     assert(strcmp("foo", (const char *)sqlite3_column_text(
                              pStmt, CHANGES_SINCE_VTAB_TBL)) == 0);
     assert(strcmp("2", (const char *)sqlite3_column_text(

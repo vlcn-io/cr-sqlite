@@ -91,6 +91,11 @@ fn create_clock_rows_from_stmt(
             write_stmt.step()?;
             write_stmt.reset()?;
         }
+        if (non_pk_cols.len() == 0) {
+            write_stmt.bind_text(pk_cols.len() as i32 + 1, "__crsql_pko", Destructor::STATIC)?;
+            write_stmt.step()?;
+            write_stmt.reset()?;
+        }
     }
 
     Ok(ResultCode::OK)

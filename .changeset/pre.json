@@ -1,0 +1,31 @@
+{
+  "mode": "pre",
+  "tag": "next",
+  "initialVersions": {
+    "@vlcn.io/crsqlite": "0.10.0",
+    "@vlcn.io/wa-sqlite": "0.16.0",
+    "@vlcn.io/browser-tests": "0.8.0",
+    "@vlcn.io/client-core": "0.9.0",
+    "@vlcn.io/client-server-common": "0.6.0",
+    "@vlcn.io/client-websocket": "0.9.0",
+    "@vlcn.io/create-web": "0.2.0",
+    "@vlcn.io/crsqlite-wasm": "0.10.0",
+    "@vlcn.io/crsqlite-allinone": "0.9.0",
+    "@vlcn.io/nodeno-tests": "0.8.0",
+    "@vlcn.io/sync-p2p": "0.8.0",
+    "@vlcn.io/react": "0.10.0",
+    "@vlcn.io/rx-query": "0.2.0",
+    "@vlcn.io/rx-tbl": "0.9.0",
+    "sandbox": "0.1.0",
+    "sandbox-node": "0.1.0",
+    "@vlcn.io/server-core": "0.9.0",
+    "@vlcn.io/server-websocket": "0.9.0",
+    "@vlcn.io/xplat-api": "0.9.0",
+    "@vlcn.io/xplat-tests": "0.8.0",
+    "@vlcn.io/tsbuild-all": "0.8.0",
+    "@vlcn.io/py-correctness": "0.8.0"
+  },
+  "changesets": [
+    "grumpy-wolves-obey"
+  ]
+}

@@ -1,5 +1,12 @@
 # @vlcn.io/sync-client
 
+## 0.9.1-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/crsqlite-wasm@0.10.1-next.0
+
 ## 0.9.0
 
 ### Minor Changes

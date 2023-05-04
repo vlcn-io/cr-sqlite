@@ -306,7 +306,8 @@ def test_backfill_for_alter_moves_dbversion():
              # There are no entries for new nullable columns for old rows
              # New row gets new db version (2).
              ('foo', '2', 'name', "'baz'", 2, 1, None),
-             ('foo', '2', 'age', '33', 2, 1, None)])
+             ('foo', '2', 'age', '33', 2, 1, None),
+             ('foo', '1', 'age', 'NULL', 2, 1, None)])
 
 
 def test_add_col_with_default():
@@ -363,8 +364,6 @@ def test_add_col_implicit_nullable():
 def test_add_col_through_12step():
     c = connect(":memory:")
     c.execute("CREATE TABLE foo (id PRIMARY KEY, name TEXT DEFAULT NULL);")
-    c.execute("INSERT INTO foo VALUES (1, 'bar');")
-    c.execute("INSERT INTO foo VALUES (2, 'baz');")
     c.execute("INSERT INTO foo (id) VALUES (3);")
     c.execute("SELECT crsql_as_crr('foo');")
     c.commit()
@@ -374,27 +373,33 @@ def test_add_col_through_12step():
         "CREATE TABLE new_foo(id PRIMARY KEY, name TEXT DEFAULT NULL, age INTEGER DEFAULT NULL);")
     # copy over old data
     c.execute("INSERT INTO new_foo (id, name) SELECT id, name FROM foo;")
-    # TODO: this insert below changes how defaults are backfilled!!!
-    # should we even backfill default values? seems useless.
-    # c.execute("INSERT INTO new_foo (id, name, age) VALUES (22, 'baz', 33);")
+    c.execute("INSERT INTO new_foo (id, name, age) VALUES (22, 'baz', 33);")
+    # add a value for the new column in the old row
+    c.execute("UPDATE new_foo SET age = 44 WHERE id = 3;")
     c.execute("DROP TABLE foo;")
     c.execute("ALTER TABLE new_foo RENAME TO foo;")
     c.execute("SELECT crsql_commit_alter('foo');")
 
     changes = c.execute(full_changes_query).fetchall()
-    pprint.pprint(changes)
-    pprint.pprint(c.execute("SELECT * FROM foo__crsql_clock").fetchall())
-
-    # altering a table via create new, copy, drop old, rename new should be equivalent to an alter table
-    # assert (changes == [('foo', '1', 'name', "'bar'", 1, 1, None),
-    #                     ('foo', '1', 'age', 'NULL', 2, 1, None)])
+    assert (changes == [('foo', '3', 'name', 'NULL', 1, 1, None),
+                        ('foo', '22', 'name', "'baz'", 2, 1, None),
+                        ('foo', '22', 'age', '33', 2, 1, None),
+                        ('foo', '3', 'age', '44', 2, 1, None)])
 
 
 # TODO: if we do optimize to not set columns with default values
 # then we could miss an insert of just the pk column.
 
 def test_pk_only_table_backfill():
-    None
+    c = connect(":memory:")
+    c.execute("CREATE TABLE foo (id PRIMARY KEY);")
+    c.execute("INSERT INTO foo VALUES (1);")
+    c.execute("INSERT INTO foo VALUES (2);")
+    c.execute("SELECT crsql_as_crr('foo');")
+    c.commit()
+
+    changes = c.execute(full_changes_query).fetchall()
+    # TODO: we fail to backfill pk only tables!!
 
 
 # Imagine the case where we have a table:
@@ -405,11 +410,45 @@ def test_pk_only_table_backfill():
 # If we optimize backfill to ignore columns with default values
 # we may never record the insert of the row with just the pk column.
 def test_pk_and_default_backfill():
-    None
+    c = connect(":memory:")
+    c.execute("CREATE TABLE foo (id PRIMARY KEY, b);")
+    c.execute("INSERT INTO foo (id) VALUES (1);")
+    c.execute("INSERT INTO foo (id) VALUES (2);")
+    c.execute("SELECT crsql_as_crr('foo');")
+    c.commit()
 
+    changes = c.execute(full_changes_query).fetchall()
+    # Rows should be backfilled
+    assert (changes == [('foo', '1', 'b', 'NULL', 1, 1,
+            None), ('foo', '2', 'b', 'NULL', 1, 1, None)])
+
+
+def test_pk_and_default_backfill_post12step_with_new_rows():
+    c = connect(":memory:")
+    c.execute("CREATE TABLE foo (id PRIMARY KEY);")
+    c.execute("SELECT crsql_as_crr('foo');")
+    c.commit()
+
+    c.execute("SELECT crsql_begin_alter('foo');")
+    c.execute(
+        "CREATE TABLE new_foo(id PRIMARY KEY, b);")
+    # copy over old data
+    c.execute("INSERT INTO new_foo (id) VALUES (1);")
+    c.execute("INSERT INTO new_foo (id) VALUES (2);")
+    c.execute("DROP TABLE foo;")
+    c.execute("ALTER TABLE new_foo RENAME TO foo;")
+    c.execute("SELECT crsql_commit_alter('foo');")
+    c.commit()
+
+    changes = c.execute(full_changes_query).fetchall()
+    # Backfill should create the rows added during the alter
+    assert (changes == [('foo', '1', 'b', 'NULL', 1, 1,
+            None), ('foo', '2', 'b', 'NULL', 1, 1, None)])
 
 # Someone adds a column (with no default) then sets the value
 # for that column for all rows.
+
+
 def test_add_column_and_set_column():
     # if we do this and then do the `inert into new_foo` do we end
     # up missing these updates?

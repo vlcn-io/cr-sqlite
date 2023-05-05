@@ -4,6 +4,7 @@ mod automigrate;
 mod backfill;
 mod is_crr;
 mod teardown;
+mod util;
 
 use core::{ffi::c_char, slice};
 extern crate alloc;

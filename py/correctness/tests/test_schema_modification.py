@@ -121,11 +121,20 @@ def test_backfill_col_add():
     c.commit()
 
     changes = c.execute(changes_query).fetchall()
+
+    # We do _not_ backfill default values.
+    # Given we only migrate against compatible schema versions there's no need to create
+    # a record of a default value. The other node will have the same default or, if they wrote a value,
+    # a value which takes precedence.
+    # TODO: test that this merging with default values works as expected.
+    # will we:
+    # a. allow the merge because no clock entry was found?
+    # b. fail becuase no clock entry was found?
+    # the test needs the _row_ to exist on both node but _columns_ to be missing metadata due
+    # to being set to defaults.
     assert (changes == [('todo', '1', 'name', "'cook'"),
                         ('todo', '1', 'complete', '0'),
-                        ('todo', '1', 'list', "'home'"),
-                        ('todo', '1', 'assignee', 'NULL'),
-                        ('todo', '1', 'due_date', "'2018-01-01'")])
+                        ('todo', '1', 'list', "'home'")])
 
     # we should be able to add entries
     c.execute(
@@ -135,13 +144,21 @@ def test_backfill_col_add():
     assert (changes == [('todo', '1', 'name', "'cook'"),
                         ('todo', '1', 'complete', '0'),
                         ('todo', '1', 'list', "'home'"),
-                        ('todo', '1', 'assignee', 'NULL'),
-                        ('todo', '1', 'due_date', "'2018-01-01'"),
                         ('todo', '2', 'name', "'clean'"),
                         ('todo', '2', 'complete', '0'),
                         ('todo', '2', 'list', "'home'"),
                         ('todo', '2', 'assignee', "'me'"),
                         ('todo', '2', 'due_date', "'2018-01-01'")])
+
+
+def test_merging_columns_with_no_metadata():
+    # This is the case where we do not create metadata records for certain
+    # columns because they were only set to the default value.
+    #
+    # Merging should:
+    # - always take a value if a value is present from a peer
+    # - not do anything if the peer is at the same state
+    None
 
 
 def test_backfill_clocks_on_rename():
@@ -205,10 +222,9 @@ def test_pk_only_sentinels():
     c.execute("SELECT crsql_commit_alter('assoc');")
     c.commit()
 
-    # TODO: should we compact out pko sentinels on column add?
+    # Sentinels are still retained after the alter
     changes = c.execute(changes_query).fetchall()
-    assert (changes == [('assoc', '1|2', '__crsql_pko',
-            None), ('assoc', '1|2', 'data', 'NULL')])
+    assert (changes == [('assoc', '1|2', '__crsql_pko', None)])
 
 
 # Get a sentinel for PK only table
@@ -301,8 +317,7 @@ def test_backfill_for_alter_moves_dbversion():
              # There are no entries for new nullable columns for old rows
              # New row gets new db version (2).
              ('foo', '2', 'name', "'baz'", 2, 1, None),
-             ('foo', '2', 'age', '33', 2, 1, None),
-             ('foo', '1', 'age', 'NULL', 2, 1, None)])
+             ('foo', '2', 'age', '33', 2, 1, None)])
 
 
 def test_add_col_with_default():
@@ -317,10 +332,9 @@ def test_add_col_with_default():
     c.execute("SELECT crsql_commit_alter('foo');")
 
     changes = c.execute(full_changes_query).fetchall()
-    assert (changes == [('foo', '1', 'name', "'bar'", 1, 1, None),
-                        # TODO: where is the metadata from the default value column?
-                        # the presence of a new column with a default value causes a new metadata row at the next db_version
-                        ('foo', '1', 'age', '0', 2, 1, None)])
+    # No change given we only added a column with a default value and we need
+    # not backfill default values
+    assert (changes == [('foo', '1', 'name', "'bar'", 1, 1, None)])
     None
 
 
@@ -336,8 +350,7 @@ def test_add_col_nullable():
     c.execute("SELECT crsql_commit_alter('foo');")
 
     changes = c.execute(full_changes_query).fetchall()
-    assert (changes == [('foo', '1', 'name', "'bar'", 1, 1, None),
-                        ('foo', '1', 'age', 'NULL', 2, 1, None)])
+    assert (changes == [('foo', '1', 'name', "'bar'", 1, 1, None)])
 
 
 def test_add_col_implicit_nullable():
@@ -352,8 +365,7 @@ def test_add_col_implicit_nullable():
     c.execute("SELECT crsql_commit_alter('foo');")
 
     changes = c.execute(full_changes_query).fetchall()
-    assert (changes == [('foo', '1', 'name', "'bar'", 1, 1, None),
-                        ('foo', '1', 'age', 'NULL', 2, 1, None)])
+    assert (changes == [('foo', '1', 'name', "'bar'", 1, 1, None)])
 
 
 def test_add_col_through_12step():

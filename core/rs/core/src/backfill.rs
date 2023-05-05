@@ -1,6 +1,8 @@
 use sqlite_nostd::{sqlite3, Connection, Destructor, ManagedStmt, ResultCode};
 extern crate alloc;
+use crate::util::get_dflt_value;
 use alloc::format;
+use alloc::string::String;
 use alloc::{vec, vec::Vec};
 
 /**
@@ -91,7 +93,7 @@ fn create_clock_rows_from_stmt(
             write_stmt.step()?;
             write_stmt.reset()?;
         }
-        if (non_pk_cols.len() == 0) {
+        if non_pk_cols.len() == 0 {
             write_stmt.bind_text(pk_cols.len() as i32 + 1, "__crsql_pko", Destructor::STATIC)?;
             write_stmt.step()?;
             write_stmt.reset()?;
@@ -121,24 +123,22 @@ fn backfill_missing_columns(
     Ok(ResultCode::OK)
 }
 
-/**
-*
-*/
+// This doesn't fill compeltely new columns...
+// Wel... does it not? The on condition x left join should do it.
 fn fill_column(
     db: *mut sqlite3,
     table: &str,
     pk_cols: &Vec<&str>,
     non_pk_col: &str,
 ) -> Result<ResultCode, ResultCode> {
-    // Only return rows for which
-    // - a row does not exist for that pk combo _and_ cid in the clock table.
-    // An optimization would be to filter out rows which are set to the default value.
-    // We can get the default value from the pragma and add a WHERE clause against
-    // t1.{col_name} where t1.{col_name} != {default_value}
+    // Only fill rows for which
+    // - a row does not exist for that pk combo _and_ the cid in the clock table.
+    // - the value is not the default value for that column.
+    let dflt_value = get_dflt_value(db, table, non_pk_col)?;
     let sql = format!(
         "SELECT {pk_cols} FROM {table} as t1
           LEFT JOIN \"{table}__crsql_clock\" as t2 ON {pk_on_conditions} AND t2.__crsql_col_name = ?
-          WHERE t2.\"{first_pk}\" IS NULL",
+          WHERE t2.\"{first_pk}\" IS NULL {dflt_value_condition}",
         table = crate::escape_ident(table),
         pk_cols = pk_cols
             .iter()
@@ -154,7 +154,12 @@ fn fill_column(
             ))
             .collect::<Vec<_>>()
             .join(" AND "),
-        first_pk = crate::escape_ident(pk_cols[0])
+        first_pk = crate::escape_ident(pk_cols[0]),
+        dflt_value_condition = if let Some(dflt) = dflt_value {
+            format!("AND t1.\"{}\" IS NOT {}", non_pk_col, dflt)
+        } else {
+            String::from("")
+        },
     );
     let read_stmt = db.prepare_v2(&sql)?;
     read_stmt.bind_text(1, non_pk_col, Destructor::STATIC)?;

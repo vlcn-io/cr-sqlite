@@ -123,7 +123,7 @@ static int createSchemaTableIfNotExists(sqlite3 *db) {
 
   char *zSql = sqlite3_mprintf(
       "CREATE TABLE IF NOT EXISTS \"%s\" (\"key\" TEXT PRIMARY KEY, \"value\" "
-      "TEXT);",
+      "ANY);",
       TBL_SCHEMA);
   rc = sqlite3_exec(db, zSql, 0, 0, 0);
   sqlite3_free(zSql);

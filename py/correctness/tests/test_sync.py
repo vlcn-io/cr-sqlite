@@ -16,6 +16,15 @@ def init():
     return dbs
 
 
+def sync_left_to_right(l, r, since):
+    changes = l.execute(
+        "SELECT * FROM crsql_changes WHERE db_version > ?", (since,))
+    for change in changes:
+        r.execute("INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?, ?)", change)
+    r.commit()
+    None
+
+
 def create_schema(c):
     c.execute("CREATE TABLE \"user\" (id primary key, name)")
     c.execute("CREATE TABLE deck (id primary key, owner_id, title)")
@@ -160,6 +169,116 @@ def test_delete():
 
     # test new table after a call to get_changes_since
     close(db)
+
+
+# Row not exists case so entry created and default filled in
+def test_merging_on_defaults():
+    def create_db1():
+        db1 = connect(":memory:")
+        db1.execute("CREATE TABLE foo (a PRIMARY KEY, b DEFAULT 0);")
+        db1.execute("INSERT INTO foo (a) VALUES (1);")
+        db1.execute("SELECT crsql_as_crr('foo');")
+        db1.commit()
+        return db1
+
+    def create_db2():
+        db2 = connect(":memory:")
+        db2.execute("CREATE TABLE foo (a PRIMARY KEY, b);")
+        db2.execute("INSERT INTO foo VALUES (1, 2);")
+        db2.execute("SELECT crsql_as_crr('foo');")
+        db2.commit()
+        return db2
+
+    # test merging from thing with records (db2) to thing without records for default cols (db1)
+    db1 = create_db1()
+    db2 = create_db2()
+
+    sync_left_to_right(db2, db1, 0)
+
+    changes = db1.execute("SELECT * FROM crsql_changes").fetchall()
+    # pprint.pprint(changes)
+
+    close(db1)
+    close(db2)
+
+    db1 = create_db1()
+    db2 = create_db2()
+
+    sync_left_to_right(db1, db2, 0)
+
+    changes = db2.execute("SELECT * FROM crsql_changes").fetchall()
+    # pprint.pprint(changes)
+
+    # test merging from thing without records (db1) to thing with records (db2)
+
+    # test merging between two dbs both which have no records for the default thing
+
+    # if the merge creates a new row will default still correctly lose even if it would win on value?
+
+    # try again but with a default value and where that default is larger that the value a user explicitly set...
+    # should not the default be retained in that case? Under normal rules but the new rules are:
+    # tie goes to greatest value unless that value is default then default is overruled.
+
+    None
+
+
+def test_merging_on_defaults2():
+    def create_db1():
+        db1 = connect(":memory:")
+        db1.execute("CREATE TABLE foo (a PRIMARY KEY, b DEFAULT 0);")
+        db1.execute("SELECT crsql_as_crr('foo');")
+        db1.commit()
+
+        db1.execute("INSERT INTO foo (a) VALUES (1);")
+        db1.commit()
+
+        db1.execute("SELECT crsql_begin_alter('foo')")
+        db1.execute("ALTER TABLE foo ADD COLUMN c DEFAULT 0;")
+        db1.execute("SELECT crsql_commit_alter('foo')")
+        db1.commit()
+        return db1
+
+    def create_db2():
+        db2 = connect(":memory:")
+        db2.execute("CREATE TABLE foo (a PRIMARY KEY, b DEFAULT 0);")
+        db2.execute("SELECT crsql_as_crr('foo');")
+        db2.commit()
+
+        db2.execute("SELECT crsql_begin_alter('foo')")
+        db2.execute("ALTER TABLE foo ADD COLUMN c DEFAULT 0;")
+        db2.execute("SELECT crsql_commit_alter('foo')")
+        db2.commit()
+
+        db2.execute("INSERT INTO foo (a,b,c) VALUES (1,2,3);")
+        db2.commit()
+        return db2
+
+    # test merging from thing with records (db2) to thing without records for default cols (db1)
+    db1 = create_db1()
+    db2 = create_db2()
+
+    pprint.pprint(db1.execute("SELECT * FROM foo__crsql_clock").fetchall())
+
+    sync_left_to_right(db2, db1, 0)
+
+    changes = db1.execute("SELECT * FROM crsql_changes").fetchall()
+    pprint.pprint(changes)
+
+    close(db1)
+    close(db2)
+
+    db1 = create_db1()
+    db2 = create_db2()
+
+    sync_left_to_right(db1, db2, 0)
+
+    changes = db2.execute("SELECT * FROM crsql_changes").fetchall()
+    pprint.pprint(changes)
+
+# Row exists but col added thus no defaults backfilled
+
+# We have a comprehensive merge test in nodejs. We should port it to python at some point and
+# keep all our correctness tests here.
 
 
 def test_merge():

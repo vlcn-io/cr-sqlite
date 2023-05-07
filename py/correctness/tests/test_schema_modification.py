@@ -126,12 +126,6 @@ def test_backfill_col_add():
     # Given we only migrate against compatible schema versions there's no need to create
     # a record of a default value. The other node will have the same default or, if they wrote a value,
     # a value which takes precedence.
-    # TODO: test that this merging with default values works as expected.
-    # will we:
-    # a. allow the merge because no clock entry was found?
-    # b. fail becuase no clock entry was found?
-    # the test needs the _row_ to exist on both node but _columns_ to be missing metadata due
-    # to being set to defaults.
     assert (changes == [('todo', '1', 'name', "'cook'"),
                         ('todo', '1', 'complete', '0'),
                         ('todo', '1', 'list', "'home'")])
@@ -396,9 +390,6 @@ def test_add_col_through_12step():
                         ('foo', '3', 'age', '44', 2, 1, None)])
 
 
-# TODO: if we do optimize to not set columns with default values
-# then we could miss an insert of just the pk column.
-
 def test_pk_only_table_backfill():
     c = connect(":memory:")
     c.execute("CREATE TABLE foo (id PRIMARY KEY);")
@@ -535,6 +526,7 @@ def test_remove_col_from_pk():
     # TODO: this is wrong, right?
     # DB version for the first two rows should be 2.....
     # Why is it 1 here?
+    # The first two rows would be re-created, no?
     assert (changes == [('foo', '1', 'c', '3', 1, 1, None),
                         ('foo', '4', 'c', '6', 1, 1, None),
                         ('foo', '1', 'b', '2', 2, 1, None),

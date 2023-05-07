@@ -101,7 +101,6 @@ def test_changes_since():
         ("user", "1", "name", "'Javi'", 1, 1, siteid),
     ]
 
-    # pprint.pprint(rows)
     assert (rows == expected)
 
     update_data(dbs[0])
@@ -130,7 +129,6 @@ def test_delete():
     db.commit()
 
     rows = get_changes_since(db, 0, 'FF')
-    # pprint.pprint(rows)
     # TODO: we should have the network layer collapse these events or do it ourselves.
     # given we have past events that we're missing data for, they're now marked off as deletes
     # TODO: should deletes not get a proper version? Would be better for ordering and chunking replications
@@ -195,8 +193,11 @@ def test_merging_on_defaults():
 
     sync_left_to_right(db2, db1, 0)
 
+    # db1 has changes from db2
+    # db2 set b to 2 this should be the winner
     changes = db1.execute("SELECT * FROM crsql_changes").fetchall()
-    # pprint.pprint(changes)
+    # w a db version change since a write happened
+    assert (changes == [('foo', '1', 'b', '2', 1, 2, None)])
 
     close(db1)
     close(db2)
@@ -207,7 +208,9 @@ def test_merging_on_defaults():
     sync_left_to_right(db1, db2, 0)
 
     changes = db2.execute("SELECT * FROM crsql_changes").fetchall()
-    # pprint.pprint(changes)
+    # db1 into db2
+    # db2 should still win w. no db version change since no write happened
+    assert (changes == [('foo', '1', 'b', '2', 1, 1, None)])
 
     # test merging from thing without records (db1) to thing with records (db2)
 
@@ -222,10 +225,13 @@ def test_merging_on_defaults():
     None
 
 
+# DB1 has a row with no clock records (added during schema modification)
+# DB2 has a row with all columns having clock records since value was set explicityl
+# The default value with no records should always be overridden in all cases
 def test_merging_on_defaults2():
     def create_db1():
         db1 = connect(":memory:")
-        db1.execute("CREATE TABLE foo (a PRIMARY KEY, b DEFAULT 0);")
+        db1.execute("CREATE TABLE foo (a PRIMARY KEY, b DEFAULT 4);")
         db1.execute("SELECT crsql_as_crr('foo');")
         db1.commit()
 
@@ -233,6 +239,8 @@ def test_merging_on_defaults2():
         db1.commit()
 
         db1.execute("SELECT crsql_begin_alter('foo')")
+        # Test with higher than incoming value and lower than incoming value
+        # defaults
         db1.execute("ALTER TABLE foo ADD COLUMN c DEFAULT 0;")
         db1.execute("SELECT crsql_commit_alter('foo')")
         db1.commit()
@@ -240,7 +248,7 @@ def test_merging_on_defaults2():
 
     def create_db2():
         db2 = connect(":memory:")
-        db2.execute("CREATE TABLE foo (a PRIMARY KEY, b DEFAULT 0);")
+        db2.execute("CREATE TABLE foo (a PRIMARY KEY, b DEFAULT 4);")
         db2.execute("SELECT crsql_as_crr('foo');")
         db2.commit()
 
@@ -257,12 +265,11 @@ def test_merging_on_defaults2():
     db1 = create_db1()
     db2 = create_db2()
 
-    pprint.pprint(db1.execute("SELECT * FROM foo__crsql_clock").fetchall())
-
     sync_left_to_right(db2, db1, 0)
 
     changes = db1.execute("SELECT * FROM crsql_changes").fetchall()
-    pprint.pprint(changes)
+    assert (changes == [('foo', '1', 'b', '4', 1, 1, None),
+            ('foo', '1', 'c', '3', 1, 2, None)])
 
     close(db1)
     close(db2)
@@ -273,7 +280,142 @@ def test_merging_on_defaults2():
     sync_left_to_right(db1, db2, 0)
 
     changes = db2.execute("SELECT * FROM crsql_changes").fetchall()
-    pprint.pprint(changes)
+    assert (changes == [('foo', '1', 'c', '3', 1, 1, None),
+                        # TODO: should not the db version here be 2?
+                        ('foo', '1', 'b', '4', 1, 1, None)])
+
+
+def create_basic_db():
+    db = connect(":memory:")
+    db.execute("CREATE TABLE foo (a PRIMARY KEY, b);")
+    db.execute("SELECT crsql_as_crr('foo');")
+    db.commit()
+    return db
+
+
+def test_merge_same():
+    def make_dbs():
+        db1 = create_basic_db()
+        db2 = create_basic_db()
+
+        db1.execute("INSERT INTO foo (a,b) VALUES (1,2);")
+        db1.commit()
+
+        db2.execute("INSERT INTO foo (a,b) VALUES (1,2);")
+        db2.commit()
+        return (db1, db2)
+
+    (db1, db2) = make_dbs()
+    sync_left_to_right(db1, db2, 0)
+    changes = db2.execute("SELECT * FROM crsql_changes").fetchall()
+    # all at base version
+    assert (changes == [('foo', '1', 'b', '2', 1, 1, None)])
+
+    (db1, db2) = make_dbs()
+    sync_left_to_right(db2, db1, 0)
+    changes = db2.execute("SELECT * FROM crsql_changes").fetchall()
+    # all at base version
+    assert (changes == [('foo', '1', 'b', '2', 1, 1, None)])
+
+
+def test_merge_matching_clocks_lesser_value():
+    def make_dbs():
+        db1 = create_basic_db()
+        db2 = create_basic_db()
+
+        db1.execute("INSERT INTO foo (a,b) VALUES (1,1);")
+        db1.commit()
+
+        db2.execute("INSERT INTO foo (a,b) VALUES (1,2);")
+        db2.commit()
+        return (db1, db2)
+
+    (db1, db2) = make_dbs()
+    sync_left_to_right(db1, db2, 0)
+    changes = db2.execute("SELECT * FROM crsql_changes").fetchall()
+    # no change since incoming is lesser
+    assert (changes == [('foo', '1', 'b', '2', 1, 1, None)])
+
+    (db1, db2) = make_dbs()
+    sync_left_to_right(db2, db1, 0)
+    changes = db1.execute("SELECT * FROM crsql_changes").fetchall()
+    # change since incoming is greater
+    assert (changes == [('foo', '1', 'b', '2', 1, 2, None)])
+
+
+def test_merge_larger_clock_larger_value():
+    def make_dbs():
+        db1 = create_basic_db()
+        db2 = create_basic_db()
+
+        db1.execute("INSERT INTO foo (a,b) VALUES (1,2);")
+        db1.commit()
+        db1.execute("UPDATE foo SET b = 3 WHERE a = 1;")
+        db1.commit()
+
+        db2.execute("INSERT INTO foo (a,b) VALUES (1,1);")
+        db2.commit()
+        return (db1, db2)
+
+    (db1, db2) = make_dbs()
+    sync_left_to_right(db1, db2, 0)
+    changes = db2.execute("SELECT * FROM crsql_changes").fetchall()
+    assert (changes == [('foo', '1', 'b', '3', 2, 2, None)])
+
+    (db1, db2) = make_dbs()
+    sync_left_to_right(db2, db1, 0)
+    changes = db1.execute("SELECT * FROM crsql_changes").fetchall()
+    assert (changes == [('foo', '1', 'b', '3', 2, 2, None)])
+
+
+def test_merge_larger_clock_smaller_value():
+    def make_dbs():
+        db1 = create_basic_db()
+        db2 = create_basic_db()
+
+        db1.execute("INSERT INTO foo (a,b) VALUES (1,2);")
+        db1.commit()
+        db1.execute("UPDATE foo SET b = 0 WHERE a = 1;")
+        db1.commit()
+
+        db2.execute("INSERT INTO foo (a,b) VALUES (1,2);")
+        db2.commit()
+        return (db1, db2)
+
+    (db1, db2) = make_dbs()
+    sync_left_to_right(db1, db2, 0)
+    changes = db2.execute("SELECT * FROM crsql_changes").fetchall()
+    assert (changes == [('foo', '1', 'b', '0', 2, 2, None)])
+
+    (db1, db2) = make_dbs()
+    sync_left_to_right(db2, db1, 0)
+    changes = db1.execute("SELECT * FROM crsql_changes").fetchall()
+    assert (changes == [('foo', '1', 'b', '0', 2, 2, None)])
+
+
+def test_merge_larger_clock_same_value():
+    def make_dbs():
+        db1 = create_basic_db()
+        db2 = create_basic_db()
+
+        db1.execute("INSERT INTO foo (a,b) VALUES (1,1);")
+        db1.commit()
+        db1.execute("UPDATE foo SET b = 2 WHERE a = 1;")
+        db1.commit()
+
+        db2.execute("INSERT INTO foo (a,b) VALUES (1,2);")
+        db2.commit()
+        return (db1, db2)
+
+    (db1, db2) = make_dbs()
+    sync_left_to_right(db1, db2, 0)
+    changes = db2.execute("SELECT * FROM crsql_changes").fetchall()
+    assert (changes == [('foo', '1', 'b', '2', 2, 2, None)])
+
+    (db1, db2) = make_dbs()
+    sync_left_to_right(db2, db1, 0)
+    changes = db1.execute("SELECT * FROM crsql_changes").fetchall()
+    assert (changes == [('foo', '1', 'b', '2', 2, 2, None)])
 
 # Row exists but col added thus no defaults backfilled
 

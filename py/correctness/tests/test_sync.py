@@ -181,7 +181,7 @@ def test_merging_on_defaults():
 
     def create_db2():
         db2 = connect(":memory:")
-        db2.execute("CREATE TABLE foo (a PRIMARY KEY, b);")
+        db2.execute("CREATE TABLE foo (a PRIMARY KEY, b DEFAULT 0);")
         db2.execute("INSERT INTO foo VALUES (1, 2);")
         db2.execute("SELECT crsql_as_crr('foo');")
         db2.commit()
@@ -223,6 +223,73 @@ def test_merging_on_defaults():
     # tie goes to greatest value unless that value is default then default is overruled.
 
     None
+
+
+# DB2 will set a value for the col that is a default
+# this value will be less than the default
+def test_merging_larger_backfilled_default():
+    def create_dbs():
+        db1 = connect(":memory:")
+        db1.execute("CREATE TABLE foo (a PRIMARY KEY, b DEFAULT 4);")
+        db1.execute("INSERT INTO foo (a) VALUES (1);")
+        db1.execute("SELECT crsql_as_crr('foo');")
+        db1.commit()
+
+        db2 = connect(":memory:")
+        db2.execute("CREATE TABLE foo (a PRIMARY KEY, b DEFAULT 4);")
+        db2.execute("SELECT crsql_as_crr('foo');")
+        db2.commit()
+
+        db2.execute("INSERT INTO foo (a,b) VALUES (1,2);")
+        db2.commit()
+
+        return (db1, db2)
+
+    (db1, db2) = create_dbs()
+
+    sync_left_to_right(db1, db2, 0)
+    changes = db2.execute("SELECT * FROM crsql_changes").fetchall()
+    # db version is pushed since 4 wins the col_version tie
+    # col version stays since 1 is the max of winner and loser.
+    assert (changes == [('foo', '1', 'b', '4', 1, 2, None)])
+
+
+def test_merging_larger():
+    None
+
+
+# We had a case where we set `VALUE` in `crsql_master` to `TEXT` type
+# this would cause db versions to get stuck if we required tracking a version
+# post compaction.
+def test_db_version_moves_as_expected_post_alter():
+    db = connect(":memory:")
+    db.execute("CREATE TABLE foo (a PRIMARY KEY, b);")
+    db.execute("SELECT crsql_as_crr('foo');")
+    db.commit()
+
+    db.execute("INSERT INTO foo (a, b) VALUES (1, 2);")
+    db.commit()
+
+    db.execute("SELECT crsql_begin_alter('foo');")
+    db.execute("ALTER TABLE foo ADD COLUMN c;")
+    db.execute("SELECT crsql_commit_alter('foo');")
+    db.commit()
+
+    db.execute("INSERT INTO foo (a, b, c) VALUES (2, 3, 4);")
+    db.commit()
+    db.execute("INSERT INTO foo (a, b, c) VALUES (3, 4, 5);")
+    db.commit()
+    db.execute("INSERT INTO foo (a, b, c) VALUES (4, 4, 5);")
+    db.commit()
+
+    changes = db.execute("SELECT * FROM crsql_changes").fetchall()
+    assert (changes == [('foo', '1', 'b', '2', 1, 1, None),
+                        ('foo', '2', 'b', '3', 1, 2, None),
+                        ('foo', '2', 'c', '4', 1, 2, None),
+                        ('foo', '3', 'b', '4', 1, 3, None),
+                        ('foo', '3', 'c', '5', 1, 3, None),
+                        ('foo', '4', 'b', '4', 1, 4, None),
+                        ('foo', '4', 'c', '5', 1, 4, None)])
 
 
 # DB1 has a row with no clock records (added during schema modification)
@@ -280,9 +347,12 @@ def test_merging_on_defaults2():
     sync_left_to_right(db1, db2, 0)
 
     changes = db2.execute("SELECT * FROM crsql_changes").fetchall()
+    # db2 c 3 wins given columns with no value after an alter
+    # do no merging
     assert (changes == [('foo', '1', 'c', '3', 1, 1, None),
-                        # TODO: should not the db version here be 2?
-                        ('foo', '1', 'b', '4', 1, 1, None)])
+                        # Move db version since b lost on db2.
+                        # b had the value 2 on db2.
+                        ('foo', '1', 'b', '4', 1, 2, None)])
 
 
 def create_basic_db():

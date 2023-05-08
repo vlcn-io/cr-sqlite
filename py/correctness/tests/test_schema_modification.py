@@ -195,6 +195,7 @@ def test_delete_sentinels_not_lost():
     c.commit()
 
     changes = c.execute(changes_query).fetchall()
+    pprint.pprint(changes)
     assert (changes == [('todo', '1', '__crsql_del', None),
                         ('todo', '1', '__crsql_del', None),
                         ('todo', '1', '__crsql_del', None)])
@@ -487,7 +488,7 @@ def test_remove_rows_on_alter():
 
     changes = c.execute(full_changes_query).fetchall()
     # TODO: db version is wrong here. Should be 2, no?
-    # TODO: clock tabl itself should be cleared too!
+    # TODO: clock table itself should be cleared too!
     assert (changes == [('foo', '1', '__crsql_del', None, 1, 1, None),
                         ('foo', '3', '__crsql_del', None, 1, 1, None)])
 

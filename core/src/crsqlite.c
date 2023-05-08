@@ -460,13 +460,58 @@ int crsql_compactPostAlter(sqlite3 *db, const char *tblName,
       return rc;
     }
   } else {
-    // clock table is still relevant, just compact it
+    // clock table is still relevant but needs compacting
+    // in case columns were removed during the migration
+
+    // First delete entries that no longer have a column
     zSql = sqlite3_mprintf(
         "DELETE FROM \"%w__crsql_clock\" WHERE \"__crsql_col_name\" NOT IN "
         "(SELECT name FROM pragma_table_info(%Q) UNION SELECT '%s' UNION "
         "SELECT "
         "'%s')",
         tblName, tblName, DELETE_CID_SENTINEL, PKS_ONLY_CID_SENTINEL);
+    rc = sqlite3_exec(db, zSql, 0, 0, errmsg);
+    sqlite3_free(zSql);
+    if (rc != SQLITE_OK) {
+      return rc;
+    }
+
+    // Next delete entries that no longer have a row
+    sqlite3_str *pDynStr = sqlite3_str_new(db);
+    if (pDynStr == 0) {
+      return SQLITE_NOMEM;
+    }
+    sqlite3_str_appendf(
+        pDynStr,
+        "DELETE FROM \"%w__crsql_clock\" WHERE NOT EXISTS (SELECT 1 FROM "
+        "\"%w\" WHERE ",
+        tblName);
+    // get table info
+    rc = crsql_ensureTableInfosAreUpToDate(db, pExtData, errmsg);
+    if (rc != SQLITE_OK) {
+      zSql = sqlite3_str_finish(pDynStr);
+      sqlite3_free(zSql);
+      return rc;
+    }
+    crsql_TableInfo *tblInfo = crsql_findTableInfo(
+        pExtData->zpTableInfos, pExtData->tableInfosLen, (const char *)tblName);
+    if (tblInfo == 0) {
+      zSql = sqlite3_str_finish(pDynStr);
+      sqlite3_free(zSql);
+      return SQLITE_ERROR;
+    }
+    // for each pk col, append \"%w\".\"%w\" = \"%w__crsql_clock\".\"%w\"
+    // to the where clause then close the statement.
+    for (size_t i = 0; i < tblInfo->pksLen; i++) {
+      if (i > 0) {
+        sqlite3_str_appendall(pDynStr, " AND ");
+      }
+      sqlite3_str_appendf(pDynStr, "\"%w\".\"%w\" = \"%w__crsql_clock\".\"%w\"",
+                          tblName, tblInfo->pks[i].name, tblName,
+                          tblInfo->pks[i].name);
+    }
+    sqlite3_str_appendall(pDynStr, "LIMIT 1)");
+    zSql = sqlite3_str_finish(pDynStr);
     rc = sqlite3_exec(db, zSql, 0, 0, errmsg);
     sqlite3_free(zSql);
     if (rc != SQLITE_OK) {

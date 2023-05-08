@@ -34,7 +34,6 @@ def test_c1_3_quoted_identifiers():
 
 def test_c1_c5_compound_primary_key():
     c = connect(":memory:")
-    # TODO: this was a silent failure when `create` as typoed
     c.execute("create table foo (a, b, c, primary key (a, b))")
     c.execute("select crsql_as_crr('foo')")
 
@@ -523,14 +522,11 @@ def test_remove_col_from_pk():
     c.commit()
 
     changes = c.execute(full_changes_query).fetchall()
-    # TODO: this is wrong, right?
-    # DB version for the first two rows should be 2.....
-    # Why is it 1 here?
-    # The first two rows would be re-created, no?
-    assert (changes == [('foo', '1', 'c', '3', 1, 1, None),
-                        ('foo', '4', 'c', '6', 1, 1, None),
-                        ('foo', '1', 'b', '2', 2, 1, None),
-                        ('foo', '4', 'b', '5', 2, 1, None)])
+    assert (changes == [('foo', '1', 'b', '2', 2, 1, None),
+                        ('foo', '1', 'c', '3', 2, 1, None),
+                        ('foo', '4', 'b', '5', 2, 1, None),
+                        ('foo', '4', 'c', '6', 2, 1, None)])
+
     None
 
 

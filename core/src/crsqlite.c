@@ -415,26 +415,65 @@ int crsql_compactPostAlter(sqlite3 *db, const char *tblName,
   if (rc != SQLITE_OK) {
     return rc;
   }
+  char *zSql = 0;
   sqlite3_int64 currentDbVersion = pExtData->dbVersion;
 
-  char *zSql = sqlite3_mprintf(
-      "DELETE FROM \"%w__crsql_clock\" WHERE \"__crsql_col_name\" NOT IN "
-      "(SELECT name FROM pragma_table_info(%Q) UNION SELECT '%s' UNION SELECT "
-      "'%s')",
-      tblName, tblName, DELETE_CID_SENTINEL, PKS_ONLY_CID_SENTINEL);
-  rc = sqlite3_exec(db, zSql, 0, 0, errmsg);
+  // If primary key columns changes
+  // We need to drop, re-create and backfill
+  // the clock table.
+  // A change in pk columns means a change in all identities
+  // of all rows.
+  // We can determine this by comparing pks on clock table vs
+  // pks on source table
+  sqlite3_stmt *pStmt = 0;
+  zSql = sqlite3_mprintf(
+      "SELECT count(name) FROM (SELECT name FROM pragma_table_info('%q') "
+      "WHERE pk "
+      "> 0 AND name NOT IN "
+      "(SELECT name FROM pragma_table_info('%q__crsql_clock') WHERE pk > 0) "
+      "UNION "
+      "SELECT name FROM pragma_table_info('%q__crsql_clock') WHERE pk > 0 "
+      "AND "
+      "name NOT IN (SELECT name FROM pragma_table_info('%q') WHERE pk > 0) "
+      "AND "
+      "name != '__crsql_col_name');",
+      tblName, tblName, tblName, tblName);
+  rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
   sqlite3_free(zSql);
   if (rc != SQLITE_OK) {
     return rc;
   }
-
-  // we're in a tx so this likely never gets the new version
-  rc = crsql_getDbVersion(db, pExtData, errmsg);
-  if (rc != SQLITE_OK) {
+  rc = sqlite3_step(pStmt);
+  if (rc != SQLITE_ROW) {
     return rc;
   }
 
-  sqlite3_stmt *pStmt;
+  int pkDiff = sqlite3_column_int(pStmt, 0);
+  sqlite3_finalize(pStmt);
+
+  if (pkDiff > 0) {
+    // drop the clock table so we can re-create it
+    zSql = sqlite3_mprintf("DROP TABLE \"%w__crsql_clock\"", tblName);
+    rc = sqlite3_exec(db, zSql, 0, 0, errmsg);
+    sqlite3_free(zSql);
+    if (rc != SQLITE_OK) {
+      return rc;
+    }
+  } else {
+    // clock table is still relevant, just compact it
+    zSql = sqlite3_mprintf(
+        "DELETE FROM \"%w__crsql_clock\" WHERE \"__crsql_col_name\" NOT IN "
+        "(SELECT name FROM pragma_table_info(%Q) UNION SELECT '%s' UNION "
+        "SELECT "
+        "'%s')",
+        tblName, tblName, DELETE_CID_SENTINEL, PKS_ONLY_CID_SENTINEL);
+    rc = sqlite3_exec(db, zSql, 0, 0, errmsg);
+    sqlite3_free(zSql);
+    if (rc != SQLITE_OK) {
+      return rc;
+    }
+  }
+
   rc = sqlite3_prepare_v2(db,
                           "INSERT OR REPLACE INTO crsql_master (key, value) "
                           "VALUES ('pre_compact_dbversion', ?)",

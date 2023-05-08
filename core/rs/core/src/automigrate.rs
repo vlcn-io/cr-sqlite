@@ -386,7 +386,7 @@ fn maybe_recreate_index(
         // drop to finalize those statements
         drop(fetch_is_unique_mem);
         drop(fetch_is_unique_local);
-        return recreate_index(local_db, table, idx, mem_db);
+        return recreate_index(local_db, idx);
     }
 
     let fetch_idx_cols_mem = mem_db.prepare_v2(IDX_COLS_SQL)?;
@@ -400,25 +400,20 @@ fn maybe_recreate_index(
             // drop to finalize those statements
             drop(fetch_idx_cols_local);
             drop(fetch_idx_cols_mem);
-            return recreate_index(local_db, table, idx, mem_db);
+            return recreate_index(local_db, idx);
         }
         fetch_idx_cols_mem.step()?;
         fetch_idx_cols_local.step()?;
     }
 
     if mem_result != local_result {
-        return recreate_index(local_db, table, idx, mem_db);
+        return recreate_index(local_db, idx);
     }
 
     Ok(ResultCode::OK)
 }
 
-fn recreate_index(
-    local_db: *mut sqlite3,
-    table: &str,
-    idx: &str,
-    mem_db: &ManagedConnection,
-) -> Result<ResultCode, ResultCode> {
+fn recreate_index(local_db: *mut sqlite3, idx: &str) -> Result<ResultCode, ResultCode> {
     let indices = vec![idx.to_string()];
     drop_indices(local_db, &indices)?;
     // no need to call add_indices

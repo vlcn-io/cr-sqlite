@@ -195,10 +195,7 @@ def test_delete_sentinels_not_lost():
     c.commit()
 
     changes = c.execute(changes_query).fetchall()
-    pprint.pprint(changes)
-    assert (changes == [('todo', '1', '__crsql_del', None),
-                        ('todo', '1', '__crsql_del', None),
-                        ('todo', '1', '__crsql_del', None)])
+    assert (changes == [('todo', '1', '__crsql_del', None)])
 
 
 def test_pk_only_sentinels():
@@ -470,6 +467,8 @@ def test_add_column_and_set_column():
                         ('foo', '3', 'age', '44', 2, 1, None)])
 
 
+# TODO: users can not remove rows during a migration
+# They need to remove the rows then start the migration.
 def test_remove_rows_on_alter():
     c = connect(":memory:")
     c.execute("CREATE TABLE foo (a PRIMARY KEY, b);")
@@ -487,10 +486,20 @@ def test_remove_rows_on_alter():
     c.commit()
 
     changes = c.execute(full_changes_query).fetchall()
-    # TODO: db version is wrong here. Should be 2, no?
-    # TODO: clock table itself should be cleared too!
-    assert (changes == [('foo', '1', '__crsql_del', None, 1, 1, None),
-                        ('foo', '3', '__crsql_del', None, 1, 1, None)])
+    # If we are to allow users to remove rows during a migration,
+    # this would need to track `__crsql_del` at the next db version
+    # for every row that was removed.
+    # We could discover this by checking the metadata table against
+    # the table itself. If there are rows in the table which are not
+    # in the metadata table, we need to backfill those rows with
+    # __crsql_del for the primary key.
+    # Does it matter to create delete records on migration?
+    # If the migration is the same on all nodes then no. i.e., it is
+    # guaranteed to delete the same rows on all nodes.
+    # For maximal safety we should record delete records, however.
+    # Current workaround is for the user to delete records _then_
+    # start `crsql_begin_alter` for that table.
+    assert (changes == [])
 
 
 # TODO: this doesn't work at the moment. We do not have a way to diff

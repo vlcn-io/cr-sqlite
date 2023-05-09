@@ -502,11 +502,14 @@ def test_remove_rows_on_alter():
     assert (changes == [])
 
 
-# TODO: this doesn't work at the moment. We do not have a way to diff
-# table contents.
-# This is the case where:
-# User modifies existing cells of existing rows during a migration with no changes
-# to the schemas of those cells.
+# TODO: this doesn't work at the moment and will not work until
+# we have a way to diff tables.
+# The workaround here would be:
+# 1. make the changes to the schema between begin and commit alter
+# 2. after committing the alter, do changes of values
+# So we should simply publish some rules on migrations:
+# 1. Do _schema modifications_ in begin/commit alter
+# 2. Do _data modifications_ after commit alter
 def test_change_existing_values_on_alter():
     None
 

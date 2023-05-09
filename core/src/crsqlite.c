@@ -486,7 +486,7 @@ int crsql_compactPostAlter(sqlite3 *db, const char *tblName,
         "DELETE FROM \"%w__crsql_clock\" WHERE __crsql_col_name != "
         "'__crsql_del' AND NOT EXISTS (SELECT 1 FROM "
         "\"%w\" WHERE ",
-        tblName);
+        tblName, tblName);
     // get table info
     rc = crsql_ensureTableInfosAreUpToDate(db, pExtData, errmsg);
     if (rc != SQLITE_OK) {

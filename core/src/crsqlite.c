@@ -254,7 +254,8 @@ int crsql_createClockTable(sqlite3 *db, crsql_TableInfo *tableInfo,
  * all triggers, views, tables
  */
 static int createCrr(sqlite3_context *context, sqlite3 *db,
-                     const char *schemaName, const char *tblName, char **err) {
+                     const char *schemaName, const char *tblName,
+                     int isCommitAlter, char **err) {
   int rc = SQLITE_OK;
   crsql_TableInfo *tableInfo = 0;
 
@@ -295,7 +296,7 @@ static int createCrr(sqlite3_context *context, sqlite3 *db,
     nonPkNames[i] = tableInfo->nonPks[i].name;
   }
   rc = crsql_backfill_table(context, tblName, pkNames, tableInfo->pksLen,
-                            nonPkNames, tableInfo->nonPksLen);
+                            nonPkNames, tableInfo->nonPksLen, isCommitAlter);
   sqlite3_free(pkNames);
   sqlite3_free(nonPkNames);
 
@@ -355,7 +356,7 @@ static void crsqlMakeCrrFunc(sqlite3_context *context, int argc,
     return;
   }
 
-  rc = createCrr(context, db, schemaName, tblName, &errmsg);
+  rc = createCrr(context, db, schemaName, tblName, 0, &errmsg);
   if (rc != SQLITE_OK) {
     sqlite3_result_error(context, errmsg, -1);
     sqlite3_result_error_code(context, rc);
@@ -562,7 +563,7 @@ static void crsqlCommitAlterFunc(sqlite3_context *context, int argc,
   crsql_ExtData *pExtData = (crsql_ExtData *)sqlite3_user_data(context);
   rc = crsql_compactPostAlter(db, tblName, pExtData, &errmsg);
   if (rc == SQLITE_OK) {
-    rc = createCrr(context, db, schemaName, tblName, &errmsg);
+    rc = createCrr(context, db, schemaName, tblName, 1, &errmsg);
   }
   if (rc == SQLITE_OK) {
     rc = sqlite3_exec(db, "RELEASE alter_crr", 0, 0, &errmsg);

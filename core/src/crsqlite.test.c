@@ -354,7 +354,7 @@ static void testSelectChangesAfterChangingColumnName() {
   // insert some rows post schema change
   rc = sqlite3_exec(db, "INSERT INTO foo VALUES (2, 3);", 0, 0, 0);
   rc += sqlite3_prepare_v2(
-      db, "SELECT * FROM crsql_changes WHERE db_version > 1", -1, &pStmt, 0);
+      db, "SELECT * FROM crsql_changes WHERE db_version >= 1", -1, &pStmt, 0);
   assert(rc == SQLITE_OK);
   numRows = 0;
   // Columns that no long exist post-alter should not

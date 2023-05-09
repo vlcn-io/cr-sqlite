@@ -100,6 +100,7 @@ pub extern "C" fn crsql_backfill_table(
     pk_cols_len: c_int,
     non_pk_cols: *const *const c_char,
     non_pk_cols_len: c_int,
+    is_commit_alter: c_int,
 ) -> c_int {
     let table = unsafe { CStr::from_ptr(table).to_str() };
     let pk_cols = unsafe {
@@ -120,7 +121,7 @@ pub extern "C" fn crsql_backfill_table(
     let result = match (table, pk_cols, non_pk_cols) {
         (Ok(table), Ok(pk_cols), Ok(non_pk_cols)) => {
             let db = context.db_handle();
-            backfill_table(db, table, pk_cols, non_pk_cols)
+            backfill_table(db, table, pk_cols, non_pk_cols, is_commit_alter != 0)
         }
         _ => Err(ResultCode::ERROR),
     };

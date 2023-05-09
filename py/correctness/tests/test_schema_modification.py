@@ -157,8 +157,11 @@ def test_merging_columns_with_no_metadata():
 def test_backfill_clocks_on_rename():
     # renaming a column should backfill the clock table with the new name
     # and drop entries for the old name
+    # TODO: when we have our custom vtab for crr definnition
+    # we can track renames directly.
     c = setup_alter_test()
     c.execute("INSERT INTO todo VALUES (2, 'clean', 0, 'home');")
+    c.commit()
     c.execute("SELECT crsql_begin_alter('todo');")
     c.execute("ALTER TABLE todo RENAME name TO task;")
     c.execute("SELECT crsql_commit_alter('todo');")
@@ -169,10 +172,6 @@ def test_backfill_clocks_on_rename():
                         ('todo', '1', 'list', "'home'", 1, 1),
                         ('todo', '2', 'complete', '0', 2, 1),
                         ('todo', '2', 'list', "'home'", 2, 1),
-                        # the original task got its db_version bumped because the column name changed.
-                        # not sure we actually want to do this if it is a rename.. but we can't actually track a rename. A rename looks like a
-                        # drop followed by an add to us.
-                        # On completion of https://github.com/vlcn-io/cr-sqlite/issues/181 we could track renames.
                         ('todo', '1', 'task', "'cook'", 2, 1),
                         ('todo', '2', 'task', "'clean'", 2, 1)])
 
@@ -275,7 +274,9 @@ def test_backfill_moves_dbversion():
 
 
 # Similar to the above test but checks that `crsql_alter` does the right thing.
-def test_backfill_for_alter_moves_dbversion():
+# See comments on create_clock_rows_from_stmt on why we don't bump db version
+# on alter commit.
+def test_backfill_for_alter_does_not_move_dbversion():
     c = connect(":memory:")
     c.execute("CREATE TABLE foo (id PRIMARY KEY, name TEXT DEFAULT NULL);")
     c.execute("INSERT INTO foo VALUES (1, 'bar');")
@@ -305,10 +306,10 @@ def test_backfill_for_alter_moves_dbversion():
     assert (changes ==
             # Existing rows have their existing db_version (1).
             [('foo', '1', 'name', "'bar'", 1, 1, None),
-             # There are no entries for new nullable columns for old rows
-             # New row gets new db version (2).
-             ('foo', '2', 'name', "'baz'", 2, 1, None),
-             ('foo', '2', 'age', '33', 2, 1, None)])
+             # New rows get the current db version given
+             # migrations on other will create convergence.
+             ('foo', '2', 'name', "'baz'", 1, 1, None),
+             ('foo', '2', 'age', '33', 1, 1, None)])
 
 
 def test_add_col_with_default():
@@ -380,11 +381,12 @@ def test_add_col_through_12step():
 
     changes = c.execute(full_changes_query).fetchall()
     assert (changes == [('foo', '3', 'name', 'NULL', 1, 1, None),
-                        # New row (22) appropriately gets new db version
-                        ('foo', '22', 'name', "'baz'", 2, 1, None),
-                        ('foo', '22', 'age', '33', 2, 1, None),
+                        # New row (22) appropriately gets same db version
+                        # see create_clock_rows_from_stmt
+                        ('foo', '22', 'name', "'baz'", 1, 1, None),
+                        ('foo', '22', 'age', '33', 1, 1, None),
                         # age was updated to a new value during migration so db_version appropriately incremented
-                        ('foo', '3', 'age', '44', 2, 1, None)])
+                        ('foo', '3', 'age', '44', 1, 1, None)])
 
 
 def test_pk_only_table_backfill():
@@ -440,8 +442,17 @@ def test_pk_and_default_backfill_post12step_with_new_rows():
 
     changes = c.execute(full_changes_query).fetchall()
     # Backfill should create the rows added during the alter
-    assert (changes == [('foo', '1', 'b', 'NULL', 1, 1,
-            None), ('foo', '2', 'b', 'NULL', 1, 1, None)])
+    # db version is 0 due to assumptions about migrations.
+    # that rows created migrations should be assigned to the current
+    # db version as migrations will generate the same data
+    # on each db.
+    # to do something other than this assumption then the user
+    # can:
+    # 1. do schema alterations in begin/commit alter
+    # 2. do data alterations after commit alter
+    # data alterations will then get new db versions.
+    assert (changes == [('foo', '1', 'b', 'NULL', 0, 1,
+            None), ('foo', '2', 'b', 'NULL', 0, 1, None)])
 
 
 def test_add_column_and_set_column():
@@ -462,9 +473,8 @@ def test_add_column_and_set_column():
     c.commit()
 
     changes = c.execute(full_changes_query).fetchall()
-    # TODO: test that we merge appropriately. Would be creating empty row followed by update
     assert (changes == [('foo', '3', '__crsql_pko', None, 1, 1, None),
-                        ('foo', '3', 'age', '44', 2, 1, None)])
+                        ('foo', '3', 'age', '44', 1, 1, None)])
 
 
 # TODO: users can not remove rows during a migration
@@ -533,10 +543,10 @@ def test_remove_col_from_pk():
     c.commit()
 
     changes = c.execute(full_changes_query).fetchall()
-    assert (changes == [('foo', '1', 'b', '2', 2, 1, None),
-                        ('foo', '1', 'c', '3', 2, 1, None),
-                        ('foo', '4', 'b', '5', 2, 1, None),
-                        ('foo', '4', 'c', '6', 2, 1, None)])
+    assert (changes == [('foo', '1', 'b', '2', 1, 1, None),
+                        ('foo', '1', 'c', '3', 1, 1, None),
+                        ('foo', '4', 'b', '5', 1, 1, None),
+                        ('foo', '4', 'c', '6', 1, 1, None)])
 
     None
 
@@ -562,8 +572,8 @@ def test_remove_pk_column():
     c.execute("SELECT crsql_commit_alter('foo');")
 
     changes = c.execute(full_changes_query).fetchall()
-    assert (changes == [('foo', '2', 'c', '3', 2, 1, None),
-            ('foo', '5', 'c', '6', 2, 1, None)])
+    assert (changes == [('foo', '2', 'c', '3', 1, 1, None),
+            ('foo', '5', 'c', '6', 1, 1, None)])
 
 
 def test_add_existing_col_to_pk():
@@ -585,8 +595,8 @@ def test_add_existing_col_to_pk():
     c.execute("SELECT crsql_commit_alter('foo');")
 
     changes = c.execute(full_changes_query).fetchall()
-    assert (changes == [('foo', '1|2', 'c', '3', 2, 1, None),
-            ('foo', '4|5', 'c', '6', 2, 1, None)])
+    assert (changes == [('foo', '1|2', 'c', '3', 1, 1, None),
+            ('foo', '4|5', 'c', '6', 1, 1, None)])
 
 
 def test_add_new_col_to_pk():
@@ -609,8 +619,8 @@ def test_add_new_col_to_pk():
 
     changes = c.execute(full_changes_query).fetchall()
 
-    assert (changes == [('foo', '1|3', 'b', '2', 2, 1, None),
-            ('foo', '4|6', 'b', '5', 2, 1, None)])
+    assert (changes == [('foo', '1|3', 'b', '2', 1, 1, None),
+            ('foo', '4|6', 'b', '5', 1, 1, None)])
 
 
 # DB version isn't bumped but this is fine...
@@ -628,6 +638,7 @@ def test_rename_pk_column():
 
     c.execute("INSERT INTO foo VALUES (1, 2);")
     c.execute("INSERT INTO foo VALUES (4, 5);")
+    c.commit()
 
     c.execute("SELECT crsql_begin_alter('foo');")
     c.execute("CREATE TABLE new_foo(c PRIMARY KEY, b)")
@@ -655,6 +666,7 @@ def test_changing_values_in_primary_key_columns():
 
     c.execute("INSERT INTO foo VALUES (1, 2);")
     c.execute("INSERT INTO foo VALUES (4, 5);")
+    c.commit()
 
     c.execute("SELECT crsql_begin_alter('foo');")
     c.execute("UPDATE foo SET a = 2 WHERE a = 1;")
@@ -662,7 +674,6 @@ def test_changing_values_in_primary_key_columns():
     c.commit()
 
     changes = c.execute(full_changes_query).fetchall()
-    pprint.pprint(changes)
     assert (changes == [('foo', '4', 'b', '5', 1, 1, None),
             ('foo', '2', 'b', '2', 1, 1, None)])
 

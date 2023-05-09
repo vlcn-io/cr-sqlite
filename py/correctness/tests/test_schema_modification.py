@@ -523,8 +523,6 @@ def test_remove_col_from_pk():
     c.execute("INSERT INTO foo VALUES (4, 5, 6);")
     c.commit()
 
-    changes = c.execute(full_changes_query).fetchall()
-
     c.execute("SELECT crsql_begin_alter('foo');")
     c.execute(
         "CREATE TABLE new_foo(a PRIMARY KEY, b, c);")
@@ -543,20 +541,106 @@ def test_remove_col_from_pk():
     None
 
 
+# Like the above test but we completely remove the column
+# rather than just remove it from pk particiaption
 def test_remove_pk_column():
-    None
+    c = connect(":memory:")
+    c.execute("CREATE TABLE foo (a, b, c, PRIMARY KEY (a, b));")
+    c.execute("SELECT crsql_as_crr('foo');")
+    c.commit()
+
+    c.execute("INSERT INTO foo VALUES (1, 2, 3);")
+    c.execute("INSERT INTO foo VALUES (4, 5, 6);")
+    c.commit()
+
+    c.execute("SELECT crsql_begin_alter('foo');")
+    c.execute(
+        "CREATE TABLE new_foo(b PRIMARY KEY, c);")
+    c.execute("INSERT INTO new_foo SELECT b, c FROM foo;")
+    c.execute("DROP TABLE foo;")
+    c.execute("ALTER TABLE new_foo RENAME TO foo;")
+    c.execute("SELECT crsql_commit_alter('foo');")
+
+    changes = c.execute(full_changes_query).fetchall()
+    assert (changes == [('foo', '2', 'c', '3', 2, 1, None),
+            ('foo', '5', 'c', '6', 2, 1, None)])
 
 
 def test_add_existing_col_to_pk():
-    None
+    c = connect(":memory:")
+    c.execute("CREATE TABLE foo (a PRIMARY KEY, b, c);")
+    c.execute("SELECT crsql_as_crr('foo');")
+    c.commit()
+
+    c.execute("INSERT INTO foo VALUES (1, 2, 3);")
+    c.execute("INSERT INTO foo VALUES (4, 5, 6);")
+    c.commit()
+
+    c.execute("SELECT crsql_begin_alter('foo');")
+    c.execute(
+        "CREATE TABLE new_foo(a, b, c, PRIMARY KEY (a, b));")
+    c.execute("INSERT INTO new_foo SELECT * FROM foo;")
+    c.execute("DROP TABLE foo;")
+    c.execute("ALTER TABLE new_foo RENAME TO foo;")
+    c.execute("SELECT crsql_commit_alter('foo');")
+
+    changes = c.execute(full_changes_query).fetchall()
+    assert (changes == [('foo', '1|2', 'c', '3', 2, 1, None),
+            ('foo', '4|5', 'c', '6', 2, 1, None)])
 
 
-def test_add_pk_column():
-    None
+def test_add_new_col_to_pk():
+    c = connect(":memory:")
+    c.execute("CREATE TABLE foo (a PRIMARY KEY, b);")
+    c.execute("SELECT crsql_as_crr('foo');")
+    c.commit()
+
+    c.execute("INSERT INTO foo VALUES (1, 2);")
+    c.execute("INSERT INTO foo VALUES (4, 5);")
+    c.commit()
+
+    c.execute("SELECT crsql_begin_alter('foo');")
+    c.execute(
+        "CREATE TABLE new_foo(a, b, c, PRIMARY KEY (a, c));")
+    c.execute("INSERT INTO new_foo SELECT a, b, b + 1 FROM foo;")
+    c.execute("DROP TABLE foo;")
+    c.execute("ALTER TABLE new_foo RENAME TO foo;")
+    c.execute("SELECT crsql_commit_alter('foo');")
+
+    changes = c.execute(full_changes_query).fetchall()
+
+    assert (changes == [('foo', '1|3', 'b', '2', 2, 1, None),
+            ('foo', '4|6', 'b', '5', 2, 1, None)])
 
 
+# DB version isn't bumped but this is fine...
+# given if someone already synced with us they'll have these
+# rows which will be migrated correctly when they receive the migration.
+# rethink: maybe none of the primary key changing migrations should change
+# db versions? Or none of the migrations should move forward the
+# db version at all???
+# given the migration isn't causing _new rows_ for others...
 def test_rename_pk_column():
-    None
+    c = connect(":memory:")
+    c.execute("CREATE TABLE foo (a PRIMARY KEY, b);")
+    c.execute("SELECT crsql_as_crr('foo');")
+    c.commit()
+
+    c.execute("INSERT INTO foo VALUES (1, 2);")
+    c.execute("INSERT INTO foo VALUES (4, 5);")
+
+    c.execute("SELECT crsql_begin_alter('foo');")
+    c.execute("CREATE TABLE new_foo(c PRIMARY KEY, b)")
+    c.execute("INSERT INTO new_foo SELECT a, b FROM foo;")
+    c.execute("DROP TABLE foo;")
+    c.execute("ALTER TABLE new_foo RENAME TO foo;")
+    c.execute("SELECT crsql_commit_alter('foo');")
+    c.commit()
+
+    changes = c.execute(full_changes_query).fetchall()
+
+    assert (changes == [('foo', '1', 'b', '2', 1, 1, None),
+            ('foo', '4', 'b', '5', 1, 1, None)])
 
 
 def test_pk_only_table_pk_membership():
@@ -564,24 +648,24 @@ def test_pk_only_table_pk_membership():
 
 
 def test_changing_values_in_primary_key_columns():
+    c = connect(":memory:")
+    c.execute("CREATE TABLE foo (a PRIMARY KEY, b);")
+    c.execute("SELECT crsql_as_crr('foo');")
+    c.commit()
 
-    # sqlite doesn't allow altering primary key def in an existing schema. Not even renames.
-    # def test_clock_nuke_on_pk_schema_alter():
-    #     c = setup_alter_test()
-    #     c.execute("SELECT crsql_begin_alter('todo');")
-    #     c.execute("ALTER TABLE todo RENAME id TO todo_id;")
-    #     c.execute("SELECT crsql_commit_alter('todo');")
-    #     c.commit()
-    #     changes = c.execute(changes_query).fetchall()
+    c.execute("INSERT INTO foo VALUES (1, 2);")
+    c.execute("INSERT INTO foo VALUES (4, 5);")
 
-    None
+    c.execute("SELECT crsql_begin_alter('foo');")
+    c.execute("UPDATE foo SET a = 2 WHERE a = 1;")
+    c.execute("SELECT crsql_commit_alter('foo');")
+    c.commit()
+
+    changes = c.execute(full_changes_query).fetchall()
+    pprint.pprint(changes)
+    assert (changes == [('foo', '4', 'b', '5', 1, 1, None),
+            ('foo', '2', 'b', '2', 1, 1, None)])
 
 
 def test_12step_backfill_retains_siteid():
     None
-
-    # TODO: test that we are not compacting out sentinel clock rows
-    # post alter.
-
-    # Do we ever actually backfill? New columns with new data brought over from 12 step, yes we'd need to backfill
-    # in those cases.

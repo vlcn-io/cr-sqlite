@@ -12,6 +12,7 @@ packages:
   - "js/packages/p2p"
   - "js/packages/react"
   - "js/packages/direct-connect-browser"
+  - "js/packages/direct-connect-browser-cy"
   - "js/packages/direct-connect-common"
   - "js/packages/direct-connect-nodejs"
   - "js/packages/rx-query"

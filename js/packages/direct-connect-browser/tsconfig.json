@@ -4,7 +4,6 @@
     "outDir": "./dist/",
     "rootDir": "./src",
     "allowSyntheticDefaultImports": true,
-    "types": ["cypress", "jest"],
     "lib": ["esnext", "dom"]
   },
   "include": ["./src/"],

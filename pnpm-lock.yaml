@@ -200,12 +200,22 @@ importers:
         specifier: workspace:*
         version: link:../xplat-api
     devDependencies:
+      typescript:
+        specifier: ^5.0.4
+        version: 5.0.4
+
+  js/packages/direct-connect-browser-cy:
+    dependencies:
+      '@vlcn.io/direct-connect-browser':
+        specifier: workspace:*
+        version: link:../direct-connect-browser
+    devDependencies:
       '@types/cypress':
         specifier: ^1.1.3
         version: 1.1.3
-      '@types/jest':
-        specifier: ^29.5.0
-        version: 29.5.0
+      '@types/node':
+        specifier: ^20.1.2
+        version: 20.1.2
       cypress:
         specifier: ^12.10.0
         version: 12.10.0
@@ -214,7 +224,7 @@ importers:
         version: 5.0.4
       vite:
         specifier: ^4.2.2
-        version: 4.2.2(@types/node@18.16.1)
+        version: 4.2.2(@types/node@20.1.2)
 
   js/packages/direct-connect-common:
     devDependencies:
@@ -401,7 +411,7 @@ importers:
         version: link:../crsqlite-wasm
       vite:
         specifier: ^4.2.2
-        version: 4.2.2(@types/node@18.16.1)
+        version: 4.2.2(@types/node@20.1.2)
 
   js/packages/sandbox-node:
     dependencies:
@@ -414,7 +424,7 @@ importers:
         version: link:../../../core
       vite:
         specifier: ^4.2.2
-        version: 4.2.2(@types/node@18.16.1)
+        version: 4.2.2(@types/node@20.1.2)
 
   js/packages/server-core:
     dependencies:
@@ -1099,6 +1109,7 @@ packages:
   /@colors/colors@1.5.0:
     resolution: {integrity: sha512-ooWCrlZP11i8GImSjTHYHLkvFDP48nS4+204nGb1RiX/WXYHmJA2III9/e2DWVabCESdW7hBAEzHRqUn9OUVvQ==}
     engines: {node: '>=0.1.90'}
+    requiresBuild: true
 
   /@cypress/request@2.88.11:
     resolution: {integrity: sha512-M83/wfQ1EkspjkE2lNWNV5ui2Cv7UCv1swW1DqljahbzLVWltcsexQh8jYtuS/vzFXP+HySntGM83ZXA9fn17w==}
@@ -1948,6 +1959,10 @@ packages:
 
   /@types/node@18.16.1:
     resolution: {integrity: sha512-DZxSZWXxFfOlx7k7Rv4LAyiMroaxa3Ly/7OOzZO8cBNho0YzAi4qlbrx8W27JGqG57IgR/6J7r+nOJWw6kcvZA==}
+    dev: true
+
+  /@types/node@20.1.2:
+    resolution: {integrity: sha512-CTO/wa8x+rZU626cL2BlbCDzydgnFNgc19h4YvizpTO88MFQxab8wqisxaofQJ/9bLGugRdWIuX/TbIs6VVF6g==}
     dev: true
 
   /@types/normalize-package-data@2.4.1:
@@ -7256,6 +7271,40 @@ packages:
         optional: true
     dependencies:
       '@types/node': 18.16.1
+      esbuild: 0.17.17
+      postcss: 8.4.22
+      resolve: 1.22.2
+      rollup: 3.20.6
+    optionalDependencies:
+      fsevents: 2.3.2
+    dev: true
+
+  /vite@4.2.2(@types/node@20.1.2):
+    resolution: {integrity: sha512-PcNtT5HeDxb3QaSqFYkEum8f5sCVe0R3WK20qxgIvNBZPXU/Obxs/+ubBMeE7nLWeCo2LDzv+8hRYSlcaSehig==}
+    engines: {node: ^14.18.0 || >=16.0.0}
+    hasBin: true
+    peerDependencies:
+      '@types/node': '>= 14'
+      less: '*'
+      sass: '*'
+      stylus: '*'
+      sugarss: '*'
+      terser: ^5.4.0
+    peerDependenciesMeta:
+      '@types/node':
+        optional: true
+      less:
+        optional: true
+      sass:
+        optional: true
+      stylus:
+        optional: true
+      sugarss:
+        optional: true
+      terser:
+        optional: true
+    dependencies:
+      '@types/node': 20.1.2
       esbuild: 0.17.17
       postcss: 8.4.22
       resolve: 1.22.2

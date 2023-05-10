@@ -9,6 +9,8 @@
   "module": "dist/index.js",
   "main": "dist/index.js",
   "devDependencies": {
+    "@types/cypress": "^1.1.3",
+    "@types/jest": "^29.5.0",
     "cypress": "^12.10.0",
     "typescript": "^5.0.4",
     "vite": "^4.2.2"

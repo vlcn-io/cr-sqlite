@@ -3,7 +3,9 @@
   "compilerOptions": {
     "outDir": "./dist/",
     "rootDir": "./src",
-    "allowSyntheticDefaultImports": true
+    "allowSyntheticDefaultImports": true,
+    "types": ["cypress"],
+    "lib": ["esnext", "dom"]
   },
   "include": ["./src/"],
   "references": [

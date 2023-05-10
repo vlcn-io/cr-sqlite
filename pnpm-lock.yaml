@@ -200,9 +200,15 @@ importers:
         specifier: workspace:*
         version: link:../xplat-api
     devDependencies:
+      cypress:
+        specifier: ^12.10.0
+        version: 12.10.0
       typescript:
         specifier: ^5.0.4
         version: 5.0.4
+      vite:
+        specifier: ^4.2.2
+        version: 4.2.2(@types/node@18.16.1)
 
   js/packages/direct-connect-common:
     devDependencies:
@@ -389,7 +395,7 @@ importers:
         version: link:../crsqlite-wasm
       vite:
         specifier: ^4.2.2
-        version: 4.2.2(@types/node@18.15.11)
+        version: 4.2.2(@types/node@18.16.1)
 
   js/packages/sandbox-node:
     dependencies:
@@ -402,7 +408,7 @@ importers:
         version: link:../../../core
       vite:
         specifier: ^4.2.2
-        version: 4.2.2(@types/node@18.15.11)
+        version: 4.2.2(@types/node@18.16.1)
 
   js/packages/server-core:
     dependencies:

@@ -8,7 +8,7 @@ export default defineConfig({
     target: "es2020",
     rollupOptions: {
       input: {
-        page1: resolve(__dirname, "page1.html"),
+        page1: resolve(__dirname, "direct-connect-browser.html"),
         page2: resolve(__dirname, "page2.html"),
       },
     },

@@ -1,20 +1,19 @@
 {
-  "name": "@vlcn.io/direct-connect-browser",
+  "name": "@vlcn.io/direct-connect-browser-cy",
   "type": "module",
+  "private": true,
   "version": "0.0.1",
-  "files": [
-    "dist",
-    "src"
-  ],
-  "module": "dist/index.js",
-  "main": "dist/index.js",
   "devDependencies": {
-    "typescript": "^5.0.4"
+    "@types/cypress": "^1.1.3",
+    "@types/node": "^20.1.2",
+    "cypress": "^12.10.0",
+    "typescript": "^5.0.4",
+    "vite": "^4.2.2"
   },
   "scripts": {
     "build": "tsc --build",
     "watch": "tsc --build --watch",
-    "test": "vitest run",
+    "test": "pnpm cypress run --component",
     "deep-clean": "rm -rf ./dist || true && rm tsconfig.tsbuildinfo || true"
   },
   "repository": {
@@ -23,9 +22,6 @@
     "directory": "https://github.com/vlcn-io/cr-sqlite/tree/main/js/packages/direct-connect-browser"
   },
   "dependencies": {
-    "@vlcn.io/crsqlite-wasm": "workspace:*",
-    "@vlcn.io/direct-connect-common": "workspace:*",
-    "@vlcn.io/rx-tbl": "workspace:*",
-    "@vlcn.io/xplat-api": "workspace:*"
+    "@vlcn.io/direct-connect-browser": "workspace:*"
   }
 }

@@ -26,6 +26,7 @@ export const tags = {
   getChangesResponse: 10,
   uploadSchema: 11,
   activateSchema: 12,
+  establishOutboundStreamResponse: 13,
 } as const;
 
 export type Tag = typeof tags;
@@ -47,6 +48,7 @@ export type Msg =
   | ApplyChangesMsg
   | GetChangesMsg
   | EstablishOutboundStreamMsg
+  | EstablishOutboundStreamResponse
   | AckChangesMsg
   | StreamingChangesMsg
   | ApplyChangesResponse
@@ -189,6 +191,11 @@ export type EstablishOutboundStreamMsg = {
    * For query based sync, the query id(s) to get changes for.
    */
   readonly queryIds?: readonly string[];
+};
+
+export type EstablishOutboundStreamResponse = {
+  readonly _tag: Tag["establishOutboundStreamResponse"];
+  readonly status: "ok" | "schemaMismatch";
 };
 
 /**

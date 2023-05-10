@@ -1,0 +1,12 @@
+{
+  "extends": "../../../tsconfig-template.json",
+  "compilerOptions": {
+    "outDir": "./dist/",
+    "rootDir": "./src",
+    "allowSyntheticDefaultImports": true,
+    "types": ["cypress", "node"],
+    "lib": ["esnext", "dom"]
+  },
+  "include": ["./component/"],
+  "references": []
+}

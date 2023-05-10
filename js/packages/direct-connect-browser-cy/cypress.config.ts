@@ -7,4 +7,6 @@ export default defineConfig({
       bundler: "vite",
     },
   },
+  screenshotOnRunFailure: false,
+  video: false,
 });

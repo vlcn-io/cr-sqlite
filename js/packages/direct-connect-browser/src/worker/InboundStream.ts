@@ -38,6 +38,8 @@ export default class InboundStream {
       seqStart: seq,
       schemaVersion: this.db.schemaVersion,
     });
+
+    // resp should contain the endpoint to use for sse...?
   }
 
   stop() {

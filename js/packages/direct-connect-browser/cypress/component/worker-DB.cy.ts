@@ -8,4 +8,8 @@ describe("WholeDbReplicator.cy.ts", () => {
   it("applies changesets", () => {});
 
   it("can update the peer tracker", () => {});
+
+  it("closes the db and finalizes the statements", () => {});
+
+  it("can retrieve the last seq for a given DB", () => {});
 });

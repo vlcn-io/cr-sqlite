@@ -11,7 +11,7 @@ export type QuoteConcatedPKs = string;
 export type TableName = string;
 export type Version = bigint;
 export type Val = string | null;
-export type Seq = [Version, number];
+export type Seq = readonly [Version, number];
 
 export const RECEIVE = 0 as const;
 export const SEND = 1 as const;

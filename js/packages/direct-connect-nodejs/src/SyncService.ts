@@ -8,11 +8,13 @@ import {
   CreateOrMigrateMsg,
   CreateOrMigrateResponse,
   EstablishOutboundStreamMsg,
+  EstablishOutboundStreamResponse,
   GetChangesMsg,
   GetChangesResponse,
   GetLastSeenMsg,
   GetLastSeenResponse,
   UploadSchemaMsg,
+  tags,
 } from "@vlcn.io/direct-connect-common";
 import ServiceDB from "./private/ServiceDB.js";
 import FSNotify from "./private/FSNotify.js";
@@ -111,10 +113,19 @@ export default class SyncService {
    * such that the client does not have to issue a request
    * for changes.
    */
-  startOutboundStream(msg: EstablishOutboundStreamMsg): OutboundStream {
+  startOutboundStream(
+    msg: EstablishOutboundStreamMsg
+  ): [OutboundStream, EstablishOutboundStreamResponse] {
     // 1. create the outbound stream
-    // 2. return it
-    return new OutboundStream(this.fsNotify!, this.serviceDB, msg);
+    // 2. return it so the user can wire it up to their SSE or websocket or whatever.
+    const os = new OutboundStream(this.fsNotify!, this.serviceDB, msg);
+    return [
+      os,
+      {
+        _tag: tags.establishOutboundStreamResponse,
+        status: "ok",
+      },
+    ];
   }
 
   shutdown() {

@@ -89,6 +89,8 @@ export default function encode(msg: Msg): Object {
             : undefined,
         msg: msg.msg,
       };
+    case tags.establishOutboundStreamResponse:
+      return msg;
     case tags.uploadSchema:
       return msg;
     case tags.activateSchema:

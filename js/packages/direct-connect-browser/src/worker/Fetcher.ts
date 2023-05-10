@@ -1,10 +1,15 @@
 import { DBID, Endpoints } from "../Types.js";
 import {
   ApplyChangesMsg,
+  ApplyChangesResponse,
   CreateOrMigrateMsg,
+  CreateOrMigrateResponse,
   EstablishOutboundStreamMsg,
+  EstablishOutboundStreamResponse,
   GetChangesMsg,
+  GetChangesResponse,
   GetLastSeenMsg,
+  GetLastSeenResponse,
   ISerializer,
   Msg,
 } from "@vlcn.io/direct-connect-common";
@@ -33,29 +38,39 @@ export default class Fetcher {
   createOrMigrate(
     msg: CreateOrMigrateMsg,
     retry: RetryConfig = defaultRetryConfig
-  ) {
+  ): Promise<CreateOrMigrateResponse> {
     return this._fetchWithRetry(
       this.endpoints.createOrMigrate,
       msg,
       this._post,
       retry
+    ).then((res) => decodeResponse(res, this.serializer));
+  }
+
+  getChanges(msg: GetChangesMsg): Promise<GetChangesResponse> {
+    return this._get(this.endpoints.getChanges, msg).then((res) =>
+      decodeResponse(res, this.serializer)
     );
   }
 
-  getChanges(msg: GetChangesMsg) {
-    return this._get(this.endpoints.getChanges, msg);
+  applyChanges(msg: ApplyChangesMsg): Promise<ApplyChangesResponse> {
+    return this._post(this.endpoints.applyChanges, msg).then((res) =>
+      decodeResponse(res, this.serializer)
+    );
   }
 
-  applyChanges(msg: ApplyChangesMsg) {
-    return this._post(this.endpoints.applyChanges, msg);
+  establishOutboundStream(
+    msg: EstablishOutboundStreamMsg
+  ): Promise<EstablishOutboundStreamResponse> {
+    return this._post(this.endpoints.establishOutboundStream, msg).then((res) =>
+      decodeResponse(res, this.serializer)
+    );
   }
 
-  establishOutboundStream(msg: EstablishOutboundStreamMsg) {
-    return this._post(this.endpoints.establishOutboundStream, msg);
-  }
-
-  getLastSeen(msg: GetLastSeenMsg) {
-    return this._get(this.endpoints.getLastSeen, msg);
+  getLastSeen(msg: GetLastSeenMsg): Promise<GetLastSeenResponse> {
+    return this._get(this.endpoints.getLastSeen, msg).then((res) =>
+      decodeResponse(res, this.serializer)
+    );
   }
 
   _post(uri: URL, msg: Msg) {
@@ -70,22 +85,13 @@ export default class Fetcher {
     msg: Msg,
     verbFn: (uri: URL, msg: Msg) => Promise<Response>,
     retry: RetryConfig = noRetryConfig
-  ): Promise<Msg> {
+  ): Promise<Response> {
     // fetch doesn't support retries, so we have to do it ourselves
     let retryCount = retry.retryCount;
     let retryDelay = retry.retryDelay;
     return verbFn(uri, msg).then((res) => {
       if (res.ok) {
-        switch (this.serializer.contentType) {
-          case "json":
-            return res.json().then((json) => {
-              this.serializer.decode(json);
-            });
-          case "binary":
-            return res.arrayBuffer().then((buffer) => {
-              this.serializer.decode(buffer);
-            });
-        }
+        return res;
       }
       if (retryCount <= 0) {
         throw new Error("Failed to fetch");
@@ -108,4 +114,23 @@ export default class Fetcher {
     uriCopy.searchParams.set("msg", this.serializer.encode(msg));
     return fetch(uriCopy);
   };
+}
+
+async function decodeResponse<T extends Msg>(
+  resp: Response,
+  serializer: ISerializer
+): Promise<T> {
+  if (!resp.ok) {
+    throw new Error("Failed to fetch");
+  }
+  switch (serializer.contentType) {
+    case "json":
+      return resp.json().then((json) => {
+        return serializer.decode(json) as T;
+      });
+    case "binary":
+      return resp.arrayBuffer().then((buffer) => {
+        return serializer.decode(buffer) as T;
+      });
+  }
 }

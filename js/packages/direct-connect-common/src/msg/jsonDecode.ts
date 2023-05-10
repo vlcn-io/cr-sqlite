@@ -86,6 +86,8 @@ export default function decode(parsed: { [key: string]: any }): Msg {
         seqEnd: [BigInt(parsed.seqEnd[0]), parsed.seqEnd[1]],
         changes: decodeChanges(parsed.changes),
       };
+    case tags.establishOutboundStreamResponse:
+      return parsed as Msg;
     case tags.uploadSchema:
       return parsed as Msg;
     case tags.activateSchema:

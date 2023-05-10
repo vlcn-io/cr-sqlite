@@ -15,7 +15,7 @@ export default class OutboundStream {
     private readonly serializer: ISerializer
   ) {}
 
-  start() {
+  start(seq: Seq) {
     if (this.started || this.shutdown) {
       return;
     }

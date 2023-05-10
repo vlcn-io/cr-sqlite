@@ -1,6 +1,6 @@
 import { ISerializer, hexToBytes, tags } from "@vlcn.io/direct-connect-common";
 import { Endpoints } from "../Types";
-import { DB, Version } from "./DB";
+import { DB, RECEIVE, Version } from "./DB";
 import Fetcher from "./Fetcher";
 
 export default class InboundStream {
@@ -27,16 +27,17 @@ export default class InboundStream {
     }
     this.started = true;
 
-    // ensure the db on the server is set up.
-    const createOrMigrateResp = await this.fetcher.createOrMigrate({
-      _tag: tags.createOrMigrate,
-      dbid: hexToBytes(this.db.remoteDbid),
-      requestorDbid: hexToBytes(this.db.localDbid),
-      schemaName: this.db.schemaName,
+    // now start the outbound stream from the server to us
+    // from when we last RECEIVED an update from the server.
+    const remoteDbid = hexToBytes(this.db.remoteDbid);
+    const seq = await this.db.seqIdFor(remoteDbid, RECEIVE);
+    const resp = await this.fetcher.establishOutboundStream({
+      _tag: tags.establishOutboundStream,
+      toDbid: remoteDbid,
+      fromDbid: hexToBytes(this.db.localDbid),
+      seqStart: seq,
       schemaVersion: this.db.schemaVersion,
     });
-
-    // now start the outbound stream from the server to us.
   }
 
   stop() {

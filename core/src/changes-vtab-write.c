@@ -123,11 +123,11 @@ int crsql_checkForLocalDelete(sqlite3 *db, const char *tblName,
   return SQLITE_OK;
 }
 
-int crsql_setWinnerClock(sqlite3 *db, crsql_TableInfo *tblInfo,
-                         const char *pkIdentifierList, const char *pkValsStr,
-                         const char *insertColName, sqlite3_int64 insertColVrsn,
-                         sqlite3_int64 insertDbVrsn, const void *insertSiteId,
-                         int insertSiteIdLen) {
+sqlite3_int64 crsql_setWinnerClock(
+    sqlite3 *db, crsql_TableInfo *tblInfo, const char *pkIdentifierList,
+    const char *pkValsStr, const char *insertColName,
+    sqlite3_int64 insertColVrsn, sqlite3_int64 insertDbVrsn,
+    const void *insertSiteId, int insertSiteIdLen) {
   int rc = SQLITE_OK;
   char *zSql = sqlite3_mprintf(
       "INSERT OR REPLACE INTO \"%s__crsql_clock\" \
@@ -138,7 +138,7 @@ int crsql_setWinnerClock(sqlite3 *db, crsql_TableInfo *tblInfo,
         %lld,\
         MAX(crsql_nextdbversion(), %lld),\
         ?\
-      )",
+      ) RETURNING _rowid_",
       tblInfo->tblName, pkIdentifierList, pkValsStr, insertColName,
       insertColVrsn, insertDbVrsn);
 
@@ -148,7 +148,7 @@ int crsql_setWinnerClock(sqlite3 *db, crsql_TableInfo *tblInfo,
 
   if (rc != SQLITE_OK) {
     sqlite3_finalize(pStmt);
-    return rc;
+    return -1;
   }
 
   if (insertSiteId == 0) {
@@ -159,33 +159,37 @@ int crsql_setWinnerClock(sqlite3 *db, crsql_TableInfo *tblInfo,
   }
 
   rc = sqlite3_step(pStmt);
-  sqlite3_finalize(pStmt);
 
-  if (rc == SQLITE_DONE) {
-    return SQLITE_OK;
+  if (rc == SQLITE_ROW) {
+    sqlite3_int64 rowid = sqlite3_column_int64(pStmt, 0);
+    sqlite3_finalize(pStmt);
+    return rowid;
   } else {
-    return SQLITE_ERROR;
+    sqlite3_finalize(pStmt);
+    return -1;
   }
 }
 
-int crsql_mergePkOnlyInsert(sqlite3 *db, crsql_TableInfo *tblInfo,
-                            const char *pkValsStr, const char *pkIdentifiers,
-                            sqlite3_int64 remoteColVersion,
-                            sqlite3_int64 remoteDbVersion,
-                            const void *remoteSiteId, int remoteSiteIdLen) {
+sqlite3_int64 crsql_mergePkOnlyInsert(sqlite3 *db, crsql_TableInfo *tblInfo,
+                                      const char *pkValsStr,
+                                      const char *pkIdentifiers,
+                                      sqlite3_int64 remoteColVersion,
+                                      sqlite3_int64 remoteDbVersion,
+                                      const void *remoteSiteId,
+                                      int remoteSiteIdLen) {
   char *zSql = sqlite3_mprintf("INSERT OR IGNORE INTO \"%s\" (%s) VALUES (%s)",
                                tblInfo->tblName, pkIdentifiers, pkValsStr);
   int rc = sqlite3_exec(db, SET_SYNC_BIT, 0, 0, 0);
   if (rc != SQLITE_OK) {
     sqlite3_free(zSql);
-    return rc;
+    return -1;
   }
 
   rc = sqlite3_exec(db, zSql, 0, 0, 0);
   sqlite3_free(zSql);
   sqlite3_exec(db, CLEAR_SYNC_BIT, 0, 0, 0);
   if (rc != SQLITE_OK) {
-    return rc;
+    return -1;
   }
 
   // TODO: if insert was ignored, no reason to change clock
@@ -194,24 +198,25 @@ int crsql_mergePkOnlyInsert(sqlite3 *db, crsql_TableInfo *tblInfo,
                               remoteDbVersion, remoteSiteId, remoteSiteIdLen);
 }
 
-int crsql_mergeDelete(sqlite3 *db, crsql_TableInfo *tblInfo,
-                      const char *pkWhereList, const char *pkValsStr,
-                      const char *pkIdentifiers, sqlite3_int64 remoteColVersion,
-                      sqlite3_int64 remoteDbVersion, const void *remoteSiteId,
-                      int remoteSiteIdLen) {
+sqlite3_int64 crsql_mergeDelete(sqlite3 *db, crsql_TableInfo *tblInfo,
+                                const char *pkWhereList, const char *pkValsStr,
+                                const char *pkIdentifiers,
+                                sqlite3_int64 remoteColVersion,
+                                sqlite3_int64 remoteDbVersion,
+                                const void *remoteSiteId, int remoteSiteIdLen) {
   char *zSql = sqlite3_mprintf("DELETE FROM \"%s\" WHERE %s", tblInfo->tblName,
                                pkWhereList);
   int rc = sqlite3_exec(db, SET_SYNC_BIT, 0, 0, 0);
   if (rc != SQLITE_OK) {
     sqlite3_free(zSql);
-    return rc;
+    return -1;
   }
 
   rc = sqlite3_exec(db, zSql, 0, 0, 0);
   sqlite3_free(zSql);
   sqlite3_exec(db, CLEAR_SYNC_BIT, 0, 0, 0);
   if (rc != SQLITE_OK) {
-    return rc;
+    return -1;
   }
 
   return crsql_setWinnerClock(db, tblInfo, pkIdentifiers, pkValsStr,
@@ -328,27 +333,35 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
   char *pkIdentifierList =
       crsql_asIdentifierList(tblInfo->pks, tblInfo->pksLen, 0);
   if (isDelete) {
-    rc = crsql_mergeDelete(db, tblInfo, pkWhereList, pkValsStr,
-                           pkIdentifierList, insertColVrsn, insertDbVrsn,
-                           insertSiteId, insertSiteIdLen);
+    sqlite3_int64 rowid = crsql_mergeDelete(
+        db, tblInfo, pkWhereList, pkValsStr, pkIdentifierList, insertColVrsn,
+        insertDbVrsn, insertSiteId, insertSiteIdLen);
 
     sqlite3_free(pkWhereList);
     sqlite3_free(pkValsStr);
     sqlite3_free(pkIdentifierList);
-    // TODO: set rowid via slab algorithm here
-    return rc;
+    if (rowid == -1) {
+      *errmsg = sqlite3_mprintf("Failed inserting changeset");
+      return SQLITE_ERROR;
+    }
+    *pRowid = crsql_slabRowid(tblInfoIndex, rowid);
+    return SQLITE_OK;
   }
 
   if (isPkOnly ||
       !crsql_columnExists(insertColName, tblInfo->nonPks, tblInfo->nonPksLen)) {
-    rc = crsql_mergePkOnlyInsert(db, tblInfo, pkValsStr, pkIdentifierList,
-                                 insertColVrsn, insertDbVrsn, insertSiteId,
-                                 insertSiteIdLen);
+    sqlite3_int64 rowid = crsql_mergePkOnlyInsert(
+        db, tblInfo, pkValsStr, pkIdentifierList, insertColVrsn, insertDbVrsn,
+        insertSiteId, insertSiteIdLen);
     sqlite3_free(pkWhereList);
     sqlite3_free(pkValsStr);
     sqlite3_free(pkIdentifierList);
-    // TODO: set rowid via slab algorithm here
-    return rc;
+    if (rowid == -1) {
+      *errmsg = sqlite3_mprintf("Failed inserting changeset");
+      return SQLITE_ERROR;
+    }
+    *pRowid = crsql_slabRowid(tblInfoIndex, rowid);
+    return SQLITE_OK;
   }
 
   char **sanitizedInsertVal =
@@ -386,7 +399,7 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
       "INSERT INTO \"%w\" (%s, \"%w\")\
       VALUES (%s, %s)\
       ON CONFLICT DO UPDATE\
-      SET \"%w\" = %s RETURNING _rowid_",
+      SET \"%w\" = %s",
       tblInfo->tblName, pkIdentifierList, insertColName, pkValsStr,
       sanitizedInsertVal[0], insertColName, sanitizedInsertVal[0]);
 
@@ -403,21 +416,9 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
     return rc;
   }
 
-  sqlite3_stmt *pStmt = 0;
-  rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
+  rc = sqlite3_exec(db, zSql, 0, 0, errmsg);
   sqlite3_free(zSql);
-  sqlite3_int64 rowid = 0;
-  if (rc == SQLITE_OK) {
-    rc = sqlite3_step(pStmt);
-    if (rc == SQLITE_ROW) {
-      rowid = sqlite3_column_int64(pStmt, 0);
-      rc = SQLITE_OK;
-    } else {
-      rc = SQLITE_ERROR;
-    }
-  }
   sqlite3_exec(db, CLEAR_SYNC_BIT, 0, 0, 0);
-  sqlite3_finalize(pStmt);
 
   if (rc != SQLITE_OK) {
     sqlite3_free(pkValsStr);
@@ -426,18 +427,17 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
     return rc;
   }
 
-  rc = crsql_setWinnerClock(db, tblInfo, pkIdentifierList, pkValsStr,
-                            insertColName, insertColVrsn, insertDbVrsn,
-                            insertSiteId, insertSiteIdLen);
+  sqlite3_int64 rowid = crsql_setWinnerClock(
+      db, tblInfo, pkIdentifierList, pkValsStr, insertColName, insertColVrsn,
+      insertDbVrsn, insertSiteId, insertSiteIdLen);
   sqlite3_free(pkIdentifierList);
   sqlite3_free(pkValsStr);
 
-  if (rc != SQLITE_OK) {
+  if (rowid == -1) {
     *errmsg = sqlite3_mprintf("Failed updating winner clock");
-    return rc;
+    return SQLITE_ERROR;
   }
 
-  // TODO: slab algo for merge pkonly and merge delete??
   *pRowid = crsql_slabRowid(tblInfoIndex, rowid);
   pTab->pExtData->rowsImpacted += 1;
   return rc;

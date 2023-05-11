@@ -25,6 +25,7 @@ void crsqlExtDataTestSuite();
 void crsqlFractSuite();
 void crsqlIsCrrTestSuite();
 void rowsImpactedTestSuite();
+void crsqlChangesVtabRowidTestSuite();
 
 int main(int argc, char *argv[]) {
   char *suite = "all";
@@ -46,6 +47,7 @@ int main(int argc, char *argv[]) {
   SUITE("fract") crsqlFractSuite();
   SUITE("is_crr") crsqlIsCrrTestSuite();
   SUITE("rows_impacted") rowsImpactedTestSuite();
+  SUITE("rowid") crsqlChangesVtabRowidTestSuite();
 
   sqlite3_shutdown();
 }

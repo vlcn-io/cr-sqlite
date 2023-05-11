@@ -103,6 +103,9 @@ struct crsql_Changes_cursor {
 
   sqlite3_int64 dbVersion;
   int rowType;
+
+  sqlite3_int64 changesRowid;
+  int tblInfoIdx;
 };
 
 #endif

@@ -21,7 +21,8 @@ char *crsql_changesQueryForTable(crsql_TableInfo *tableInfo) {
       __crsql_col_name as cid,\
       __crsql_col_version as col_vrsn,\
       __crsql_db_version as db_vrsn,\
-      __crsql_site_id as site_id\
+      __crsql_site_id as site_id,\
+      _rowid_\
     FROM \"%s__crsql_clock\"",
       tableInfo->tblName, crsql_quoteConcat(tableInfo->pks, tableInfo->pksLen),
       tableInfo->tblName);
@@ -72,7 +73,8 @@ char *crsql_changesUnionQuery(crsql_TableInfo **tableInfos, int tableInfosLen,
 
   // compose the final query
   return sqlite3_mprintf(
-      "SELECT tbl, pks, cid, col_vrsn, db_vrsn, site_id FROM (%z) %s%s ORDER "
+      "SELECT tbl, pks, cid, col_vrsn, db_vrsn, site_id, _rowid_ FROM (%z) "
+      "%s%s ORDER "
       "BY "
       "db_vrsn, tbl ASC",
       unionsStr, idxStr != 0 && strlen(idxStr) > 0 ? "WHERE " : "",

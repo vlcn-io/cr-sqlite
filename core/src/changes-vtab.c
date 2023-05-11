@@ -121,18 +121,13 @@ static int changesClose(sqlite3_vtab_cursor *cur) {
 }
 
 /**
- * version is guaranteed to be unique (it increases on every write)
- * thus we use it for the rowid. -- it isn't unique given we increment
- * version once per transaction!
- *
- * Depending on how sqlite treats calls to `xUpdate` we may
- * shift to a `without rowid` table and use `table + pk` concated
- * as the primary key. xUpdate requires a single column to act
- * as the primary key, hence the concatenation that'd be required.
+ * Update to invoke slab algorithm to generate rowids
  */
 static int changesRowid(sqlite3_vtab_cursor *cur, sqlite_int64 *pRowid) {
   crsql_Changes_cursor *pCur = (crsql_Changes_cursor *)cur;
   // TODO: add invocation of rowid slab algorithm here
+  // to do this we need to know
+  // the current table info we're in...
   *pRowid = pCur->dbVersion;
   return SQLITE_OK;
 }
@@ -186,12 +181,15 @@ static int changesNext(sqlite3_vtab_cursor *cur) {
     return changesCrsrFinalize(pCur);
   }
 
+  // todo: pChangesStmt should also pull rowid from the underlying clock tbls
   const char *tbl = (const char *)sqlite3_column_text(pCur->pChangesStmt, TBL);
   const char *pks = (const char *)sqlite3_column_text(pCur->pChangesStmt, PKS);
   const char *cid = (const char *)sqlite3_column_text(pCur->pChangesStmt, CID);
   sqlite3_int64 dbVersion = sqlite3_column_int64(pCur->pChangesStmt, DB_VRSN);
   pCur->dbVersion = dbVersion;
 
+  // get tbl info idx instead
+  // stick into pCur
   crsql_TableInfo *tblInfo =
       crsql_findTableInfo(pCur->pTab->pExtData->zpTableInfos,
                           pCur->pTab->pExtData->tableInfosLen, tbl);

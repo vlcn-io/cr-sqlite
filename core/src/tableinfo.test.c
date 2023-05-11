@@ -261,9 +261,9 @@ static void testSlabRowid() {
   assert(rc == SQLITE_OK);
 
   // now get the slab rowid for each table
-  sqlite3_int64 fooSlabRowid = crsql_slabRowid(tblInfos, tblInfosLen, "foo", 1);
-  sqlite3_int64 barSlabRowid = crsql_slabRowid(tblInfos, tblInfosLen, "bar", 2);
-  sqlite3_int64 bazSlabRowid = crsql_slabRowid(tblInfos, tblInfosLen, "baz", 3);
+  sqlite3_int64 fooSlabRowid = crsql_slabRowid(0, 1);
+  sqlite3_int64 barSlabRowid = crsql_slabRowid(1, 2);
+  sqlite3_int64 bazSlabRowid = crsql_slabRowid(2, 3);
 
   // now assert each one
   assert(fooSlabRowid == 1);
@@ -271,16 +271,12 @@ static void testSlabRowid() {
   assert(bazSlabRowid == 3 + ROWID_SLAB_SIZE * 2);
 
   // now test the modulo
-  assert(crsql_slabRowid(tblInfos, tblInfosLen, "foo", ROWID_SLAB_SIZE) == 0);
-  assert(crsql_slabRowid(tblInfos, tblInfosLen, "foo", ROWID_SLAB_SIZE + 1) ==
-         1);
+  assert(crsql_slabRowid(0, ROWID_SLAB_SIZE) == 0);
+  assert(crsql_slabRowid(0, ROWID_SLAB_SIZE + 1) == 1);
 
-  fooSlabRowid =
-      crsql_slabRowid(tblInfos, tblInfosLen, "foo", ROWID_SLAB_SIZE + 1);
-  barSlabRowid =
-      crsql_slabRowid(tblInfos, tblInfosLen, "bar", ROWID_SLAB_SIZE + 2);
-  bazSlabRowid =
-      crsql_slabRowid(tblInfos, tblInfosLen, "baz", ROWID_SLAB_SIZE * 2 + 3);
+  fooSlabRowid = crsql_slabRowid(0, ROWID_SLAB_SIZE + 1);
+  barSlabRowid = crsql_slabRowid(1, ROWID_SLAB_SIZE + 2);
+  bazSlabRowid = crsql_slabRowid(2, ROWID_SLAB_SIZE * 2 + 3);
 
   assert(fooSlabRowid == 1);
   assert(barSlabRowid == 2 + ROWID_SLAB_SIZE);

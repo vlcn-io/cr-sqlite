@@ -183,13 +183,12 @@ static void testIsTableCompatible() {
   assert(rc == 0);
   sqlite3_free(errmsg);
 
-  // not null and no dflt
+  // not null and no dflt -- this is allowed
   rc = sqlite3_exec(db, "CREATE TABLE buzz (a primary key, b NOT NULL)", 0, 0,
                     0);
   assert(rc == SQLITE_OK);
   rc = crsql_isTableCompatible(db, "buzz", &errmsg);
-  assert(rc == 0);
-  sqlite3_free(errmsg);
+  assert(rc == 1);
 
   // not null and dflt
   rc = sqlite3_exec(

@@ -298,9 +298,7 @@ int crsql_indexofTableInfo(crsql_TableInfo **tblInfos, int len,
   return -1;
 }
 
-sqlite3_int64 crsql_slabRowid(crsql_TableInfo **tblInfos, int len,
-                              const char *tblName, sqlite3_int64 rowid) {
-  int idx = crsql_indexofTableInfo(tblInfos, len, tblName);
+sqlite3_int64 crsql_slabRowid(int idx, sqlite3_int64 rowid) {
   if (idx < 0) {
     return -1;
   }

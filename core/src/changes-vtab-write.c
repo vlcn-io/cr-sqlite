@@ -278,9 +278,15 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
   const void *insertSiteId =
       sqlite3_value_blob(argv[2 + CHANGES_SINCE_VTAB_SITE_ID]);
 
-  crsql_TableInfo *tblInfo = crsql_findTableInfo(pTab->pExtData->zpTableInfos,
-                                                 pTab->pExtData->tableInfosLen,
-                                                 (const char *)insertTbl);
+  int tblInfoIndex = crsql_indexofTableInfo(pTab->pExtData->zpTableInfos,
+                                            pTab->pExtData->tableInfosLen,
+                                            (const char *)insertTbl);
+  crsql_TableInfo *tblInfo;
+  if (tblInfoIndex != -1) {
+    tblInfo = pTab->pExtData->zpTableInfos[tblInfoIndex];
+  } else {
+    tblInfo = 0;
+  }
 
   if (tblInfo == 0) {
     *errmsg = sqlite3_mprintf(
@@ -329,6 +335,7 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
     sqlite3_free(pkWhereList);
     sqlite3_free(pkValsStr);
     sqlite3_free(pkIdentifierList);
+    // TODO: set rowid via slab algorithm here
     return rc;
   }
 
@@ -340,6 +347,7 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
     sqlite3_free(pkWhereList);
     sqlite3_free(pkValsStr);
     sqlite3_free(pkIdentifierList);
+    // TODO: set rowid via slab algorithm here
     return rc;
   }
 
@@ -371,11 +379,14 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
     return doesCidWin == 0 ? SQLITE_OK : SQLITE_ERROR;
   }
 
+  // TODO: this is wrong. we should
+  // be returning rowid from the _clock_ table!
+  // not base table!
   zSql = sqlite3_mprintf(
       "INSERT INTO \"%w\" (%s, \"%w\")\
       VALUES (%s, %s)\
       ON CONFLICT DO UPDATE\
-      SET \"%w\" = %s",
+      SET \"%w\" = %s RETURNING _rowid_",
       tblInfo->tblName, pkIdentifierList, insertColName, pkValsStr,
       sanitizedInsertVal[0], insertColName, sanitizedInsertVal[0]);
 
@@ -387,13 +398,26 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
     sqlite3_free(pkValsStr);
     sqlite3_free(pkIdentifierList);
     sqlite3_exec(db, CLEAR_SYNC_BIT, 0, 0, 0);
+    sqlite3_free(zSql);
     *errmsg = sqlite3_mprintf("Failed setting sync bit");
     return rc;
   }
 
-  rc = sqlite3_exec(db, zSql, 0, 0, errmsg);
+  sqlite3_stmt *pStmt = 0;
+  rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
   sqlite3_free(zSql);
+  sqlite3_int64 rowid = 0;
+  if (rc == SQLITE_OK) {
+    rc = sqlite3_step(pStmt);
+    if (rc == SQLITE_ROW) {
+      rowid = sqlite3_column_int64(pStmt, 0);
+      rc = SQLITE_OK;
+    } else {
+      rc = SQLITE_ERROR;
+    }
+  }
   sqlite3_exec(db, CLEAR_SYNC_BIT, 0, 0, 0);
+  sqlite3_finalize(pStmt);
 
   if (rc != SQLITE_OK) {
     sqlite3_free(pkValsStr);
@@ -410,14 +434,11 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
 
   if (rc != SQLITE_OK) {
     *errmsg = sqlite3_mprintf("Failed updating winner clock");
+    return rc;
   }
 
-  // TODO: ... this isn't really guaranteed to be unique across
-  // the table.
-  // Is it fine if we prevent anyone from using `rowid` on a vtab?
-  // or must we convert to `without rowid`?
-  // TODO: add invocation of rowid slab algorithm here.
-  *pRowid = insertDbVrsn;
+  // TODO: slab algo for merge pkonly and merge delete??
+  *pRowid = crsql_slabRowid(tblInfoIndex, rowid);
   pTab->pExtData->rowsImpacted += 1;
   return rc;
 }

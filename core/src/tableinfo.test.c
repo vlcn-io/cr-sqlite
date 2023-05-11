@@ -237,6 +237,59 @@ static void testIsTableCompatible() {
   crsql_close(db);
 }
 
+static void testSlabRowid() {
+  printf("SlabRowid\n");
+  sqlite3 *db = 0;
+  char *errmsg = 0;
+  int rc = SQLITE_OK;
+
+  rc = sqlite3_open(":memory:", &db);
+  rc += sqlite3_exec(db, "CREATE TABLE foo (a PRIMARY KEY)", 0, 0, 0);
+  rc += sqlite3_exec(db, "CREATE TABLE bar (a PRIMARY KEY)", 0, 0, 0);
+  rc += sqlite3_exec(db, "CREATE TABLE baz (a PRIMARY KEY)", 0, 0, 0);
+  assert(rc == SQLITE_OK);
+
+  rc += sqlite3_exec(db, "SELECT crsql_as_crr('foo');", 0, 0, 0);
+  rc += sqlite3_exec(db, "SELECT crsql_as_crr('bar');", 0, 0, 0);
+  rc += sqlite3_exec(db, "SELECT crsql_as_crr('baz');", 0, 0, 0);
+  assert(rc == SQLITE_OK);
+
+  // now pull all table infos
+  crsql_TableInfo **tblInfos = 0;
+  int tblInfosLen = 0;
+  rc = crsql_pullAllTableInfos(db, &tblInfos, &tblInfosLen, &errmsg);
+  assert(rc == SQLITE_OK);
+
+  // now get the slab rowid for each table
+  sqlite3_int64 fooSlabRowid = crsql_slabRowid(tblInfos, tblInfosLen, "foo", 1);
+  sqlite3_int64 barSlabRowid = crsql_slabRowid(tblInfos, tblInfosLen, "bar", 2);
+  sqlite3_int64 bazSlabRowid = crsql_slabRowid(tblInfos, tblInfosLen, "baz", 3);
+
+  // now assert each one
+  assert(fooSlabRowid == 1);
+  assert(barSlabRowid == 2 + ROWID_SLAB_SIZE);
+  assert(bazSlabRowid == 3 + ROWID_SLAB_SIZE * 2);
+
+  // now test the modulo
+  assert(crsql_slabRowid(tblInfos, tblInfosLen, "foo", ROWID_SLAB_SIZE) == 0);
+  assert(crsql_slabRowid(tblInfos, tblInfosLen, "foo", ROWID_SLAB_SIZE + 1) ==
+         1);
+
+  fooSlabRowid =
+      crsql_slabRowid(tblInfos, tblInfosLen, "foo", ROWID_SLAB_SIZE + 1);
+  barSlabRowid =
+      crsql_slabRowid(tblInfos, tblInfosLen, "bar", ROWID_SLAB_SIZE + 2);
+  bazSlabRowid =
+      crsql_slabRowid(tblInfos, tblInfosLen, "baz", ROWID_SLAB_SIZE * 2 + 3);
+
+  assert(fooSlabRowid == 1);
+  assert(barSlabRowid == 2 + ROWID_SLAB_SIZE);
+  assert(bazSlabRowid == 3 + ROWID_SLAB_SIZE * 2);
+
+  crsql_close(db);
+  printf("\t\e[0;32mSuccess\e[0m\n");
+}
+
 void crsqlTableInfoTestSuite() {
   printf("\e[47m\e[1;30mSuite: crsql_tableInfo\e[0m\n");
 
@@ -245,5 +298,6 @@ void crsqlTableInfoTestSuite() {
   testFindTableInfo();
   testQuoteConcat();
   testIsTableCompatible();
+  testSlabRowid();
   // testPullAllTableInfos();
 }

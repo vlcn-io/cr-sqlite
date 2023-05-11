@@ -7,7 +7,9 @@ export default class WorkerInterface {
   private disposables = new Map<string, () => void>();
 
   constructor(workerUri: string) {
-    this.worker = new SharedWorker(workerUri);
+    this.worker = new SharedWorker(workerUri, {
+      type: "module",
+    });
 
     this.worker.port.onmessage = (e: MessageEvent<FromWorkerMsg>) => {
       const msg = e.data;

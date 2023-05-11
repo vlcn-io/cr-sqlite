@@ -125,10 +125,7 @@ static int changesClose(sqlite3_vtab_cursor *cur) {
  */
 static int changesRowid(sqlite3_vtab_cursor *cur, sqlite_int64 *pRowid) {
   crsql_Changes_cursor *pCur = (crsql_Changes_cursor *)cur;
-  // TODO: add invocation of rowid slab algorithm here
-  // to do this we need to know
-  // the current table info we're in...
-  *pRowid = pCur->dbVersion;
+  *pRowid = crsql_slabRowid(pCur->tblInfoIdx, pCur->changesRowid);
   return SQLITE_OK;
 }
 
@@ -186,19 +183,23 @@ static int changesNext(sqlite3_vtab_cursor *cur) {
   const char *pks = (const char *)sqlite3_column_text(pCur->pChangesStmt, PKS);
   const char *cid = (const char *)sqlite3_column_text(pCur->pChangesStmt, CID);
   sqlite3_int64 dbVersion = sqlite3_column_int64(pCur->pChangesStmt, DB_VRSN);
+  sqlite3_int64 changesRowid =
+      sqlite3_column_int64(pCur->pChangesStmt, CHANGES_ROWID);
   pCur->dbVersion = dbVersion;
 
-  // get tbl info idx instead
-  // stick into pCur
-  crsql_TableInfo *tblInfo =
-      crsql_findTableInfo(pCur->pTab->pExtData->zpTableInfos,
-                          pCur->pTab->pExtData->tableInfosLen, tbl);
-  if (tblInfo == 0) {
+  // get information required to calculate rowid slabs.
+  int tblInfoIndex =
+      crsql_indexofTableInfo(pCur->pTab->pExtData->zpTableInfos,
+                             pCur->pTab->pExtData->tableInfosLen, tbl);
+  if (tblInfoIndex < 0) {
     pTabBase->zErrMsg = sqlite3_mprintf(
         "crsql internal error. Could not find schema for table %s", tbl);
     changesCrsrFinalize(pCur);
     return SQLITE_ERROR;
   }
+  crsql_TableInfo *tblInfo = pCur->pTab->pExtData->zpTableInfos[tblInfoIndex];
+  pCur->changesRowid = changesRowid;
+  pCur->tblInfoIdx = tblInfoIndex;
 
   if (tblInfo->pksLen == 0) {
     crsql_freeTableInfo(tblInfo);

@@ -4,6 +4,7 @@ import ViteExpress from "vite-express";
 const PORT = process.env.PORT || 8080;
 
 const app = express();
+app.use(express.json());
 
 app.get("/sync/changes", (req, res) => {
   console.log(req.query);
@@ -16,6 +17,7 @@ app.post("/sync/changes", (req, res) => {
 });
 
 app.post("/sync/create-or-migrate", (req, res) => {
+  console.log("Create or migrate");
   console.log(req.body);
   res.json({});
 });

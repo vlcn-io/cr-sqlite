@@ -396,6 +396,9 @@ importers:
       '@vlcn.io/direct-connect-browser':
         specifier: workspace:*
         version: link:../direct-connect-browser
+      '@vlcn.io/direct-connect-nodejs':
+        specifier: workspace:*
+        version: link:../direct-connect-nodejs
       '@vlcn.io/rx-tbl':
         specifier: workspace:*
         version: link:../rx-tbl

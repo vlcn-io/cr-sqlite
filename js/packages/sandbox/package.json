@@ -16,6 +16,7 @@
     "@vlcn.io/crsqlite-wasm": "workspace:*",
     "@vlcn.io/rx-tbl": "workspace:*",
     "@vlcn.io/direct-connect-browser": "workspace:*",
+    "@vlcn.io/direct-connect-nodejs": "workspace:*",
     "express": "^4.18.2",
     "vite": "^4.2.2",
     "vite-express": "^0.6.0"

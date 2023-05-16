@@ -28,7 +28,8 @@ export default class SyncService {
         msg.wasmUri,
         msg.dbid,
         msg.endpoints,
-        new JsonSerializer(true, true)
+        // TODO: make this configurable so we can switch to binary encoding
+        new JsonSerializer(true, false)
       );
       this.dbs.set(msg.dbid, db);
     }

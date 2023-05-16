@@ -59,12 +59,13 @@ export default class Fetcher {
     );
   }
 
-  establishOutboundStream(
-    msg: EstablishOutboundStreamMsg
-  ): Promise<EstablishOutboundStreamResponse> {
-    return this._post(this.endpoints.establishOutboundStream, msg).then((res) =>
-      decodeResponse(res, this.serializer)
+  startOutboundStream(msg: EstablishOutboundStreamMsg): EventSource {
+    const uri = new URL(this.endpoints.startOutboundStream);
+    uri.searchParams.set(
+      "msg",
+      encodeURIComponent(this.serializer.encode(msg))
     );
+    return new EventSource(uri);
   }
 
   getLastSeen(msg: GetLastSeenMsg): Promise<GetLastSeenResponse> {
@@ -117,7 +118,10 @@ export default class Fetcher {
 
   _get = (uri: string, msg: Msg) => {
     const uriCopy = new URL(uri.toString());
-    uriCopy.searchParams.set("msg", this.serializer.encode(msg));
+    uriCopy.searchParams.set(
+      "msg",
+      encodeURIComponent(this.serializer.encode(msg))
+    );
     return fetch(uriCopy, {
       method: "GET",
       mode: "cors",

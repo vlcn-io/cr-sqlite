@@ -87,7 +87,7 @@ export default class WorkerInterface {
 
   private _localDbChanged(dbid: string, src: Src) {
     if (src !== "thisTab") {
-      console.log("ignoreing changes from sync layer itself");
+      console.log("ignoring changes from sync layer itself");
       return;
     }
 

@@ -23,7 +23,7 @@ syncWorker.startSync(
     createOrMigrate: new URL("/sync/create-or-migrate", window.location.origin),
     getChanges: new URL("/sync/changes", window.location.origin),
     applyChanges: new URL("/sync/changes", window.location.origin),
-    establishOutboundStream: new URL(
+    startOutboundStream: new URL(
       "/sync/start-outbound-stream",
       window.location.origin
     ),

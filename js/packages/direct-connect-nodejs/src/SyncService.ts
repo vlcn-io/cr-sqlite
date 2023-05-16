@@ -119,6 +119,7 @@ export default class SyncService {
     // 1. create the outbound stream
     // 2. return it so the user can wire it up to their SSE or websocket or whatever.
     const os = new OutboundStream(this.fsNotify!, this.serviceDB, msg);
+    os.start();
     return [
       os,
       {

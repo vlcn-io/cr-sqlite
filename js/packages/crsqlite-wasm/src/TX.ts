@@ -135,19 +135,24 @@ export default class TX implements TXAsync {
   ): Promise<any> {
     const results: { columns: string[]; rows: any[] }[] = [];
 
-    for await (const stmt of this.api.statements(this.db, sql)) {
-      const rows: any[] = [];
-      const columns = this.api.column_names(stmt);
-      if (bind) {
-        this.bind(stmt, bind);
+    try {
+      for await (const stmt of this.api.statements(this.db, sql)) {
+        const rows: any[] = [];
+        const columns = this.api.column_names(stmt);
+        if (bind) {
+          this.bind(stmt, bind);
+        }
+        while ((await this.api.step(stmt)) === SQLite.SQLITE_ROW) {
+          const row = this.api.row(stmt);
+          rows.push(row);
+        }
+        if (columns.length) {
+          results.push({ columns, rows });
+        }
       }
-      while ((await this.api.step(stmt)) === SQLite.SQLITE_ROW) {
-        const row = this.api.row(stmt);
-        rows.push(row);
-      }
-      if (columns.length) {
-        results.push({ columns, rows });
-      }
+    } catch (error) {
+      console.error(`Failed running ${sql}`, error);
+      throw error;
     }
 
     // we'll only return results for first stmt

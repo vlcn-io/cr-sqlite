@@ -6,5 +6,5 @@ export { default as ServiceDB } from "./private/ServiceDB.js";
 export { default as FSNotify } from "./private/FSNotify.js";
 export { default as DBCache } from "./private/DBCache.js";
 export type { SchemaRow } from "./private/ServiceDB.js";
-export { jsonDecode, jsonEncode } from "@vlcn.io/direct-connect-common";
+export { JsonSerializer } from "@vlcn.io/direct-connect-common";
 export { cryb64 } from "@vlcn.io/xplat-api";

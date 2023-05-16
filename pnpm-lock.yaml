@@ -210,28 +210,6 @@ importers:
         specifier: ^5.0.4
         version: 5.0.4
 
-  js/packages/direct-connect-browser-cy:
-    dependencies:
-      '@vlcn.io/direct-connect-browser':
-        specifier: workspace:*
-        version: link:../direct-connect-browser
-    devDependencies:
-      '@types/cypress':
-        specifier: ^1.1.3
-        version: 1.1.3
-      '@types/node':
-        specifier: ^20.1.2
-        version: 20.1.2
-      cypress:
-        specifier: ^12.10.0
-        version: 12.10.0
-      typescript:
-        specifier: ^5.0.4
-        version: 5.0.4
-      vite:
-        specifier: ^4.2.2
-        version: 4.2.2(@types/node@20.1.2)
-
   js/packages/direct-connect-common:
     devDependencies:
       fast-check:
@@ -418,6 +396,9 @@ importers:
       '@vlcn.io/direct-connect-browser':
         specifier: workspace:*
         version: link:../direct-connect-browser
+      '@vlcn.io/rx-tbl':
+        specifier: workspace:*
+        version: link:../rx-tbl
       express:
         specifier: ^4.18.2
         version: 4.18.2
@@ -1887,13 +1868,6 @@ packages:
       '@types/node': 18.16.1
     dev: true
 
-  /@types/cypress@1.1.3:
-    resolution: {integrity: sha512-OXe0Gw8LeCflkG1oPgFpyrYWJmEKqYncBsD/J0r17r0ETx/TnIGDNLwXt/pFYSYuYTpzcq1q3g62M9DrfsBL4g==}
-    deprecated: This is a stub types definition for cypress (https://cypress.io). cypress provides its own type definitions, so you don't need @types/cypress installed!
-    dependencies:
-      cypress: 12.10.0
-    dev: true
-
   /@types/estree@0.0.39:
     resolution: {integrity: sha512-EYNwp3bU+98cpU4lAWYYL7Zz+2gryWH1qbdDTidVd6hkiR6weksdbMadyXKXNPEkQFhXM+hVO9ZygomHXp+AIw==}
     dev: true
@@ -2011,10 +1985,6 @@ packages:
 
   /@types/node@18.16.1:
     resolution: {integrity: sha512-DZxSZWXxFfOlx7k7Rv4LAyiMroaxa3Ly/7OOzZO8cBNho0YzAi4qlbrx8W27JGqG57IgR/6J7r+nOJWw6kcvZA==}
-    dev: true
-
-  /@types/node@20.1.2:
-    resolution: {integrity: sha512-CTO/wa8x+rZU626cL2BlbCDzydgnFNgc19h4YvizpTO88MFQxab8wqisxaofQJ/9bLGugRdWIuX/TbIs6VVF6g==}
     dev: true
 
   /@types/normalize-package-data@2.4.1:
@@ -6346,14 +6316,6 @@ packages:
       fsevents: 2.3.2
     dev: true
 
-  /rollup@3.20.6:
-    resolution: {integrity: sha512-2yEB3nQXp/tBQDN0hJScJQheXdvU2wFhh6ld7K/aiZ1vYcak6N/BKjY1QrU6BvO2JWYS8bEs14FRaxXosxy2zw==}
-    engines: {node: '>=14.18.0', npm: '>=8.0.0'}
-    hasBin: true
-    optionalDependencies:
-      fsevents: 2.3.2
-    dev: true
-
   /rollup@3.21.8:
     resolution: {integrity: sha512-SSFV2T2fWtQ/vvBip85u2Nr0GNKireabH9d7nXswBg+XSH+jbVDSYptRAEbCEsquhs503rpPA9POYAp0/Jhasw==}
     engines: {node: '>=14.18.0', npm: '>=8.0.0'}
@@ -7341,40 +7303,6 @@ packages:
       postcss: 8.4.22
       resolve: 1.22.2
       rollup: 3.21.8
-    optionalDependencies:
-      fsevents: 2.3.2
-    dev: true
-
-  /vite@4.2.2(@types/node@20.1.2):
-    resolution: {integrity: sha512-PcNtT5HeDxb3QaSqFYkEum8f5sCVe0R3WK20qxgIvNBZPXU/Obxs/+ubBMeE7nLWeCo2LDzv+8hRYSlcaSehig==}
-    engines: {node: ^14.18.0 || >=16.0.0}
-    hasBin: true
-    peerDependencies:
-      '@types/node': '>= 14'
-      less: '*'
-      sass: '*'
-      stylus: '*'
-      sugarss: '*'
-      terser: ^5.4.0
-    peerDependenciesMeta:
-      '@types/node':
-        optional: true
-      less:
-        optional: true
-      sass:
-        optional: true
-      stylus:
-        optional: true
-      sugarss:
-        optional: true
-      terser:
-        optional: true
-    dependencies:
-      '@types/node': 20.1.2
-      esbuild: 0.17.17
-      postcss: 8.4.22
-      resolve: 1.22.2
-      rollup: 3.20.6
     optionalDependencies:
       fsevents: 2.3.2
     dev: true

@@ -4,7 +4,7 @@
   "type": "module",
   "version": "0.1.0",
   "scripts": {
-    "dev": "node ./server.js",
+    "dev": "node ./slurp.mjs && node ./server.js",
     "tsc": "tsc --noEmit",
     "preview": "vite preview",
     "bld": "vite build",
@@ -14,6 +14,7 @@
   },
   "devDependencies": {
     "@vlcn.io/crsqlite-wasm": "workspace:*",
+    "@vlcn.io/rx-tbl": "workspace:*",
     "@vlcn.io/direct-connect-browser": "workspace:*",
     "express": "^4.18.2",
     "vite": "^4.2.2",

@@ -10,14 +10,18 @@
   "main": "dist/index.js",
   "exports": {
     ".": "./dist/index.js",
-    "./shared.worker.js": "./dist/worker/shared.worker.js"
+    "./shared.worker.js": "./dist/worker/shared.worker.js",
+    "./shared.bundle.worker.js": "./dist/worker/shared.bundle.worker.js"
   },
   "devDependencies": {
+    "@rollup/plugin-node-resolve": "^15.0.2",
+    "rollup": "^3.21.8",
     "typescript": "^5.0.4"
   },
   "scripts": {
-    "build": "tsc --build",
+    "build": "tsc --build && pnpm run bundle-worker",
     "watch": "tsc --build --watch",
+    "bundle-worker": "rollup ./dist/worker/shared.worker.js -o ./dist/worker/shared.bundle.worker.js -p @rollup/plugin-node-resolve",
     "test": "vitest run",
     "deep-clean": "rm -rf ./dist || true && rm tsconfig.tsbuildinfo || true"
   },

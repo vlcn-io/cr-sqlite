@@ -1,4 +1,5 @@
-import { jsonDecode, jsonEncode } from "../index.js";
+import jsonEncode from "./jsonEncode.js";
+import jsonDecode from "./jsonDecode.js";
 import { ISerializer, Msg } from "../types.js";
 
 export default class JsonSerializer implements ISerializer {

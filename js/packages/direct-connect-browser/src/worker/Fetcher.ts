@@ -118,7 +118,10 @@ export default class Fetcher {
   _get = (uri: string, msg: Msg) => {
     const uriCopy = new URL(uri.toString());
     uriCopy.searchParams.set("msg", this.serializer.encode(msg));
-    return fetch(uriCopy);
+    return fetch(uriCopy, {
+      method: "GET",
+      mode: "cors",
+    });
   };
 }
 
@@ -134,7 +137,7 @@ async function decodeResponse<T extends Msg>(
       return resp.json().then((json) => {
         return serializer.decode(json) as T;
       });
-    case "binary":
+    case "application/octet-stream":
       return resp.arrayBuffer().then((buffer) => {
         return serializer.decode(buffer) as T;
       });

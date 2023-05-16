@@ -11,4 +11,5 @@ export type Config = {
   readonly cacheTtlInSeconds: number;
   readonly notifyLatencyInMs: number;
   readonly serviceDbPath: string;
+  readonly msgContentType: "application/json" | "application/octet-stream";
 };

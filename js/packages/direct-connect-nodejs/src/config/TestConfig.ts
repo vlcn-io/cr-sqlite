@@ -6,6 +6,7 @@ const TestConfig: Config = {
   cacheTtlInSeconds: 60,
   notifyLatencyInMs: 10,
   serviceDbPath: ":memory:",
+  msgContentType: "application/json",
 };
 
 export default TestConfig;

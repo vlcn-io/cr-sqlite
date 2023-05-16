@@ -109,6 +109,7 @@ export default class DB {
     // get current schema version
     const storedVersion = this.db
       .prepare(`SELECT value FROM crsql_master WHERE key = 'schema_version'`)
+      .safeIntegers(true)
       .pluck()
       .get();
     const storedName = this.db

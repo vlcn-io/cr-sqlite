@@ -65,10 +65,14 @@ test("migrating to the same schema & version is a no-op", async () => {
     sdb.getSchema("ns", name, version)
   );
 
-  const result1 = await db.migrateTo("test.sql", 1n);
-  const result2 = await db.migrateTo("test.sql", 1n);
+  let result1 = await db.migrateTo("test.sql", 1n);
+  let result2 = await db.migrateTo("test.sql", 1n);
 
   expect(result1).toBe("apply");
+  expect(result2).toBe("noop");
+
+  result1 = await db.migrateTo("test.sql", -4199889328989581946n);
+  result2 = await db.migrateTo("test.sql", -4199889328989581946n);
   expect(result2).toBe("noop");
 });
 

@@ -4,7 +4,7 @@
   "type": "module",
   "version": "0.1.0",
   "scripts": {
-    "start:ui": "vite",
+    "dev": "node ./server.js",
     "tsc": "tsc --noEmit",
     "preview": "vite preview",
     "bld": "vite build",

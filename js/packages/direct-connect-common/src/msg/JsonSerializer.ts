@@ -8,8 +8,8 @@ export default class JsonSerializer implements ISerializer {
     private readonly parse: boolean = false
   ) {}
 
-  get contentType(): "json" {
-    return "json";
+  get contentType(): "application/json" {
+    return "application/json";
   }
 
   encode(msg: Msg): any {

@@ -5,7 +5,7 @@ import { defineConfig } from "vite";
 export default defineConfig({
   base: "./",
   build: {
-    target: "es2020",
+    target: "esnext",
     rollupOptions: {
       input: {
         page1: resolve(__dirname, "direct-connect-browser.html"),
@@ -16,7 +16,7 @@ export default defineConfig({
 
   optimizeDeps: {
     esbuildOptions: {
-      target: "es2020",
+      target: "esnext",
     },
   },
 });

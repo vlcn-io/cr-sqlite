@@ -73,12 +73,18 @@ export default class Fetcher {
     );
   }
 
-  _post(uri: string, msg: Msg) {
+  _post = (uri: string, msg: Msg) => {
+    const body = this.serializer.encode(msg);
+    console.log("Posting to: ", uri, body);
     return fetch(uri, {
       method: "POST",
-      body: this.serializer.encode(msg),
+      mode: "cors",
+      headers: {
+        "Content-Type": this.serializer.contentType,
+      },
+      body,
     });
-  }
+  };
 
   _fetchWithRetry(
     uri: string,
@@ -124,7 +130,7 @@ async function decodeResponse<T extends Msg>(
     throw new Error("Failed to fetch");
   }
   switch (serializer.contentType) {
-    case "json":
+    case "application/json":
       return resp.json().then((json) => {
         return serializer.decode(json) as T;
       });

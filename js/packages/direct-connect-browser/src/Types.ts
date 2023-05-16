@@ -20,6 +20,7 @@ export type StartSyncMsg = {
   _tag: "StartSync";
   dbid: DBID;
   endpoints: Endpoints;
+  wasmUri: string;
 };
 
 export type StopSyncMsg = {

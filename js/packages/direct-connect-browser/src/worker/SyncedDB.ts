@@ -83,11 +83,12 @@ export class SyncedDB {
 }
 
 export default async function createSyncedDB(
+  wasmUri: string,
   dbid: DBID,
   endpoints: Endpoints,
   serializer: ISerializer
 ) {
-  const db = await createDb(dbid);
+  const db = await createDb(wasmUri, dbid);
   return new SyncedDB(db, endpoints, serializer);
 }
 

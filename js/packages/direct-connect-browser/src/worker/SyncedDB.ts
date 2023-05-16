@@ -4,6 +4,8 @@ import createDb, { DB } from "./DB.js";
 import InboundStream from "./InboundStream.js";
 import OutboundStream from "./OutboundStream.js";
 import Fetcher from "./Fetcher.js";
+import tblrx from "@vlcn.io/rx-tbl";
+import { UpdateType } from "@vlcn.io/xplat-api";
 
 export class SyncedDB {
   private readonly ports: Set<MessagePort>;
@@ -12,6 +14,7 @@ export class SyncedDB {
   private readonly inboundStream: InboundStream;
   private shutdown = false;
   private readonly fetcher: Fetcher;
+  private rx: ReturnType<typeof tblrx>;
 
   constructor(
     private readonly db: DB,
@@ -22,11 +25,10 @@ export class SyncedDB {
     this.outboundStream = new OutboundStream(db, endpoints, serializer);
     this.inboundStream = new InboundStream(db, endpoints, serializer);
     this.fetcher = new Fetcher(endpoints, serializer);
+    this.rx = tblrx(this.db.db);
   }
 
   // port is for communicating back out to the thread that asked us to start sync
-  // TODO: it is an error to try to sync the same db to many endpoints.
-  // Raise an exception if this happens.
   async start(port: MessagePort, endpoints: Endpoints) {
     if (!shallowCompare(this.endpoints, endpoints)) {
       throw new Error(
@@ -52,23 +54,29 @@ export class SyncedDB {
 
     this.inboundStream.start();
     this.outboundStream.start(createOrMigrateResp.seq);
+
+    this.rx.__internalRawListener = this._dbChangedFromOurThread;
   }
 
   localDbChangedFromMainThread() {
     this.outboundStream.nextTick();
   }
 
-  _syncApplied() {
-    // rxtbl calls this or we call it from `inboundStream`
-    // if rxtbl, use __internalRawListener
-    // then we fire up the ports to the main threads to tell them to update.
-    // we should collect the precise tables that changed and send that info to the main thread
-    // we could install rx-tbl inside of here...
-    // or we can collect during changeset application...
-    // ignore clock tables in callbacks.
-    // register with `internalRawListener` so we can filter out tables we have no concern for? e.g., the bookkeeping sync tables?
-    //  you'll want to not push on bookkeeping given that all writes will incur sync bookkeeping writes.
-  }
+  _dbChangedFromOurThread = (updates: [UpdateType, string, bigint][]) => {
+    updates = updates.filter((u) => !u[1].includes("crsql_"));
+    if (updates.length === 0) {
+      return;
+    }
+    for (const port of this.ports) {
+      port.postMessage({
+        _tag: "SyncedRemote",
+        dbid: this.db.remoteDbid,
+        collectedChanges: updates,
+      });
+    }
+  };
+
+  _dispatchChangesToMainThread = () => {};
 
   async stop(port: MessagePort): Promise<boolean> {
     this.ports.delete(port);
@@ -78,6 +86,7 @@ export class SyncedDB {
       this.shutdown = true;
       this.outboundStream.stop();
       this.inboundStream.stop();
+      this.rx?.dispose();
       await this.db.close();
       return true;
     }

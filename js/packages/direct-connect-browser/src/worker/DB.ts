@@ -2,7 +2,11 @@ import initWasm from "@vlcn.io/crsqlite-wasm";
 import { DBAsync, StmtAsync } from "@vlcn.io/xplat-api";
 import { TXAsync } from "@vlcn.io/xplat-api";
 import { DBID } from "../Types.js";
-import { SCHEMA_NAME, SCHEMA_VERSION } from "@vlcn.io/direct-connect-common";
+import {
+  SCHEMA_NAME,
+  SCHEMA_VERSION,
+  hexToBytes,
+} from "@vlcn.io/direct-connect-common";
 
 export type CID = string;
 export type QuoteConcatedPKs = string;
@@ -15,7 +19,7 @@ export const RECEIVE = 0 as const;
 export const SEND = 1 as const;
 type VersionEvent = typeof RECEIVE | typeof SEND;
 
-export type Changeset = [
+export type Changeset = readonly [
   TableName,
   QuoteConcatedPKs,
   CID,
@@ -29,8 +33,10 @@ export type Changeset = [
 ];
 
 export class DB {
+  public readonly remoteDbidBytes: Uint8Array;
+
   constructor(
-    private readonly db: DBAsync,
+    public readonly db: DBAsync,
     public readonly localDbid: DBID,
     public readonly remoteDbid: DBID,
     public readonly schemaName: string,
@@ -38,7 +44,9 @@ export class DB {
     private readonly pullChangesetStmt: StmtAsync,
     private readonly applyChangesetStmt: StmtAsync,
     private readonly updatePeerTrackerStmt: StmtAsync
-  ) {}
+  ) {
+    this.remoteDbidBytes = hexToBytes(this.remoteDbid);
+  }
 
   async pullChangeset(seq: Seq): Promise<Changeset[]> {
     // pull changes since we last sent the server changes,
@@ -70,11 +78,7 @@ export class DB {
     return [BigInt(row[0]), row[1]];
   }
 
-  async applyChangeset(
-    tx: TXAsync,
-    from: Uint8Array,
-    changes: readonly Changeset[]
-  ) {
+  async applyChangeset(tx: TXAsync, changes: readonly Changeset[]) {
     for (const cs of changes) {
       // have to run serially given wasm build
       // isn't actually multithreaded
@@ -86,20 +90,19 @@ export class DB {
         cs[3],
         cs[4],
         cs[5],
-        from
+        this.remoteDbidBytes
       );
     }
   }
 
   async updatePeerTracker(
     tx: TXAsync,
-    fromBin: Uint8Array,
     event: VersionEvent,
     seqEnd: readonly [Version, number]
   ) {
     await this.updatePeerTrackerStmt.run(
       tx,
-      fromBin,
+      this.remoteDbidBytes,
       event,
       BigInt(seqEnd[0]),
       seqEnd[1]

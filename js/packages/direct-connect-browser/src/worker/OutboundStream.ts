@@ -29,6 +29,8 @@ export default class OutboundStream {
     }
     this.started = true;
     this.seq = seq;
+
+    this.nextTick();
   }
 
   nextTick() {
@@ -54,6 +56,9 @@ export default class OutboundStream {
     }
 
     const changes = await this.db.pullChangeset(this.seq);
+    if (changes.length === 0) {
+      return;
+    }
     const seqEnd = [changes[changes.length - 1][5], 0] as const;
 
     const resp = await this.fetcher.applyChanges({

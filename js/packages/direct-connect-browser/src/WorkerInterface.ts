@@ -1,14 +1,18 @@
-import { Endpoints, FromWorkerMsg, SyncedRemoteMsg } from "./Types";
+import { DBID, Endpoints, FromWorkerMsg, SyncedRemoteMsg } from "./Types";
 import tblrx, { Src } from "@vlcn.io/rx-tbl";
 
+type AsUrls<T> = {
+  [Property in keyof T]: URL;
+};
 export default class WorkerInterface {
   private readonly worker;
-  private readonly syncs = new Map<string, ReturnType<typeof tblrx>>();
+  private readonly syncs = new Map<DBID, ReturnType<typeof tblrx>>();
   private disposables = new Map<string, () => void>();
 
   constructor(workerUri: string, private readonly wasmUri: string) {
     this.worker = new SharedWorker(workerUri, {
       type: "module",
+      name: "direct-connect-browser:shared.worker",
     });
 
     this.worker.port.onmessage = (e: MessageEvent<FromWorkerMsg>) => {
@@ -21,7 +25,11 @@ export default class WorkerInterface {
     };
   }
 
-  startSync(dbid: string, endpoints: Endpoints, rx: ReturnType<typeof tblrx>) {
+  startSync(
+    dbid: DBID,
+    endpoints: AsUrls<Endpoints>,
+    rx: ReturnType<typeof tblrx>
+  ) {
     const existing = this.syncs.get(dbid);
     if (existing) {
       throw new Error(`Already syncing ${dbid}`);
@@ -30,7 +38,10 @@ export default class WorkerInterface {
     const msg = {
       _tag: "StartSync",
       dbid,
-      endpoints,
+      endpoints: Object.keys(endpoints).reduce((acc, key) => {
+        (acc as any)[key] = (endpoints as any)[key].toString();
+        return acc;
+      }, {} as Endpoints),
       wasmUri: this.wasmUri,
     };
     this.worker.port.postMessage(msg);
@@ -44,7 +55,7 @@ export default class WorkerInterface {
     );
   }
 
-  stopSync(dbid: string) {
+  stopSync(dbid: DBID) {
     const msg = {
       _tag: "StopSync",
       dbid,

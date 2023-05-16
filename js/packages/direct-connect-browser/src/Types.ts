@@ -1,11 +1,11 @@
 import { UpdateType } from "@vlcn.io/xplat-api";
 
 export type Endpoints = {
-  createOrMigrate: URL;
-  getChanges: URL;
-  applyChanges: URL;
-  establishOutboundStream: URL;
-  getLastSeen: URL;
+  createOrMigrate: string;
+  getChanges: string;
+  applyChanges: string;
+  establishOutboundStream: string;
+  getLastSeen: string;
 };
 
 export type ToWorkerMsg = LocalDBChangedMsg | StartSyncMsg | StopSyncMsg;

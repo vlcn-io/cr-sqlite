@@ -137,10 +137,10 @@ export default async function getDB(wasmUri: string, dbid: DBID) {
   siteid = siteid.slice(2, -1); // remove X'' quoting
 
   const schemaNameResult = await db.execA(
-    `SELECT value FROM crsql_master WHERE key = ${SCHEMA_NAME}`
+    `SELECT value FROM crsql_master WHERE key = '${SCHEMA_NAME}'`
   );
   const schemaVersionResult = await db.execA(
-    `SELECT value FROM crsql_master WHERE key = ${SCHEMA_VERSION}`
+    `SELECT value FROM crsql_master WHERE key = '${SCHEMA_VERSION}'`
   );
 
   if (schemaNameResult.length == 0 || schemaVersionResult.length == 0) {

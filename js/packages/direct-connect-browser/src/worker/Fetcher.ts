@@ -73,7 +73,7 @@ export default class Fetcher {
     );
   }
 
-  _post(uri: URL, msg: Msg) {
+  _post(uri: string, msg: Msg) {
     return fetch(uri, {
       method: "POST",
       body: this.serializer.encode(msg),
@@ -81,9 +81,9 @@ export default class Fetcher {
   }
 
   _fetchWithRetry(
-    uri: URL,
+    uri: string,
     msg: Msg,
-    verbFn: (uri: URL, msg: Msg) => Promise<Response>,
+    verbFn: (uri: string, msg: Msg) => Promise<Response>,
     retry: RetryConfig = noRetryConfig
   ): Promise<Response> {
     // fetch doesn't support retries, so we have to do it ourselves
@@ -109,7 +109,7 @@ export default class Fetcher {
     }) as any;
   }
 
-  _get = (uri: URL, msg: Msg) => {
+  _get = (uri: string, msg: Msg) => {
     const uriCopy = new URL(uri.toString());
     uriCopy.searchParams.set("msg", this.serializer.encode(msg));
     return fetch(uriCopy);

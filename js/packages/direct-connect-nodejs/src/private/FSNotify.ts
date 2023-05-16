@@ -56,6 +56,11 @@ export default class FSNotify {
     } else {
       listeners.add(cb);
     }
+
+    // Fire an event on registration so state is sent out immediately.
+    setTimeout(() => {
+      cb(this.cache.getStr(dbid));
+    }, 0);
   }
 
   removeListener(dbid: string, cb: (db: DB) => void) {

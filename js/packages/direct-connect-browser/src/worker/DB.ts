@@ -135,6 +135,7 @@ export default async function getDB(wasmUri: string, dbid: DBID) {
           "seq" = excluded."seq"`
       ),
     ]);
+  pullChangesetStmt.raw(true);
 
   let siteid = (await db.execA(`SELECT quote(crsql_siteid())`))[0][0];
   siteid = siteid.slice(2, -1); // remove X'' quoting

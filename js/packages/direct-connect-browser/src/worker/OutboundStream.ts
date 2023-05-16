@@ -34,6 +34,7 @@ export default class OutboundStream {
   }
 
   nextTick() {
+    console.log("next tick!");
     // pull changes from the local DB
     if (this.seq == null || this.shutdown) {
       // init not yet complete

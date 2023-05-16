@@ -6,7 +6,7 @@ export default class WorkerInterface {
   private readonly syncs = new Map<string, ReturnType<typeof tblrx>>();
   private disposables = new Map<string, () => void>();
 
-  constructor(workerUri: string) {
+  constructor(workerUri: string, private readonly wasmUri: string) {
     this.worker = new SharedWorker(workerUri, {
       type: "module",
     });
@@ -31,6 +31,7 @@ export default class WorkerInterface {
       _tag: "StartSync",
       dbid,
       endpoints,
+      wasmUri: this.wasmUri,
     };
     this.worker.port.postMessage(msg);
 

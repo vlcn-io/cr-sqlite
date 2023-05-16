@@ -10,7 +10,7 @@
   "main": "dist/index.js",
   "exports": {
     ".": "./dist/index.js",
-    "./shared-worker": "./dist/worker/shared-worker.js"
+    "./shared.worker.js": "./dist/worker/shared.worker.js"
   },
   "devDependencies": {
     "typescript": "^5.0.4"

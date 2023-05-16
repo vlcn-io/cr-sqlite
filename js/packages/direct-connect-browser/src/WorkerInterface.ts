@@ -2,7 +2,7 @@ import { DBID, Endpoints, FromWorkerMsg, SyncedRemoteMsg } from "./Types";
 import tblrx, { Src } from "@vlcn.io/rx-tbl";
 
 type AsUrls<T> = {
-  [Property in keyof T]: URL;
+  [Property in keyof T]: T[Property] extends undefined | URL ? undefined : URL;
 };
 export default class WorkerInterface {
   private readonly worker;

@@ -51,37 +51,41 @@ export default class OutboundStream {
   }
 
   async _nextTick(): Promise<void> {
-    // pull changes from the local DB
-    if (this.seq == null) {
-      return;
-    }
+    try {
+      // pull changes from the local DB
+      if (this.seq == null) {
+        return;
+      }
 
-    const changes = await this.db.pullChangeset(this.seq);
-    if (changes.length === 0) {
-      return;
-    }
-    const seqEnd = [changes[changes.length - 1][5], 0] as const;
+      const changes = await this.db.pullChangeset(this.seq);
+      if (changes.length === 0) {
+        return;
+      }
+      const seqEnd = [changes[changes.length - 1][5], 0] as const;
 
-    const resp = await this.fetcher.applyChanges({
-      _tag: tags.applyChanges,
-      toDbid: hexToBytes(this.db.remoteDbid),
-      fromDbid: hexToBytes(this.db.localDbid),
-      schemaVersion: this.db.schemaVersion,
-      seqStart: this.seq!,
-      seqEnd,
-      changes,
-    });
+      const resp = await this.fetcher.applyChanges({
+        _tag: tags.applyChanges,
+        toDbid: this.db.remoteDbidBytes,
+        fromDbid: hexToBytes(this.db.localDbid),
+        schemaVersion: this.db.schemaVersion,
+        seqStart: this.seq!,
+        seqEnd,
+        changes,
+      });
 
-    if (resp.status === "ok") {
-      this.seq = resp.seqEnd!;
-    } else {
-      throw new Error(`failed to apply changes on remote: ${resp.status}`);
-    }
+      if (resp.status === "ok") {
+        this.seq = resp.seqEnd!;
+      } else {
+        throw new Error(`failed to apply changes on remote: ${resp.status}`);
+      }
 
-    this.inflightTick = null;
-    if (this.hasPendingTick) {
-      this.hasPendingTick = false;
-      this.nextTick();
+      this.inflightTick = null;
+      if (this.hasPendingTick) {
+        this.hasPendingTick = false;
+        this.nextTick();
+      }
+    } finally {
+      this.inflightTick = null;
     }
   }
 

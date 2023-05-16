@@ -22,16 +22,12 @@ const fsNotify = new FSNotify(DefaultConfig, dbCache);
 const syncSvc = new SyncService(DefaultConfig, dbCache, svcDb, fsNotify);
 const serializer = new JsonSerializer();
 
-app.get("/sync/changes", (req, res) => {
-  console.log(req.query);
-  res.json({ changes: [] });
-});
-
 app.post(
   "/sync/changes",
   makeSafe(async (req, res) => {
-    console.log(req.body);
-    res.json({});
+    const msg = serializer.decode(req.body);
+    const ret = await syncSvc.applyChanges(msg);
+    res.json(serializer.encode(ret));
   })
 );
 
@@ -41,14 +37,6 @@ app.post(
     const msg = serializer.decode(req.body);
     const ret = await syncSvc.createOrMigrateDatabase(msg);
     res.json(serializer.encode(ret));
-  })
-);
-
-app.get(
-  "/sync/last-seen",
-  makeSafe(async (req, res) => {
-    console.log(req.query);
-    res.json({ lastSeen: 0 });
   })
 );
 
@@ -63,6 +51,7 @@ app.get(
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
 
+    // TODO: just throw on schema mismatch rather than providing a response
     const [stream, initialResponse] = await syncSvc.startOutboundStream(msg);
     res.write(
       `data: ${JSON.stringify(serializer.encode(initialResponse))}\n\n`

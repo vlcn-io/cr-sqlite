@@ -48,15 +48,15 @@ export default class Fetcher {
   }
 
   getChanges(msg: GetChangesMsg): Promise<GetChangesResponse> {
-    return this._get(this.endpoints.getChanges, msg).then((res) =>
+    return this._get(this.endpoints.getChanges!, msg).then((res) =>
       decodeResponse(res, this.serializer)
     );
   }
 
   applyChanges(msg: ApplyChangesMsg): Promise<ApplyChangesResponse> {
-    return this._post(this.endpoints.applyChanges, msg).then((res) =>
-      decodeResponse(res, this.serializer)
-    );
+    return this._post(this.endpoints.applyChanges, msg).then((res) => {
+      return decodeResponse(res, this.serializer);
+    });
   }
 
   startOutboundStream(msg: EstablishOutboundStreamMsg): EventSource {
@@ -69,7 +69,7 @@ export default class Fetcher {
   }
 
   getLastSeen(msg: GetLastSeenMsg): Promise<GetLastSeenResponse> {
-    return this._get(this.endpoints.getLastSeen, msg).then((res) =>
+    return this._get(this.endpoints.getLastSeen!, msg).then((res) =>
       decodeResponse(res, this.serializer)
     );
   }
@@ -101,6 +101,7 @@ export default class Fetcher {
         return res;
       }
       if (retryCount <= 0) {
+        console.log(res);
         throw new Error("Failed to fetch");
       }
       return new Promise((resolve) => {
@@ -134,6 +135,7 @@ async function decodeResponse<T extends Msg>(
   serializer: ISerializer
 ): Promise<T> {
   if (!resp.ok) {
+    console.log(resp);
     throw new Error("Failed to fetch");
   }
   switch (serializer.contentType) {

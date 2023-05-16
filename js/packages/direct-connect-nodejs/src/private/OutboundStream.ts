@@ -42,7 +42,8 @@ export default class OutboundStream {
   }
 
   start() {
-    this.fsnotify.addListener(bytesToHex(this.localDbid), this.#dbChanged);
+    const localdbid = bytesToHex(this.localDbid);
+    this.fsnotify.addListener(localdbid, this.#dbChanged);
   }
 
   addListener(l: (changes: StreamingChangesMsg) => void) {

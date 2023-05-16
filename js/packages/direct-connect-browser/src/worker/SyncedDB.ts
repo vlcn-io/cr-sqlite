@@ -59,11 +59,15 @@ export class SyncedDB {
   }
 
   _syncApplied() {
-    // inbound stream calls this
+    // rxtbl calls this or we call it from `inboundStream`
+    // if rxtbl, use __internalRawListener
     // then we fire up the ports to the main threads to tell them to update.
     // we should collect the precise tables that changed and send that info to the main thread
     // we could install rx-tbl inside of here...
     // or we can collect during changeset application...
+    // ignore clock tables in callbacks.
+    // register with `internalRawListener` so we can filter out tables we have no concern for? e.g., the bookkeeping sync tables?
+    //  you'll want to not push on bookkeeping given that all writes will incur sync bookkeeping writes.
   }
 
   async stop(port: MessagePort): Promise<boolean> {

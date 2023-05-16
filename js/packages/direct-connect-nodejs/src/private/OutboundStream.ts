@@ -45,6 +45,13 @@ export default class OutboundStream {
     this.fsnotify.addListener(bytesToHex(this.localDbid), this.#dbChanged);
   }
 
+  addListener(l: (changes: StreamingChangesMsg) => void) {
+    this.listeners.add(l);
+    return () => {
+      this.listeners.delete(l);
+    };
+  }
+
   #dbChanged = (db: DB) => {
     const changes = db.getChanges(this.remoteDbid, this.since[0]);
     if (changes.length == 0) {
@@ -76,5 +83,6 @@ export default class OutboundStream {
   // and restart it.
   close() {
     this.fsnotify.removeListener(bytesToHex(this.localDbid), this.#dbChanged);
+    this.listeners.clear();
   }
 }

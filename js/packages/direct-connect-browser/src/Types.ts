@@ -4,7 +4,7 @@ export type Endpoints = {
   createOrMigrate: string;
   getChanges: string;
   applyChanges: string;
-  establishOutboundStream: string;
+  startOutboundStream: string;
   getLastSeen: string;
 };
 

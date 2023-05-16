@@ -52,11 +52,38 @@ app.get(
   })
 );
 
-app.post(
+app.get(
   "/sync/start-outbound-stream",
   makeSafe(async (req, res) => {
-    console.log(req.body);
-    res.json({});
+    console.log("Start outbound stream");
+    const msg = serializer.decode(
+      JSON.parse(decodeURIComponent(req.query.msg))
+    );
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+
+    const [stream, initialResponse] = await syncSvc.startOutboundStream(msg);
+    res.write(
+      `data: ${JSON.stringify(serializer.encode(initialResponse))}\n\n`
+    );
+
+    stream.addListener((changes) => {
+      res.write(
+        `data: ${JSON.stringify(serializer.encode(changes))}\n\n`,
+        (err) => {
+          if (err != null) {
+            console.error(err);
+            stream.close();
+          }
+        }
+      );
+    });
+
+    req.on("close", () => {
+      console.log("Close outbound stream");
+      stream.close();
+    });
   })
 );
 
@@ -64,6 +91,11 @@ ViteExpress.listen(app, PORT, () =>
   console.log(`Listening at http://localhost:${PORT}`)
 );
 
+/**
+ *
+ * @param {import("express").RequestHandler} handler
+ * @returns {import("express").RequestHandler}
+ */
 function makeSafe(handler) {
   return async (req, res) => {
     try {

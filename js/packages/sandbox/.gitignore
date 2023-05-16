@@ -1,0 +1,3 @@
+dbs/*.db
+dbs/*.db-shm
+dbs/*.db-wal

@@ -24,7 +24,7 @@ syncWorker.startSync(
     getChanges: new URL("/sync/changes", window.location.origin),
     applyChanges: new URL("/sync/changes", window.location.origin),
     establishOutboundStream: new URL(
-      "/sync/establish-outbound-stream",
+      "/sync/start-outbound-stream",
       window.location.origin
     ),
     getLastSeen: new URL("/sync/last-seen", window.location.origin),

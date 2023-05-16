@@ -66,6 +66,10 @@ function App({ ctx }: { ctx: CtxAsync }) {
     ]);
   };
 
+  const dropData = () => {
+    ctx.db.exec("DELETE FROM test;");
+  };
+
   return (
     <div style={{ minWidth: 350 }}>
       <button
@@ -73,6 +77,12 @@ function App({ ctx }: { ctx: CtxAsync }) {
         className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
       >
         Add Data
+      </button>
+      <button
+        onClick={dropData}
+        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+      >
+        Drop Data
       </button>
       <table className="table-auto">
         <thead>

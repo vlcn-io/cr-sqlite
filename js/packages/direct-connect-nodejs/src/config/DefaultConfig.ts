@@ -6,6 +6,7 @@ const DefaultConfig: Config = {
   cacheTtlInSeconds: 60 * 5,
   notifyLatencyInMs: 10,
   serviceDbPath: "./dbs/service.db",
+  msgContentType: "application/json",
 };
 
 export default DefaultConfig;

@@ -73,11 +73,8 @@ export default class OutboundStream {
         changes,
       });
 
-      if (resp.status === "ok") {
-        this.seq = resp.seqEnd!;
-      } else {
-        throw new Error(`failed to apply changes on remote: ${resp.status}`);
-      }
+      // resp.seqEnd?
+      this.seq = seqEnd;
 
       this.inflightTick = null;
       if (this.hasPendingTick) {

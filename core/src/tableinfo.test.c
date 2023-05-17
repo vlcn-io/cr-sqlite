@@ -282,6 +282,8 @@ static void testSlabRowid() {
   assert(barSlabRowid == 2 + ROWID_SLAB_SIZE);
   assert(bazSlabRowid == 3 + ROWID_SLAB_SIZE * 2);
 
+  crsql_freeAllTableInfos(tblInfos, tblInfosLen);
+
   crsql_close(db);
   printf("\t\e[0;32mSuccess\e[0m\n");
 }

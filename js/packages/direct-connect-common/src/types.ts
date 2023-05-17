@@ -100,9 +100,6 @@ export type CreateOrMigrateMsg = {
 
 export type ApplyChangesResponse = {
   readonly _tag: Tag["applyChangesResponse"];
-  readonly msg?: string;
-  readonly seqEnd?: Seq;
-  readonly status: "ok" | "schemaMismatch" | "outOfOrder";
 };
 
 export type CreateOrMigrateResponse = {
@@ -195,19 +192,7 @@ export type EstablishOutboundStreamMsg = {
 
 export type EstablishOutboundStreamResponse = {
   readonly _tag: Tag["establishOutboundStreamResponse"];
-  readonly status: "ok" | "schemaMismatch";
 };
-
-/**
- * Should the sender know what the receiver has received?
- * Or should the sender negotiate where to start?
- * The receiver telling it what it last had.
- *
- * Inbound is a  "you need changes from me, tell me since when"
- *
- * If there's acking the sender could maintain such info...
- */
-export type EstablishInboundStreamMsg = {};
 
 export type AckChangesMsg = {
   readonly _tag: Tag["ackChanges"];

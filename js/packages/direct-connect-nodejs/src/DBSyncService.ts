@@ -78,22 +78,10 @@ const DBSyncService = {
     // 1. ensure contiguity of messages by checking seqStart against seen_peers
     // 2. apply changes in a transaction and update seen_peers
     // 3. return status
-    try {
-      db.transaction(applyChangesInternal)(db, msg);
-      return {
-        _tag: tags.applyChangesResponse,
-        seqEnd: msg.seqEnd,
-        status: "ok",
-      };
-    } catch (e: any) {
-      console.error(e);
-      return {
-        _tag: tags.applyChangesResponse,
-        msg: e.msg,
-        seqEnd: e.seqEnd,
-        status: e.status || "uncaught",
-      };
-    }
+    db.transaction(applyChangesInternal)(db, msg);
+    return {
+      _tag: tags.applyChangesResponse,
+    };
   },
 
   getChanges(db: DB, msg: GetChangesMsg): GetChangesResponse {

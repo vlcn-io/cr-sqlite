@@ -124,7 +124,6 @@ export default class SyncService {
       os,
       {
         _tag: tags.establishOutboundStreamResponse,
-        status: "ok",
       },
     ];
   }

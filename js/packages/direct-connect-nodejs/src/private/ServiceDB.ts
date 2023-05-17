@@ -6,7 +6,7 @@ import { Config } from "../Types.js";
 export type SchemaRow = {
   namespace: string;
   name: string;
-  version: string;
+  version: bigint;
   content: string;
   active: boolean;
 };
@@ -26,9 +26,11 @@ export default class ServiceDB {
     this.getSchemaStmt = this.db.prepare(
       `SELECT namespace, name, version, active, content FROM schema WHERE namespace = ? AND name = ? AND version = ?`
     );
-    this.listSchemasStmt = this.db.prepare(
-      `SELECT name, version, active, creation_time FROM schema WHERE namespace = ? ORDER BY creation_time, version DESC`
-    );
+    this.listSchemasStmt = this.db
+      .prepare(
+        `SELECT name, version, active, creation_time FROM schema WHERE namespace = ? ORDER BY creation_time, version DESC`
+      )
+      .safeIntegers(true);
   }
 
   bootstrap() {

@@ -34,8 +34,8 @@ test("writes to the database notify fs listeners", async () => {
   // sleep for some time for fs events to propagate
   await sleep(500);
 
-  // Should not be notified on creation of fsNotify
-  expect(notified).toBe(false);
+  // Should be notified on first registration of listener to fsnotify.
+  expect(notified).toBe(true);
 
   db.exec("INSERT INTO test2 VALUES (1, 2)");
   if (util.isDarwin()) {

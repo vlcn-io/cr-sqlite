@@ -28,7 +28,10 @@ export default class WorkerInterface {
   startSync(
     dbid: DBID,
     endpoints: AsUrls<Endpoints>,
-    rx: ReturnType<typeof tblrx>
+    rx: ReturnType<typeof tblrx>,
+    transportContentType:
+      | "application/json"
+      | "application/octet-stream" = "application/json"
   ) {
     const existing = this.syncs.get(dbid);
     if (existing) {
@@ -43,6 +46,7 @@ export default class WorkerInterface {
         return acc;
       }, {} as Endpoints),
       wasmUri: this.wasmUri,
+      transportContentType,
     };
     this.worker.port.postMessage(msg);
 

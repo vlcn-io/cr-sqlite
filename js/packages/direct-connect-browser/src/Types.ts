@@ -21,6 +21,7 @@ export type StartSyncMsg = {
   dbid: DBID;
   endpoints: Endpoints;
   wasmUri: string;
+  transportContentType: "application/json" | "application/octet-stream";
 };
 
 export type StopSyncMsg = {

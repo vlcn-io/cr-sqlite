@@ -1,4 +1,5 @@
-import JsonSerializer from "./JsonSerializer";
+import JsonSerializer from "./JsonSerializer.js";
+import BinarySerializer from "./BinarySerializer.js";
 
 export default {
   getSerializer(
@@ -9,8 +10,7 @@ export default {
       case "application/json":
         return new JsonSerializer(...args);
       case "application/octet-stream":
-      default:
-        throw new Error(`Unsupported content type: ${contentType}`);
+        return new BinarySerializer();
     }
   },
 };

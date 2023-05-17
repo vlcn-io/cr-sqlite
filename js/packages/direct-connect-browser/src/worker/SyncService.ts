@@ -1,4 +1,7 @@
-import { JsonSerializer } from "@vlcn.io/direct-connect-common";
+import {
+  JsonSerializer,
+  SerializerFactory,
+} from "@vlcn.io/direct-connect-common";
 import {
   Endpoints,
   LocalDBChangedMsg,
@@ -28,8 +31,7 @@ export default class SyncService {
         msg.wasmUri,
         msg.dbid,
         msg.endpoints,
-        // TODO: make this configurable so we can switch to binary encoding
-        new JsonSerializer(true, false)
+        SerializerFactory.getSerializer(msg.transportContentType, [true, false])
       );
       this.dbs.set(msg.dbid, db);
     }

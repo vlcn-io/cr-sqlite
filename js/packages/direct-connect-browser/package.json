@@ -22,7 +22,7 @@
     "build": "tsc --build && pnpm run bundle-worker",
     "watch": "tsc --build --watch",
     "bundle-worker": "rollup ./dist/worker/shared.worker.js -o ./dist/worker/shared.bundle.worker.js -p @rollup/plugin-node-resolve",
-    "test": "vitest run",
+    "test": "echo 'no tests yet'",
     "deep-clean": "rm -rf ./dist || true && rm tsconfig.tsbuildinfo || true"
   },
   "repository": {

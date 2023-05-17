@@ -54,7 +54,7 @@ export default class SyncService {
 
   listSchemas(): {
     name: string;
-    version: string;
+    version: bigint;
     active: boolean;
   }[] {
     return this.serviceDB.listSchemas("default");

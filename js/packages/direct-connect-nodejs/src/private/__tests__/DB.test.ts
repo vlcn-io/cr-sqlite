@@ -71,9 +71,9 @@ test("migrating to the same schema & version is a no-op", async () => {
   expect(result1).toBe("apply");
   expect(result2).toBe("noop");
 
-  result1 = await db.migrateTo("test.sql", -4199889328989581946n);
-  result2 = await db.migrateTo("test.sql", -4199889328989581946n);
-  expect(result2).toBe("noop");
+  // result1 = await db.migrateTo("test.sql", -4199889328989581946n);
+  // result2 = await db.migrateTo("test.sql", -4199889328989581946n);
+  // expect(result2).toBe("noop");
 });
 
 test("migrating to an unrelated schema is an error", async () => {

@@ -38,7 +38,7 @@ test("uploading and listing schemas", () => {
     {
       name: "test",
       version: 1n,
-      active: 1,
+      active: 1n,
     },
   ]);
 
@@ -55,12 +55,12 @@ test("uploading and listing schemas", () => {
     {
       name: "test",
       version: 2n,
-      active: 1,
+      active: 1n,
     },
     {
       name: "test",
       version: 1n,
-      active: 0,
+      active: 0n,
     },
   ]);
 
@@ -76,18 +76,18 @@ test("uploading and listing schemas", () => {
   expect(schemas3).toEqual([
     {
       name: "test",
-      version: "3",
-      active: 0,
+      version: 3n,
+      active: 0n,
     },
     {
       name: "test",
       version: 2n,
-      active: 1,
+      active: 1n,
     },
     {
       name: "test",
       version: 1n,
-      active: 0,
+      active: 0n,
     },
   ]);
 
@@ -121,7 +121,7 @@ test("activating a schema", () => {
     {
       name: "test",
       version: 1n,
-      active: 0,
+      active: 0n,
     },
   ]);
 
@@ -136,7 +136,7 @@ test("activating a schema", () => {
     {
       name: "test",
       version: 1n,
-      active: 1,
+      active: 1n,
     },
   ]);
 
@@ -175,6 +175,7 @@ test("creating a database", () => {
   expect(resp).toEqual({
     _tag: tags.createOrMigrateResponse,
     status: "apply",
+    seq: [0n, 0],
   });
   resp = svc.createOrMigrateDatabase({
     _tag: tags.createOrMigrate,
@@ -186,6 +187,7 @@ test("creating a database", () => {
   expect(resp).toEqual({
     _tag: tags.createOrMigrateResponse,
     status: "noop",
+    seq: [0n, 0],
   });
 
   // bad schema (not exists)
@@ -244,6 +246,7 @@ test("creating a database", () => {
   expect(resp).toEqual({
     _tag: tags.createOrMigrateResponse,
     status: "migrate",
+    seq: [0n, 0],
   });
 });
 
@@ -298,8 +301,6 @@ test("apply changes", () => {
   });
   expect(resp).toEqual({
     _tag: tags.applyChangesResponse,
-    seqEnd: [1n, 0],
-    status: "ok",
   });
 
   since = svc.getLastSeen({

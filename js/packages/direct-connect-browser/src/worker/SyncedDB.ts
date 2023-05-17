@@ -63,6 +63,7 @@ export class SyncedDB {
   }
 
   _dbChangedFromOurThread = (updates: [UpdateType, string, bigint][]) => {
+    console.log("db changed from our thread");
     updates = updates.filter((u) => !u[1].includes("crsql_"));
     if (updates.length === 0) {
       return;
@@ -75,8 +76,6 @@ export class SyncedDB {
       });
     }
   };
-
-  _dispatchChangesToMainThread = () => {};
 
   async stop(port: MessagePort): Promise<boolean> {
     this.ports.delete(port);

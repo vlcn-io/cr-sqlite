@@ -75,7 +75,7 @@ export default class InboundStream {
 
   // apply in batches over some throttle period? Or just collect while we're waiting
   // the last operation then process the whole next batch.
-  #collectChangesetMsg(msg: StreamingChangesMsg) {
+  #collectChangesetMsg(msg: StreamingChangesMsg | null) {
     // ensure we're contiguous
     // then update peer tracker / our record of the server
     // await this.updatePeerTracker(tx, from, RECEIVE, seqEnd);
@@ -83,8 +83,11 @@ export default class InboundStream {
       return;
     }
 
-    this.pendingWrites.push(msg);
+    if (msg != null) this.pendingWrites.push(msg);
     if (this.inflightWrite != null) {
+      return;
+    }
+    if (this.pendingWrites.length == 0) {
       return;
     }
 
@@ -92,10 +95,17 @@ export default class InboundStream {
     const writes = this.pendingWrites;
     this.pendingWrites = [];
     this.inflightWrite = this.#applyAllChangesetMsgs(writes);
+    const inflightComplete = () => {
+      this.inflightWrite = null;
+      if (this.pendingWrites.length > 0) {
+        this.#collectChangesetMsg(null);
+      }
+    };
+    this.inflightWrite.then(inflightComplete);
   }
 
-  async #applyAllChangesetMsgs(writes: StreamingChangesMsg[]) {
-    await this.db.db.tx(async (tx) => {
+  #applyAllChangesetMsgs(writes: StreamingChangesMsg[]) {
+    return this.db.db.tx(async (tx) => {
       for (const msg of writes) {
         await this.#applyChangesetMsg(tx, msg);
       }
@@ -107,9 +117,9 @@ export default class InboundStream {
       throw new Error("Receive a message before we have a seq");
     }
     if (msg.seqStart[0] != this.seq[0]) {
-      throw new Error(
-        `Expected seqStart v ${this.seq} but got ${msg.seqStart}`
-      );
+      const err = `Expected seqStart v ${this.seq} but got ${msg.seqStart}`;
+      console.error(err);
+      throw new Error(err);
     }
     if (msg.seqStart[1] != this.seq[1]) {
       throw new Error(
@@ -117,7 +127,9 @@ export default class InboundStream {
       );
     }
 
+    console.log("Applying ", msg);
     await this.db.applyChangeset(tx, msg.changes);
     await this.db.updatePeerTracker(tx, RECEIVE, msg.seqEnd);
+    this.seq = msg.seqEnd;
   }
 }

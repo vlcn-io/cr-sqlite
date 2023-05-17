@@ -82,12 +82,6 @@ export default function encode(msg: Msg): Object {
     case tags.applyChangesResponse:
       return {
         _tag: tags.applyChangesResponse,
-        status: msg.status,
-        seqEnd:
-          msg.seqEnd != null
-            ? [msg.seqEnd[0].toString(), msg.seqEnd[1]]
-            : undefined,
-        msg: msg.msg,
       };
     case tags.establishOutboundStreamResponse:
       return msg;

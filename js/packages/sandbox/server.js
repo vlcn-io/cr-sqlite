@@ -91,6 +91,7 @@ function makeSafe(handler) {
       await handler(req, res);
     } catch (err) {
       console.error(err);
+      res.status(500).json({ error: err.message });
     }
   };
 }

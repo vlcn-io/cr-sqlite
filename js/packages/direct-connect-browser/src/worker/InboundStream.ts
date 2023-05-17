@@ -60,9 +60,6 @@ export default class InboundStream {
     console.log(msg);
     switch (msg._tag) {
       case tags.establishOutboundStreamResponse:
-        if (msg.status !== "ok") {
-          throw new Error(msg.status);
-        }
         console.log(`inbound stream established`);
         break;
       case tags.streamingChanges:

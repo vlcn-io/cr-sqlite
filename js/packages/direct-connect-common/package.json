@@ -23,5 +23,8 @@
     "type": "git",
     "url": "git@github.com:vlcn-io/cr-sqlite.git",
     "directory": "https://github.com/vlcn-io/cr-sqlite/tree/main/js/packages/direct-connect-common"
+  },
+  "dependencies": {
+    "lib0": "^0.2.73"
   }
 }

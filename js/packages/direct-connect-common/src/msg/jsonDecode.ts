@@ -75,9 +75,6 @@ export default function decode(parsed: { [key: string]: any }): Msg {
     case tags.applyChangesResponse:
       return {
         _tag: tags.applyChangesResponse,
-        status: parsed.status,
-        seqEnd: [BigInt(parsed.seqEnd[0]), parsed.seqEnd[1]],
-        msg: parsed.msg,
       };
     case tags.streamingChanges:
       return {

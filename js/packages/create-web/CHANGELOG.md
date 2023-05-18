@@ -1,5 +1,11 @@
 # @vlcn.io/create-web
 
+## 0.2.1
+
+### Patch Changes
+
+- fts5, sqlite 3.42.1, direct-connect packages
+
 ## 0.2.0
 
 ### Minor Changes

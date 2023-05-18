@@ -1,5 +1,14 @@
 # @vlcn.io/react
 
+## 0.10.1
+
+### Patch Changes
+
+- fts5, sqlite 3.42.1, direct-connect packages
+- Updated dependencies
+  - @vlcn.io/rx-tbl@0.9.1
+  - @vlcn.io/xplat-api@0.9.1
+
 ## 0.10.0
 
 ### Minor Changes

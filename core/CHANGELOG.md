@@ -1,5 +1,11 @@
 # @vlcn.io/crsqlite
 
+## 0.10.1
+
+### Patch Changes
+
+- fts5, sqlite 3.42.1, direct-connect packages
+
 ## 0.10.0
 
 ### Minor Changes

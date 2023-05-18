@@ -1,5 +1,13 @@
 # @vlcn.io/replicator-wholedb
 
+## 0.8.1
+
+### Patch Changes
+
+- fts5, sqlite 3.42.1, direct-connect packages
+- Updated dependencies
+  - @vlcn.io/xplat-api@0.9.1
+
 ## 0.8.0
 
 ### Minor Changes

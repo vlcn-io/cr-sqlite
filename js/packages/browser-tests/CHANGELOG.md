@@ -1,5 +1,15 @@
 # @vlcn.io/browser-tests
 
+## 0.8.1
+
+### Patch Changes
+
+- fts5, sqlite 3.42.1, direct-connect packages
+- Updated dependencies [6dbfdcb]
+- Updated dependencies
+  - @vlcn.io/crsqlite-wasm@0.10.1
+  - @vlcn.io/xplat-tests@0.8.1
+
 ## 0.8.1-next.0
 
 ### Patch Changes

@@ -1,5 +1,18 @@
 # @vlcn.io/sync-client
 
+## 0.9.1
+
+### Patch Changes
+
+- fts5, sqlite 3.42.1, direct-connect packages
+- Updated dependencies [6dbfdcb]
+- Updated dependencies
+  - @vlcn.io/crsqlite-wasm@0.10.1
+  - @vlcn.io/client-core@0.9.1
+  - @vlcn.io/client-server-common@0.6.1
+  - @vlcn.io/rx-tbl@0.9.1
+  - @vlcn.io/xplat-api@0.9.1
+
 ## 0.9.1-next.0
 
 ### Patch Changes

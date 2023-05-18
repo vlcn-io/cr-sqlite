@@ -1,5 +1,15 @@
 # @vlcn.io/sync-server
 
+## 0.9.1
+
+### Patch Changes
+
+- fts5, sqlite 3.42.1, direct-connect packages
+- Updated dependencies
+  - @vlcn.io/crsqlite@0.10.1
+  - @vlcn.io/client-server-common@0.6.1
+  - @vlcn.io/server-core@0.9.1
+
 ## 0.9.0
 
 ### Minor Changes

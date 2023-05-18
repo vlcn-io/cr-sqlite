@@ -1,5 +1,11 @@
 # sandbox-node
 
+## 0.1.1
+
+### Patch Changes
+
+- fts5, sqlite 3.42.1, direct-connect packages
+
 ## 0.1.0
 
 ### Minor Changes

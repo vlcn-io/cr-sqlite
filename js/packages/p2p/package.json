@@ -1,7 +1,7 @@
 {
   "name": "@vlcn.io/sync-p2p",
   "type": "module",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "files": [
     "dist",
     "src"

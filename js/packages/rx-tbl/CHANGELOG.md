@@ -1,5 +1,13 @@
 # @vlcn.io/rx-tbl
 
+## 0.9.1
+
+### Patch Changes
+
+- fts5, sqlite 3.42.1, direct-connect packages
+- Updated dependencies
+  - @vlcn.io/xplat-api@0.9.1
+
 ## 0.9.0
 
 ### Minor Changes

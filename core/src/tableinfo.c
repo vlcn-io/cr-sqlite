@@ -287,6 +287,26 @@ crsql_TableInfo *crsql_findTableInfo(crsql_TableInfo **tblInfos, int len,
   return 0;
 }
 
+int crsql_indexofTableInfo(crsql_TableInfo **tblInfos, int len,
+                           const char *tblName) {
+  for (int i = 0; i < len; ++i) {
+    if (strcmp(tblInfos[i]->tblName, tblName) == 0) {
+      return i;
+    }
+  }
+
+  return -1;
+}
+
+sqlite3_int64 crsql_slabRowid(int idx, sqlite3_int64 rowid) {
+  if (idx < 0) {
+    return -1;
+  }
+
+  sqlite3_int64 modulo = rowid % ROWID_SLAB_SIZE;
+  return idx * ROWID_SLAB_SIZE + modulo;
+}
+
 /**
  * Pulls all table infos for all crrs present in the database.
  * Run once at vtab initialization -- see docs on crsql_Changes_vtab

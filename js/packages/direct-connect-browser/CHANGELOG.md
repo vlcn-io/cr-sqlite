@@ -1,5 +1,11 @@
 # @vlcn.io/direct-connect-browser
 
+## 0.0.4
+
+### Patch Changes
+
+- vite workaround so worker works in both prod and dev mode
+
 ## 0.0.3
 
 ### Patch Changes

@@ -1,5 +1,12 @@
 # sandbox
 
+## 0.1.2
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/direct-connect-browser@0.0.3
+
 ## 0.1.1
 
 ### Patch Changes

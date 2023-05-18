@@ -1,5 +1,11 @@
 # @vlcn.io/direct-connect-browser
 
+## 0.0.3
+
+### Patch Changes
+
+- include the worker in such a way that vite understands
+
 ## 0.0.2
 
 ### Patch Changes

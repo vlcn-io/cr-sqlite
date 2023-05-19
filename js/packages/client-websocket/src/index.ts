@@ -85,7 +85,7 @@ function startSyncInWorker(
       // This is because RX calls into sync layer telling it there was a change.
       // But if change came from sync layer  itself, we don't need to tell sync layer this.
       if (src !== "thisTab") {
-        console.log("ignoring changes from sync layer / other tabs");
+        // console.log("ignoring changes from sync layer / other tabs");
         return;
       }
 

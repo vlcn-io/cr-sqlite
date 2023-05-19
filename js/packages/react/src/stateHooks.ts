@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 
 // export function useThrottledState() {
 //   /**
@@ -33,4 +33,26 @@ export function useCachedState<T>(propValue: T): [T, (value: T) => void] {
       setCurrValue(value);
     },
   ];
+}
+
+export function useCachedBinding<T>(
+  attr: keyof React.AllHTMLAttributes<T>,
+  value: any,
+  event: keyof React.DOMAttributes<T>,
+  handler: React.ReactEventHandler<T>
+) {
+  const [lastValue, setLastValue] = useState(value);
+  const [currValue, setCurrValue] = useState(value);
+  if (value !== lastValue) {
+    setLastValue(value);
+    setCurrValue(value);
+  }
+
+  return {
+    [attr]: currValue,
+    [event]: (e: React.SyntheticEvent<T>) => {
+      setCurrValue((e.target as any)[attr]);
+      handler(e);
+    },
+  };
 }

@@ -1,5 +1,11 @@
 # @vlcn.io/sync-client
 
+## 0.9.2
+
+### Patch Changes
+
+- remove some cosonle.logs, add utility state hooks
+
 ## 0.9.1
 
 ### Patch Changes

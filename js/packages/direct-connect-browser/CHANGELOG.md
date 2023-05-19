@@ -1,5 +1,11 @@
 # @vlcn.io/direct-connect-browser
 
+## 0.0.6
+
+### Patch Changes
+
+- remove some cosonle.logs, add utility state hooks
+
 ## 0.0.5
 
 ### Patch Changes

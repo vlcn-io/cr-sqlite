@@ -1,5 +1,11 @@
 # @vlcn.io/direct-connect-browser
 
+## 0.0.5
+
+### Patch Changes
+
+- restart connect on version mismatch
+
 ## 0.0.4
 
 ### Patch Changes

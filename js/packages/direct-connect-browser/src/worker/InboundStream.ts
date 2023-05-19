@@ -20,6 +20,8 @@ export default class InboundStream {
 
   private inflightWrite: Promise<void> | null = null;
   private pendingWrites: StreamingChangesMsg[] = [];
+  private restartHandle: number | null = null;
+  private errCount = 0;
 
   constructor(
     private readonly db: DB,
@@ -53,11 +55,16 @@ export default class InboundStream {
   stop() {
     this.started = false;
     this.shutdown = true;
+    if (this.restartHandle) {
+      clearTimeout(this.restartHandle);
+    }
   }
 
   _msgReceivedFromServer = (ev: MessageEvent<any>) => {
+    if (!this.started) {
+      return;
+    }
     const msg = this.serializer.decode(JSON.parse(ev.data));
-    console.log(msg);
     switch (msg._tag) {
       case tags.establishOutboundStreamResponse:
         console.log(`inbound stream established`);
@@ -116,17 +123,31 @@ export default class InboundStream {
     if (msg.seqStart[0] != this.seq[0]) {
       const err = `Expected seqStart v ${this.seq} but got ${msg.seqStart}`;
       console.error(err);
-      throw new Error(err);
+      this.#restartConnection();
     }
     if (msg.seqStart[1] != this.seq[1]) {
-      throw new Error(
-        `Expected seqStart s ${this.seq} but got ${msg.seqStart}`
-      );
+      const err = `Expected seqStart s ${this.seq} but got ${msg.seqStart}`;
+      console.error(err);
+      this.#restartConnection();
     }
 
-    console.log("Applying ", msg);
     await this.db.applyChangeset(tx, msg.changes);
     await this.db.updatePeerTracker(tx, RECEIVE, msg.seqEnd);
     this.seq = msg.seqEnd;
+    this.errCount = 0;
+  }
+
+  #restartConnection() {
+    this.eventSource?.close();
+    this.started = false;
+
+    this.restartHandle = setTimeout(
+      async () => {
+        this.restartHandle = null;
+        await this.start();
+      },
+      this.errCount == 0 ? 0 : Math.pow(2, this.errCount) * 1000
+    );
+    this.errCount = Math.min(this.errCount + 1, 3);
   }
 }

@@ -1,4 +1,5 @@
-import { DBID, Endpoints, FromWorkerMsg, SyncedRemoteMsg } from "./Types";
+import { Endpoints, FromWorkerMsg, SyncedRemoteMsg } from "./Types";
+import { DBID } from "@vlcn.io/xplat-api";
 import tblrx, { Src } from "@vlcn.io/rx-tbl";
 
 type AsUrls<T> = {

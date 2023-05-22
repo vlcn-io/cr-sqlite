@@ -1,7 +1,7 @@
 import initWasm from "@vlcn.io/crsqlite-wasm";
 import { DBAsync, StmtAsync } from "@vlcn.io/xplat-api";
 import { TXAsync } from "@vlcn.io/xplat-api";
-import { DBID } from "../Types.js";
+import { DBID } from "@vlcn.io/xplat-api";
 import {
   SCHEMA_NAME,
   SCHEMA_VERSION,

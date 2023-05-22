@@ -41,7 +41,7 @@ pub extern "C" fn crsql_automigrate(
 
     let args = args!(argc, argv);
     if let Err(code) = automigrate_impl(ctx, args) {
-        ctx.result_error("failed to apply the updated schema");
+        ctx.result_error(&format!("failed to apply the updated schema {:?}", code));
         ctx.result_error_code(code);
         return;
     }
@@ -137,7 +137,10 @@ fn migrate_to(local_db: *mut sqlite3, mem_db: ManagedConnection) -> Result<Resul
 fn strip_crr_statements(schema: &str) -> String {
     schema
         .split("\n")
-        .filter(|line| !line.to_lowercase().contains("crsql_as_crr"))
+        .filter(|line| {
+            !line.to_lowercase().contains("crsql_as_crr")
+                && !line.to_lowercase().contains("crsql_fract_as_ordered")
+        })
         .collect::<Vec<_>>()
         .join("\n")
 }

@@ -1,5 +1,11 @@
 # @vlcn.io/wa-crsqlite
 
+## 0.10.2-next.0
+
+### Patch Changes
+
+- better error reporting on migration failure, handle schema swap
+
 ## 0.10.1
 
 ### Patch Changes

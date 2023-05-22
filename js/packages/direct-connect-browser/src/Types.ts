@@ -1,4 +1,4 @@
-import { UpdateType } from "@vlcn.io/xplat-api";
+import { UpdateType, DBID } from "@vlcn.io/xplat-api";
 
 export type Endpoints = {
   createOrMigrate: string;
@@ -33,10 +33,6 @@ export type SyncedRemoteMsg = {
   _tag: "SyncedRemote";
   dbid: DBID;
   collectedChanges: [UpdateType, string, bigint][];
-};
-
-export type DBID = string & {
-  readonly DBID: unique symbol; // this is the phantom type
 };
 
 export function newDbid() {

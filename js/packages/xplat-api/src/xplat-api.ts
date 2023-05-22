@@ -12,6 +12,17 @@ export const UPDATE_TYPE: {
   UPDATE: 23,
 } as const;
 
+export type DBID = string & {
+  readonly DBID: unique symbol; // this is the phantom type
+};
+
+export type Schema = {
+  namespace: string;
+  name: string;
+  active: boolean;
+  content: string;
+};
+
 export interface DB {
   readonly siteid: string;
   execMany(sql: string[]): void;

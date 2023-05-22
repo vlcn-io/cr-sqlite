@@ -86,7 +86,16 @@ export class DB implements DBAsync {
         : "migrate";
 
     await this.tx(async (tx) => {
-      if (storedVersion == null) {
+      if (storedVersion == null || storedName !== schemaName) {
+        if (storedName !== schemaName) {
+          // drop all tables since a schema name change is a reformat of the db.
+          const tables = await tx.execA(
+            `SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE '%crsql_%'`
+          );
+          for (const table of tables) {
+            await tx.exec(`DROP TABLE [${table[0]}]`);
+          }
+        }
         await tx.exec(schemaContent);
       } else {
         await tx.exec(`SELECT crsql_automigrate(?)`, [schemaContent]);
@@ -100,6 +109,7 @@ export class DB implements DBAsync {
         ["schema_name", schemaName]
       );
     });
+    await this.exec(`VACUUM;`);
 
     return ret;
   }

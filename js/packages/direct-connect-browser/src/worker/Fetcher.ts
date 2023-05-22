@@ -1,4 +1,5 @@
-import { DBID, Endpoints } from "../Types.js";
+import { Endpoints } from "../Types.js";
+import { DBID } from "@vlcn.io/xplat-api";
 import {
   ApplyChangesMsg,
   ApplyChangesResponse,

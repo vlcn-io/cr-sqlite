@@ -1,5 +1,6 @@
 import { ISerializer, hexToBytes, tags } from "@vlcn.io/direct-connect-common";
-import { DBID, Endpoints } from "../Types.js";
+import { Endpoints } from "../Types.js";
+import { DBID } from "@vlcn.io/xplat-api";
 import createDb, { DB } from "./DB.js";
 import InboundStream from "./InboundStream.js";
 import OutboundStream from "./OutboundStream.js";

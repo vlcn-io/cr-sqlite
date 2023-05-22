@@ -1,5 +1,13 @@
 # @vlcn.io/direct-connect-browser
 
+## 0.0.7-next.0
+
+### Patch Changes
+
+- better error reporting on migration failure, handle schema swap
+- Updated dependencies
+  - @vlcn.io/crsqlite-wasm@0.10.2-next.0
+
 ## 0.0.6
 
 ### Patch Changes

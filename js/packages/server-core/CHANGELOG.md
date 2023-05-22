@@ -1,5 +1,12 @@
 # @vlcn.io/server-core
 
+## 0.9.2-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/crsqlite@0.10.2-next.0
+
 ## 0.9.1
 
 ### Patch Changes

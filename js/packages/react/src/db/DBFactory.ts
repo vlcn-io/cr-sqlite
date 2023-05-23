@@ -1,5 +1,5 @@
 import { WorkerInterface } from "@vlcn.io/direct-connect-browser";
-import initWasm from "@vlcn.io/crsqlite-wasm";
+import initWasm, { SQLite3 } from "@vlcn.io/crsqlite-wasm";
 import tblrx from "@vlcn.io/rx-tbl";
 import { CtxAsync } from "../context.js";
 
@@ -12,8 +12,6 @@ export type Schema = {
   content: string;
 };
 
-const sqlite = await initWasm();
-
 const dbMap = new Map<DBID, Promise<CtxAsync>>();
 const hooks = new Map<DBID, () => CtxAsync | null>();
 
@@ -21,7 +19,19 @@ export type SyncEdnpoints = {
   createOrMigrate: URL;
   applyChanges: URL;
   startOutboundStream: URL;
+  worker: string;
+  wasm: string;
 };
+
+let initPromise: Promise<SQLite3> | null = null;
+function init(wasmUri: string) {
+  if (initPromise) {
+    return initPromise;
+  }
+
+  initPromise = initWasm(() => wasmUri);
+  return initPromise;
+}
 
 const dbFactory = {
   async get(
@@ -38,10 +48,11 @@ const dbFactory = {
     }
 
     const entry = (async () => {
+      const sqlite = await init(endpoints.wasm);
       const db = await sqlite.open(dbid);
       await db.automigrateTo(schema.name, schema.content);
       const rx = tblrx(db);
-      const syncWorker = new WorkerInterface();
+      const syncWorker = new WorkerInterface(endpoints.worker);
       syncWorker.startSync(dbid as any, endpoints, rx);
       return {
         db,

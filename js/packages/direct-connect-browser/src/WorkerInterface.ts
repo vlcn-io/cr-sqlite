@@ -10,21 +10,21 @@ export default class WorkerInterface {
   private readonly syncs = new Map<DBID, ReturnType<typeof tblrx>>();
   private disposables = new Map<string, () => void>();
 
-  constructor() {
-    // if ((import.meta as any).env?.DEV) {
-    //   this.worker = new SharedWorker(new URL(workerUri, import.meta.url), {
-    //     type: "module",
-    //     name: "direct-connect-browser:shared.worker",
-    //   });
-    // } else {
-    this.worker = new SharedWorker(
-      new URL("./worker/shared.worker.js", import.meta.url),
-      {
+  constructor(workerUri: string) {
+    if ((import.meta as any).env?.DEV) {
+      this.worker = new SharedWorker(workerUri, {
         type: "module",
         name: "direct-connect-browser:shared.worker",
-      }
-    );
-    // }
+      });
+    } else {
+      this.worker = new SharedWorker(
+        new URL("./worker/shared.worker.js", import.meta.url),
+        {
+          type: "module",
+          name: "direct-connect-browser:shared.worker",
+        }
+      );
+    }
 
     this.worker.port.onmessage = (e: MessageEvent<FromWorkerMsg>) => {
       const msg = e.data;

@@ -117,8 +117,8 @@ export class DB {
   }
 }
 
-export default async function getDB(dbid: DBID) {
-  const sqlite = await initWasm();
+export default async function getDB(wasmUri: string | undefined, dbid: DBID) {
+  const sqlite = await initWasm(wasmUri ? () => wasmUri : undefined);
   const db = await sqlite.open(dbid);
 
   const [pullChangesetStmt, applyChangesetStmt, updatePeerTrackerStmt] =

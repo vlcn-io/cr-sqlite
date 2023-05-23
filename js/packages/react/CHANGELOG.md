@@ -1,5 +1,13 @@
 # @vlcn.io/react
 
+## 0.10.3-next.1
+
+### Patch Changes
+
+- re-introduce passing of worker and wasm urls
+- Updated dependencies
+  - @vlcn.io/direct-connect-browser@0.0.7-next.1
+
 ## 0.10.2
 
 ### Patch Changes

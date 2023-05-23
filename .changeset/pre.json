@@ -29,6 +29,7 @@
     "@vlcn.io/py-correctness": "0.8.1"
   },
   "changesets": [
+    "early-maps-flash",
     "purple-pets-knock"
   ]
 }

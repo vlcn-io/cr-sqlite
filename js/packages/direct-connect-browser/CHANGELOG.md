@@ -1,5 +1,11 @@
 # @vlcn.io/direct-connect-browser
 
+## 0.0.7-next.2
+
+### Patch Changes
+
+- re-introduce passing of worker and wasm urls
+
 ## 0.0.7-next.0
 
 ### Patch Changes

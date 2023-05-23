@@ -60,6 +60,9 @@ export default class WorkerInterface {
       wasmUri,
       dbid,
       endpoints: Object.keys(endpoints).reduce((acc, key) => {
+        if ((endpoints as any)[key] == null) {
+          return acc;
+        }
         (acc as any)[key] = (endpoints as any)[key].toString();
         return acc;
       }, {} as Endpoints),

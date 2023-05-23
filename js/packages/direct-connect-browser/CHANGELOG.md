@@ -1,5 +1,11 @@
 # @vlcn.io/direct-connect-browser
 
+## 0.0.7-next.4
+
+### Patch Changes
+
+- thread wasm uri down to worker
+
 ## 0.0.7-next.3
 
 ### Patch Changes

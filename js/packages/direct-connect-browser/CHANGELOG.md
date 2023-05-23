@@ -1,5 +1,11 @@
 # @vlcn.io/direct-connect-browser
 
+## 0.0.7-next.3
+
+### Patch Changes
+
+- optional wasm and worker uris
+
 ## 0.0.7-next.2
 
 ### Patch Changes

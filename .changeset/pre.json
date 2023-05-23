@@ -30,6 +30,7 @@
   },
   "changesets": [
     "early-maps-flash",
+    "mighty-melons-add",
     "purple-pets-knock"
   ]
 }

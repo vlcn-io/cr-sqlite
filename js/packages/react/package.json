@@ -1,7 +1,7 @@
 {
   "name": "@vlcn.io/react",
   "type": "module",
-  "version": "0.10.3-next.3",
+  "version": "0.10.3-next.4",
   "files": [
     "dist",
     "src"

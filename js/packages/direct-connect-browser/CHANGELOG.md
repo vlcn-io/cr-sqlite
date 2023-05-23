@@ -1,5 +1,11 @@
 # @vlcn.io/direct-connect-browser
 
+## 0.0.7-next.5
+
+### Patch Changes
+
+- filter bug
+
 ## 0.0.7-next.4
 
 ### Patch Changes

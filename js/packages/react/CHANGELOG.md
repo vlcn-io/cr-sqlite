@@ -1,5 +1,12 @@
 # @vlcn.io/react
 
+## 0.10.3-next.4
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/direct-connect-browser@0.0.7-next.5
+
 ## 0.10.3-next.3
 
 ### Patch Changes

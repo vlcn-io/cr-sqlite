@@ -20,7 +20,6 @@ export type StartSyncMsg = {
   _tag: "StartSync";
   dbid: DBID;
   endpoints: Endpoints;
-  wasmUri: string;
   transportContentType: "application/json" | "application/octet-stream";
 };
 

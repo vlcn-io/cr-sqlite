@@ -48,7 +48,7 @@ export default async function initWasm(
       if (locateWasm) {
         return locateWasm(file);
       }
-      return new URL(file, import.meta.url).href;
+      return new URL("crsqlite.wasm", import.meta.url).href;
     },
   });
   const sqlite3 = SQLite.Factory(wasmModule);

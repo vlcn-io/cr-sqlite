@@ -3,7 +3,8 @@
   "compilerOptions": {
     "outDir": "./dist/",
     "rootDir": "./src",
-    "allowSyntheticDefaultImports": true
+    "allowSyntheticDefaultImports": true,
+    "jsx": "react-jsx"
   },
   "include": ["./src/"],
   "references": [{ "path": "../xplat-api" }, { "path": "../rx-tbl" }]

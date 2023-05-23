@@ -28,7 +28,6 @@ export default class SyncService {
     let db = this.dbs.get(msg.dbid);
     if (!db) {
       db = await createSyncedDB(
-        msg.wasmUri,
         msg.dbid,
         msg.endpoints,
         SerializerFactory.getSerializer(msg.transportContentType, [true, false])

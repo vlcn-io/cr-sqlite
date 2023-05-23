@@ -346,6 +346,12 @@ importers:
 
   js/packages/react:
     dependencies:
+      '@vlcn.io/crsqlite-wasm':
+        specifier: workspace:*
+        version: link:../crsqlite-wasm
+      '@vlcn.io/direct-connect-browser':
+        specifier: workspace:*
+        version: link:../direct-connect-browser
       '@vlcn.io/rx-tbl':
         specifier: workspace:*
         version: link:../rx-tbl
@@ -436,7 +442,7 @@ importers:
         version: 18.2.4
       vite:
         specifier: ^4.2.2
-        version: 4.2.2(@types/node@18.15.11)
+        version: 4.2.2(@types/node@18.16.1)
 
   js/packages/sandbox-node:
     dependencies:
@@ -449,7 +455,7 @@ importers:
         version: link:../../../core
       vite:
         specifier: ^4.2.2
-        version: 4.2.2(@types/node@18.15.11)
+        version: 4.2.2(@types/node@18.16.1)
 
   js/packages/server-core:
     dependencies:
@@ -1988,10 +1994,10 @@ packages:
 
   /@types/node@18.15.11:
     resolution: {integrity: sha512-E5Kwq2n4SbMzQOn6wnmBjuK9ouqlURrcZDVfbo9ftDDTFt3nk7ZKK4GMOzoYgnpQJKcxwQw+lGaBvvlMo0qN/Q==}
+    dev: true
 
   /@types/node@18.16.1:
     resolution: {integrity: sha512-DZxSZWXxFfOlx7k7Rv4LAyiMroaxa3Ly/7OOzZO8cBNho0YzAi4qlbrx8W27JGqG57IgR/6J7r+nOJWw6kcvZA==}
-    dev: true
 
   /@types/normalize-package-data@2.4.1:
     resolution: {integrity: sha512-Gj7cI7z+98M282Tqmp2K5EIsoouUEzbBJhQQzDE3jSIRk6r9gsz0oUokqIUR4u1R3dMHo0pDHM7sNOHyhulypw==}
@@ -7229,7 +7235,7 @@ packages:
       express: 4.18.2
       node-fetch: 2.6.7
       picocolors: 1.0.0
-      vite: 4.2.2(@types/node@18.15.11)
+      vite: 4.2.2(@types/node@18.16.1)
     transitivePeerDependencies:
       - encoding
     dev: false
@@ -7287,6 +7293,7 @@ packages:
       rollup: 3.21.8
     optionalDependencies:
       fsevents: 2.3.2
+    dev: true
 
   /vite@4.2.2(@types/node@18.16.1):
     resolution: {integrity: sha512-PcNtT5HeDxb3QaSqFYkEum8f5sCVe0R3WK20qxgIvNBZPXU/Obxs/+ubBMeE7nLWeCo2LDzv+8hRYSlcaSehig==}
@@ -7320,7 +7327,6 @@ packages:
       rollup: 3.21.8
     optionalDependencies:
       fsevents: 2.3.2
-    dev: true
 
   /vitest@0.30.1:
     resolution: {integrity: sha512-y35WTrSTlTxfMLttgQk4rHcaDkbHQwDP++SNwPb+7H8yb13Q3cu2EixrtHzF27iZ8v0XCciSsLg00RkPAzB/aA==}

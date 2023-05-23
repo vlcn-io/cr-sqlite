@@ -3,15 +3,13 @@ import { createRoot } from "react-dom/client";
 
 import { CtxAsync, useQuery } from "@vlcn.io/react";
 import { WorkerInterface, newDbid } from "@vlcn.io/direct-connect-browser";
-import workerUrl from "@vlcn.io/direct-connect-browser/shared.worker.js?url";
-import wasmUrl from "@vlcn.io/crsqlite-wasm/crsqlite.wasm?url";
 import initWasm from "@vlcn.io/crsqlite-wasm";
 import tblrx from "@vlcn.io/rx-tbl";
 import testSchema from "./schemas/testSchema.mjs";
 import randomWords from "./support/randomWords.js";
 type TestRecord = { id: string; name: string };
 
-const sqlite = await initWasm(() => wasmUrl);
+const sqlite = await initWasm();
 
 // Document how to get a dbid.
 // Either:
@@ -25,7 +23,7 @@ const sqlite = await initWasm(() => wasmUrl);
 const dbid = "5421f3dc8eb548c1b07cf92bec2c459e" as any;
 const db = await sqlite.open(dbid);
 
-const syncWorker = new WorkerInterface(workerUrl, wasmUrl);
+const syncWorker = new WorkerInterface();
 await db.automigrateTo(testSchema.name, testSchema.content);
 
 const rx = tblrx(db);

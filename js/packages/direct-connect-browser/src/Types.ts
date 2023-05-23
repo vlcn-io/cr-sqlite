@@ -18,6 +18,7 @@ export type LocalDBChangedMsg = {
 
 export type StartSyncMsg = {
   _tag: "StartSync";
+  wasmUri?: string;
   dbid: DBID;
   endpoints: Endpoints;
   transportContentType: "application/json" | "application/octet-stream";

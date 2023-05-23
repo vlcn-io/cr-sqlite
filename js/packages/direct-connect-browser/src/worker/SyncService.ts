@@ -1,13 +1,5 @@
-import {
-  JsonSerializer,
-  SerializerFactory,
-} from "@vlcn.io/direct-connect-common";
-import {
-  Endpoints,
-  LocalDBChangedMsg,
-  StartSyncMsg,
-  StopSyncMsg,
-} from "../Types.js";
+import { SerializerFactory } from "@vlcn.io/direct-connect-common";
+import { LocalDBChangedMsg, StartSyncMsg, StopSyncMsg } from "../Types.js";
 import createSyncedDB, { SyncedDB } from "./SyncedDB.js";
 
 export default class SyncService {
@@ -27,7 +19,10 @@ export default class SyncService {
   async startSync(msg: StartSyncMsg, port: MessagePort) {
     let db = this.dbs.get(msg.dbid);
     if (!db) {
+      // TODO: eagerly cache the promise isntead so we can't end up with a race and have the same
+      // db created twice.
       db = await createSyncedDB(
+        msg.wasmUri,
         msg.dbid,
         msg.endpoints,
         SerializerFactory.getSerializer(msg.transportContentType, [true, false])

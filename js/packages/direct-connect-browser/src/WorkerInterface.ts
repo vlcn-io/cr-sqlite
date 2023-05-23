@@ -1,4 +1,9 @@
-import { Endpoints, FromWorkerMsg, SyncedRemoteMsg } from "./Types";
+import {
+  Endpoints,
+  FromWorkerMsg,
+  StartSyncMsg,
+  SyncedRemoteMsg,
+} from "./Types";
 import { DBID } from "@vlcn.io/xplat-api";
 import tblrx, { Src } from "@vlcn.io/rx-tbl";
 
@@ -37,6 +42,7 @@ export default class WorkerInterface {
   }
 
   startSync(
+    wasmUri: string | undefined,
     dbid: DBID,
     endpoints: AsUrls<Endpoints>,
     rx: ReturnType<typeof tblrx>,
@@ -51,13 +57,14 @@ export default class WorkerInterface {
     this.syncs.set(dbid, rx);
     const msg = {
       _tag: "StartSync",
+      wasmUri,
       dbid,
       endpoints: Object.keys(endpoints).reduce((acc, key) => {
         (acc as any)[key] = (endpoints as any)[key].toString();
         return acc;
       }, {} as Endpoints),
       transportContentType,
-    };
+    } as StartSyncMsg;
     this.worker.port.postMessage(msg);
 
     this.disposables.set(

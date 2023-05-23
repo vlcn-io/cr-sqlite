@@ -19,17 +19,17 @@ export type SyncEdnpoints = {
   createOrMigrate: URL;
   applyChanges: URL;
   startOutboundStream: URL;
-  worker: string;
-  wasm: string;
+  worker?: string;
+  wasm?: string;
 };
 
 let initPromise: Promise<SQLite3> | null = null;
-function init(wasmUri: string) {
+function init(wasmUri?: string) {
   if (initPromise) {
     return initPromise;
   }
 
-  initPromise = initWasm(() => wasmUri);
+  initPromise = initWasm(wasmUri ? () => wasmUri : undefined);
   return initPromise;
 }
 

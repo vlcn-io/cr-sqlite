@@ -10,8 +10,8 @@ export default class WorkerInterface {
   private readonly syncs = new Map<DBID, ReturnType<typeof tblrx>>();
   private disposables = new Map<string, () => void>();
 
-  constructor(workerUri: string) {
-    if ((import.meta as any).env?.DEV) {
+  constructor(workerUri?: string) {
+    if (workerUri) {
       this.worker = new SharedWorker(workerUri, {
         type: "module",
         name: "direct-connect-browser:shared.worker",

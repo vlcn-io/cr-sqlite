@@ -1,5 +1,14 @@
 # sandbox
 
+## 0.1.6-next.2
+
+### Patch Changes
+
+- optional wasm and worker uris
+- Updated dependencies
+  - @vlcn.io/direct-connect-browser@0.0.7-next.3
+  - @vlcn.io/react@0.10.3-next.2
+
 ## 0.1.6-next.1
 
 ### Patch Changes

@@ -392,9 +392,6 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
     return doesCidWin == 0 ? SQLITE_OK : SQLITE_ERROR;
   }
 
-  // TODO: this is wrong. we should
-  // be returning rowid from the _clock_ table!
-  // not base table!
   zSql = sqlite3_mprintf(
       "INSERT INTO \"%w\" (%s, \"%w\")\
       VALUES (%s, %s)\

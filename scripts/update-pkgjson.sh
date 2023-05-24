@@ -2,6 +2,8 @@
 
 pkgs=""
 if [[ $1 == "local" ]]; then
+  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
+  source "$SCRIPT_DIR/pkgs.inc.sh"
   pkgs=("${pkgslocal[@]}")
 else
   SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"

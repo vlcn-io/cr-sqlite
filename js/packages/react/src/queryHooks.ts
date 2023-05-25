@@ -151,6 +151,7 @@ class AsyncResultStateMachine<T, M = readonly T[]> {
     } as const;
     this.fetchingState = {
       ...this.disposedState,
+      rawData: [] as any[],
       loading: true,
       error: undefined,
     };
@@ -386,9 +387,22 @@ class AsyncResultStateMachine<T, M = readonly T[]> {
                 return;
               }
 
+              let newRawData = data;
+              let newData;
+              const oldRawData = this.fetchingState?.rawData;
+              if (dataShallowlyEqual(newRawData, oldRawData)) {
+                newRawData = oldRawData;
+                newData = this.fetchingState?.data;
+              } else {
+                newData = this.postProcess
+                  ? this.postProcess(newRawData)
+                  : newRawData;
+              }
               this.data = {
                 loading: false,
-                data: (this.postProcess ? this.postProcess(data) : data) as any,
+                data: newData,
+                // @ts-ignore
+                rawData: newRawData,
                 error: undefined,
               };
               this.pendingFetchPromise = null;
@@ -487,4 +501,51 @@ function usedTables(db: DBAsync, query: string): Promise<string[]> {
     .then((rows) => {
       return rows.map((r) => r[0]);
     });
+}
+
+function dataShallowlyEqual(left: any, right: any): boolean {
+  // Handle arrays of rows
+  if (Array.isArray(left) && Array.isArray(right)) {
+    if (left.length !== right.length) {
+      return false;
+    }
+    for (let i = 0; i < left.length; i++) {
+      if (left[i] !== right[i] && !shallowEqual(left[i], right[i])) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // Anything else
+  return shallowEqual(left, right);
+}
+
+const is = Object.is;
+const hasOwn = Object.prototype.hasOwnProperty;
+
+export default function shallowEqual(objA: any, objB: any) {
+  if (is(objA, objB)) return true;
+
+  if (
+    typeof objA !== "object" ||
+    objA === null ||
+    typeof objB !== "object" ||
+    objB === null
+  ) {
+    return false;
+  }
+
+  const keysA = Object.keys(objA);
+  const keysB = Object.keys(objB);
+
+  if (keysA.length !== keysB.length) return false;
+
+  for (let i = 0; i < keysA.length; i++) {
+    if (!hasOwn.call(objB, keysA[i]) || !is(objA[keysA[i]], objB[keysA[i]])) {
+      return false;
+    }
+  }
+
+  return true;
 }

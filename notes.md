@@ -1,3 +1,9 @@
+# in-order in-tx + cursoring
+
+- clock tbls without rowid
+- new integer key for operation count rather than tx count
+- populate similarly to dbversion
+
 Compact on deletes. You have clock entries in there that need not exist after a row is deleted!!!
 
 ---

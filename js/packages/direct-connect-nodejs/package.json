@@ -1,7 +1,7 @@
 {
   "name": "@vlcn.io/direct-connect-nodejs",
   "type": "module",
-  "version": "0.1.2-next.0",
+  "version": "0.2.0",
   "files": [
     "dist",
     "src"

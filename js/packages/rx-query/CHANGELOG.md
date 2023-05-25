@@ -1,5 +1,16 @@
 # @vlcn.io/rx-query
 
+## 0.3.0
+
+### Minor Changes
+
+- automigrate fixes for WASM, react fixes for referential equality, direct-connect networking implementations, sync in shared worker, dbProvider hooks for React
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/xplat-api@0.10.0
+
 ## 0.2.1
 
 ### Patch Changes

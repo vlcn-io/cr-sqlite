@@ -2,7 +2,7 @@
   "name": "sandbox",
   "private": true,
   "type": "module",
-  "version": "0.1.6-next.4",
+  "version": "0.2.0",
   "scripts": {
     "dev": "node ./slurp.mjs && node ./server.js",
     "tsc": "tsc --noEmit",

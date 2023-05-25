@@ -1,5 +1,18 @@
 # @vlcn.io/xplat-tests
 
+## 0.9.0
+
+### Minor Changes
+
+- automigrate fixes for WASM, react fixes for referential equality, direct-connect networking implementations, sync in shared worker, dbProvider hooks for React
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/sync-p2p@0.9.0
+  - @vlcn.io/rx-tbl@0.10.0
+  - @vlcn.io/xplat-api@0.10.0
+
 ## 0.8.1
 
 ### Patch Changes

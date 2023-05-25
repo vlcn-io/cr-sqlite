@@ -1,5 +1,25 @@
 # @vlcn.io/direct-connect-browser
 
+## 0.1.0
+
+### Minor Changes
+
+- automigrate fixes for WASM, react fixes for referential equality, direct-connect networking implementations, sync in shared worker, dbProvider hooks for React
+
+### Patch Changes
+
+- 5aecbb6: re-introduce passing of worker and wasm urls
+- c81b7d5: optional wasm and worker uris
+- 2d17a8e: filter bug
+- 4e737a0: better error reporting on migration failure, handle schema swap
+- 62934ad: thread wasm uri down to worker
+- Updated dependencies
+- Updated dependencies [4e737a0]
+  - @vlcn.io/crsqlite-wasm@0.11.0
+  - @vlcn.io/direct-connect-common@0.2.0
+  - @vlcn.io/rx-tbl@0.10.0
+  - @vlcn.io/xplat-api@0.10.0
+
 ## 0.0.7-next.5
 
 ### Patch Changes

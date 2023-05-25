@@ -98,7 +98,10 @@ export class DB implements DBAsync {
         }
         await tx.exec(schemaContent);
       } else {
-        await tx.exec(`SELECT crsql_automigrate(?)`, [schemaContent]);
+        await tx.exec(
+          `SELECT crsql_automigrate(?, 'SELECT crsql_finalize();')`,
+          [schemaContent]
+        );
       }
       await tx.exec(
         `INSERT OR REPLACE INTO crsql_master (key, value) VALUES (?, ?)`,

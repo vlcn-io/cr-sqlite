@@ -15,6 +15,9 @@ describe("automigrate.cy.ts", () => {
       CREATE TABLE IF NOT EXISTS test (id PRIMARY KEY, name TEXT, time INTEGER);
       SELECT crsql_as_crr('test');
     `;
-    await db.exec(`SELECT crsql_automigrate(?);`, [updatedSchema]);
+    await db.exec(
+      /*sql*/ `SELECT crsql_automigrate(?, 'SELECT crsql_finalize();');`,
+      [updatedSchema]
+    );
   });
 });

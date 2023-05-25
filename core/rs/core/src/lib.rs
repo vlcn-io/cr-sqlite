@@ -66,7 +66,7 @@ pub extern "C" fn sqlite3_crsqlcore_init(
     let rc = db
         .create_function_v2(
             "crsql_automigrate",
-            1,
+            -1,
             sqlite::UTF8,
             None,
             Some(crsql_automigrate),

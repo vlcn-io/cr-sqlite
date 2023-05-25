@@ -34,8 +34,8 @@ pub extern "C" fn crsql_automigrate(
     argc: c_int,
     argv: *mut *mut sqlite::value,
 ) {
-    if argc != 1 {
-        ctx.result_error("Expected a single argument -- the schema string of create table statements to migrate to");
+    if argc < 1 {
+        ctx.result_error("Had no args. Expected a schema to migrate to");
         return;
     }
 
@@ -63,20 +63,18 @@ fn automigrate_impl(
             return Err(ResultCode::SCHEMA);
         }
         local_db.exec_safe("SAVEPOINT automigrate_tables;")?;
-        if let Err(_) = migrate_to(local_db, mem_db) {
+
+        let migrate_result = migrate_to(local_db, &mem_db);
+        if args.len() == 2 {
+            let cleanup_stmt = args[1].text();
+            mem_db.exec_safe(cleanup_stmt)?;
+        }
+
+        if let Err(_) = migrate_result {
             local_db.exec_safe("ROLLBACK TO automigrate_tables")?;
             return Err(ResultCode::MISMATCH);
         }
-        // wait wait. This need not be done.
-        // We will run the schema against the local_db post migration.
-        // To pull in:
-        // - crr application
-        // - new index creation
-        // - new table creation
-        // - anything extra the user did like trigger creation
-        //
-        // In this way we simplify this automigrate code.
-        // The user's schema thus must then be idemptotent via `IF NOT EXISTS` statements.
+
         if !desired_schema.is_empty() {
             local_db.exec_safe(desired_schema)?;
         }
@@ -86,7 +84,10 @@ fn automigrate_impl(
     }
 }
 
-fn migrate_to(local_db: *mut sqlite3, mem_db: ManagedConnection) -> Result<ResultCode, ResultCode> {
+fn migrate_to(
+    local_db: *mut sqlite3,
+    mem_db: &ManagedConnection,
+) -> Result<ResultCode, ResultCode> {
     let mut mem_tables: BTreeSet<String> = BTreeSet::new();
 
     let sql = "SELECT name FROM sqlite_master WHERE type = 'table'

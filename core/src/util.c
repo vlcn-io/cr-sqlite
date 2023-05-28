@@ -306,7 +306,8 @@ char *crsql_getDbVersionUnionQuery(int numRows, char **tableNames) {
 
   for (i = 0; i < numRows; ++i) {
     unionsArr[i] = sqlite3_mprintf(
-        "SELECT max(__crsql_db_version) as version FROM \"%w\" %s ",
+        "SELECT max(__crsql_db_version) as version, max(__crsql_opid) as opid "
+        "FROM \"%w\" %s ",
         // the first result in tableNames is the column heading
         // so skip that
         tableNames[i + 1],
@@ -325,8 +326,11 @@ char *crsql_getDbVersionUnionQuery(int numRows, char **tableNames) {
   // compose the final query
   // and update the pointer to the string to point to it.
   ret = sqlite3_mprintf(
-      "SELECT max(version) as version FROM (%z UNION SELECT value as version "
-      "FROM crsql_master WHERE key = 'pre_compact_dbversion')",
+      "SELECT max(version) as version, max(opid) as opid FROM (%z UNION SELECT "
+      "A.value as version, B.value as opid FROM (SELECT value FROM "
+      "crsql_master "
+      "WHERE key = 'pre_compact_dbversion') A CROSS JOIN (SELECT value FROM "
+      "crsql_master WHERE key = 'pre_compact_opid') B)",
       unionsStr);
   // %z frees unionsStr https://www.sqlite.org/printf.html#percentz
   return ret;

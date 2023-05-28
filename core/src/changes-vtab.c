@@ -26,9 +26,6 @@ static int changesConnect(sqlite3 *db, void *pAux, int argc,
 
   rc = sqlite3_declare_vtab(
       db,
-      // If we go without rowid we need to concat `table || !'! pk` to be the
-      // primary key as xUpdate requires a single column to be the primary key
-      // if we use without rowid.
       "CREATE TABLE x([table] TEXT NOT NULL, [pk] TEXT NOT NULL, [cid] TEXT "
       "NOT NULL, [val], [col_version] INTEGER NOT NULL, [db_version] INTEGER "
       "NOT NULL, [site_id] BLOB)");
@@ -120,12 +117,9 @@ static int changesClose(sqlite3_vtab_cursor *cur) {
   return SQLITE_OK;
 }
 
-/**
- * Update to invoke slab algorithm to generate rowids
- */
 static int changesRowid(sqlite3_vtab_cursor *cur, sqlite_int64 *pRowid) {
   crsql_Changes_cursor *pCur = (crsql_Changes_cursor *)cur;
-  *pRowid = crsql_slabRowid(pCur->tblInfoIdx, pCur->changesRowid);
+  *pRowid = pCur->changesRowid;
   return SQLITE_OK;
 }
 
@@ -187,7 +181,6 @@ static int changesNext(sqlite3_vtab_cursor *cur) {
       sqlite3_column_int64(pCur->pChangesStmt, CHANGES_ROWID);
   pCur->dbVersion = dbVersion;
 
-  // get information required to calculate rowid slabs.
   int tblInfoIndex =
       crsql_indexofTableInfo(pCur->pTab->pExtData->zpTableInfos,
                              pCur->pTab->pExtData->tableInfosLen, tbl);

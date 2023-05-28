@@ -57,16 +57,19 @@ char *crsql_insertTriggerQuery(crsql_TableInfo *tableInfo, char *pkList,
         __crsql_col_name,\
         __crsql_col_version,\
         __crsql_db_version,\
-        __crsql_site_id\
+        __crsql_opid,\
+        __crsql_site_id,\
       ) SELECT \
         %s,\
         %Q,\
         1,\
         crsql_nextdbversion(),\
+        crsql_nextopid(),\
         NULL\
       WHERE crsql_internal_sync_bit() = 0 ON CONFLICT DO UPDATE SET\
         __crsql_col_version = __crsql_col_version + 1,\
         __crsql_db_version = crsql_nextdbversion(),\
+        __crsql_opid = crsql_nextopid(),\
         __crsql_site_id = NULL;\n",
         tableInfo->tblName, pkList, pkNewList, PKS_ONLY_CID_SENTINEL);
   }
@@ -77,16 +80,19 @@ char *crsql_insertTriggerQuery(crsql_TableInfo *tableInfo, char *pkList,
         __crsql_col_name,\
         __crsql_col_version,\
         __crsql_db_version,\
+        __crsql_opid,\
         __crsql_site_id\
       ) SELECT \
         %s,\
         %Q,\
         1,\
         crsql_nextdbversion(),\
+        crsql_nextopid(),\
         NULL\
       WHERE crsql_internal_sync_bit() = 0 ON CONFLICT DO UPDATE SET\
         __crsql_col_version = __crsql_col_version + 1,\
         __crsql_db_version = crsql_nextdbversion(),\
+        __crsql_opid = crsql_nextopid(),\
         __crsql_site_id = NULL;\n",
         tableInfo->tblName, pkList, pkNewList, tableInfo->nonPks[i].name);
   }
@@ -142,16 +148,19 @@ int crsql_createUpdateTrigger(sqlite3 *db, crsql_TableInfo *tableInfo,
         __crsql_col_name,\
         __crsql_col_version,\
         __crsql_db_version,\
+        __crsql_opid,\
         __crsql_site_id\
       ) SELECT \
         %s,\
         %Q,\
         1,\
         crsql_nextdbversion(),\
+        crsql_nextopid(),\
         NULL\
       WHERE crsql_internal_sync_bit() = 0 ON CONFLICT DO UPDATE SET\
         __crsql_col_version = __crsql_col_version + 1,\
         __crsql_db_version = crsql_nextdbversion(),\
+        __crsql_opid = crsql_nextopid(),\
         __crsql_site_id = NULL;\n",
         tableInfo->tblName, pkList, pkNewList, PKS_ONLY_CID_SENTINEL);
   }
@@ -165,11 +174,13 @@ int crsql_createUpdateTrigger(sqlite3 *db, crsql_TableInfo *tableInfo,
         __crsql_col_name,\
         __crsql_col_version,\
         __crsql_db_version,\
+        __crsql_opid,\
         __crsql_site_id\
-      ) SELECT %s, %Q, 1, crsql_nextdbversion(), NULL WHERE crsql_internal_sync_bit() = 0 AND NEW.\"%w\" != OLD.\"%w\"\
+      ) SELECT %s, %Q, 1, crsql_nextdbversion(), crsql_nextopid(), NULL WHERE crsql_internal_sync_bit() = 0 AND NEW.\"%w\" != OLD.\"%w\"\
       ON CONFLICT DO UPDATE SET\
         __crsql_col_version = __crsql_col_version + 1,\
         __crsql_db_version = crsql_nextdbversion(),\
+        __crsql_opid = crsql_nextopid(),\
         __crsql_site_id = NULL;\n",
         tableInfo->tblName, pkList, pkNewList, tableInfo->nonPks[i].name,
         tableInfo->nonPks[i].name, tableInfo->nonPks[i].name);
@@ -217,16 +228,19 @@ char *crsql_deleteTriggerQuery(crsql_TableInfo *tableInfo) {
         __crsql_col_name,\
         __crsql_col_version,\
         __crsql_db_version,\
+        __crsql_opid,\
         __crsql_site_id\
       ) SELECT \
         %s,\
         %Q,\
         1,\
         crsql_nextdbversion(),\
+        crsql_nextopid(),\
         NULL\
       WHERE crsql_internal_sync_bit() = 0 ON CONFLICT DO UPDATE SET\
       __crsql_col_version = __crsql_col_version + 1,\
       __crsql_db_version = crsql_nextdbversion(),\
+      __crsql_opid = crsql_nextopid(),\
       __crsql_site_id = NULL;\
       END; ",
       tableInfo->tblName, tableInfo->tblName, tableInfo->tblName, pkList,

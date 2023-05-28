@@ -173,6 +173,20 @@ static void dbVersionFunc(sqlite3_context *context, int argc,
   sqlite3_result_int64(context, pExtData->dbVersion);
 }
 
+static void opidFunc(sqlite3_context *context, int argc, sqlite3_value **argv) {
+  char *errmsg = 0;
+  crsql_ExtData *pExtData = (crsql_ExtData *)sqlite3_user_data(context);
+  sqlite3 *db = sqlite3_context_db_handle(context);
+  int rc = crsql_getDbVersion(db, pExtData, &errmsg);
+  if (rc != SQLITE_OK) {
+    sqlite3_result_error(context, errmsg, -1);
+    sqlite3_free(errmsg);
+    return;
+  }
+
+  sqlite3_result_int64(context, pExtData->opid);
+}
+
 /**
  * Return the next version of the database for use in inserts/updates/deletes
  *
@@ -196,6 +210,22 @@ static void nextDbVersionFunc(sqlite3_context *context, int argc,
   }
 
   sqlite3_result_int64(context, pExtData->dbVersion + 1);
+}
+
+static void nextOpidFunc(sqlite3_context *context, int argc,
+                         sqlite3_value **argv) {
+  char *errmsg = 0;
+  crsql_ExtData *pExtData = (crsql_ExtData *)sqlite3_user_data(context);
+  sqlite3 *db = sqlite3_context_db_handle(context);
+  int rc = crsql_getDbVersion(db, pExtData, &errmsg);
+  if (rc != SQLITE_OK) {
+    sqlite3_result_error(context, errmsg, -1);
+    sqlite3_free(errmsg);
+    return;
+  }
+
+  pExtData->opid += 1;
+  sqlite3_result_int64(context, pExtData->opid);
 }
 
 /**
@@ -224,12 +254,13 @@ int crsql_createClockTable(sqlite3 *db, crsql_TableInfo *tableInfo,
   zSql = sqlite3_mprintf(
       "CREATE TABLE IF NOT EXISTS \"%s__crsql_clock\" (\
       %s,\
+      \"__crsql_opid\" INTEGER NOT NULL,\
       \"__crsql_col_name\" NOT NULL,\
       \"__crsql_col_version\" NOT NULL,\
       \"__crsql_db_version\" NOT NULL,\
       \"__crsql_site_id\",\
       PRIMARY KEY (%s, \"__crsql_col_name\")\
-    )",
+    ) WITHOUT ROWID",
       tableInfo->tblName, pkList, pkList);
   sqlite3_free(pkList);
 
@@ -243,8 +274,21 @@ int crsql_createClockTable(sqlite3 *db, crsql_TableInfo *tableInfo,
       "CREATE INDEX IF NOT EXISTS \"%s__crsql_clock_dbv_idx\" ON "
       "\"%s__crsql_clock\" (\"__crsql_db_version\")",
       tableInfo->tblName, tableInfo->tblName);
-  sqlite3_exec(db, zSql, 0, 0, err);
+  rc = sqlite3_exec(db, zSql, 0, 0, err);
   sqlite3_free(zSql);
+  if (rc != SQLITE_OK) {
+    return rc;
+  }
+
+  zSql = sqlite3_mprintf(
+      "CREATE INDEX IF NOT EXISTS \"%s__crsql_clock_opid_idx\" ON "
+      "\"%s__crsql_clock\" (\"__crsql_opid\")",
+      tableInfo->tblName, tableInfo->tblName);
+  rc = sqlite3_exec(db, zSql, 0, 0, err);
+  sqlite3_free(zSql);
+  if (rc != SQLITE_OK) {
+    return rc;
+  }
 
   return rc;
 }
@@ -418,6 +462,7 @@ int crsql_compactPostAlter(sqlite3 *db, const char *tblName,
   }
   char *zSql = 0;
   sqlite3_int64 currentDbVersion = pExtData->dbVersion;
+  sqlite3_int64 currentOpid = pExtData->opid;
 
   // If primary key columns changes
   // We need to drop, re-create and backfill
@@ -521,11 +566,13 @@ int crsql_compactPostAlter(sqlite3 *db, const char *tblName,
     }
   }
 
-  rc = sqlite3_prepare_v2(db,
-                          "INSERT OR REPLACE INTO crsql_master (key, value) "
-                          "VALUES ('pre_compact_dbversion', ?)",
-                          -1, &pStmt, 0);
+  rc = sqlite3_prepare_v2(
+      db,
+      "INSERT OR REPLACE INTO crsql_master (key, value) "
+      "VALUES ('pre_compact_dbversion', ?), ('pre_compact_opid', ?)",
+      -1, &pStmt, 0);
   rc += sqlite3_bind_int64(pStmt, 1, currentDbVersion);
+  rc += sqlite3_bind_int64(pStmt, 2, currentOpid);
   rc += sqlite3_step(pStmt);
   if (rc != SQLITE_DONE) {
     return rc;
@@ -598,6 +645,7 @@ static int commitHook(void *pUserData) {
   crsql_ExtData *pExtData = (crsql_ExtData *)pUserData;
 
   pExtData->dbVersion = -1;
+  pExtData->opid = -1;
   return SQLITE_OK;
 }
 
@@ -605,6 +653,7 @@ static void rollbackHook(void *pUserData) {
   crsql_ExtData *pExtData = (crsql_ExtData *)pUserData;
 
   pExtData->dbVersion = -1;
+  pExtData->opid = -1;
 }
 
 int sqlite3_crsqlrustbundle_init(sqlite3 *db, char **pzErrMsg,
@@ -650,6 +699,19 @@ __declspec(dllexport)
                                  // dbversion can change on each invocation.
                                  SQLITE_UTF8 | SQLITE_INNOCUOUS, pExtData,
                                  nextDbVersionFunc, 0, 0);
+  }
+
+  if (rc == SQLITE_OK) {
+    rc = sqlite3_create_function(db, "crsql_opid", 0,
+                                 // dbversion can change on each invocation.
+                                 SQLITE_UTF8 | SQLITE_INNOCUOUS, pExtData,
+                                 opidFunc, 0, 0);
+  }
+  if (rc == SQLITE_OK) {
+    rc = sqlite3_create_function(db, "crsql_nextopid", 0,
+                                 // dbversion can change on each invocation.
+                                 SQLITE_UTF8 | SQLITE_INNOCUOUS, pExtData,
+                                 nextOpidFunc, 0, 0);
   }
 
   if (rc == SQLITE_OK) {

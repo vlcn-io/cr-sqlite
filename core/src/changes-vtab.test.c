@@ -15,6 +15,7 @@ static void testManyPkTable() {
 
   sqlite3 *db;
   sqlite3_stmt *pStmt;
+  char *errmsg = 0;
   int rc;
   rc = sqlite3_open(":memory:", &db);
 
@@ -22,7 +23,7 @@ static void testManyPkTable() {
                     0);
   rc += sqlite3_exec(db, "SELECT crsql_as_crr('foo');", 0, 0, 0);
   assert(rc == SQLITE_OK);
-  rc += sqlite3_exec(db, "INSERT INTO foo VALUES (4,5,6);", 0, 0, 0);
+  rc += sqlite3_exec(db, "INSERT INTO foo VALUES (4,5,6);", 0, 0, &errmsg);
   assert(rc == SQLITE_OK);
 
   rc += sqlite3_prepare_v2(db, "SELECT * FROM crsql_changes", -1, &pStmt, 0);

@@ -37,7 +37,7 @@ fn junction_table() {
 
 // https://discord.com/channels/989870439897653248/989870440585494530/1081084118680485938
 #[test]
-fn dicord_report_1() {
+fn discord_report_1() {
     discord_report_1_impl().unwrap();
 }
 
@@ -250,7 +250,7 @@ fn discord_report_1_impl() -> Result<(), ResultCode> {
     let db_a = integration_utils::opendb()?;
     db_a.db
         .exec_safe("CREATE TABLE IF NOT EXISTS data (id NUMBER PRIMARY KEY);")?;
-    db_a.db.exec_safe("SELECT crsql_as_crr('data')")?;
+    db_a.db.exec_safe("SELECT crsql_as_crr('data');")?;
     db_a.db
         .exec_safe("INSERT INTO data VALUES (42) ON CONFLICT DO NOTHING;")?;
 

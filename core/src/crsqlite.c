@@ -254,11 +254,11 @@ int crsql_createClockTable(sqlite3 *db, crsql_TableInfo *tableInfo,
   zSql = sqlite3_mprintf(
       "CREATE TABLE IF NOT EXISTS \"%s__crsql_clock\" (\
       %s,\
-      \"__crsql_opid\" INTEGER NOT NULL,\
       \"__crsql_col_name\" NOT NULL,\
       \"__crsql_col_version\" NOT NULL,\
       \"__crsql_db_version\" NOT NULL,\
       \"__crsql_site_id\",\
+      \"__crsql_opid\" INTEGER NOT NULL,\
       PRIMARY KEY (%s, \"__crsql_col_name\")\
     ) WITHOUT ROWID",
       tableInfo->tblName, pkList, pkList);
@@ -328,6 +328,11 @@ static int createCrr(sqlite3_context *context, sqlite3 *db,
     if (rc == SQLITE_OK) {
       rc = crsql_createCrrTriggers(db, tableInfo, err);
     }
+  }
+
+  if (rc != SQLITE_OK) {
+    crsql_freeTableInfo(tableInfo);
+    return rc;
   }
 
   const char **pkNames = sqlite3_malloc(sizeof(char *) * tableInfo->pksLen);

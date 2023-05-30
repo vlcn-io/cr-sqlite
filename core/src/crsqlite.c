@@ -14,6 +14,14 @@ SQLITE_EXTENSION_INIT1
 #include "triggers.h"
 #include "util.h"
 
+// see
+// https://github.com/chromium/chromium/commit/579b3dd0ea41a40da8a61ab87a8b0bc39e158998
+// & https://github.com/rust-lang/rust/issues/73632 &
+// https://sourcegraph.com/github.com/chromium/chromium/-/commit/579b3dd0ea41a40da8a61ab87a8b0bc39e158998?visible=1
+#ifdef CRSQLITE_WASM
+unsigned char __rust_no_alloc_shim_is_unstable;
+#endif
+
 static void uuid(unsigned char *blob) {
   sqlite3_randomness(16, blob);
   blob[6] = (blob[6] & 0x0f) + 0x40;

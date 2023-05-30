@@ -65,7 +65,7 @@ def delete_data(c):
 
 def get_changes_since(c, version, requestor):
     return c.execute(
-        "SELECT * FROM crsql_changes WHERE db_version > {v} AND site_id IS NOT X'{r}'".format(
+        "SELECT *, rowid FROM crsql_changes WHERE db_version > {v} AND site_id IS NOT X'{r}'".format(
             v=version, r=requestor)
     ).fetchall()
 
@@ -80,34 +80,33 @@ def test_changes_since():
     rows = get_changes_since(dbs[0], 0, "FF")
     # siteid = dbs[0].execute("select crsql_siteid()").fetchone()[0]
     siteid = None
-    # changesets are in the order that writes were actually made
-    expected = [('user', '1', 'name', "'Javi'", 1, 1, None),
-                ('deck', '1', 'owner_id', '1', 1, 1, None),
-                ('deck', '1', 'title', "'Preso'", 1, 1, None),
-                ('slide', '1', 'deck_id', '1', 1, 1, None),
-                ('slide', '1', 'order', '0', 1, 1, None),
-                ('component', '1', 'type', "'text'", 1, 1, None),
-                ('component', '1', 'slide_id', '1', 1, 1, None),
-                ('component', '1', 'content', "'wootwoot'", 1, 1, None),
-                ('component', '2', 'type', "'text'", 1, 1, None),
-                ('component', '2', 'slide_id', '1', 1, 1, None),
-                ('component', '2', 'content', "'toottoot'", 1, 1, None),
-                ('component', '3', 'type', "'text'", 1, 1, None),
-                ('component', '3', 'slide_id', '1', 1, 1, None),
-                ('component', '3', 'content', "'footfoot'", 1, 1, None),
-                ('slide', '2', 'deck_id', '1', 1, 1, None),
-                ('slide', '2', 'order', '1', 1, 1, None),
-                ('slide', '3', 'deck_id', '1', 1, 1, None),
-                ('slide', '3', 'order', '2', 1, 1, None)]
+    # changes within a changeset are gotten in the order that writes were actually made
+    expected = [('user', '1', 'name', "'Javi'", 1, 1, None, 1),
+                ('deck', '1', 'owner_id', '1', 1, 1, None, 2),
+                ('deck', '1', 'title', "'Preso'", 1, 1, None, 3),
+                ('slide', '1', 'deck_id', '1', 1, 1, None, 4),
+                ('slide', '1', 'order', '0', 1, 1, None, 5),
+                ('component', '1', 'type', "'text'", 1, 1, None, 6),
+                ('component', '1', 'slide_id', '1', 1, 1, None, 7),
+                ('component', '1', 'content', "'wootwoot'", 1, 1, None, 8),
+                ('component', '2', 'type', "'text'", 1, 1, None, 9),
+                ('component', '2', 'slide_id', '1', 1, 1, None, 10),
+                ('component', '2', 'content', "'toottoot'", 1, 1, None, 11),
+                ('component', '3', 'type', "'text'", 1, 1, None, 12),
+                ('component', '3', 'slide_id', '1', 1, 1, None, 13),
+                ('component', '3', 'content', "'footfoot'", 1, 1, None, 14),
+                ('slide', '2', 'deck_id', '1', 1, 1, None, 15),
+                ('slide', '2', 'order', '1', 1, 1, None, 16),
+                ('slide', '3', 'deck_id', '1', 1, 1, None, 17),
+                ('slide', '3', 'order', '2', 1, 1, None, 18)]
 
     assert (rows == expected)
 
     update_data(dbs[0])
 
     rows = get_changes_since(dbs[0], 1, 'FF')
-
-    assert (rows == [('user', '1', 'name', "'Maestro'", 2, 2, None),
-                     ('deck', '1', 'title', "'Presto'", 2, 2, None)])
+    assert (rows == [('user', '1', 'name', "'Maestro'", 2, 2, None, 20),
+                     ('deck', '1', 'title', "'Presto'", 2, 2, None, 22)])
 
 
 def test_delete():
@@ -120,7 +119,8 @@ def test_delete():
     rows = get_changes_since(db, 1, 'FF')
     siteid = None
     # Deletes are marked with a sentinel id
-    assert (rows == [('component', '1', '__crsql_del', None, 1, 2, siteid)])
+    assert (
+        rows == [('component', '1', '__crsql_del', None, 1, 2, siteid, 19)])
 
     db.execute("DELETE FROM component")
     db.execute("DELETE FROM deck")
@@ -131,31 +131,31 @@ def test_delete():
     # TODO: we should have the network layer collapse these events or do it ourselves.
     # given we have past events that we're missing data for, they're now marked off as deletes
     # TODO: should deletes not get a proper version? Would be better for ordering and chunking replications
-    assert (rows == [('user', '1', 'name', "'Javi'", 1, 1, None),
-                     ('deck', '1', '__crsql_del', None, 1, 1, None),
-                     ('deck', '1', '__crsql_del', None, 1, 1, None),
-                     ('slide', '1', '__crsql_del', None, 1, 1, None),
-                     ('slide', '1', '__crsql_del', None, 1, 1, None),
-                     ('component', '1', '__crsql_del', None, 1, 1, None),
-                     ('component', '1', '__crsql_del', None, 1, 1, None),
-                     ('component', '1', '__crsql_del', None, 1, 1, None),
-                     ('component', '2', '__crsql_del', None, 1, 1, None),
-                     ('component', '2', '__crsql_del', None, 1, 1, None),
-                     ('component', '2', '__crsql_del', None, 1, 1, None),
-                     ('component', '3', '__crsql_del', None, 1, 1, None),
-                     ('component', '3', '__crsql_del', None, 1, 1, None),
-                     ('component', '3', '__crsql_del', None, 1, 1, None),
-                     ('slide', '2', '__crsql_del', None, 1, 1, None),
-                     ('slide', '2', '__crsql_del', None, 1, 1, None),
-                     ('slide', '3', '__crsql_del', None, 1, 1, None),
-                     ('slide', '3', '__crsql_del', None, 1, 1, None),
-                     ('component', '1', '__crsql_del', None, 1, 2, None),
-                     ('component', '2', '__crsql_del', None, 1, 3, None),
-                     ('component', '3', '__crsql_del', None, 1, 3, None),
-                     ('deck', '1', '__crsql_del', None, 1, 3, None),
-                     ('slide', '1', '__crsql_del', None, 1, 3, None),
-                     ('slide', '2', '__crsql_del', None, 1, 3, None),
-                     ('slide', '3', '__crsql_del', None, 1, 3, None)])
+    assert (rows == [('user', '1', 'name', "'Javi'", 1, 1, None, 1),
+                     ('deck', '1', '__crsql_del', None, 1, 1, None, 2),
+                     ('deck', '1', '__crsql_del', None, 1, 1, None, 3),
+                     ('slide', '1', '__crsql_del', None, 1, 1, None, 4),
+                     ('slide', '1', '__crsql_del', None, 1, 1, None, 5),
+                     ('component', '1', '__crsql_del', None, 1, 1, None, 6),
+                     ('component', '1', '__crsql_del', None, 1, 1, None, 7),
+                     ('component', '1', '__crsql_del', None, 1, 1, None, 8),
+                     ('component', '2', '__crsql_del', None, 1, 1, None, 9),
+                     ('component', '2', '__crsql_del', None, 1, 1, None, 10),
+                     ('component', '2', '__crsql_del', None, 1, 1, None, 11),
+                     ('component', '3', '__crsql_del', None, 1, 1, None, 12),
+                     ('component', '3', '__crsql_del', None, 1, 1, None, 13),
+                     ('component', '3', '__crsql_del', None, 1, 1, None, 14),
+                     ('slide', '2', '__crsql_del', None, 1, 1, None, 15),
+                     ('slide', '2', '__crsql_del', None, 1, 1, None, 16),
+                     ('slide', '3', '__crsql_del', None, 1, 1, None, 17),
+                     ('slide', '3', '__crsql_del', None, 1, 1, None, 18),
+                     ('component', '1', '__crsql_del', None, 1, 2, None, 19),
+                     ('component', '2', '__crsql_del', None, 1, 3, None, 20),
+                     ('component', '3', '__crsql_del', None, 1, 3, None, 21),
+                     ('deck', '1', '__crsql_del', None, 1, 3, None, 22),
+                     ('slide', '1', '__crsql_del', None, 1, 3, None, 23),
+                     ('slide', '2', '__crsql_del', None, 1, 3, None, 24),
+                     ('slide', '3', '__crsql_del', None, 1, 3, None, 25)])
 
     # test insert
 

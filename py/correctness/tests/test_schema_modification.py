@@ -5,7 +5,7 @@ import pytest
 changes_query = "SELECT [table], [pk], [cid], [val] FROM crsql_changes"
 changes_with_versions_query = "SELECT [table], [pk], [cid], [val], [db_version], [col_version] FROM crsql_changes"
 full_changes_query = "SELECT [table], [pk], [cid], [val], [db_version], [col_version], [site_id] FROM crsql_changes"
-clock_query = "SELECT rowid, __crsql_col_version, __crsql_db_version, __crsql_col_name, __crsql_site_id FROM todo__crsql_clock"
+clock_query = "SELECT __crsql_opid, __crsql_col_version, __crsql_db_version, __crsql_col_name, __crsql_site_id FROM todo__crsql_clock ORDER BY __crsql_opid ASC"
 
 
 def test_c1_4_no_primary_keys():
@@ -25,7 +25,7 @@ def test_c1_3_quoted_identifiers():
     c.execute("select crsql_as_crr('baz')")
 
     def check_clock(t): return c.execute(
-        "SELECT rowid, __crsql_col_version, __crsql_db_version, __crsql_col_name, __crsql_site_id FROM {t}__crsql_clock".format(t=t)).fetchall()
+        "SELECT __crsql_opid, __crsql_col_version, __crsql_db_version, __crsql_col_name, __crsql_site_id FROM {t}__crsql_clock".format(t=t)).fetchall()
 
     check_clock("foo")
     check_clock("bar")

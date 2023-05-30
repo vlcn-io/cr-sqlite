@@ -58,7 +58,7 @@ char *crsql_insertTriggerQuery(crsql_TableInfo *tableInfo, char *pkList,
         __crsql_col_version,\
         __crsql_db_version,\
         __crsql_opid,\
-        __crsql_site_id,\
+        __crsql_site_id\
       ) SELECT \
         %s,\
         %Q,\

@@ -1,4 +1,5 @@
 from crsql_correctness import connect
+from crsql_correctness import close
 import pprint
 import pytest
 
@@ -656,6 +657,65 @@ def test_rename_pk_column():
 
 def test_pk_only_table_pk_membership():
     None
+
+
+# Should save off opid and dbversion for later insertions.
+def test_remove_rows_with_latest_versions():
+    c = connect(":memory:")
+    c.execute("CREATE TABLE foo (a PRIMARY KEY, b);")
+    c.execute("SELECT crsql_as_crr('foo');")
+    c.commit()
+
+    c.execute("INSERT INTO foo VALUES (1, 2);")
+    c.execute("INSERT INTO foo VALUES (4, 5);")
+    c.commit()
+
+    pre_changes = c.execute("SELECT *, rowid FROM crsql_changes").fetchall()
+    assert (pre_changes == [('foo', '1', 'b', '2', 1, 1,
+            None, 1), ('foo', '4', 'b', '5', 1, 1, None, 2)])
+
+    c.execute("SELECT crsql_begin_alter('foo');")
+    c.execute("ALTER TABLE foo DROP COLUMN b;")
+    c.execute("SELECT crsql_commit_alter('foo');")
+
+    post_changes = c.execute("SELECT *, rowid FROM crsql_changes").fetchall()
+    # TODO: What should this really look like?
+    # - dbversion is the db's current version since we're assuming migrations
+    # put everyone into identical states. I.e., we don't need to sync the result of a _structural_ migration.
+    # - opid is the next opid... we don't know what to set it to if we'd want to keep it stable.
+    # so if someone syncs on opid they'd sync structural results of a migration... :|
+    assert (post_changes == [('foo', '1', '__crsql_pko', None, 1, 1, None, 3),
+                             ('foo', '4', '__crsql_pko', None, 1, 1, None, 4)])
+    close(c)
+
+
+def test_compact_due_to_remove():
+    c = connect(":memory:")
+    c.execute("CREATE TABLE bar (a PRIMARY KEY, b);")
+    c.execute("SELECT crsql_as_crr('bar');")
+    c.commit()
+
+    c.execute("INSERT INTO bar VALUES (1, 2);")
+    c.execute("INSERT INTO bar VALUES (4, 5);")
+    c.commit()
+
+    pre_changes = c.execute("SELECT *, rowid FROM crsql_changes").fetchall()
+
+    c.execute("SELECT crsql_begin_alter('bar');")
+    c.execute("CREATE TABLE new_bar(a PRIMARY KEY, c DEFAULT NULL);")
+    c.execute("INSERT INTO new_bar (a) SELECT a FROM bar;")
+    c.execute("DROP TABLE bar;")
+    c.execute("ALTER TABLE new_bar RENAME TO bar;")
+    c.execute("SELECT crsql_commit_alter('bar');")
+
+    post_changes = c.execute("SELECT *, rowid FROM crsql_changes").fetchall()
+    pprint.pprint(post_changes)
+    # opids move forward -- we did not lose the fact that the most recent opid was _2_,
+    # making the next opid 3, even though we dropped the rows recording that opid.
+    assert (post_changes == [('bar', '1', 'c', 'NULL', 1, 1, None, 3),
+                             ('bar', '4', 'c', 'NULL', 1, 1, None, 4)])
+
+    close(c)
 
 
 def test_changing_values_in_primary_key_columns():

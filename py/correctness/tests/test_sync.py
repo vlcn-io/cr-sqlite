@@ -491,6 +491,37 @@ def test_merge_larger_clock_same_value():
 # keep all our correctness tests here.
 
 
+def test_out_of_order():
+    def make_db():
+        db = connect(":memory:")
+        db.execute("CREATE TABLE foo (a PRIMARY KEY, b, c);")
+        db.execute("SELECT crsql_as_crr('foo');")
+        db.commit()
+        return db
+
+    db1 = make_db()
+    db2 = make_db()
+
+    db1.execute("INSERT INTO foo (a,b,c) VALUES (1,1,1);")
+    db1.commit()
+    db1.execute("UPDATE foo SET b = 2 WHERE a = 1;")
+    db1.commit()
+
+    changes = db1.execute(
+        "SELECT * FROM crsql_changes WHERE db_version = 2").fetchall()
+    for change in changes:
+        db2.execute(
+            "INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?, ?)", change)
+
+    db2.commit()
+    foodata = db2.execute("SELECT * FROM foo").fetchall()
+
+    close(db1)
+    close(db2)
+    # Can insert even if we receive before creating the row
+    assert (foodata == [(1, 2, None)])
+
+
 def test_merge():
     dbs = init()
 

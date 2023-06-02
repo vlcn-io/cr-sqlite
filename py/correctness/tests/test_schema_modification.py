@@ -709,7 +709,6 @@ def test_compact_due_to_remove():
     c.execute("SELECT crsql_commit_alter('bar');")
 
     post_changes = c.execute("SELECT *, rowid FROM crsql_changes").fetchall()
-    pprint.pprint(post_changes)
     # opids move forward -- we did not lose the fact that the most recent opid was _2_,
     # making the next opid 3, even though we dropped the rows recording that opid.
     assert (post_changes == [('bar', '1', 'c', 'NULL', 1, 1, None, 3),

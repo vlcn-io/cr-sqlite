@@ -22,6 +22,9 @@ def sync_left_to_right(l, r, since):
     for change in changes:
         r.execute("INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?, ?)", change)
     r.commit()
+
+
+def sync_left_to_right_via_rowid(l, r, since):
     None
 
 

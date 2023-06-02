@@ -1,5 +1,5 @@
 from crsql_correctness import connect, close
-from hypothesis import given
+from hypothesis import given, settings
 from hypothesis.strategies import integers, data, booleans, integers, text, floats, uuids
 from functools import reduce
 import pprint
@@ -21,15 +21,17 @@ COLUMN_NAMES = (
     "width",
     "height",
     "name",
-    "dscription"
+    "description",
+    "weight"
 )
 
 
 @given(data())
+@settings(max_examples=10)
 def test_delta_sync(data):
     def create_column_data(which_columns):
-        return tuple(None if c == False else COLUMN_TYPES[i](
-        ) for i, c in enumerate(which_columns))
+        return tuple(None if c == False else data.draw(COLUMN_TYPES[i](
+        )) for i, c in enumerate(which_columns))
 
     def gen_script_step(x):
         op = data.draw(integers(0, 2))
@@ -37,13 +39,17 @@ def test_delta_sync(data):
             booleans()), data.draw(booleans()), data.draw(booleans()))
 
         if op == INSERT:
-            return (op, uuids(), create_column_data(which_columns))
+            return (op, data.draw(uuids()), create_column_data(which_columns))
 
         if op == UPDATE:
-            # force on column to true
+            # force at least one column to true
+            if not any(which_columns):
+                temp = list(which_columns)
+                temp[0] = True
+                which_columns = tuple(temp)
             return (op, create_column_data(which_columns))
 
-        return (op)
+        return (op,)
 
     def make_script(x):
         length = data.draw(integers(0, 100))
@@ -85,7 +91,7 @@ def run_step(db, step):
     def get_column_names_values(column_data):
         column_values = [x for x in column_data if x is not None]
         column_names = [x for x in list(
-            None if column_data[i] == None else name for i, name in enumerate(COLUMN_NAMES)) if x is not None]
+            None if column_data[i] is None else name for i, name in enumerate(COLUMN_NAMES)) if x is not None]
         return (column_names, column_values)
 
     if op == INSERT:
@@ -96,9 +102,8 @@ def run_step(db, step):
         column_placeholders = ["?" for x in column_values]
 
         sql = "INSERT INTO item ({}) VALUES ({})".format(
-            ", ".join(["id"] + column_names), ", ".join(["id"] + column_placeholders))
-        pprint.pprint(sql)
-        conn.execute(sql, tuple([id] + column_values))
+            ", ".join(["id"] + column_names), ", ".join(["?"] + column_placeholders))
+        conn.execute(sql, tuple([str(id)] + column_values))
         conn.commit()
     if op == UPDATE:
         row = conn.execute(

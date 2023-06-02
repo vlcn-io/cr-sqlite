@@ -61,13 +61,9 @@ jobs:
       #   with:
       #     python-version: "3.10"
 
-      - name: Install pytest
+      - name: Install pip
         run: |
           python -m pip install --upgrade pip
-          pip install pytest
-
-      - name: Pip Deps
-        run: cd py/correctness && pip install -e .
 
       - name: Test
-        run: cd py/correctness && pytest
+        run: cd py/correctness && ./install-and-test.sh

@@ -441,7 +441,8 @@ int crsql_isTableCompatible(sqlite3 *db, const char *tblName, char **errmsg) {
     sqlite3_finalize(pStmt);
     if (count != 0) {
       *errmsg = sqlite3_mprintf(
-          "Table %s has foreign key constraints. CRRs must not have "
+          "Table %s has checked foreign key constraints. CRRs may have foreign "
+          "keys but must not have "
           "checked "
           "foreign key constraints as they can be violated by row level "
           "security or replication.",

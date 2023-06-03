@@ -41,7 +41,7 @@ Discussions of these problems in the application space:
 
 # Usage
 
-The full documentation site is available [here](https://vlcn.io/docs/getting-started).
+The full documentation site is available [here](https://vlcn.io/background).
 
 `crsqlite` exposes three main APIs:
 

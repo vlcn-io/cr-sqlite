@@ -65,6 +65,7 @@ static void testRowidsForReads() {
   assert(rc == SQLITE_OK);
   assert(sqlite3_step(pStmt) == SQLITE_ROW);
   assert(sqlite3_column_int64(pStmt, 0) == 1);
+  sqlite3_finalize(pStmt);
 
   // now many inserts in a single tx
   sqlite3_exec(db, "BEGIN;", 0, 0, 0);
@@ -78,18 +79,21 @@ static void testRowidsForReads() {
   assert(rc == SQLITE_OK);
   assert(sqlite3_step(pStmt) == SQLITE_ROW);
   assert(sqlite3_column_int64(pStmt, 0) == 2);
+  sqlite3_finalize(pStmt);
 
   zSql = "SELECT _rowid_ FROM crsql_changes WHERE [table] = 'foo' AND pk = '3'";
   rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
   assert(rc == SQLITE_OK);
   assert(sqlite3_step(pStmt) == SQLITE_ROW);
   assert(sqlite3_column_int64(pStmt, 0) == 3);
+  sqlite3_finalize(pStmt);
 
   zSql = "SELECT _rowid_ FROM crsql_changes WHERE [table] = 'foo' AND pk = '4'";
   rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
   assert(rc == SQLITE_OK);
   assert(sqlite3_step(pStmt) == SQLITE_ROW);
   assert(sqlite3_column_int64(pStmt, 0) == 4);
+  sqlite3_finalize(pStmt);
 
   // do rest of tests in python
   // - migration to compact out rowids and ensure we get the right ones back
@@ -128,6 +132,7 @@ static void testInsertRowidMatchesReadRowid() {
   assert(rc == SQLITE_OK);
   assert(sqlite3_step(pStmt) == SQLITE_ROW);
   assert(sqlite3_column_int64(pStmt, 0) == 1);
+  sqlite3_finalize(pStmt);
 
   crsql_close(db);
   printf("\t\e[0;32mSuccess\e[0m\n");

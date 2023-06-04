@@ -12,7 +12,6 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-          - os: windows-2022
           - os: macos-latest
     steps:
       - uses: actions/checkout@v3
@@ -29,13 +28,6 @@ jobs:
         run: |
           rustup default nightly
           rustup update
-
-      - name: Windows rust toolchain
-        if: runner.os == 'Windows'
-        run: |
-          rustup toolchain install nightly-x86_64-pc-windows-gnu
-          rustup component add rust-src --toolchain nightly-x86_64-pc-windows-gnu
-          rustup default nightly-x86_64-pc-windows-gnu
 
       - name: Make loadable
         run: |

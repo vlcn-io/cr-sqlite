@@ -1,5 +1,3 @@
-rustc 1.71.0-nightly (b628260df 2023-04-22)
-
 # in-order in-tx + cursoring
 
 - clock tbls without rowid

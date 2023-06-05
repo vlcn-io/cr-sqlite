@@ -17,7 +17,6 @@ struct crsql_ExtData {
   // to crsql_nextdbversion()
   // and re-set on transaction commit or rollback.
   sqlite3_int64 dbVersion;
-  sqlite3_int64 opid;
   int pragmaSchemaVersion;
 
   // we need another schema version number that tracks when we checked it

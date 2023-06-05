@@ -4,10 +4,3 @@ src/crsql_correctness.egg-info/PKG-INFO
 src/crsql_correctness.egg-info/SOURCES.txt
 src/crsql_correctness.egg-info/dependency_links.txt
 src/crsql_correctness.egg-info/top_level.txt
-tests/test_dbversion.py
-tests/test_insert_new_rows.py
-tests/test_schema_modification.py
-tests/test_siteid.py
-tests/test_sync.py
-tests/test_sync_prop.py
-tests/test_update_rows.py

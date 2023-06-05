@@ -74,8 +74,8 @@ fn create_clock_rows_from_stmt(
     // state. No need to re-sync post migration.
     let sql = format!(
         "INSERT INTO \"{table}__crsql_clock\"
-          ({pk_cols}, __crsql_col_name, __crsql_col_version, __crsql_db_version, __crsql_opid) VALUES
-          ({pk_values}, ?, 1, {dbversion_getter}, crsql_nextopid())",
+          ({pk_cols}, __crsql_col_name, __crsql_col_version, __crsql_db_version) VALUES
+          ({pk_values}, ?, 1, {dbversion_getter})",
         table = crate::escape_ident(table),
         pk_cols = pk_cols
             .iter()

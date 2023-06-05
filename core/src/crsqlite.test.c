@@ -332,7 +332,7 @@ static void testSelectChangesAfterChangingColumnName() {
   rc = sqlite3_exec(db, "SELECT crsql_begin_alter('foo')", 0, 0, &err);
   rc += sqlite3_exec(db, "ALTER TABLE foo DROP COLUMN b", 0, 0, 0);
   rc += sqlite3_exec(db, "ALTER TABLE foo ADD COLUMN c", 0, 0, 0);
-  rc += sqlite3_exec(db, "SELECT crsql_commit_alter('foo')", 0, 0, &err);
+  rc += sqlite3_exec(db, "SELECT crsql_commit_alter('foo')", 0, 0, 0);
   assert(rc == SQLITE_OK);
 
   rc += sqlite3_prepare_v2(db, "SELECT cid, val FROM crsql_changes", -1, &pStmt,

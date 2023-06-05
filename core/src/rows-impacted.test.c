@@ -251,7 +251,7 @@ static void testDeleteThatDoesNotChangeAnything() {
 }
 
 static void testCreateThatDoesNotChangeAnything() {
-  printf("CreateThatDoesNotChangeAnything\n");
+  printf("UpdateThatDoesNotChangeAnything\n");
   int rc = SQLITE_OK;
   char *err = 0;
   sqlite3 *db = createDb();
@@ -329,7 +329,6 @@ void rowsImpactedTestSuite() {
   testManyInsertsInATx();
   testMultipartInsertInTx();
   testManyTxns();
-  testCreateThatDoesNotChangeAnything();
   testUpdateThatDoesNotChangeAnything();
   testDeleteThatDoesNotChangeAnything();
   testValueWin();

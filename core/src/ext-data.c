@@ -13,7 +13,6 @@ crsql_ExtData *crsql_newExtData(sqlite3 *db) {
                               &(pExtData->pPragmaSchemaVersionStmt), 0);
   if (rc != SQLITE_OK) {
     sqlite3_finalize(pExtData->pPragmaSchemaVersionStmt);
-    pExtData->pPragmaSchemaVersionStmt = 0;
     return 0;
   }
   pExtData->pPragmaDataVersionStmt = 0;
@@ -23,21 +22,16 @@ crsql_ExtData *crsql_newExtData(sqlite3 *db) {
   if (rc != SQLITE_OK) {
     sqlite3_finalize(pExtData->pPragmaDataVersionStmt);
     sqlite3_finalize(pExtData->pPragmaSchemaVersionStmt);
-    pExtData->pPragmaDataVersionStmt = 0;
-    pExtData->pPragmaSchemaVersionStmt = 0;
     return 0;
   }
 
   if (rc != SQLITE_OK) {
     sqlite3_finalize(pExtData->pPragmaDataVersionStmt);
     sqlite3_finalize(pExtData->pPragmaSchemaVersionStmt);
-    pExtData->pPragmaDataVersionStmt = 0;
-    pExtData->pPragmaSchemaVersionStmt = 0;
     return 0;
   }
 
   pExtData->dbVersion = -1;
-  pExtData->opid = -1;
   pExtData->pragmaSchemaVersion = -1;
   pExtData->pragmaDataVersion = -1;
   pExtData->pragmaSchemaVersionForTableInfos = -1;
@@ -187,7 +181,6 @@ int crsql_fetchDbVersionFromStorage(sqlite3 *db, crsql_ExtData *pExtData,
     if (rc == -1) {
       // this means there are no clock tables / this is a clean db
       pExtData->dbVersion = MIN_POSSIBLE_DB_VERSION;
-      pExtData->opid = MIN_POSSIBLE_DB_VERSION;
       return SQLITE_OK;
     }
     if (rc != SQLITE_OK) {
@@ -201,7 +194,6 @@ int crsql_fetchDbVersionFromStorage(sqlite3 *db, crsql_ExtData *pExtData,
   if (rc == SQLITE_DONE) {
     rc = sqlite3_reset(pExtData->pDbVersionStmt);
     pExtData->dbVersion = MIN_POSSIBLE_DB_VERSION;
-    pExtData->opid = MIN_POSSIBLE_DB_VERSION;
     if (rc != SQLITE_OK) {
       *errmsg = sqlite3_mprintf("failed to reset the version statement");
     }
@@ -219,7 +211,6 @@ int crsql_fetchDbVersionFromStorage(sqlite3 *db, crsql_ExtData *pExtData,
     // No rows? We're at min version
     rc = sqlite3_reset(pExtData->pDbVersionStmt);
     pExtData->dbVersion = MIN_POSSIBLE_DB_VERSION;
-    pExtData->opid = MIN_POSSIBLE_DB_VERSION;
     if (rc != SQLITE_OK) {
       *errmsg = sqlite3_mprintf("failed to reset the version statement(2)");
     }
@@ -227,7 +218,6 @@ int crsql_fetchDbVersionFromStorage(sqlite3 *db, crsql_ExtData *pExtData,
   }
 
   pExtData->dbVersion = sqlite3_column_int64(pExtData->pDbVersionStmt, 0);
-  pExtData->opid = sqlite3_column_int64(pExtData->pDbVersionStmt, 1);
   return sqlite3_reset(pExtData->pDbVersionStmt);
 }
 

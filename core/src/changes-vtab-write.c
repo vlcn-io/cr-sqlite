@@ -130,10 +130,15 @@ sqlite3_int64 crsql_setWinnerClock(
     const void *insertSiteId, int insertSiteIdLen) {
   int rc = SQLITE_OK;
   char *zSql = sqlite3_mprintf(
-      "INSERT OR REPLACE INTO \"%s__crsql_clock\" (%s, \"__crsql_col_name\", "
-      "\"__crsql_col_version\", \"__crsql_db_version\", \"__crsql_site_id\", "
-      "\"__crsql_opid\") VALUES (%s, %Q, %lld, MAX(crsql_nextdbversion(), "
-      "%lld), ?, crsql_nextopid()) RETURNING __crsql_opid",
+      "INSERT OR REPLACE INTO \"%s__crsql_clock\" \
+      (%s, \"__crsql_col_name\", \"__crsql_col_version\", \"__crsql_db_version\", \"__crsql_site_id\")\
+      VALUES (\
+        %s,\
+        %Q,\
+        %lld,\
+        MAX(crsql_nextdbversion(), %lld),\
+        ?\
+      ) RETURNING _rowid_",
       tblInfo->tblName, pkIdentifierList, pkValsStr, insertColName,
       insertColVrsn, insertDbVrsn);
 
@@ -339,7 +344,7 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
       *errmsg = sqlite3_mprintf("Failed inserting changeset");
       return SQLITE_ERROR;
     }
-    *pRowid = rowid;
+    *pRowid = crsql_slabRowid(tblInfoIndex, rowid);
     return SQLITE_OK;
   }
 
@@ -355,7 +360,7 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
       *errmsg = sqlite3_mprintf("Failed inserting changeset");
       return SQLITE_ERROR;
     }
-    *pRowid = rowid;
+    *pRowid = crsql_slabRowid(tblInfoIndex, rowid);
     return SQLITE_OK;
   }
 
@@ -430,7 +435,7 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
     return SQLITE_ERROR;
   }
 
-  *pRowid = rowid;
+  *pRowid = crsql_slabRowid(tblInfoIndex, rowid);
   pTab->pExtData->rowsImpacted += 1;
   return rc;
 }

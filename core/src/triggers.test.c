@@ -67,19 +67,17 @@ static void testDeleteTriggerQuery() {
   rc += sqlite3_exec(db, "DROP TABLE foo", 0, 0, &errMsg);
 
   char *query = crsql_deleteTriggerQuery(tableInfo);
-  assert(
-      strcmp(
-          "CREATE TRIGGER IF NOT EXISTS \"foo__crsql_dtrig\"      AFTER DELETE "
-          "ON \"foo\"    BEGIN      INSERT INTO \"foo__crsql_clock\" (        "
-          "\"a\",        __crsql_col_name,        __crsql_col_version,        "
-          "__crsql_db_version,        __crsql_opid,        __crsql_site_id     "
-          " ) SELECT         OLD.\"a\",        '__crsql_del',        1,        "
-          "crsql_nextdbversion(),        crsql_nextopid(),        NULL      "
-          "WHERE crsql_internal_sync_bit() = 0 ON CONFLICT DO UPDATE SET      "
-          "__crsql_col_version = __crsql_col_version + 1,      "
-          "__crsql_db_version = crsql_nextdbversion(),      __crsql_opid = "
-          "crsql_nextopid(),      __crsql_site_id = NULL;      END; ",
-          query) == 0);
+  assert(strcmp("CREATE TRIGGER IF NOT EXISTS \"foo__crsql_dtrig\"      AFTER "
+                "DELETE ON \"foo\"    BEGIN      INSERT INTO "
+                "\"foo__crsql_clock\" (        \"a\",        __crsql_col_name, "
+                "       __crsql_col_version,        __crsql_db_version,        "
+                "__crsql_site_id      ) SELECT         OLD.\"a\",        "
+                "\'__crsql_del\',        1,        crsql_nextdbversion(),      "
+                "  NULL      WHERE crsql_internal_sync_bit() = 0 ON CONFLICT "
+                "DO UPDATE SET      __crsql_col_version = __crsql_col_version "
+                "+ 1,      __crsql_db_version = crsql_nextdbversion(),      "
+                "__crsql_site_id = NULL;      END; ",
+                query) == 0);
 
   crsql_freeTableInfo(tableInfo);
   crsql_close(db);
@@ -107,13 +105,12 @@ static void testInsertTriggerQuery() {
   char *expected =
       "INSERT INTO \"foo__crsql_clock\" (        a, b,        "
       "__crsql_col_name,        __crsql_col_version,        "
-      "__crsql_db_version,        __crsql_opid,        __crsql_site_id      ) "
-      "SELECT         NEW.a, NEW.b,        'c',        1,        "
-      "crsql_nextdbversion(),        crsql_nextopid(),        NULL      WHERE "
-      "crsql_internal_sync_bit() = 0 ON CONFLICT DO UPDATE SET        "
-      "__crsql_col_version = __crsql_col_version + 1,        "
-      "__crsql_db_version = crsql_nextdbversion(),        __crsql_opid = "
-      "crsql_nextopid(),        __crsql_site_id = NULL;\n";
+      "__crsql_db_version,        __crsql_site_id      ) SELECT         NEW.a, "
+      "NEW.b,        \'c\',        1,        crsql_nextdbversion(),        "
+      "NULL      WHERE crsql_internal_sync_bit() = 0 ON CONFLICT DO UPDATE SET "
+      "       __crsql_col_version = __crsql_col_version + 1,        "
+      "__crsql_db_version = crsql_nextdbversion(),        __crsql_site_id = "
+      "NULL;\n";
 
   assert(strcmp(expected, query) == 0);
 

@@ -7,6 +7,9 @@ SQLITE_EXTENSION_INIT3
 #include <ctype.h>
 #include <stddef.h>
 
+// 10 trillion = 10,000,000,000,000
+#define ROWID_SLAB_SIZE 10000000000000
+
 typedef struct crsql_ColumnInfo crsql_ColumnInfo;
 struct crsql_ColumnInfo {
   int cid;
@@ -48,6 +51,7 @@ crsql_TableInfo *crsql_findTableInfo(crsql_TableInfo **tblInfos, int len,
                                      const char *tblName);
 int crsql_indexofTableInfo(crsql_TableInfo **tblInfos, int len,
                            const char *tblName);
+sqlite3_int64 crsql_slabRowid(int idx, sqlite3_int64 rowid);
 char *crsql_quoteConcat(crsql_ColumnInfo *cols, int len);
 int crsql_pullAllTableInfos(sqlite3 *db, crsql_TableInfo ***pzpTableInfos,
                             int *rTableInfosLen, char **errmsg);

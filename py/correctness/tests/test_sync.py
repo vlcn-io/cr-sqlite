@@ -22,9 +22,6 @@ def sync_left_to_right(l, r, since):
     for change in changes:
         r.execute("INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?, ?)", change)
     r.commit()
-
-
-def sync_left_to_right_via_rowid(l, r, since):
     None
 
 
@@ -68,7 +65,7 @@ def delete_data(c):
 
 def get_changes_since(c, version, requestor):
     return c.execute(
-        "SELECT *, rowid FROM crsql_changes WHERE db_version > {v} AND site_id IS NOT X'{r}'".format(
+        "SELECT * FROM crsql_changes WHERE db_version > {v} AND site_id IS NOT X'{r}'".format(
             v=version, r=requestor)
     ).fetchall()
 
@@ -83,33 +80,35 @@ def test_changes_since():
     rows = get_changes_since(dbs[0], 0, "FF")
     # siteid = dbs[0].execute("select crsql_siteid()").fetchone()[0]
     siteid = None
-    # changes within a changeset are gotten in the order that writes were actually made
-    expected = [('user', '1', 'name', "'Javi'", 1, 1, None, 1),
-                ('deck', '1', 'owner_id', '1', 1, 1, None, 2),
-                ('deck', '1', 'title', "'Preso'", 1, 1, None, 3),
-                ('slide', '1', 'deck_id', '1', 1, 1, None, 4),
-                ('slide', '1', 'order', '0', 1, 1, None, 5),
-                ('component', '1', 'type', "'text'", 1, 1, None, 6),
-                ('component', '1', 'slide_id', '1', 1, 1, None, 7),
-                ('component', '1', 'content', "'wootwoot'", 1, 1, None, 8),
-                ('component', '2', 'type', "'text'", 1, 1, None, 9),
-                ('component', '2', 'slide_id', '1', 1, 1, None, 10),
-                ('component', '2', 'content', "'toottoot'", 1, 1, None, 11),
-                ('component', '3', 'type', "'text'", 1, 1, None, 12),
-                ('component', '3', 'slide_id', '1', 1, 1, None, 13),
-                ('component', '3', 'content', "'footfoot'", 1, 1, None, 14),
-                ('slide', '2', 'deck_id', '1', 1, 1, None, 15),
-                ('slide', '2', 'order', '1', 1, 1, None, 16),
-                ('slide', '3', 'deck_id', '1', 1, 1, None, 17),
-                ('slide', '3', 'order', '2', 1, 1, None, 18)]
+    expected = [
+        ("component", "1", "content", "'wootwoot'", 1, 1, siteid),
+        ("component", "1", "slide_id", "1", 1, 1, siteid),
+        ("component", "1", "type", "'text'", 1, 1, siteid),
+        ("component", "2", "content", "'toottoot'", 1, 1, siteid),
+        ("component", "2", "slide_id", "1", 1, 1, siteid),
+        ("component", "2", "type", "'text'", 1, 1, siteid),
+        ("component", "3", "content", "'footfoot'", 1, 1, siteid),
+        ("component", "3", "slide_id", "1", 1, 1, siteid),
+        ("component", "3", "type", "'text'", 1, 1, siteid),
+        ("deck", "1", "owner_id", "1", 1, 1, siteid),
+        ("deck", "1", "title", "'Preso'", 1, 1, siteid),
+        ("slide", "1", "deck_id", "1", 1, 1, siteid),
+        ("slide", "1", "order", "0", 1, 1, siteid),
+        ("slide", "2", "deck_id", "1", 1, 1, siteid),
+        ("slide", "2", "order", "1", 1, 1, siteid),
+        ("slide", "3", "deck_id", "1", 1, 1, siteid),
+        ("slide", "3", "order", "2", 1, 1, siteid),
+        ("user", "1", "name", "'Javi'", 1, 1, siteid),
+    ]
 
     assert (rows == expected)
 
     update_data(dbs[0])
 
     rows = get_changes_since(dbs[0], 1, 'FF')
-    assert (rows == [('user', '1', 'name', "'Maestro'", 2, 2, None, 20),
-                     ('deck', '1', 'title', "'Presto'", 2, 2, None, 22)])
+
+    assert (rows == [("deck", "1", "title", "'Presto'", 2, 2,
+            siteid), ("user", "1", "name", "'Maestro'", 2, 2, siteid)])
 
 
 def test_delete():
@@ -122,8 +121,7 @@ def test_delete():
     rows = get_changes_since(db, 1, 'FF')
     siteid = None
     # Deletes are marked with a sentinel id
-    assert (
-        rows == [('component', '1', '__crsql_del', None, 1, 2, siteid, 19)])
+    assert (rows == [('component', '1', '__crsql_del', None, 1, 2, siteid)])
 
     db.execute("DELETE FROM component")
     db.execute("DELETE FROM deck")
@@ -134,31 +132,32 @@ def test_delete():
     # TODO: we should have the network layer collapse these events or do it ourselves.
     # given we have past events that we're missing data for, they're now marked off as deletes
     # TODO: should deletes not get a proper version? Would be better for ordering and chunking replications
-    assert (rows == [('user', '1', 'name', "'Javi'", 1, 1, None, 1),
-                     ('deck', '1', '__crsql_del', None, 1, 1, None, 2),
-                     ('deck', '1', '__crsql_del', None, 1, 1, None, 3),
-                     ('slide', '1', '__crsql_del', None, 1, 1, None, 4),
-                     ('slide', '1', '__crsql_del', None, 1, 1, None, 5),
-                     ('component', '1', '__crsql_del', None, 1, 1, None, 6),
-                     ('component', '1', '__crsql_del', None, 1, 1, None, 7),
-                     ('component', '1', '__crsql_del', None, 1, 1, None, 8),
-                     ('component', '2', '__crsql_del', None, 1, 1, None, 9),
-                     ('component', '2', '__crsql_del', None, 1, 1, None, 10),
-                     ('component', '2', '__crsql_del', None, 1, 1, None, 11),
-                     ('component', '3', '__crsql_del', None, 1, 1, None, 12),
-                     ('component', '3', '__crsql_del', None, 1, 1, None, 13),
-                     ('component', '3', '__crsql_del', None, 1, 1, None, 14),
-                     ('slide', '2', '__crsql_del', None, 1, 1, None, 15),
-                     ('slide', '2', '__crsql_del', None, 1, 1, None, 16),
-                     ('slide', '3', '__crsql_del', None, 1, 1, None, 17),
-                     ('slide', '3', '__crsql_del', None, 1, 1, None, 18),
-                     ('component', '1', '__crsql_del', None, 1, 2, None, 19),
-                     ('component', '2', '__crsql_del', None, 1, 3, None, 20),
-                     ('component', '3', '__crsql_del', None, 1, 3, None, 21),
-                     ('deck', '1', '__crsql_del', None, 1, 3, None, 22),
-                     ('slide', '1', '__crsql_del', None, 1, 3, None, 23),
-                     ('slide', '2', '__crsql_del', None, 1, 3, None, 24),
-                     ('slide', '3', '__crsql_del', None, 1, 3, None, 25)])
+    assert (rows == [
+        ("component", "1", "__crsql_del", None, 1, 1, siteid),
+        ("component", "1", "__crsql_del", None, 1, 1, siteid),
+        ("component", "1", "__crsql_del", None, 1, 1, siteid),
+        ("component", "2", "__crsql_del", None, 1, 1, siteid),
+        ("component", "2", "__crsql_del", None, 1, 1, siteid),
+        ("component", "2", "__crsql_del", None, 1, 1, siteid),
+        ("component", "3", "__crsql_del", None, 1, 1, siteid),
+        ("component", "3", "__crsql_del", None, 1, 1, siteid),
+        ("component", "3", "__crsql_del", None, 1, 1, siteid),
+        ("deck", "1", "__crsql_del", None, 1, 1, siteid),
+        ("deck", "1", "__crsql_del", None, 1, 1, siteid),
+        ("slide", "1", "__crsql_del", None, 1, 1, siteid),
+        ("slide", "1", "__crsql_del", None, 1, 1, siteid),
+        ("slide", "2", "__crsql_del", None, 1, 1, siteid),
+        ("slide", "2", "__crsql_del", None, 1, 1, siteid),
+        ("slide", "3", "__crsql_del", None, 1, 1, siteid),
+        ("slide", "3", "__crsql_del", None, 1, 1, siteid),
+        ("user", "1", "name", "'Javi'", 1, 1, siteid),
+        ("component", "1", "__crsql_del", None, 1, 2, siteid),
+        ("component", "2", "__crsql_del", None, 1, 3, siteid),
+        ("component", "3", "__crsql_del", None, 1, 3, siteid),
+        ("deck", "1", "__crsql_del", None, 1, 3, siteid),
+        ("slide", "1", "__crsql_del", None, 1, 3, siteid),
+        ("slide", "2", "__crsql_del", None, 1, 3, siteid),
+        ("slide", "3", "__crsql_del", None, 1, 3, siteid)])
 
     # test insert
 
@@ -492,37 +491,6 @@ def test_merge_larger_clock_same_value():
 
 # We have a comprehensive merge test in nodejs. We should port it to python at some point and
 # keep all our correctness tests here.
-
-
-def test_out_of_order():
-    def make_db():
-        db = connect(":memory:")
-        db.execute("CREATE TABLE foo (a PRIMARY KEY, b, c);")
-        db.execute("SELECT crsql_as_crr('foo');")
-        db.commit()
-        return db
-
-    db1 = make_db()
-    db2 = make_db()
-
-    db1.execute("INSERT INTO foo (a,b,c) VALUES (1,1,1);")
-    db1.commit()
-    db1.execute("UPDATE foo SET b = 2 WHERE a = 1;")
-    db1.commit()
-
-    changes = db1.execute(
-        "SELECT * FROM crsql_changes WHERE db_version = 2").fetchall()
-    for change in changes:
-        db2.execute(
-            "INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?, ?)", change)
-
-    db2.commit()
-    foodata = db2.execute("SELECT * FROM foo").fetchall()
-
-    close(db1)
-    close(db2)
-    # Can insert even if we receive before creating the row
-    assert (foodata == [(1, 2, None)])
 
 
 def test_merge():

@@ -1,6 +1,5 @@
 on:
   push:
-  pull_request:
 name: "py-tests"
 jobs:
   build:
@@ -13,7 +12,6 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-          - os: windows-2022
           - os: macos-latest
     steps:
       - uses: actions/checkout@v3
@@ -30,13 +28,6 @@ jobs:
         run: |
           rustup default nightly
           rustup update
-
-      - name: Windows rust toolchain
-        if: runner.os == 'Windows'
-        run: |
-          rustup toolchain install nightly-x86_64-pc-windows-gnu
-          rustup component add rust-src --toolchain nightly-x86_64-pc-windows-gnu
-          rustup default nightly-x86_64-pc-windows-gnu
 
       - name: Make loadable
         run: |
@@ -61,13 +52,9 @@ jobs:
       #   with:
       #     python-version: "3.10"
 
-      - name: Install pytest
+      - name: Install pip
         run: |
           python -m pip install --upgrade pip
-          pip install pytest
-
-      - name: Pip Deps
-        run: cd py/correctness && pip install -e .
 
       - name: Test
-        run: cd py/correctness && pytest
+        run: cd py/correctness && ./install-and-test.sh

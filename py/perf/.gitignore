@@ -1,1 +1,4 @@
 correctness.db
+perf.db-shm
+perf.db
+perf.db-wal

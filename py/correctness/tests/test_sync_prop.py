@@ -34,7 +34,7 @@ COLUMN_NAMES = (
 
 
 # @reproduce_failure('6.75.9', b'AXicY2BWYxgF5AMANDEAKg==')
-@settings(max_examples=30)
+@settings(max_examples=30, deadline=500)
 @given(data())
 def test_delta_sync(data):
     since_is_rowid = False

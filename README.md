@@ -39,6 +39,14 @@ Discussions of these problems in the application space:
 - [robinvasan](https://github.com/robinvasan)
 - [iansinnott](https://github.com/iansinnott)
 
+# Perf
+
+Perf data: https://github.com/vlcn-io/cr-sqlite/blob/main/py/perf/perf.ipynb
+
+- Currently inserts into CRRs are 2.5-3x slower than inserts into regular SQLite tables.
+- Reads are the same speed
+
+
 # Usage
 
 The full documentation site is available [here](https://vlcn.io/background).

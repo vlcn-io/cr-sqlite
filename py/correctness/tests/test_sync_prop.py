@@ -1,9 +1,10 @@
 from crsql_correctness import connect, close
-from hypothesis import given, settings, reproduce_failure, composite
-from hypothesis.strategies import integers, data, booleans, integers, text, floats, uuids, characters
+from hypothesis import given, settings, example
+from hypothesis.strategies import integers, data, booleans, integers, text, floats, uuids, characters, composite
 from functools import reduce
 import random
 import pprint
+import uuid
 
 INSERT = 0
 UPDATE = 1
@@ -36,7 +37,7 @@ COLUMN_NAMES = (
 @composite
 def full_script(draw):
     def create_column_data(which_columns):
-        return tuple(None if c == False else data.draw(COLUMN_TYPES[i]) for i, c in enumerate(which_columns))
+        return tuple(None if c == False else draw(COLUMN_TYPES[i]) for i, c in enumerate(which_columns))
 
     def gen_script_step(x):
         op = draw(integers(0, 2))
@@ -45,10 +46,10 @@ def full_script(draw):
         should_sync = draw(integers(0, 10)) == 0
         num_peers_to_sync = None
         if should_sync:
-            num_peers_to_sync = data.draw(integers(1, len(num_dbs)))
+            num_peers_to_sync = draw(integers(1, num_dbs))
 
         if op == INSERT:
-            return (op, draw(uuids()), create_column_data(which_columns), num_peers_to_sync)
+            return (op, str(uuid.uuid4()), create_column_data(which_columns), num_peers_to_sync)
 
         if op == UPDATE:
             # force at least one column to true
@@ -73,7 +74,7 @@ def full_script(draw):
 
 
 # @reproduce_failure('6.75.9', b'AXicY2BWYxgF5AMANDEAKg==')
-@settings(max_examples=30, deadline=500)
+@settings(deadline=500)
 @given(full_script())
 def test_delta_sync(all_scripts):
     since_is_rowid = False
@@ -110,8 +111,8 @@ def test_delta_sync(all_scripts):
             "SELECT * FROM item ORDER BY id ASC").fetchall()
         right_rows = conn2.execute(
             "SELECT * FROM item ORDER BY id ASC").fetchall()
-        pprint.pprint(left_rows)
-        pprint.pprint(right_rows)
+        # pprint.pprint(left_rows)
+        # pprint.pprint(right_rows)
         assert (left_rows == right_rows)
     for db in dbs:
         close(db[1])
@@ -164,9 +165,8 @@ def run_step(db, step):
         conn.commit()
         return step[1]
 
+
 # run up and back down
-
-
 def sync_all(dbs, since_is_rowid):
     # 0 pulls from everyone
     # then everyone pulls from 0

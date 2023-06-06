@@ -35,7 +35,7 @@ static void testGetVersionUnionQuery() {
       strcmp(
           query,
           "SELECT max(version) as version FROM (SELECT max(__crsql_db_version) "
-          "as version FROM \"foo\"   UNION ALL SELECT value as version FROM "
+          "as version FROM \"foo\"   UNION SELECT value as version FROM "
           "crsql_master WHERE key = 'pre_compact_dbversion')") == 0);
   sqlite3_free(query);
 
@@ -46,7 +46,7 @@ static void testGetVersionUnionQuery() {
           "SELECT max(version) as version FROM (SELECT max(__crsql_db_version) "
           "as version FROM \"foo\" UNION ALL SELECT max(__crsql_db_version) as "
           "version FROM \"bar\" UNION ALL SELECT max(__crsql_db_version) as "
-          "version FROM \"baz\"   UNION ALL SELECT value as version FROM "
+          "version FROM \"baz\"   UNION SELECT value as version FROM "
           "crsql_master WHERE key = 'pre_compact_dbversion')") == 0);
   sqlite3_free(query);
 

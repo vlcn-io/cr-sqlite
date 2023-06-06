@@ -1,5 +1,5 @@
 from crsql_correctness import connect, close
-from hypothesis import given, settings, reproduce_failure
+from hypothesis import given, settings, reproduce_failure, composite
 from hypothesis.strategies import integers, data, booleans, integers, text, floats, uuids, characters
 from functools import reduce
 import random
@@ -33,24 +33,22 @@ COLUMN_NAMES = (
 )
 
 
-# @reproduce_failure('6.75.9', b'AXicY2BWYxgF5AMANDEAKg==')
-@settings(max_examples=30, deadline=500)
-@given(data())
-def test_delta_sync(data):
-    since_is_rowid = False
-    # since_is_rowid = data.draw(booleans())
-    # todo: expand this test to do many tables. since_is_rowid works after our rowid reversion only because there's a single table.
-
+@composite
+def full_script(draw):
     def create_column_data(which_columns):
         return tuple(None if c == False else data.draw(COLUMN_TYPES[i]) for i, c in enumerate(which_columns))
 
     def gen_script_step(x):
-        op = data.draw(integers(0, 2))
-        which_columns = (data.draw(booleans()), data.draw(booleans()), data.draw(
-            booleans()), data.draw(booleans()), data.draw(booleans()))
+        op = draw(integers(0, 2))
+        which_columns = (draw(booleans()), draw(booleans()), draw(
+            booleans()), draw(booleans()), draw(booleans()))
+        should_sync = draw(integers(0, 10)) == 0
+        num_peers_to_sync = None
+        if should_sync:
+            num_peers_to_sync = data.draw(integers(1, len(num_dbs)))
 
         if op == INSERT:
-            return (op, data.draw(uuids()), create_column_data(which_columns))
+            return (op, draw(uuids()), create_column_data(which_columns), num_peers_to_sync)
 
         if op == UPDATE:
             # force at least one column to true
@@ -58,13 +56,29 @@ def test_delta_sync(data):
                 temp = list(which_columns)
                 temp[0] = True
                 which_columns = tuple(temp)
-            return (op, create_column_data(which_columns))
+            return (op, create_column_data(which_columns), num_peers_to_sync)
 
-        return (op,)
+        # DELETE
+        return (op, num_peers_to_sync)
 
     def make_script(x):
-        length = data.draw(integers(0, 100))
+        length = draw(integers(0, 100))
         return list(map(gen_script_step, range(length)))
+
+    num_dbs = draw(integers(2, 5))
+    scripts = list(map(make_script, range(num_dbs)))
+    total_steps = reduce(lambda l, r: l + len(r), scripts, 0)
+
+    return (num_dbs, scripts, total_steps)
+
+
+# @reproduce_failure('6.75.9', b'AXicY2BWYxgF5AMANDEAKg==')
+@settings(max_examples=30, deadline=500)
+@given(full_script())
+def test_delta_sync(all_scripts):
+    since_is_rowid = False
+    # since_is_rowid = data.draw(booleans())
+    # todo: expand this test to do many tables. since_is_rowid works after our rowid reversion only because there's a single table.
 
     def open_db(i):
         conn = connect(":memory:")
@@ -74,19 +88,17 @@ def test_delta_sync(data):
         conn.commit()
         return (i, conn, dict())
 
-    num_dbs = data.draw(integers(2, 5))
+    (num_dbs, scripts, total_steps) = all_scripts
     dbs = list(map(open_db, range(num_dbs)))
-    scripts = list(map(make_script, range(num_dbs)))
-
-    total_steps = reduce(lambda l, r: l + len(r), scripts, 0)
 
     for step_index in range(total_steps):
         for db, script in zip(dbs, scripts):
             if step_index >= len(script):
                 continue
-            run_step(db, script[step_index])
-            if data.draw(integers(0, 10)) == 0:
-                sync_from_random_peers(data, db, dbs, since_is_rowid)
+            maybe_num_peers_to_sync = run_step(db, script[step_index])
+            if maybe_num_peers_to_sync is not None:
+                sync_from_random_peers(
+                    maybe_num_peers_to_sync, db, dbs, since_is_rowid)
 
     sync_all(dbs, since_is_rowid)
 
@@ -94,8 +106,13 @@ def test_delta_sync(data):
         conn1 = dbs[i][1]
         conn2 = dbs[i+1][1]
 
-        assert (conn1.execute("SELECT * FROM item ORDER BY id ASC").fetchall() ==
-                conn2.execute("SELECT * FROM item ORDER BY id ASC").fetchall())
+        left_rows = conn1.execute(
+            "SELECT * FROM item ORDER BY id ASC").fetchall()
+        right_rows = conn2.execute(
+            "SELECT * FROM item ORDER BY id ASC").fetchall()
+        pprint.pprint(left_rows)
+        pprint.pprint(right_rows)
+        assert (left_rows == right_rows)
     for db in dbs:
         close(db[1])
 
@@ -121,7 +138,8 @@ def run_step(db, step):
             ", ".join(["id"] + column_names), ", ".join(["?"] + column_placeholders))
         conn.execute(sql, tuple([str(id)] + column_values))
         conn.commit()
-    if op == UPDATE:
+        return step[3]
+    elif op == UPDATE:
         row = conn.execute(
             "SELECT id FROM item ORDER BY RANDOM() LIMIT 1;").fetchone()
         if row is None:
@@ -135,7 +153,8 @@ def run_step(db, step):
         conn.execute("UPDATE item SET {} WHERE id = ?".format(
             ", ".join(set_statements)), tuple([row[0]] + column_values))
         conn.commit()
-    if op == DELETE:
+        return step[2]
+    elif op == DELETE:
         row = conn.execute(
             "SELECT id FROM item ORDER BY RANDOM() LIMIT 1;").fetchone()
         if row is None:
@@ -143,6 +162,7 @@ def run_step(db, step):
 
         conn.execute("DELETE FROM item WHERE id = ?", row)
         conn.commit()
+        return step[1]
 
 # run up and back down
 
@@ -172,7 +192,7 @@ def sync_all(dbs, since_is_rowid):
         sync_left_to_right(conn, push_to_conn, since, since_is_rowid)
 
 
-def sync_from_random_peers(data, db, dbs, since_is_rowid):
+def sync_from_random_peers(num_peers_to_sync, db, dbs, since_is_rowid):
     peer_tracker = db[2]
     conn = db[1]
     dbid = db[0]
@@ -183,7 +203,7 @@ def sync_from_random_peers(data, db, dbs, since_is_rowid):
 
     # pull 1-n other dbids to pull from
     pull_from_dbids = random.choices(
-        dbids, k=data.draw(integers(1, len(dbids))))
+        dbids, k=num_peers_to_sync)
 
     for pull_from in pull_from_dbids:
         since = peer_tracker.get(pull_from, 0)

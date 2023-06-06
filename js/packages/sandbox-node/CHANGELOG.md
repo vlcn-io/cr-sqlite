@@ -1,5 +1,11 @@
 # sandbox-node
 
+## 0.3.0-next.0
+
+### Minor Changes
+
+- 15c8e04: 50x perf boost when pulling changesets
+
 ## 0.2.0
 
 ### Minor Changes

@@ -1,5 +1,16 @@
 # @vlcn.io/replicator-wholedb
 
+## 0.10.0-next.0
+
+### Minor Changes
+
+- 15c8e04: 50x perf boost when pulling changesets
+
+### Patch Changes
+
+- Updated dependencies [15c8e04]
+  - @vlcn.io/xplat-api@0.11.0-next.0
+
 ## 0.9.0
 
 ### Minor Changes

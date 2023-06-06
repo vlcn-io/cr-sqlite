@@ -311,7 +311,7 @@ char *crsql_getDbVersionUnionQuery(int numRows, char **tableNames) {
         // so skip that
         tableNames[i + 1],
         // If we have more tables to process, union them in
-        i < numRows - 1 ? UNION : "");
+        i < numRows - 1 ? UNION_ALL : "");
   }
 
   // move the array of strings into a single string

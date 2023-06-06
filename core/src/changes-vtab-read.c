@@ -59,7 +59,7 @@ char *crsql_changesUnionQuery(crsql_TableInfo **tableInfos, int tableInfosLen,
     }
 
     if (i < tableInfosLen - 1) {
-      unionsArr[i] = sqlite3_mprintf("%z %s ", unionsArr[i], UNION);
+      unionsArr[i] = sqlite3_mprintf("%z %s ", unionsArr[i], UNION_ALL);
     }
   }
 

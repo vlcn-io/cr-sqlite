@@ -1,5 +1,18 @@
 # @vlcn.io/direct-connect-nodejs
 
+## 0.3.0-next.0
+
+### Minor Changes
+
+- 15c8e04: 50x perf boost when pulling changesets
+
+### Patch Changes
+
+- Updated dependencies [15c8e04]
+  - @vlcn.io/crsqlite@0.12.0-next.0
+  - @vlcn.io/direct-connect-common@0.3.0-next.0
+  - @vlcn.io/xplat-api@0.11.0-next.0
+
 ## 0.2.0
 
 ### Minor Changes

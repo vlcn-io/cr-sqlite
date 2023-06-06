@@ -1,5 +1,17 @@
 # @vlcn.io/browser-tests
 
+## 0.10.0-next.0
+
+### Minor Changes
+
+- 15c8e04: 50x perf boost when pulling changesets
+
+### Patch Changes
+
+- Updated dependencies [15c8e04]
+  - @vlcn.io/crsqlite-wasm@0.12.0-next.0
+  - @vlcn.io/xplat-tests@0.10.0-next.0
+
 ## 0.9.0
 
 ### Minor Changes

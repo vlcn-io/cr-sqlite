@@ -1,5 +1,18 @@
 # @vlcn.io/xplat-tests
 
+## 0.10.0-next.0
+
+### Minor Changes
+
+- 15c8e04: 50x perf boost when pulling changesets
+
+### Patch Changes
+
+- Updated dependencies [15c8e04]
+  - @vlcn.io/sync-p2p@0.10.0-next.0
+  - @vlcn.io/rx-tbl@0.11.0-next.0
+  - @vlcn.io/xplat-api@0.11.0-next.0
+
 ## 0.9.0
 
 ### Minor Changes

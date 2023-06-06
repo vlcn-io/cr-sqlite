@@ -1,5 +1,16 @@
 # @vlcn.io/rx-query
 
+## 0.4.0-next.0
+
+### Minor Changes
+
+- 15c8e04: 50x perf boost when pulling changesets
+
+### Patch Changes
+
+- Updated dependencies [15c8e04]
+  - @vlcn.io/xplat-api@0.11.0-next.0
+
 ## 0.3.0
 
 ### Minor Changes

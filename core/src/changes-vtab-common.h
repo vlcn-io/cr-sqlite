@@ -12,6 +12,7 @@ SQLITE_EXTENSION_INIT3
 #define CHANGES_SINCE_VTAB_COL_VRSN 4
 #define CHANGES_SINCE_VTAB_DB_VRSN 5
 #define CHANGES_SINCE_VTAB_SITE_ID 6
+#define CHANGES_SINCE_VTAB_SEQ 7
 
 char *crsql_extractWhereList(crsql_ColumnInfo *zColumnInfos, int columnInfosLen,
                              const char *quoteConcatedVals);

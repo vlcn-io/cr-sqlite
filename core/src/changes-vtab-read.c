@@ -22,7 +22,8 @@ char *crsql_changesQueryForTable(crsql_TableInfo *tableInfo) {
       __crsql_col_version as col_vrsn,\
       __crsql_db_version as db_vrsn,\
       __crsql_site_id as site_id,\
-      _rowid_\
+      _rowid_,\
+      __crsql_seq as seq\
     FROM \"%s__crsql_clock\"",
       tableInfo->tblName, crsql_quoteConcat(tableInfo->pks, tableInfo->pksLen),
       tableInfo->tblName);
@@ -73,10 +74,11 @@ char *crsql_changesUnionQuery(crsql_TableInfo **tableInfos, int tableInfosLen,
 
   // compose the final query
   return sqlite3_mprintf(
-      "SELECT tbl, pks, cid, col_vrsn, db_vrsn, site_id, _rowid_ FROM (%z) "
+      "SELECT tbl, pks, cid, col_vrsn, db_vrsn, site_id, _rowid_, seq FROM "
+      "(%z) "
       "%s%s ORDER "
       "BY "
-      "db_vrsn ASC",
+      "db_vrsn, seq ASC",
       unionsStr, idxStr != 0 && strlen(idxStr) > 0 ? "WHERE " : "",
       idxStr == 0 ? "" : idxStr);
   // %z frees unionsStr https://www.sqlite.org/printf.html#percentz

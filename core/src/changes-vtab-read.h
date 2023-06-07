@@ -16,6 +16,7 @@ char *crsql_changesQueryForTable(crsql_TableInfo *tableInfo);
 #define DB_VRSN 4
 #define SITE_ID 5
 #define CHANGES_ROWID 6
+#define SEQ 7
 
 char *crsql_changesUnionQuery(crsql_TableInfo **tableInfos, int tableInfosLen,
                               const char *idxStr);

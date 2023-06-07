@@ -71,11 +71,14 @@ static void testDeleteTriggerQuery() {
                 "DELETE ON \"foo\"    BEGIN      INSERT INTO "
                 "\"foo__crsql_clock\" (        \"a\",        __crsql_col_name, "
                 "       __crsql_col_version,        __crsql_db_version,        "
+                "__crsql_seq,        "
                 "__crsql_site_id      ) SELECT         OLD.\"a\",        "
                 "\'__crsql_del\',        1,        crsql_nextdbversion(),      "
-                "  NULL      WHERE crsql_internal_sync_bit() = 0 ON CONFLICT "
+                "  crsql_increment_and_get_seq(),        NULL      WHERE "
+                "crsql_internal_sync_bit() = 0 ON CONFLICT "
                 "DO UPDATE SET      __crsql_col_version = __crsql_col_version "
                 "+ 1,      __crsql_db_version = crsql_nextdbversion(),      "
+                "__crsql_seq = crsql_increment_and_get_seq(),      "
                 "__crsql_site_id = NULL;      END; ",
                 query) == 0);
 
@@ -105,11 +108,14 @@ static void testInsertTriggerQuery() {
   char *expected =
       "INSERT INTO \"foo__crsql_clock\" (        a, b,        "
       "__crsql_col_name,        __crsql_col_version,        "
-      "__crsql_db_version,        __crsql_site_id      ) SELECT         NEW.a, "
+      "__crsql_db_version,        __crsql_seq,        __crsql_site_id      ) "
+      "SELECT         NEW.a, "
       "NEW.b,        \'c\',        1,        crsql_nextdbversion(),        "
+      "crsql_increment_and_get_seq(),        "
       "NULL      WHERE crsql_internal_sync_bit() = 0 ON CONFLICT DO UPDATE SET "
       "       __crsql_col_version = __crsql_col_version + 1,        "
-      "__crsql_db_version = crsql_nextdbversion(),        __crsql_site_id = "
+      "__crsql_db_version = crsql_nextdbversion(),        __crsql_seq = "
+      "crsql_increment_and_get_seq(),        __crsql_site_id = "
       "NULL;\n";
 
   assert(strcmp(expected, query) == 0);

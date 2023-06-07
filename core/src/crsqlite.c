@@ -206,6 +206,13 @@ static void nextDbVersionFunc(sqlite3_context *context, int argc,
   sqlite3_result_int64(context, pExtData->dbVersion + 1);
 }
 
+static void incrementAndGetSeqFunc(sqlite3_context *context, int argc,
+                                   sqlite3_value **argv) {
+  crsql_ExtData *pExtData = (crsql_ExtData *)sqlite3_user_data(context);
+  sqlite3_result_int(context, pExtData->seq);
+  pExtData->seq += 1;
+}
+
 /**
  * The clock table holds the versions for each column of a given row.
  *
@@ -236,6 +243,7 @@ int crsql_createClockTable(sqlite3 *db, crsql_TableInfo *tableInfo,
       \"__crsql_col_version\" NOT NULL,\
       \"__crsql_db_version\" NOT NULL,\
       \"__crsql_site_id\",\
+      \"__crsql_seq\" NOT NULL,\
       PRIMARY KEY (%s, \"__crsql_col_name\")\
     )",
       tableInfo->tblName, pkList, pkList);
@@ -606,6 +614,7 @@ static int commitHook(void *pUserData) {
   crsql_ExtData *pExtData = (crsql_ExtData *)pUserData;
 
   pExtData->dbVersion = -1;
+  pExtData->seq = 0;
   return SQLITE_OK;
 }
 
@@ -658,6 +667,11 @@ __declspec(dllexport)
                                  // dbversion can change on each invocation.
                                  SQLITE_UTF8 | SQLITE_INNOCUOUS, pExtData,
                                  nextDbVersionFunc, 0, 0);
+  }
+  if (rc == SQLITE_OK) {
+    rc = sqlite3_create_function(db, "crsql_increment_and_get_seq", 0,
+                                 SQLITE_UTF8 | SQLITE_INNOCUOUS, pExtData,
+                                 incrementAndGetSeqFunc, 0, 0);
   }
 
   if (rc == SQLITE_OK) {

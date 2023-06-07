@@ -170,10 +170,10 @@ def test_backfill_clocks_on_rename():
 
     assert (changes == [('todo', '1', 'complete', '0', 1, 1),
                         ('todo', '1', 'list', "'home'", 1, 1),
-                        ('todo', '2', 'complete', '0', 2, 1),
-                        ('todo', '2', 'list', "'home'", 2, 1),
                         ('todo', '1', 'task', "'cook'", 2, 1),
-                        ('todo', '2', 'task', "'clean'", 2, 1)])
+                        ('todo', '2', 'complete', '0', 2, 1),
+                        ('todo', '2', 'task', "'clean'", 2, 1),
+                        ('todo', '2', 'list', "'home'", 2, 1)])
 
 
 def test_delete_sentinels_not_lost():
@@ -674,8 +674,9 @@ def test_changing_values_in_primary_key_columns():
     c.commit()
 
     changes = c.execute(full_changes_query).fetchall()
-    assert (changes == [('foo', '4', 'b', '5', 1, 1, None),
-            ('foo', '2', 'b', '2', 1, 1, None)])
+    pprint.pprint(changes)
+    assert (changes == [('foo', '2', 'b', '2', 1, 1, None),
+            ('foo', '4', 'b', '5', 1, 1, None)])
 
 
 def test_12step_backfill_retains_siteid():

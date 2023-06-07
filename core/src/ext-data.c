@@ -13,6 +13,7 @@ crsql_ExtData *crsql_newExtData(sqlite3 *db) {
                               &(pExtData->pPragmaSchemaVersionStmt), 0);
   if (rc != SQLITE_OK) {
     sqlite3_finalize(pExtData->pPragmaSchemaVersionStmt);
+    pExtData->pPragmaSchemaVersionStmt = 0;
     return 0;
   }
   pExtData->pPragmaDataVersionStmt = 0;
@@ -22,16 +23,21 @@ crsql_ExtData *crsql_newExtData(sqlite3 *db) {
   if (rc != SQLITE_OK) {
     sqlite3_finalize(pExtData->pPragmaDataVersionStmt);
     sqlite3_finalize(pExtData->pPragmaSchemaVersionStmt);
+    pExtData->pPragmaDataVersionStmt = 0;
+    pExtData->pPragmaSchemaVersionStmt = 0;
     return 0;
   }
 
   if (rc != SQLITE_OK) {
     sqlite3_finalize(pExtData->pPragmaDataVersionStmt);
     sqlite3_finalize(pExtData->pPragmaSchemaVersionStmt);
+    pExtData->pPragmaDataVersionStmt = 0;
+    pExtData->pPragmaSchemaVersionStmt = 0;
     return 0;
   }
 
   pExtData->dbVersion = -1;
+  pExtData->seq = 0;
   pExtData->pragmaSchemaVersion = -1;
   pExtData->pragmaDataVersion = -1;
   pExtData->pragmaSchemaVersionForTableInfos = -1;

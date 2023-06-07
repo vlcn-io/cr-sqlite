@@ -80,26 +80,24 @@ def test_changes_since():
     rows = get_changes_since(dbs[0], 0, "FF")
     # siteid = dbs[0].execute("select crsql_siteid()").fetchone()[0]
     siteid = None
-    expected = [
-        ('user', '1', 'name', "'Javi'", 1, 1, None),
-        ('deck', '1', 'owner_id', '1', 1, 1, None),
-        ('deck', '1', 'title', "'Preso'", 1, 1, None),
-        ('slide', '1', 'deck_id', '1', 1, 1, None),
-        ('slide', '1', 'order', '0', 1, 1, None),
-        ('slide', '2', 'deck_id', '1', 1, 1, None),
-        ('slide', '2', 'order', '1', 1, 1, None),
-        ('slide', '3', 'deck_id', '1', 1, 1, None),
-        ('slide', '3', 'order', '2', 1, 1, None),
-        ('component', '1', 'type', "'text'", 1, 1, None),
-        ('component', '1', 'slide_id', '1', 1, 1, None),
-        ('component', '1', 'content', "'wootwoot'", 1, 1, None),
-        ('component', '2', 'type', "'text'", 1, 1, None),
-        ('component', '2', 'slide_id', '1', 1, 1, None),
-        ('component', '2', 'content', "'toottoot'", 1, 1, None),
-        ('component', '3', 'type', "'text'", 1, 1, None),
-        ('component', '3', 'slide_id', '1', 1, 1, None),
-        ('component', '3', 'content', "'footfoot'", 1, 1, None)
-    ]
+    expected = [('user', '1', 'name', "'Javi'", 1, 1, None),
+                ('deck', '1', 'owner_id', '1', 1, 1, None),
+                ('deck', '1', 'title', "'Preso'", 1, 1, None),
+                ('slide', '1', 'deck_id', '1', 1, 1, None),
+                ('slide', '1', 'order', '0', 1, 1, None),
+                ('component', '1', 'type', "'text'", 1, 1, None),
+                ('component', '1', 'slide_id', '1', 1, 1, None),
+                ('component', '1', 'content', "'wootwoot'", 1, 1, None),
+                ('component', '2', 'type', "'text'", 1, 1, None),
+                ('component', '2', 'slide_id', '1', 1, 1, None),
+                ('component', '2', 'content', "'toottoot'", 1, 1, None),
+                ('component', '3', 'type', "'text'", 1, 1, None),
+                ('component', '3', 'slide_id', '1', 1, 1, None),
+                ('component', '3', 'content', "'footfoot'", 1, 1, None),
+                ('slide', '2', 'deck_id', '1', 1, 1, None),
+                ('slide', '2', 'order', '1', 1, 1, None),
+                ('slide', '3', 'deck_id', '1', 1, 1, None),
+                ('slide', '3', 'order', '2', 1, 1, None)]
 
     assert (rows == expected)
 
@@ -137,26 +135,26 @@ def test_delete():
                      ('deck', '1', '__crsql_del', None, 1, 1, None),
                      ('slide', '1', '__crsql_del', None, 1, 1, None),
                      ('slide', '1', '__crsql_del', None, 1, 1, None),
+                     ('component', '1', '__crsql_del', None, 1, 1, None),
+                     ('component', '1', '__crsql_del', None, 1, 1, None),
+                     ('component', '1', '__crsql_del', None, 1, 1, None),
+                     ('component', '2', '__crsql_del', None, 1, 1, None),
+                     ('component', '2', '__crsql_del', None, 1, 1, None),
+                     ('component', '2', '__crsql_del', None, 1, 1, None),
+                     ('component', '3', '__crsql_del', None, 1, 1, None),
+                     ('component', '3', '__crsql_del', None, 1, 1, None),
+                     ('component', '3', '__crsql_del', None, 1, 1, None),
                      ('slide', '2', '__crsql_del', None, 1, 1, None),
                      ('slide', '2', '__crsql_del', None, 1, 1, None),
                      ('slide', '3', '__crsql_del', None, 1, 1, None),
                      ('slide', '3', '__crsql_del', None, 1, 1, None),
-                     ('component', '1', '__crsql_del', None, 1, 1, None),
-                     ('component', '1', '__crsql_del', None, 1, 1, None),
-                     ('component', '1', '__crsql_del', None, 1, 1, None),
-                     ('component', '2', '__crsql_del', None, 1, 1, None),
-                     ('component', '2', '__crsql_del', None, 1, 1, None),
-                     ('component', '2', '__crsql_del', None, 1, 1, None),
-                     ('component', '3', '__crsql_del', None, 1, 1, None),
-                     ('component', '3', '__crsql_del', None, 1, 1, None),
-                     ('component', '3', '__crsql_del', None, 1, 1, None),
                      ('component', '1', '__crsql_del', None, 1, 2, None),
+                     ('component', '2', '__crsql_del', None, 1, 3, None),
+                     ('component', '3', '__crsql_del', None, 1, 3, None),
                      ('deck', '1', '__crsql_del', None, 1, 3, None),
                      ('slide', '1', '__crsql_del', None, 1, 3, None),
                      ('slide', '2', '__crsql_del', None, 1, 3, None),
-                     ('slide', '3', '__crsql_del', None, 1, 3, None),
-                     ('component', '2', '__crsql_del', None, 1, 3, None),
-                     ('component', '3', '__crsql_del', None, 1, 3, None)])
+                     ('slide', '3', '__crsql_del', None, 1, 3, None)])
 
     # test insert
 

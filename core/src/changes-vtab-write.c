@@ -131,12 +131,13 @@ sqlite3_int64 crsql_setWinnerClock(
   int rc = SQLITE_OK;
   char *zSql = sqlite3_mprintf(
       "INSERT OR REPLACE INTO \"%s__crsql_clock\" \
-      (%s, \"__crsql_col_name\", \"__crsql_col_version\", \"__crsql_db_version\", \"__crsql_site_id\")\
+      (%s, \"__crsql_col_name\", \"__crsql_col_version\", \"__crsql_db_version\", \"__crsql_seq\", \"__crsql_site_id\")\
       VALUES (\
         %s,\
         %Q,\
         %lld,\
         MAX(crsql_nextdbversion(), %lld),\
+        crsql_increment_and_get_seq(),\
         ?\
       ) RETURNING _rowid_",
       tblInfo->tblName, pkIdentifierList, pkValsStr, insertColName,

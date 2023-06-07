@@ -1,5 +1,11 @@
 # @vlcn.io/crsqlite
 
+## 0.12.0
+
+### Minor Changes
+
+- 7885afd: 50x perf boost when pulling changesets
+
 ## 0.12.0-next.0
 
 ### Minor Changes

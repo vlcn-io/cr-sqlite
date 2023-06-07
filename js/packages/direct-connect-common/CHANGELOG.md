@@ -1,5 +1,11 @@
 # @vlcn.io/direct-connect-common
 
+## 0.3.0
+
+### Minor Changes
+
+- 7885afd: 50x perf boost when pulling changesets
+
 ## 0.3.0-next.0
 
 ### Minor Changes

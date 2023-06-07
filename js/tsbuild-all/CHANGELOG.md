@@ -1,5 +1,11 @@
 # @vlcn.io/tsbuild-all
 
+## 0.10.0
+
+### Minor Changes
+
+- 7885afd: 50x perf boost when pulling changesets
+
 ## 0.10.0-next.0
 
 ### Minor Changes

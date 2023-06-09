@@ -135,8 +135,15 @@ export default class TX implements TXAsync {
   ): Promise<any> {
     const results: { columns: string[]; rows: any[] }[] = [];
 
+    const str = this.api.str_new(this.db, sql);
+    let prepared: { stmt: number | null; sql: number } | null = {
+      stmt: null,
+      sql: this.api.str_value(str),
+    };
     try {
-      for await (const stmt of this.api.statements(this.db, sql)) {
+      while ((prepared = await this.api.prepare_v2(this.db, prepared.sql))) {
+        const stmt = prepared.stmt!;
+
         const rows: any[] = [];
         const columns = this.api.column_names(stmt);
         if (bind) {
@@ -149,11 +156,20 @@ export default class TX implements TXAsync {
         if (columns.length) {
           results.push({ columns, rows });
         }
+
+        this.api.finalize(prepared.stmt!);
+        prepared.stmt = null;
       }
-    } catch (error) {
-      console.error(`Failed running ${sql}`, error);
-      throw error;
+    } finally {
+      if (prepared?.stmt) {
+        this.api.finalize(prepared.stmt);
+      }
+      this.api.str_finish(str);
     }
+    // } catch (error) {
+    //   console.error(`Failed running ${sql}`, error);
+    //   throw error;
+    // }
 
     // we'll only return results for first stmt
     // if (results.length > 1) {

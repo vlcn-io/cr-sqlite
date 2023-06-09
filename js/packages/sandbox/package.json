@@ -4,7 +4,7 @@
   "type": "module",
   "version": "0.3.0",
   "scripts": {
-    "dev": "node ./slurp.mjs && node ./server.js",
+    "dev": "vite",
     "tsc": "tsc --noEmit",
     "preview": "vite preview",
     "bld": "vite build",

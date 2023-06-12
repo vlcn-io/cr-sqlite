@@ -127,27 +127,8 @@ def test_delete():
     db.commit()
 
     rows = get_changes_since(db, 0, 'FF')
-    # TODO: we should have the network layer collapse these events or do it ourselves.
-    # given we have past events that we're missing data for, they're now marked off as deletes
     # TODO: should deletes not get a proper version? Would be better for ordering and chunking replications
     assert (rows == [('user', '1', 'name', "'Javi'", 1, 1, None),
-                     ('deck', '1', '__crsql_del', None, 1, 1, None),
-                     ('deck', '1', '__crsql_del', None, 1, 1, None),
-                     ('slide', '1', '__crsql_del', None, 1, 1, None),
-                     ('slide', '1', '__crsql_del', None, 1, 1, None),
-                     ('component', '1', '__crsql_del', None, 1, 1, None),
-                     ('component', '1', '__crsql_del', None, 1, 1, None),
-                     ('component', '1', '__crsql_del', None, 1, 1, None),
-                     ('component', '2', '__crsql_del', None, 1, 1, None),
-                     ('component', '2', '__crsql_del', None, 1, 1, None),
-                     ('component', '2', '__crsql_del', None, 1, 1, None),
-                     ('component', '3', '__crsql_del', None, 1, 1, None),
-                     ('component', '3', '__crsql_del', None, 1, 1, None),
-                     ('component', '3', '__crsql_del', None, 1, 1, None),
-                     ('slide', '2', '__crsql_del', None, 1, 1, None),
-                     ('slide', '2', '__crsql_del', None, 1, 1, None),
-                     ('slide', '3', '__crsql_del', None, 1, 1, None),
-                     ('slide', '3', '__crsql_del', None, 1, 1, None),
                      ('component', '1', '__crsql_del', None, 1, 2, None),
                      ('component', '2', '__crsql_del', None, 1, 3, None),
                      ('component', '3', '__crsql_del', None, 1, 3, None),

@@ -47,7 +47,11 @@ export function serialize(
     cache?.set(key, res);
     // this catch doesn't swallow, the exception still makes it to the user
     // of res as we return res not the caught variation of res.
-    res.finally(() => cache?.delete(key)).catch(() => {});
+    res
+      .finally(() => cache?.delete(key))
+      .catch((e) => {
+        console.error(e);
+      });
   }
 
   return res;

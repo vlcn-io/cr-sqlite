@@ -234,8 +234,6 @@ char *crsql_deleteTriggerQuery(crsql_TableInfo *tableInfo) {
       "CREATE TRIGGER IF NOT EXISTS \"%w__crsql_dtrig\"\
       AFTER DELETE ON \"%w\"\
     BEGIN\
-      DELETE FROM \"%w__crsql_clock\" WHERE crsql_internal_sync_bit() = 0 AND %s AND __crsql_col_name != '__crsql_del';\
-      \
       INSERT INTO \"%w__crsql_clock\" (\
         %s,\
         __crsql_col_name,\
@@ -255,9 +253,11 @@ char *crsql_deleteTriggerQuery(crsql_TableInfo *tableInfo) {
       __crsql_db_version = crsql_nextdbversion(),\
       __crsql_seq = crsql_increment_and_get_seq(),\
       __crsql_site_id = NULL;\
+      \
+      DELETE FROM \"%w__crsql_clock\" WHERE crsql_internal_sync_bit() = 0 AND %s AND __crsql_col_name != '__crsql_del';\
       END; ",
-      tableInfo->tblName, tableInfo->tblName, tableInfo->tblName, pkWhereList,
-      tableInfo->tblName, pkList, pkOldList, DELETE_CID_SENTINEL);
+      tableInfo->tblName, tableInfo->tblName, tableInfo->tblName, pkList,
+      pkOldList, DELETE_CID_SENTINEL, tableInfo->tblName, pkWhereList);
 
   sqlite3_free(pkList);
   sqlite3_free(pkOldList);

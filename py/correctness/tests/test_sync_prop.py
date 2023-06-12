@@ -405,7 +405,7 @@ def test_delta_sync(all_scripts):
                 sync_from_random_peers(
                     maybe_num_peers_to_sync, db, dbs, since_is_rowid)
 
-    # sync_all(dbs, since_is_rowid)
+    sync_all(dbs, since_is_rowid)
 
     for i in range(0, len(dbs) - 1):
         conn1 = dbs[i][1]
@@ -415,13 +415,6 @@ def test_delta_sync(all_scripts):
             "SELECT * FROM item ORDER BY id ASC").fetchall()
         right_rows = conn2.execute(
             "SELECT * FROM item ORDER BY id ASC").fetchall()
-
-        pprint.pprint(left_rows)
-        pprint.pprint(right_rows)
-
-        # left_log = conn1.execute()
-        right_log = conn2.execute("SELECT * FROM crsql_changes").fetchall()
-        pprint.pprint(right_log)
 
         assert (left_rows == right_rows)
     for db in dbs:

@@ -674,7 +674,6 @@ def test_changing_values_in_primary_key_columns():
     c.commit()
 
     changes = c.execute(full_changes_query).fetchall()
-    pprint.pprint(changes)
     assert (changes == [('foo', '2', 'b', '2', 1, 1, None),
             ('foo', '4', 'b', '5', 1, 1, None)])
 

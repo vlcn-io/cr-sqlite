@@ -183,10 +183,7 @@ def test_delete_sentinels_not_lost():
     changes = c.execute(changes_query).fetchall()
 
     # starting off correctly
-    assert (changes == [('todo', '1', '__crsql_del', None),
-                        ('todo', '1', '__crsql_del', None),
-                        ('todo', '1', '__crsql_del', None),
-                        ('todo', '1', '__crsql_del', None)])
+    assert (changes == [('todo', '1', '__crsql_del', None)])
 
     c.execute("SELECT crsql_begin_alter('todo');")
     c.execute("ALTER TABLE todo RENAME name TO task;")

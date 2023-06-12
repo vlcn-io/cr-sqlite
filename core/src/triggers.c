@@ -234,7 +234,7 @@ char *crsql_deleteTriggerQuery(crsql_TableInfo *tableInfo) {
       "CREATE TRIGGER IF NOT EXISTS \"%w__crsql_dtrig\"\
       AFTER DELETE ON \"%w\"\
     BEGIN\
-      DELETE FROM \"%w__crsql_clock\" WHERE crsql_internal_sync_bit() = 0 AND %s;\
+      DELETE FROM \"%w__crsql_clock\" WHERE crsql_internal_sync_bit() = 0 AND %s AND __crsql_col_name != '__crsql_del';\
       \
       INSERT INTO \"%w__crsql_clock\" (\
         %s,\

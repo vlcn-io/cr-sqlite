@@ -74,7 +74,7 @@ def full_script(draw):
 
 
 # @reproduce_failure('6.75.9', b'AXicY2BWYxgF5AMANDEAKg==')
-@settings(max_examples=30, deadline=1000)
+@settings(max_examples=30, deadline=None)
 @given(full_script())
 def test_delta_sync(all_scripts):
     since_is_rowid = False

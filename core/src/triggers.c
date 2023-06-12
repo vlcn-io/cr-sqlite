@@ -211,6 +211,10 @@ int crsql_createUpdateTrigger(sqlite3 *db, crsql_TableInfo *tableInfo,
   return rc;
 }
 
+static char *compareWithOld(const char *in) {
+  return sqlite3_mprintf("\"%w\" = OLD.\"%w\"", in, in);
+}
+
 char *crsql_deleteTriggerQuery(crsql_TableInfo *tableInfo) {
   char *zSql;
   char *pkList = 0;
@@ -219,11 +223,20 @@ char *crsql_deleteTriggerQuery(crsql_TableInfo *tableInfo) {
   pkList = crsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, 0);
   pkOldList = crsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, "OLD.");
 
+  char **pkNames = sqlite3_malloc(tableInfo->pksLen * sizeof(char *));
+  for (int i = 0; i < tableInfo->pksLen; ++i) {
+    pkNames[i] = tableInfo->pks[i].name;
+  }
+  char *pkWhereList =
+      crsql_join2(&compareWithOld, pkNames, tableInfo->pksLen, " AND ");
+
   zSql = sqlite3_mprintf(
-      "CREATE TRIGGER IF NOT EXISTS \"%s__crsql_dtrig\"\
-      AFTER DELETE ON \"%s\"\
+      "CREATE TRIGGER IF NOT EXISTS \"%w__crsql_dtrig\"\
+      AFTER DELETE ON \"%w\"\
     BEGIN\
-      INSERT INTO \"%s__crsql_clock\" (\
+      DELETE FROM \"%w__crsql_clock\" WHERE crsql_internal_sync_bit() = 0 AND %s;\
+      \
+      INSERT INTO \"%w__crsql_clock\" (\
         %s,\
         __crsql_col_name,\
         __crsql_col_version,\
@@ -243,8 +256,8 @@ char *crsql_deleteTriggerQuery(crsql_TableInfo *tableInfo) {
       __crsql_seq = crsql_increment_and_get_seq(),\
       __crsql_site_id = NULL;\
       END; ",
-      tableInfo->tblName, tableInfo->tblName, tableInfo->tblName, pkList,
-      pkOldList, DELETE_CID_SENTINEL);
+      tableInfo->tblName, tableInfo->tblName, tableInfo->tblName, pkWhereList,
+      tableInfo->tblName, pkList, pkOldList, DELETE_CID_SENTINEL);
 
   sqlite3_free(pkList);
   sqlite3_free(pkOldList);

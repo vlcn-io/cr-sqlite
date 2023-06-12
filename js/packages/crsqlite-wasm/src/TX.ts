@@ -103,7 +103,7 @@ export default class TX implements TXAsync {
           await cb(tx);
         } catch (e) {
           await tx.exec("ROLLBACK");
-          return;
+          throw e;
         }
         await tx.exec("RELEASE crsql_transaction");
       },
@@ -166,7 +166,7 @@ export default class TX implements TXAsync {
       }
       this.api.str_finish(str);
     }
-    // } catch (error) {
+    // catch (error) {
     //   console.error(`Failed running ${sql}`, error);
     //   throw error;
     // }

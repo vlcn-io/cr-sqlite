@@ -162,7 +162,7 @@ test("failing two -- discord: https://discord.com/channels/989870439897653248/98
     `CREATE TABLE IF NOT EXISTS "todos__crsql_clock" ("id","__crsql_col_name" NOT NULL,"__crsql_col_version" NOT NULL, "__crsql_db_version" NOT NULL,"__crsql_site_id","__crsql_seq" NOT NULL,PRIMARY KEY ("id", "__crsql_col_name")    );`,
 
     // This is the duplicate entry:
-    `INSERT INTO todos__crsql_clock VALUES('xc2yf7z5qb','title',1,1,X'af6a922841304d14a443ddbcd36469bc');`,
+    `INSERT INTO todos__crsql_clock VALUES('xc2yf7z5qb','title',1,1,X'af6a922841304d14a443ddbcd36469bc', 0);`,
   ]);
 
   const change = [

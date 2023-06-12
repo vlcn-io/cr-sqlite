@@ -205,7 +205,7 @@ sqlite3_int64 crsql_mergeDelete(sqlite3 *db, crsql_TableInfo *tblInfo,
                                 sqlite3_int64 remoteColVersion,
                                 sqlite3_int64 remoteDbVersion,
                                 const void *remoteSiteId, int remoteSiteIdLen) {
-  char *zSql = sqlite3_mprintf("DELETE FROM \"%s\" WHERE %s", tblInfo->tblName,
+  char *zSql = sqlite3_mprintf("DELETE FROM \"%w\" WHERE %s", tblInfo->tblName,
                                pkWhereList);
   int rc = sqlite3_exec(db, SET_SYNC_BIT, 0, 0, 0);
   if (rc != SQLITE_OK) {

@@ -68,8 +68,8 @@ test("insert after", () => {
   let actual = db
     .execA("SELECT id FROM todo ORDER BY ordering")
     .map((r) => r[0]);
-  console.log(expected);
-  console.log(actual);
+  // console.log(expected);
+  // console.log(actual);
   expect(actual).toEqual(expected);
 });
 

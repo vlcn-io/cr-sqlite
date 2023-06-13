@@ -24,3 +24,6 @@ test("pk only table", () => {
     },
   ]);
 });
+
+// https://discord.com/channels/989870439897653248/989870440585494530/1118123015364939836
+test("failed to increment?", () => {});

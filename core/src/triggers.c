@@ -261,6 +261,8 @@ char *crsql_deleteTriggerQuery(crsql_TableInfo *tableInfo) {
 
   sqlite3_free(pkList);
   sqlite3_free(pkOldList);
+  sqlite3_free(pkWhereList);
+  sqlite3_free(pkNames);
 
   return zSql;
 }

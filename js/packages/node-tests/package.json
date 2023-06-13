@@ -24,10 +24,12 @@
     "directory": "https://github.com/vlcn-io/cr-sqlite/tree/main/js/tests/nodeno-tests"
   },
   "dependencies": {
+    "@vlcn.io/crsqlite": "workspace:*",
     "@vlcn.io/crsqlite-allinone": "workspace:*",
     "@vlcn.io/rx-tbl": "workspace:*",
     "@vlcn.io/xplat-api": "workspace:*",
     "@vlcn.io/xplat-tests": "workspace:*",
+    "better-sqlite3": "^8.3.0",
     "fast-check": "^3.8.0",
     "nanoid": "^4.0.2"
   },

@@ -1,5 +1,5 @@
-import { ToWorkerMsg } from "../Types.js";
-import SyncService from "./SyncService.js";
+import { ToWorkerMsg } from "./Types.js";
+import SyncService from "./common/SyncService.js";
 
 type Self = {
   onconnect: (event: MessageEvent) => void;

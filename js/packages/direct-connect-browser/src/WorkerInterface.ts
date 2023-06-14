@@ -23,7 +23,7 @@ export default class WorkerInterface {
       });
     } else {
       this.worker = new SharedWorker(
-        new URL("./worker/shared.worker.js", import.meta.url),
+        new URL("./worker-shared/shared.worker.js", import.meta.url),
         {
           type: "module",
           name: "direct-connect-browser:shared.worker",

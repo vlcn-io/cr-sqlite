@@ -14,24 +14,69 @@ export default class WorkerInterface {
   private readonly worker;
   private readonly syncs = new Map<DBID, ReturnType<typeof tblrx>>();
   private disposables = new Map<string, () => void>();
+  private readonly workerPort: {
+    onmessage: ((e: MessageEvent<FromWorkerMsg>) => void) | null;
+    postMessage: (msg: any) => void;
+    close: () => void;
+  };
 
-  constructor(workerUri?: string) {
+  /**
+   *
+   * @param workerUri
+   * @param isShared use a shared worker or coordinate dedicated workers?
+   * Android does not yet support shared workers, hence the option.
+   */
+  constructor(workerUri?: string, isShared: boolean = false) {
     if (workerUri) {
-      this.worker = new SharedWorker(workerUri, {
-        type: "module",
-        name: "direct-connect-browser:shared.worker",
-      });
-    } else {
-      this.worker = new SharedWorker(
-        new URL("./shared.worker.js", import.meta.url),
-        {
+      if (isShared) {
+        this.worker = new SharedWorker(workerUri, {
           type: "module",
           name: "direct-connect-browser:shared.worker",
-        }
-      );
+        });
+      } else {
+        this.worker = new Worker(workerUri, {
+          type: "module",
+          name: "direct-connect-browser:dedicated.worker",
+        });
+      }
+    } else {
+      if (isShared) {
+        this.worker = new SharedWorker(
+          new URL("./shared.worker.js", import.meta.url),
+          {
+            type: "module",
+            name: "direct-connect-browser:shared.worker",
+          }
+        );
+      } else {
+        this.worker = new Worker(
+          new URL("./dedicated.worker.js", import.meta.url),
+          {
+            type: "module",
+            name: "direct-connect-browser:dedicated.worker",
+          }
+        );
+      }
     }
 
-    this.worker.port.onmessage = (e: MessageEvent<FromWorkerMsg>) => {
+    if (isShared) {
+      this.workerPort = (this.worker as SharedWorker).port;
+    } else {
+      const worker = this.worker as Worker;
+      this.workerPort = {
+        postMessage: (msg: any) => worker.postMessage(msg),
+        close: () => worker.terminate(),
+        set onmessage(cb: (e: MessageEvent<FromWorkerMsg>) => void) {
+          worker.onmessage = cb;
+        },
+        get onmessage() {
+          // @ts-ignore
+          return worker.onmessage;
+        },
+      };
+    }
+
+    this.workerPort.onmessage = (e: MessageEvent<FromWorkerMsg>) => {
       const msg = e.data;
       switch (msg._tag) {
         case "SyncedRemote":
@@ -68,7 +113,7 @@ export default class WorkerInterface {
       }, {} as Endpoints),
       transportContentType,
     } as StartSyncMsg;
-    this.worker.port.postMessage(msg);
+    this.workerPort.postMessage(msg);
 
     this.disposables.set(
       dbid,
@@ -84,7 +129,7 @@ export default class WorkerInterface {
       _tag: "StopSync",
       dbid,
     };
-    this.worker.port.postMessage(msg);
+    this.workerPort.postMessage(msg);
     this.disposables.get(dbid)?.();
     this.syncs.delete(dbid);
     this.disposables.delete(dbid);
@@ -96,7 +141,7 @@ export default class WorkerInterface {
     for (const dbid of this.syncs.keys()) {
       this.stopSync(dbid);
     }
-    this.worker.port.close();
+    this.workerPort.close();
   }
 
   private _onSyncedRemote(msg: SyncedRemoteMsg) {
@@ -120,6 +165,6 @@ export default class WorkerInterface {
       _tag: "LocalDBChanged",
       dbid,
     };
-    this.worker.port.postMessage(msg);
+    this.workerPort.postMessage(msg);
   }
 }

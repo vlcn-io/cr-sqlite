@@ -1,2 +1,2 @@
-export { default as SharedWorkerInterface } from "./SharedWorkerInterface.js";
+export { default as WorkerInterface } from "./WorkerInterface.js";
 export { newDbid } from "./Types.js";

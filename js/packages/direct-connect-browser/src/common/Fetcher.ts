@@ -77,7 +77,7 @@ export default class Fetcher {
 
   _post = (uri: string, msg: Msg) => {
     const body = this.serializer.encode(msg);
-    console.log("Posting to: ", uri, body);
+    // console.log("Posting to: ", uri, body);
     return fetch(uri, {
       method: "POST",
       mode: "cors",

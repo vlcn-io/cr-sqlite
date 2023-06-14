@@ -1,5 +1,5 @@
 import { ISerializer, hexToBytes, tags } from "@vlcn.io/direct-connect-common";
-import { Endpoints } from "../Types.js";
+import { Endpoints, Port } from "../Types.js";
 import { DBID } from "@vlcn.io/xplat-api";
 import createDb, { DB } from "./DB.js";
 import InboundStream from "./InboundStream.js";
@@ -9,7 +9,7 @@ import tblrx from "@vlcn.io/rx-tbl";
 import { UpdateType } from "@vlcn.io/xplat-api";
 
 export class SyncedDB {
-  private readonly ports: Set<MessagePort>;
+  private readonly ports: Set<Port>;
   private syncStarted = false;
   private readonly outboundStream: OutboundStream;
   private readonly inboundStream: InboundStream;
@@ -30,7 +30,7 @@ export class SyncedDB {
   }
 
   // port is for communicating back out to the thread that asked us to start sync
-  async start(port: MessagePort, endpoints: Endpoints) {
+  async start(port: Port, endpoints: Endpoints) {
     if (!shallowCompare(this.endpoints, endpoints)) {
       throw new Error(
         "A DB can only be synced to one backend at a time. Submit a PR if you'd like to lift this restriction."
@@ -78,7 +78,7 @@ export class SyncedDB {
     }
   };
 
-  async stop(port: MessagePort): Promise<boolean> {
+  async stop(port: Port): Promise<boolean> {
     this.ports.delete(port);
     if (this.ports.size === 0) {
       // stop sync

@@ -10,6 +10,9 @@ export type Endpoints = {
 
 export type ToWorkerMsg = LocalDBChangedMsg | StartSyncMsg | StopSyncMsg;
 export type FromWorkerMsg = SyncedRemoteMsg;
+export type Port = {
+  postMessage: (msg: any) => void;
+};
 
 export type LocalDBChangedMsg = {
   _tag: "LocalDBChanged";

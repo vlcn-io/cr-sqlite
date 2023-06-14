@@ -10,7 +10,8 @@
   "main": "dist/index.js",
   "exports": {
     ".": "./dist/index.js",
-    "./shared.worker.js": "./dist/worker-shared/shared.worker.js"
+    "./shared.worker.js": "./dist/shared.worker.js",
+    "./dedicated.worker.js": "./dist/dedicated.worker.js"
   },
   "devDependencies": {
     "@rollup/plugin-node-resolve": "^15.0.2",

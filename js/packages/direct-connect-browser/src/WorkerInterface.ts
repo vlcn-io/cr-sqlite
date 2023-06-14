@@ -27,6 +27,11 @@ export default class WorkerInterface {
    * Android does not yet support shared workers, hence the option.
    */
   constructor(workerUri?: string, isShared: boolean = false) {
+    if (workerUri && workerUri.includes("shared") && isShared === false) {
+      console.warn(
+        `You passed in a worker URI that points to a shared worker but asked for a dedicated worker context! workerUri: ${workerUri} isShared: ${isShared}`
+      );
+    }
     if (workerUri) {
       if (isShared) {
         this.worker = new SharedWorker(workerUri, {

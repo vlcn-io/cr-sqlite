@@ -2,7 +2,7 @@ import { Port, ToWorkerMsg } from "./Types.js";
 import SyncService from "./common/SyncService.js";
 
 const port: Port = {
-  postMessage,
+  postMessage: (msg) => postMessage(msg),
 };
 
 const svc = new SyncService();

@@ -15,7 +15,6 @@ export default class WorkerInterface {
   private readonly syncs = new Map<DBID, ReturnType<typeof tblrx>>();
   private disposables = new Map<string, () => void>();
   private readonly workerPort: {
-    onmessage: ((e: MessageEvent<FromWorkerMsg>) => void) | null;
     postMessage: (msg: any) => void;
     close: () => void;
   };
@@ -71,24 +70,8 @@ export default class WorkerInterface {
       this.workerPort = {
         postMessage: (msg: any) => worker.postMessage(msg),
         close: () => worker.terminate(),
-        set onmessage(cb: (e: MessageEvent<FromWorkerMsg>) => void) {
-          worker.onmessage = cb;
-        },
-        get onmessage() {
-          // @ts-ignore
-          return worker.onmessage;
-        },
       };
     }
-
-    this.workerPort.onmessage = (e: MessageEvent<FromWorkerMsg>) => {
-      const msg = e.data;
-      switch (msg._tag) {
-        case "SyncedRemote":
-          this._onSyncedRemote(msg);
-          break;
-      }
-    };
   }
 
   startSync(
@@ -119,14 +102,6 @@ export default class WorkerInterface {
       transportContentType,
     } as StartSyncMsg;
     this.workerPort.postMessage(msg);
-
-    this.disposables.set(
-      dbid,
-      // TODO: onAny should tell us if broadcast channel event or not
-      // we should ignore broadcast channel events as those tabs will call the shared worker
-      // on their own.
-      rx.onAny((_updates, src) => this._localDbChanged(dbid, src))
-    );
   }
 
   stopSync(dbid: DBID) {
@@ -147,38 +122,5 @@ export default class WorkerInterface {
       this.stopSync(dbid);
     }
     this.workerPort.close();
-  }
-
-  private _onSyncedRemote(msg: SyncedRemoteMsg) {
-    const rx = this.syncs.get(msg.dbid);
-    if (!rx) {
-      console.error(`No rx-tbl instance for ${msg.dbid}`);
-      return;
-    }
-
-    rx.__internalNotifyListenersAndBroadcast(msg.collectedChanges, "sync");
-  }
-
-  private _localDbChanged(dbid: string, src: Src) {
-    if (this.isShared) {
-      // Shared workers are connected to by all tabs so the tab that made the
-      // change would have already notified the shared worker.
-      if (src !== "thisTab") {
-        return;
-      }
-    } else {
-      // Dedicated workers. We only ignore events from the sync layer.
-      // Other tab events we send to our shared worker in case it is our worker that
-      // holds the DB sync lock.
-      if (src === "sync") {
-        return;
-      }
-    }
-
-    const msg = {
-      _tag: "LocalDBChanged",
-      dbid,
-    };
-    this.workerPort.postMessage(msg);
   }
 }

@@ -1,5 +1,11 @@
 # @vlcn.io/crsqlite
 
+## 0.13.0
+
+### Minor Changes
+
+- 62912ad: split up large transactions, compact out unneeded delete records, coordinate dedicated workers for android, null merge fix
+
 ## 0.13.0-next.0
 
 ### Minor Changes

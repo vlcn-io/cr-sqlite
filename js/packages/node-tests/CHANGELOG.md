@@ -1,5 +1,20 @@
 # @vlcn.io/nodeno-tests
 
+## 0.11.0
+
+### Minor Changes
+
+- 62912ad: split up large transactions, compact out unneeded delete records, coordinate dedicated workers for android, null merge fix
+
+### Patch Changes
+
+- Updated dependencies [62912ad]
+  - @vlcn.io/crsqlite@0.13.0
+  - @vlcn.io/crsqlite-allinone@0.12.0
+  - @vlcn.io/rx-tbl@0.12.0
+  - @vlcn.io/xplat-api@0.12.0
+  - @vlcn.io/xplat-tests@0.11.0
+
 ## 0.11.0-next.0
 
 ### Minor Changes

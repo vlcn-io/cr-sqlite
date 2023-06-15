@@ -1,5 +1,11 @@
 # @vlcn.io/direct-connect-common
 
+## 0.4.0
+
+### Minor Changes
+
+- 62912ad: split up large transactions, compact out unneeded delete records, coordinate dedicated workers for android, null merge fix
+
 ## 0.4.0-next.0
 
 ### Minor Changes

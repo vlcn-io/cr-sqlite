@@ -1,5 +1,16 @@
 # @vlcn.io/rx-tbl
 
+## 0.12.0
+
+### Minor Changes
+
+- 62912ad: split up large transactions, compact out unneeded delete records, coordinate dedicated workers for android, null merge fix
+
+### Patch Changes
+
+- Updated dependencies [62912ad]
+  - @vlcn.io/xplat-api@0.12.0
+
 ## 0.12.0-next.0
 
 ### Minor Changes

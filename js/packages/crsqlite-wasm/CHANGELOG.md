@@ -1,5 +1,17 @@
 # @vlcn.io/wa-crsqlite
 
+## 0.13.0
+
+### Minor Changes
+
+- 62912ad: split up large transactions, compact out unneeded delete records, coordinate dedicated workers for android, null merge fix
+
+### Patch Changes
+
+- Updated dependencies [62912ad]
+  - @vlcn.io/wa-sqlite@0.19.0
+  - @vlcn.io/xplat-api@0.12.0
+
 ## 0.13.0-next.0
 
 ### Minor Changes

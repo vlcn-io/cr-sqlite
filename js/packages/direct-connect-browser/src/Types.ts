@@ -8,12 +8,10 @@ export type Endpoints = {
   getLastSeen?: string;
 };
 
-export type ToWorkerMsg = LocalDBChangedMsg | StartSyncMsg | StopSyncMsg;
+export type ToWorkerMsg = StartSyncMsg | StopSyncMsg;
 export type FromWorkerMsg = SyncedRemoteMsg;
-
-export type LocalDBChangedMsg = {
-  _tag: "LocalDBChanged";
-  dbid: DBID;
+export type Port = {
+  postMessage: (msg: any) => void;
 };
 
 export type StartSyncMsg = {

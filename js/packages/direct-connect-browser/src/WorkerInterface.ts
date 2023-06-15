@@ -14,31 +14,64 @@ export default class WorkerInterface {
   private readonly worker;
   private readonly syncs = new Map<DBID, ReturnType<typeof tblrx>>();
   private disposables = new Map<string, () => void>();
+  private readonly workerPort: {
+    postMessage: (msg: any) => void;
+    close: () => void;
+  };
 
-  constructor(workerUri?: string) {
-    if (workerUri) {
-      this.worker = new SharedWorker(workerUri, {
-        type: "module",
-        name: "direct-connect-browser:shared.worker",
-      });
-    } else {
-      this.worker = new SharedWorker(
-        new URL("./worker/shared.worker.js", import.meta.url),
-        {
-          type: "module",
-          name: "direct-connect-browser:shared.worker",
-        }
+  /**
+   *
+   * @param workerUri
+   * @param isShared use a shared worker or coordinate dedicated workers?
+   * Android does not yet support shared workers, hence the option.
+   */
+  constructor(workerUri?: string, private isShared: boolean = false) {
+    if (workerUri && workerUri.includes("shared") && isShared === false) {
+      console.warn(
+        `You passed in a worker URI that points to a shared worker but asked for a dedicated worker context! workerUri: ${workerUri} isShared: ${isShared}`
       );
     }
-
-    this.worker.port.onmessage = (e: MessageEvent<FromWorkerMsg>) => {
-      const msg = e.data;
-      switch (msg._tag) {
-        case "SyncedRemote":
-          this._onSyncedRemote(msg);
-          break;
+    if (workerUri) {
+      if (isShared) {
+        this.worker = new SharedWorker(workerUri, {
+          type: "module",
+          name: "direct-connect-browser:shared.worker",
+        });
+      } else {
+        this.worker = new Worker(workerUri, {
+          type: "module",
+          name: "direct-connect-browser:dedicated.worker",
+        });
       }
-    };
+    } else {
+      if (isShared) {
+        this.worker = new SharedWorker(
+          new URL("./shared.worker.js", import.meta.url),
+          {
+            type: "module",
+            name: "direct-connect-browser:shared.worker",
+          }
+        );
+      } else {
+        this.worker = new Worker(
+          new URL("./dedicated.worker.js", import.meta.url),
+          {
+            type: "module",
+            name: "direct-connect-browser:dedicated.worker",
+          }
+        );
+      }
+    }
+
+    if (isShared) {
+      this.workerPort = (this.worker as SharedWorker).port;
+    } else {
+      const worker = this.worker as Worker;
+      this.workerPort = {
+        postMessage: (msg: any) => worker.postMessage(msg),
+        close: () => worker.terminate(),
+      };
+    }
   }
 
   startSync(
@@ -68,15 +101,7 @@ export default class WorkerInterface {
       }, {} as Endpoints),
       transportContentType,
     } as StartSyncMsg;
-    this.worker.port.postMessage(msg);
-
-    this.disposables.set(
-      dbid,
-      // TODO: onAny should tell us if broadcast channel event or not
-      // we should ignore broadcast channel events as those tabs will call the shared worker
-      // on their own.
-      rx.onAny((_updates, src) => this._localDbChanged(dbid, src))
-    );
+    this.workerPort.postMessage(msg);
   }
 
   stopSync(dbid: DBID) {
@@ -84,7 +109,7 @@ export default class WorkerInterface {
       _tag: "StopSync",
       dbid,
     };
-    this.worker.port.postMessage(msg);
+    this.workerPort.postMessage(msg);
     this.disposables.get(dbid)?.();
     this.syncs.delete(dbid);
     this.disposables.delete(dbid);
@@ -96,30 +121,6 @@ export default class WorkerInterface {
     for (const dbid of this.syncs.keys()) {
       this.stopSync(dbid);
     }
-    this.worker.port.close();
-  }
-
-  private _onSyncedRemote(msg: SyncedRemoteMsg) {
-    const rx = this.syncs.get(msg.dbid);
-    if (!rx) {
-      console.error(`No rx-tbl instance for ${msg.dbid}`);
-      return;
-    }
-
-    rx.__internalNotifyListeners(msg.collectedChanges, "sync");
-  }
-
-  private _localDbChanged(dbid: string, src: Src) {
-    // console.log("db change event", src);
-    if (src !== "thisTab") {
-      // console.log("ignoring changes from sync layer itself", src);
-      return;
-    }
-
-    const msg = {
-      _tag: "LocalDBChanged",
-      dbid,
-    };
-    this.worker.port.postMessage(msg);
+    this.workerPort.close();
   }
 }

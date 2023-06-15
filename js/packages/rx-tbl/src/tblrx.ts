@@ -18,7 +18,7 @@
 
 import { DB, DBAsync, UpdateType } from "@vlcn.io/xplat-api";
 
-export type Src = "thisTab" | "otherTab" | "sync";
+export type Src = "thisProcess" | "otherProcess";
 
 export class TblRx {
   #pointListeners = new Map<
@@ -40,7 +40,7 @@ export class TblRx {
   constructor(private readonly db: DB | DBAsync) {
     this.#bc = new BroadcastChannel(db.siteid);
     this.#bc.onmessage = (msg) => {
-      this.__internalNotifyListeners(msg.data, "otherTab");
+      this.__internalNotifyListeners(msg.data, "otherProcess");
     };
 
     this.#disposeHook = this.db.onUpdate(
@@ -120,7 +120,7 @@ export class TblRx {
     setTimeout(() => {
       const data = this.#pendingNotification!;
       this.#pendingNotification = null;
-      this.__internalNotifyListeners(data, "thisTab");
+      this.__internalNotifyListeners(data, "thisProcess");
       this.#bc.postMessage(data);
     }, 0);
   }

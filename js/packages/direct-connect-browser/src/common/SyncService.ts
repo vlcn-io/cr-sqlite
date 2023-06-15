@@ -1,5 +1,5 @@
 import { SerializerFactory } from "@vlcn.io/direct-connect-common";
-import { LocalDBChangedMsg, StartSyncMsg, StopSyncMsg } from "../Types.js";
+import { Port, StartSyncMsg, StopSyncMsg } from "../Types.js";
 import createSyncedDB, { SyncedDB } from "./SyncedDB.js";
 
 export default class SyncService {
@@ -16,7 +16,7 @@ export default class SyncService {
    * @param endpoints
    * @param port Used to communicate back out to the thread that created this service
    */
-  async startSync(msg: StartSyncMsg, port: MessagePort) {
+  async startSync(msg: StartSyncMsg, port: Port) {
     let db = this.dbs.get(msg.dbid);
     if (!db) {
       // TODO: eagerly cache the promise isntead so we can't end up with a race and have the same
@@ -33,16 +33,7 @@ export default class SyncService {
     db.start(port, msg.endpoints);
   }
 
-  localDbChangedFromMainThread(msg: LocalDBChangedMsg) {
-    // push out changes for the given db
-    const db = this.dbs.get(msg.dbid);
-    if (db == null) {
-      console.warn(`got a local db changed event for unknown db ${msg.dbid}`);
-    }
-    db?.localDbChangedFromMainThread();
-  }
-
-  stopSync(msg: StopSyncMsg, port: MessagePort) {
+  stopSync(msg: StopSyncMsg, port: Port) {
     // decrement reference count for the given db
     // if reference count is 0, stop sync for that db
     // TODO: can we understand when message ports close due to browser tab closing?

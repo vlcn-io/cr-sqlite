@@ -1,5 +1,5 @@
-import { ToWorkerMsg } from "../Types.js";
-import SyncService from "./SyncService.js";
+import { ToWorkerMsg } from "./Types.js";
+import SyncService from "./common/SyncService.js";
 
 type Self = {
   onconnect: (event: MessageEvent) => void;
@@ -17,7 +17,6 @@ glob.onconnect = (e: MessageEvent) => {
   port.onmessage = (e) => {
     msgReceived(e, port);
   };
-  // port.start? supposidly implicitly called
 };
 
 function msgReceived(e: MessageEvent<ToWorkerMsg>, port: MessagePort) {
@@ -26,11 +25,6 @@ function msgReceived(e: MessageEvent<ToWorkerMsg>, port: MessagePort) {
   switch (msg._tag) {
     case "StartSync":
       svc.startSync(msg, port);
-      break;
-    case "LocalDBChanged":
-      // TODO: we should collect all `LocalDBChanged` messages that occur within a short period of time
-      // So throttle invocations here or just collect all over a given tick of the event loop.
-      svc.localDbChangedFromMainThread(msg);
       break;
     case "StopSync":
       svc.stopSync(msg, port);

@@ -1,10 +1,5 @@
 import { SerializerFactory } from "@vlcn.io/direct-connect-common";
-import {
-  LocalDBChangedMsg,
-  Port,
-  StartSyncMsg,
-  StopSyncMsg,
-} from "../Types.js";
+import { Port, StartSyncMsg, StopSyncMsg } from "../Types.js";
 import createSyncedDB, { SyncedDB } from "./SyncedDB.js";
 
 export default class SyncService {
@@ -36,15 +31,6 @@ export default class SyncService {
     }
 
     db.start(port, msg.endpoints);
-  }
-
-  localDbChangedFromMainThread(msg: LocalDBChangedMsg) {
-    // push out changes for the given db
-    const db = this.dbs.get(msg.dbid);
-    if (db == null) {
-      console.warn(`got a local db changed event for unknown db ${msg.dbid}`);
-    }
-    db?.localDbChangedFromMainThread();
   }
 
   stopSync(msg: StopSyncMsg, port: Port) {

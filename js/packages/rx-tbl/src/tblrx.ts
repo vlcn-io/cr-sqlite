@@ -18,8 +18,7 @@
 
 import { DB, DBAsync, UpdateType } from "@vlcn.io/xplat-api";
 
-// Nit: `thisProcess` and `otherProcess` rather than `tab`
-export type Src = "thisTab" | "otherTab" | "sync";
+export type Src = "thisProcess" | "otherProcess";
 
 export class TblRx {
   #pointListeners = new Map<
@@ -36,18 +35,13 @@ export class TblRx {
   // TODO: test that `onUpdate` is not spread across ticks of the event loop.
 
   #pendingNotification: [UpdateType, string, bigint][] | null = null;
-  #bc: BroadcastChannel | null = null;
+  #bc: BroadcastChannel;
 
-  constructor(private readonly db: DB | DBAsync, broadcast: boolean = true) {
-    if (broadcast) {
-      this.#bc = new BroadcastChannel(db.siteid);
-      this.#bc.onmessage = (msg) => {
-        this.__internalNotifyListeners(
-          msg.data.updates,
-          msg.data.src || "otherTab"
-        );
-      };
-    }
+  constructor(private readonly db: DB | DBAsync) {
+    this.#bc = new BroadcastChannel(db.siteid);
+    this.#bc.onmessage = (msg) => {
+      this.__internalNotifyListeners(msg.data, "otherProcess");
+    };
 
     this.#disposeHook = this.db.onUpdate(
       (updateType, dbName, tblName, rowid) => {
@@ -58,17 +52,6 @@ export class TblRx {
         this.#preNotify(updateType, tblName, rowid);
       }
     );
-  }
-
-  __internalNotifyListenersAndBroadcast(
-    data: [UpdateType, string, bigint][],
-    src: "sync"
-  ) {
-    this.__internalNotifyListeners(data, src);
-    this.#bc?.postMessage({
-      updates: data,
-      src,
-    });
   }
 
   /**
@@ -137,11 +120,8 @@ export class TblRx {
     setTimeout(() => {
       const data = this.#pendingNotification!;
       this.#pendingNotification = null;
-      this.__internalNotifyListeners(data, "thisTab");
-      this.#bc?.postMessage({
-        updates: data,
-        src: "otherTab",
-      });
+      this.__internalNotifyListeners(data, "thisProcess");
+      this.#bc.postMessage(data);
     }, 0);
   }
 
@@ -204,11 +184,11 @@ export class TblRx {
     this.#rangeListeners.clear();
     this.#pointListeners.clear();
     this.#arbitraryListeners.clear();
-    this.#bc?.close();
+    this.#bc.close();
     this.#disposeHook();
   }
 }
 
-export default function tblrx(db: DB | DBAsync, broadcast: boolean = true) {
-  return new TblRx(db, broadcast);
+export default function tblrx(db: DB | DBAsync) {
+  return new TblRx(db);
 }

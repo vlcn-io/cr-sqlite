@@ -26,7 +26,12 @@ export class SyncedDB {
     this.outboundStream = new OutboundStream(db, endpoints, serializer);
     this.inboundStream = new InboundStream(db, endpoints, serializer);
     this.fetcher = new Fetcher(endpoints, serializer);
-    this.rx = tblrx(this.db.db, false);
+    this.rx = tblrx(this.db.db);
+    this.rx.onAny((updates, src) => {
+      if (src !== "thisProcess") {
+        this.localDbChangedFromOtherProcess();
+      }
+    });
   }
 
   // port is for communicating back out to the thread that asked us to start sync
@@ -55,28 +60,11 @@ export class SyncedDB {
 
     this.inboundStream.start();
     this.outboundStream.start(createOrMigrateResp.seq);
-
-    this.rx.__internalRawListener = this._dbChangedFromOurThread;
   }
 
-  localDbChangedFromMainThread() {
+  localDbChangedFromOtherProcess() {
     this.outboundStream.nextTick();
   }
-
-  _dbChangedFromOurThread = (updates: [UpdateType, string, bigint][]) => {
-    console.log("db changed from our thread");
-    updates = updates.filter((u) => !u[1].includes("crsql_"));
-    if (updates.length === 0) {
-      return;
-    }
-    for (const port of this.ports) {
-      port.postMessage({
-        _tag: "SyncedRemote",
-        dbid: this.db.remoteDbid,
-        collectedChanges: updates,
-      });
-    }
-  };
 
   async stop(port: Port): Promise<boolean> {
     this.ports.delete(port);

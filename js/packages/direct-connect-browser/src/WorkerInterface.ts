@@ -26,7 +26,7 @@ export default class WorkerInterface {
    * @param isShared use a shared worker or coordinate dedicated workers?
    * Android does not yet support shared workers, hence the option.
    */
-  constructor(workerUri?: string, isShared: boolean = false) {
+  constructor(workerUri?: string, private isShared: boolean = false) {
     if (workerUri && workerUri.includes("shared") && isShared === false) {
       console.warn(
         `You passed in a worker URI that points to a shared worker but asked for a dedicated worker context! workerUri: ${workerUri} isShared: ${isShared}`
@@ -156,14 +156,23 @@ export default class WorkerInterface {
       return;
     }
 
-    rx.__internalNotifyListeners(msg.collectedChanges, "sync");
+    rx.__internalNotifyListenersAndBroadcast(msg.collectedChanges, "sync");
   }
 
   private _localDbChanged(dbid: string, src: Src) {
-    // console.log("db change event", src);
-    if (src !== "thisTab") {
-      // console.log("ignoring changes from sync layer itself", src);
-      return;
+    if (this.isShared) {
+      // Shared workers are connected to by all tabs so the tab that made the
+      // change would have already notified the shared worker.
+      if (src !== "thisTab") {
+        return;
+      }
+    } else {
+      // Dedicated workers. We only ignore events from the sync layer.
+      // Other tab events we send to our shared worker in case it is our worker that
+      // holds the DB sync lock.
+      if (src === "sync") {
+        return;
+      }
     }
 
     const msg = {

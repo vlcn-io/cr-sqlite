@@ -124,23 +124,6 @@ static int initSiteId(sqlite3 *db, unsigned char *ret) {
 static int createSchemaTableIfNotExists(sqlite3 *db) {
   int rc = SQLITE_OK;
 
-  int brandNewDb = 0;
-  sqlite3_stmt *pStmt = 0;
-  rc = sqlite3_prepare(
-      db, "SELECT tbl_name FROM sqlite_master WHERE tbl_name = 'crsql_master';",
-      -1, &pStmt, 0);
-  if (rc != SQLITE_OK) {
-    sqlite3_finalize(pStmt);
-    return rc;
-  }
-  rc = sqlite3_step(pStmt);
-  sqlite3_finalize(pStmt);
-  if (rc == SQLITE_DONE) {
-    brandNewDb = 1;
-  } else if (rc != SQLITE_ROW) {
-    return rc;
-  }
-
   rc = sqlite3_exec(db, "SAVEPOINT crsql_create_schema_table;", 0, 0, 0);
   if (rc != SQLITE_OK) {
     return rc;
@@ -156,27 +139,6 @@ static int createSchemaTableIfNotExists(sqlite3 *db) {
   if (rc != SQLITE_OK) {
     sqlite3_exec(db, "ROLLBACK;", 0, 0, 0);
     return rc;
-  }
-
-  // only do this if this was a brand new DB.
-  if (brandNewDb == 1) {
-    rc = sqlite3_prepare(
-        db,
-        "INSERT OR REPLACE INTO crsql_master VALUES ('crsqlite_version', ?)",
-        -1, &pStmt, 0);
-    if (rc != SQLITE_OK) {
-      sqlite3_finalize(pStmt);
-      sqlite3_exec(db, "ROLLBACK;", 0, 0, 0);
-      return rc;
-    }
-    sqlite3_bind_int(pStmt, 1, CRSQLITE_VERSION);
-    rc = sqlite3_step(pStmt);
-    sqlite3_finalize(pStmt);
-
-    if (rc != SQLITE_DONE) {
-      sqlite3_exec(db, "ROLLBACK;", 0, 0, 0);
-      return rc;
-    }
   }
 
   sqlite3_exec(db, "RELEASE crsql_create_schema_table;", 0, 0, 0);
@@ -223,11 +185,18 @@ static int maybeUpdateDb(sqlite3 *db) {
   // if matches current version, we're good.
   int rc = SQLITE_OK;
   sqlite3_stmt *pStmt = 0;
+
+  rc = sqlite3_exec(db, "SAVEPOINT crsql_maybe_update_db;", 0, 0, 0);
+  if (rc != SQLITE_OK) {
+    return rc;
+  }
+
   rc = sqlite3_prepare_v2(
       db, "SELECT value FROM crsql_master WHERE key = 'crsqlite_version'", -1,
       &pStmt, 0);
 
   if (rc != SQLITE_OK) {
+    sqlite3_exec(db, "ROLLBACK;", 0, 0, 0);
     return rc;
   }
 
@@ -236,11 +205,30 @@ static int maybeUpdateDb(sqlite3 *db) {
   if (rc == SQLITE_DONE) {
     // no version recorded.
     // we are pre v0.13.0
-    return updateTo0_13_0(db);
+    updateTo0_13_0(db);
   } else if (rc != SQLITE_ROW) {
+    sqlite3_exec(db, "ROLLBACK;", 0, 0, 0);
     return rc;
   }
 
+  rc = sqlite3_prepare(
+      db, "INSERT OR REPLACE INTO crsql_master VALUES ('crsqlite_version', ?)",
+      -1, &pStmt, 0);
+  if (rc != SQLITE_OK) {
+    sqlite3_finalize(pStmt);
+    sqlite3_exec(db, "ROLLBACK;", 0, 0, 0);
+    return rc;
+  }
+  sqlite3_bind_int(pStmt, 1, CRSQLITE_VERSION);
+  rc = sqlite3_step(pStmt);
+  sqlite3_finalize(pStmt);
+
+  if (rc != SQLITE_DONE) {
+    sqlite3_exec(db, "ROLLBACK;", 0, 0, 0);
+    return rc;
+  }
+
+  sqlite3_exec(db, "RELEASE crsql_maybe_update_db;", 0, 0, 0);
   return SQLITE_OK;
 }
 

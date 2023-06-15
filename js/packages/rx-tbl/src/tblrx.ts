@@ -18,6 +18,7 @@
 
 import { DB, DBAsync, UpdateType } from "@vlcn.io/xplat-api";
 
+// Nit: `thisProcess` and `otherProcess` rather than `tab`
 export type Src = "thisTab" | "otherTab" | "sync";
 
 export class TblRx {
@@ -35,13 +36,18 @@ export class TblRx {
   // TODO: test that `onUpdate` is not spread across ticks of the event loop.
 
   #pendingNotification: [UpdateType, string, bigint][] | null = null;
-  #bc: BroadcastChannel;
+  #bc: BroadcastChannel | null = null;
 
-  constructor(private readonly db: DB | DBAsync) {
-    this.#bc = new BroadcastChannel(db.siteid);
-    this.#bc.onmessage = (msg) => {
-      this.__internalNotifyListeners(msg.data, "otherTab");
-    };
+  constructor(private readonly db: DB | DBAsync, broadcast: boolean = true) {
+    if (broadcast) {
+      this.#bc = new BroadcastChannel(db.siteid);
+      this.#bc.onmessage = (msg) => {
+        this.__internalNotifyListeners(
+          msg.data.updates,
+          msg.data.src || "otherTab"
+        );
+      };
+    }
 
     this.#disposeHook = this.db.onUpdate(
       (updateType, dbName, tblName, rowid) => {
@@ -52,6 +58,17 @@ export class TblRx {
         this.#preNotify(updateType, tblName, rowid);
       }
     );
+  }
+
+  __internalNotifyListenersAndBroadcast(
+    data: [UpdateType, string, bigint][],
+    src: "sync"
+  ) {
+    this.__internalNotifyListeners(data, src);
+    this.#bc?.postMessage({
+      updates: data,
+      src,
+    });
   }
 
   /**
@@ -121,7 +138,10 @@ export class TblRx {
       const data = this.#pendingNotification!;
       this.#pendingNotification = null;
       this.__internalNotifyListeners(data, "thisTab");
-      this.#bc.postMessage(data);
+      this.#bc?.postMessage({
+        updates: data,
+        src: "otherTab",
+      });
     }, 0);
   }
 
@@ -184,11 +204,11 @@ export class TblRx {
     this.#rangeListeners.clear();
     this.#pointListeners.clear();
     this.#arbitraryListeners.clear();
-    this.#bc.close();
+    this.#bc?.close();
     this.#disposeHook();
   }
 }
 
-export default function tblrx(db: DB | DBAsync) {
-  return new TblRx(db);
+export default function tblrx(db: DB | DBAsync, broadcast: boolean = true) {
+  return new TblRx(db, broadcast);
 }

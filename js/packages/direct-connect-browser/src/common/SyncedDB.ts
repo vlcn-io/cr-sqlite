@@ -26,7 +26,7 @@ export class SyncedDB {
     this.outboundStream = new OutboundStream(db, endpoints, serializer);
     this.inboundStream = new InboundStream(db, endpoints, serializer);
     this.fetcher = new Fetcher(endpoints, serializer);
-    this.rx = tblrx(this.db.db);
+    this.rx = tblrx(this.db.db, false);
   }
 
   // port is for communicating back out to the thread that asked us to start sync

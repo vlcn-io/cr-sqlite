@@ -1,5 +1,16 @@
 # @vlcn.io/replicator-wholedb
 
+## 0.11.0-next.0
+
+### Minor Changes
+
+- split up large transactions, compact out unneeded delete records, coordinate dedicated workers for android, null merge fix
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/xplat-api@0.12.0-next.0
+
 ## 0.10.0
 
 ### Minor Changes

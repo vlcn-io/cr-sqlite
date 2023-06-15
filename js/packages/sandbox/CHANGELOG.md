@@ -1,5 +1,21 @@
 # sandbox
 
+## 0.4.0-next.0
+
+### Minor Changes
+
+- split up large transactions, compact out unneeded delete records, coordinate dedicated workers for android, null merge fix
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/crsqlite-wasm@0.13.0-next.0
+  - @vlcn.io/direct-connect-browser@0.3.0-next.0
+  - @vlcn.io/direct-connect-common@0.4.0-next.0
+  - @vlcn.io/direct-connect-nodejs@0.4.0-next.0
+  - @vlcn.io/react@2.3.0-next.0
+  - @vlcn.io/rx-tbl@0.12.0-next.0
+
 ## 0.3.0
 
 ### Minor Changes

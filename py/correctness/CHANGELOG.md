@@ -1,5 +1,11 @@
 # @vlcn.io/py-correctness
 
+## 0.11.0-next.0
+
+### Minor Changes
+
+- split up large transactions, compact out unneeded delete records, coordinate dedicated workers for android, null merge fix
+
 ## 0.10.0
 
 ### Minor Changes

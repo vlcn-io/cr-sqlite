@@ -1,5 +1,17 @@
 # @vlcn.io/browser-tests
 
+## 0.11.0-next.0
+
+### Minor Changes
+
+- split up large transactions, compact out unneeded delete records, coordinate dedicated workers for android, null merge fix
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/crsqlite-wasm@0.13.0-next.0
+  - @vlcn.io/xplat-tests@0.11.0-next.0
+
 ## 0.10.0
 
 ### Minor Changes

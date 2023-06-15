@@ -1,5 +1,16 @@
 # @vlcn.io/rx-query
 
+## 0.5.0-next.0
+
+### Minor Changes
+
+- split up large transactions, compact out unneeded delete records, coordinate dedicated workers for android, null merge fix
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/xplat-api@0.12.0-next.0
+
 ## 0.4.0
 
 ### Minor Changes

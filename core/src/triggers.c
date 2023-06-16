@@ -176,11 +176,11 @@ int crsql_createUpdateTrigger(sqlite3 *db, crsql_TableInfo *tableInfo,
         __crsql_db_version,\
         __crsql_seq,\
         __crsql_site_id\
-      ) SELECT %s, %Q, 1, crsql_nextdbversion(), crsql_increment_and_get_seq(), NULL WHERE crsql_internal_sync_bit() = 0 AND NEW.\"%w\" IS NOT OLD.\"%w\"\
+      ) SELECT %s, %Q, 1, crsql_nextdbversion(), crsql_increment_and_get_seq() - 1, NULL WHERE crsql_internal_sync_bit() = 0 AND NEW.\"%w\" IS NOT OLD.\"%w\"\
       ON CONFLICT DO UPDATE SET\
         __crsql_col_version = __crsql_col_version + 1,\
         __crsql_db_version = crsql_nextdbversion(),\
-        __crsql_seq = crsql_get_seq(),\
+        __crsql_seq = crsql_get_seq() - 1,\
         __crsql_site_id = NULL;\n",
         tableInfo->tblName, pkList, pkNewList, tableInfo->nonPks[i].name,
         tableInfo->nonPks[i].name, tableInfo->nonPks[i].name);
@@ -251,7 +251,7 @@ char *crsql_deleteTriggerQuery(crsql_TableInfo *tableInfo) {
       WHERE crsql_internal_sync_bit() = 0 ON CONFLICT DO UPDATE SET\
       __crsql_col_version = __crsql_col_version + 1,\
       __crsql_db_version = crsql_nextdbversion(),\
-      __crsql_seq = crsql_increment_and_get_seq(),\
+      __crsql_seq = crsql_get_seq(),\
       __crsql_site_id = NULL;\
       \
       DELETE FROM \"%w__crsql_clock\" WHERE crsql_internal_sync_bit() = 0 AND %s AND __crsql_col_name != '__crsql_del';\

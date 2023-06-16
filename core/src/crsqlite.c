@@ -299,6 +299,12 @@ static void incrementAndGetSeqFunc(sqlite3_context *context, int argc,
   pExtData->seq += 1;
 }
 
+static void getSeqFunc(sqlite3_context *context, int argc,
+                       sqlite3_value **argv) {
+  crsql_ExtData *pExtData = (crsql_ExtData *)sqlite3_user_data(context);
+  sqlite3_result_int(context, pExtData->seq);
+}
+
 /**
  * The clock table holds the versions for each column of a given row.
  *
@@ -761,6 +767,12 @@ __declspec(dllexport)
     rc = sqlite3_create_function(db, "crsql_increment_and_get_seq", 0,
                                  SQLITE_UTF8 | SQLITE_INNOCUOUS, pExtData,
                                  incrementAndGetSeqFunc, 0, 0);
+  }
+  if (rc == SQLITE_OK) {
+    rc = sqlite3_create_function(
+        db, "crsql_get_seq", 0,
+        SQLITE_UTF8 | SQLITE_INNOCUOUS | SQLITE_DETERMINISTIC, pExtData,
+        getSeqFunc, 0, 0);
   }
 
   if (rc == SQLITE_OK) {

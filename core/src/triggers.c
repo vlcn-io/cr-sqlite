@@ -69,7 +69,7 @@ char *crsql_insertTriggerQuery(crsql_TableInfo *tableInfo, char *pkList,
       WHERE crsql_internal_sync_bit() = 0 ON CONFLICT DO UPDATE SET\
         __crsql_col_version = __crsql_col_version + 1,\
         __crsql_db_version = crsql_nextdbversion(),\
-        __crsql_seq = crsql_increment_and_get_seq(),\
+        __crsql_seq = crsql_get_seq(),\
         __crsql_site_id = NULL;\n",
         tableInfo->tblName, pkList, pkNewList, PKS_ONLY_CID_SENTINEL);
   }
@@ -92,7 +92,7 @@ char *crsql_insertTriggerQuery(crsql_TableInfo *tableInfo, char *pkList,
       WHERE crsql_internal_sync_bit() = 0 ON CONFLICT DO UPDATE SET\
         __crsql_col_version = __crsql_col_version + 1,\
         __crsql_db_version = crsql_nextdbversion(),\
-        __crsql_seq = crsql_increment_and_get_seq(),\
+        __crsql_seq = crsql_get_seq(),\
         __crsql_site_id = NULL;\n",
         tableInfo->tblName, pkList, pkNewList, tableInfo->nonPks[i].name);
   }
@@ -160,7 +160,7 @@ int crsql_createUpdateTrigger(sqlite3 *db, crsql_TableInfo *tableInfo,
       WHERE crsql_internal_sync_bit() = 0 ON CONFLICT DO UPDATE SET\
         __crsql_col_version = __crsql_col_version + 1,\
         __crsql_db_version = crsql_nextdbversion(),\
-        __crsql_seq = crsql_increment_and_get_seq(),\
+        __crsql_seq = crsql_get_seq(),\
         __crsql_site_id = NULL;\n",
         tableInfo->tblName, pkList, pkNewList, PKS_ONLY_CID_SENTINEL);
   }
@@ -180,7 +180,7 @@ int crsql_createUpdateTrigger(sqlite3 *db, crsql_TableInfo *tableInfo,
       ON CONFLICT DO UPDATE SET\
         __crsql_col_version = __crsql_col_version + 1,\
         __crsql_db_version = crsql_nextdbversion(),\
-        __crsql_seq = crsql_increment_and_get_seq(),\
+        __crsql_seq = crsql_get_seq(),\
         __crsql_site_id = NULL;\n",
         tableInfo->tblName, pkList, pkNewList, tableInfo->nonPks[i].name,
         tableInfo->nonPks[i].name, tableInfo->nonPks[i].name);

@@ -149,6 +149,7 @@ $(TARGET_SQLITE3): $(prefix) $(TARGET_SQLITE3_EXTRA_C) $(rs_lib_dbg_static_cpy) 
 	-DSQLITE_THREADSAFE=0 \
 	-DSQLITE_OMIT_LOAD_EXTENSION=1 \
 	-DSQLITE_EXTRA_INIT=core_init \
+	-DSQLITE_ENABLE_BYTECODE_VTAB \
 	-I./src/ -I./src/sqlite \
 	$(TARGET_SQLITE3_EXTRA_C) src/sqlite/shell.c $(ext_files) $(rs_lib_dbg_static_cpy) \
 	$(LDLIBS) -o $@

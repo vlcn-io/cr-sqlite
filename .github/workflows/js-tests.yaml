@@ -36,7 +36,7 @@ jobs:
         if: runner.os == 'macOS'
         run: rustup component add rust-src --toolchain nightly-x86_64-apple-darwin
 
-      - uses: cachix/install-nix-action@v18
+      - uses: cachix/install-nix-action@v22
         with:
           nix_path: nixpkgs=channel:nixos-unstable
       - run: nix-env -i wabt -f '<nixpkgs>'

@@ -45,12 +45,11 @@ export function serialize(
 
   if (key) {
     cache?.set(key, res);
-    // this catch doesn't swallow, the exception still makes it to the user
-    // of res as we return res not the caught variation of res.
     res
       .finally(() => cache?.delete(key))
       .catch((e) => {
-        console.error(e);
+        // this catch doesn't swallow, the exception still makes it to the user
+        // of res as we return res rather than the caught variation of res.
       });
   }
 

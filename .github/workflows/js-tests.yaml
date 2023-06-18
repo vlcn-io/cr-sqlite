@@ -39,7 +39,7 @@ jobs:
       - uses: cachix/install-nix-action@v22
         with:
           nix_path: nixpkgs=channel:nixos-unstable
-      - run: nix-env -i wabt -f '<nixpkgs>'
+      - run: nix-env -i wabt -f '<nixpkgs>' --show-trace
 
       - name: Install pnpm
         uses: pnpm/action-setup@v2

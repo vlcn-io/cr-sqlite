@@ -250,6 +250,31 @@ static void testDeleteThatDoesNotChangeAnything() {
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
+static void testDelete() {
+  printf("Delete\n");
+  int rc = SQLITE_OK;
+  char *err = 0;
+  sqlite3 *db = createDb();
+  sqlite3_stmt *pStmt = 0;
+
+  rc = sqlite3_exec(db, "INSERT INTO foo VALUES (1, 2)", 0, 0, 0);
+
+  rc += sqlite3_exec(db, "BEGIN", 0, 0, 0);
+  rc += sqlite3_exec(db,
+                     "INSERT INTO crsql_changes VALUES ('foo', 1, "
+                     "'__crsql_del', NULL, 1, 2, NULL)",
+                     0, 0, &err);
+  sqlite3_prepare_v2(db, "SELECT crsql_rows_impacted()", -1, &pStmt, 0);
+  sqlite3_step(pStmt);
+  assert(sqlite3_column_int(pStmt, 0) == 1);
+  sqlite3_finalize(pStmt);
+  rc += sqlite3_exec(db, "COMMIT", 0, 0, 0);
+  assert(rc == SQLITE_OK);
+
+  crsql_close(db);
+  printf("\t\e[0;32mSuccess\e[0m\n");
+}
+
 static void testCreateThatDoesNotChangeAnything() {
   printf("UpdateThatDoesNotChangeAnything\n");
   int rc = SQLITE_OK;

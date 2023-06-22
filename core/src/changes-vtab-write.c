@@ -346,6 +346,7 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
       return SQLITE_ERROR;
     }
     *pRowid = crsql_slabRowid(tblInfoIndex, rowid);
+    pTab->pExtData->rowsImpacted += 1;
     return SQLITE_OK;
   }
 
@@ -362,6 +363,7 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
       return SQLITE_ERROR;
     }
     *pRowid = crsql_slabRowid(tblInfoIndex, rowid);
+    pTab->pExtData->rowsImpacted += 1;
     return SQLITE_OK;
   }
 

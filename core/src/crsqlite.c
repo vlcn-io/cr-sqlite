@@ -185,6 +185,7 @@ static int maybeUpdateDb(sqlite3 *db) {
   // if matches current version, we're good.
   int rc = SQLITE_OK;
   sqlite3_stmt *pStmt = 0;
+  int recordedVersion = 0;
 
   rc = sqlite3_exec(db, "SAVEPOINT crsql_maybe_update_db;", 0, 0, 0);
   if (rc != SQLITE_OK) {
@@ -201,6 +202,9 @@ static int maybeUpdateDb(sqlite3 *db) {
   }
 
   rc = sqlite3_step(pStmt);
+  if (rc == SQLITE_ROW) {
+    recordedVersion = sqlite3_column_int(pStmt, 0);
+  }
   sqlite3_finalize(pStmt);
   if (rc == SQLITE_DONE) {
     // no version recorded.
@@ -211,21 +215,24 @@ static int maybeUpdateDb(sqlite3 *db) {
     return rc;
   }
 
-  rc = sqlite3_prepare(
-      db, "INSERT OR REPLACE INTO crsql_master VALUES ('crsqlite_version', ?)",
-      -1, &pStmt, 0);
-  if (rc != SQLITE_OK) {
+  if (recordedVersion < CRSQLITE_VERSION) {
+    rc = sqlite3_prepare(
+        db,
+        "INSERT OR REPLACE INTO crsql_master VALUES ('crsqlite_version', ?)",
+        -1, &pStmt, 0);
+    if (rc != SQLITE_OK) {
+      sqlite3_finalize(pStmt);
+      sqlite3_exec(db, "ROLLBACK;", 0, 0, 0);
+      return rc;
+    }
+    sqlite3_bind_int(pStmt, 1, CRSQLITE_VERSION);
+    rc = sqlite3_step(pStmt);
     sqlite3_finalize(pStmt);
-    sqlite3_exec(db, "ROLLBACK;", 0, 0, 0);
-    return rc;
-  }
-  sqlite3_bind_int(pStmt, 1, CRSQLITE_VERSION);
-  rc = sqlite3_step(pStmt);
-  sqlite3_finalize(pStmt);
 
-  if (rc != SQLITE_DONE) {
-    sqlite3_exec(db, "ROLLBACK;", 0, 0, 0);
-    return rc;
+    if (rc != SQLITE_DONE) {
+      sqlite3_exec(db, "ROLLBACK;", 0, 0, 0);
+      return rc;
+    }
   }
 
   sqlite3_exec(db, "RELEASE crsql_maybe_update_db;", 0, 0, 0);

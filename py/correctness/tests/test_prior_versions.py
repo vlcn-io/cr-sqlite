@@ -34,3 +34,12 @@ def test_can_load_v0_13_0():
         "SELECT value FROM crsql_master WHERE key ='crsqlite_version'").fetchone()
     assert (version[0] == 130000)
     close(c)
+
+
+def test_can_load_as_readonly():
+    prefix = "./prior-dbs/v0.13.0"
+    # copy the file given connecting might migrate it!
+    shutil.copyfile(prefix + ".prior-db", prefix + ".db")
+    c = connect('file:' + prefix + ".db?mode=ro", uri=True)
+    # just expecting not to throw.
+    close(c)

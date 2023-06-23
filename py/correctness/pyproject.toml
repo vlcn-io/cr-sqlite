@@ -1,5 +1,6 @@
 [project]
 name = "crsql_correctness"
+version = "0.0.1"
 
 [tool.pytest.ini_options]
 addopts = [

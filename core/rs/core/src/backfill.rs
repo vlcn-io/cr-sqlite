@@ -18,20 +18,24 @@ pub fn backfill_table(
     db.exec_safe("SAVEPOINT backfill")?;
 
     let sql = format!(
-      "SELECT {pk_cols} FROM \"{table}\" as t1
-        LEFT JOIN \"{table}__crsql_clock\" as t2 ON {pk_on_conditions} WHERE t2.\"{first_pk}\" IS NULL",
-      table = crate::escape_ident(table),
-      pk_cols = pk_cols
-          .iter()
-          .map(|f| format!("t1.\"{}\"", crate::escape_ident(f)))
-          .collect::<Vec<_>>()
-          .join(", "),
-      pk_on_conditions = pk_cols
-          .iter()
-          .map(|f| format!("t1.\"{}\" = t2.\"{}\"", crate::escape_ident(f), crate::escape_ident(f)))
-          .collect::<Vec<_>>()
-          .join(" AND "),
-      first_pk = crate::escape_ident(pk_cols[0]),
+        "SELECT {pk_cols} FROM \"{table}\" AS t1
+        WHERE NOT EXISTS
+          (SELECT 1 FROM \"{table}__crsql_clock\" AS t2 WHERE {pk_where_conditions})",
+        table = crate::escape_ident(table),
+        pk_cols = pk_cols
+            .iter()
+            .map(|f| format!("t1.\"{}\"", crate::escape_ident(f)))
+            .collect::<Vec<_>>()
+            .join(", "),
+        pk_where_conditions = pk_cols
+            .iter()
+            .map(|f| format!(
+                "t1.\"{}\" IS t2.\"{}\"",
+                crate::escape_ident(f),
+                crate::escape_ident(f)
+            ))
+            .collect::<Vec<_>>()
+            .join(" AND "),
     );
     let stmt = db.prepare_v2(&sql);
 

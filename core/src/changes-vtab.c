@@ -454,6 +454,9 @@ static int changesBestIndex(sqlite3_vtab *tab, sqlite3_index_info *pIdxInfo) {
   for (int i = 0; i < pIdxInfo->nConstraint; i++) {
     const struct sqlite3_index_constraint *pConstraint =
         &pIdxInfo->aConstraint[i];
+    if (pConstraint->usable == 0) {
+      continue;
+    }
     switch (pConstraint->iColumn) {
       case CHANGES_SINCE_VTAB_TBL:
         // TODO: stick tbl constraint into pTab?

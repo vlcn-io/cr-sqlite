@@ -76,9 +76,7 @@ char *crsql_changesUnionQuery(crsql_TableInfo **tableInfos, int tableInfosLen,
   return sqlite3_mprintf(
       "SELECT tbl, pks, cid, col_vrsn, db_vrsn, site_id, _rowid_, seq FROM "
       "(%z) "
-      "%s%s ORDER "
-      "BY "
-      "db_vrsn, seq ASC",
+      "%s%s",
       unionsStr, idxStr != 0 && strlen(idxStr) > 0 ? "WHERE " : "",
       idxStr == 0 ? "" : idxStr);
   // %z frees unionsStr https://www.sqlite.org/printf.html#percentz

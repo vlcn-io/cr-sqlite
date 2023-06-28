@@ -435,6 +435,33 @@ static const char *getOperatorString(unsigned char op) {
   }
 }
 
+static const char *getClockTblColName(int colIdx) {
+  switch (colIdx) {
+    case CHANGES_SINCE_VTAB_TBL:
+      // TODO: stick tbl constraint into pTab?
+      // to read out later?
+      return "tbl";
+    case CHANGES_SINCE_VTAB_PK:
+      // TODO: bind param it? o wait, it would need splitting.
+      // the clock table has pks split out.
+      return "pks";
+    case CHANGES_SINCE_VTAB_CID:
+      return "cid";
+    case CHANGES_SINCE_VTAB_CVAL:
+      return 0;
+    case CHANGES_SINCE_VTAB_COL_VRSN:
+      return "col_vrsn";
+    case CHANGES_SINCE_VTAB_DB_VRSN:
+      return "db_vrsn";
+    case CHANGES_SINCE_VTAB_SITE_ID:
+      return "site_id";
+    case CHANGES_SINCE_VTAB_SEQ:
+      return "seq";
+  }
+
+  return 0;
+}
+
 /*
 ** SQLite will invoke this method one or more times while planning a query
 ** that uses the virtual table.  This routine needs to create
@@ -448,8 +475,8 @@ static int changesBestIndex(sqlite3_vtab *tab, sqlite3_index_info *pIdxInfo) {
   crsql_Changes_vtab *crsqlTab = (crsql_Changes_vtab *)tab;
   sqlite3_str *pStr = sqlite3_str_new(crsqlTab->db);
 
-  int firstConstaint = 1;
-  char *colName = 0;
+  int firstConstraint = 1;
+  const char *colName = 0;
   int argvIndex = 1;
   for (int i = 0; i < pIdxInfo->nConstraint; i++) {
     const struct sqlite3_index_constraint *pConstraint =
@@ -457,29 +484,10 @@ static int changesBestIndex(sqlite3_vtab *tab, sqlite3_index_info *pIdxInfo) {
     if (pConstraint->usable == 0) {
       continue;
     }
-    switch (pConstraint->iColumn) {
-      case CHANGES_SINCE_VTAB_TBL:
-        // TODO: stick tbl constraint into pTab?
-        // to read out later?
-        break;
-      case CHANGES_SINCE_VTAB_PK:
-        // TODO: bind param it? o wait, it would need splitting.
-        // the clock table has pks split out.
-        break;
-      case CHANGES_SINCE_VTAB_CID:
-        colName = "cid";
-        break;
-      case CHANGES_SINCE_VTAB_CVAL:
-        break;
-      case CHANGES_SINCE_VTAB_COL_VRSN:
-        colName = "col_vrsn";
-        break;
-      case CHANGES_SINCE_VTAB_DB_VRSN:
-        colName = "db_vrsn";
-        break;
-      case CHANGES_SINCE_VTAB_SITE_ID:
-        colName = "site_id";
-        break;
+    if (pConstraint->iColumn != CHANGES_SINCE_VTAB_TBL &&
+        pConstraint->iColumn != CHANGES_SINCE_VTAB_PK &&
+        pConstraint->iColumn != CHANGES_SINCE_VTAB_CVAL) {
+      colName = getClockTblColName(pConstraint->iColumn);
     }
 
     if (colName != 0) {
@@ -487,8 +495,8 @@ static int changesBestIndex(sqlite3_vtab *tab, sqlite3_index_info *pIdxInfo) {
       if (opString == 0) {
         continue;
       }
-      if (firstConstaint) {
-        firstConstaint = 0;
+      if (firstConstraint) {
+        firstConstraint = 0;
       } else {
         sqlite3_str_appendall(pStr, " AND ");
       }
@@ -517,6 +525,31 @@ static int changesBestIndex(sqlite3_vtab *tab, sqlite3_index_info *pIdxInfo) {
     }
   }
 
+  int desc = 0;
+  if (pIdxInfo->nOrderBy > 0) {
+    sqlite3_str_appendall(pStr, " ORDER BY ");
+  }
+  firstConstraint = 1;
+  for (int i = 0; i < pIdxInfo->nOrderBy; i++) {
+    const struct sqlite3_index_orderby *orderBy = &pIdxInfo->aOrderBy[i];
+    colName = getClockTblColName(orderBy->iColumn);
+    desc = orderBy->desc;
+
+    if (firstConstraint == 1) {
+      firstConstraint = 0;
+    } else {
+      sqlite3_str_appendall(pStr, ", ");
+    }
+    sqlite3_str_appendf(pStr, "%s", colName);
+  }
+  if (pIdxInfo->nOrderBy > 0) {
+    if (desc) {
+      sqlite3_str_appendall(pStr, " DESC");
+    } else {
+      sqlite3_str_appendall(pStr, " ASC");
+    }
+  }
+
   // both constraints are present
   if ((idxNum & 6) == 6) {
     pIdxInfo->estimatedCost = (double)1;
@@ -539,6 +572,7 @@ static int changesBestIndex(sqlite3_vtab *tab, sqlite3_index_info *pIdxInfo) {
   }
 
   pIdxInfo->idxNum = idxNum;
+  pIdxInfo->orderByConsumed = 1;
   pIdxInfo->idxStr = sqlite3_str_finish(pStr);
   pIdxInfo->needToFreeIdxStr = 1;
   return SQLITE_OK;

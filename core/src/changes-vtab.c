@@ -377,7 +377,7 @@ static int changesFilter(sqlite3_vtab_cursor *pVtabCursor, int idxNum,
   sqlite3_free(zSql);
   if (rc != SQLITE_OK) {
     pTabBase->zErrMsg = sqlite3_mprintf(
-        "error preparing stmt to extract changes %s", sqlite3_errmsg(db));
+        "error preparing stmt to extract changes %s %s", sqlite3_errmsg(db));
     sqlite3_finalize(pStmt);
     return rc;
   }
@@ -462,6 +462,13 @@ static const char *getClockTblColName(int colIdx) {
   return 0;
 }
 
+static int colIsUsable(const struct sqlite3_index_constraint *pConstraint) {
+  return pConstraint->usable &&
+         pConstraint->iColumn != CHANGES_SINCE_VTAB_TBL &&
+         pConstraint->iColumn != CHANGES_SINCE_VTAB_PK &&
+         pConstraint->iColumn != CHANGES_SINCE_VTAB_CVAL;
+}
+
 /*
 ** SQLite will invoke this method one or more times while planning a query
 ** that uses the virtual table.  This routine needs to create
@@ -478,18 +485,22 @@ static int changesBestIndex(sqlite3_vtab *tab, sqlite3_index_info *pIdxInfo) {
   int firstConstraint = 1;
   const char *colName = 0;
   int argvIndex = 1;
-  for (int i = 0; i < pIdxInfo->nConstraint; i++) {
+  int numUsable = 0;
+  for (int i = 0; i < pIdxInfo->nConstraint; ++i) {
+    if (colIsUsable(&pIdxInfo->aConstraint[i])) {
+      ++numUsable;
+    }
+  }
+  if (numUsable > 0) {
+    sqlite3_str_appendall(pStr, "WHERE ");
+  }
+  for (int i = 0; i < pIdxInfo->nConstraint && numUsable > 0; i++) {
     const struct sqlite3_index_constraint *pConstraint =
         &pIdxInfo->aConstraint[i];
-    if (pConstraint->usable == 0) {
+    if (!colIsUsable(&pIdxInfo->aConstraint[i])) {
       continue;
     }
-    if (pConstraint->iColumn != CHANGES_SINCE_VTAB_TBL &&
-        pConstraint->iColumn != CHANGES_SINCE_VTAB_PK &&
-        pConstraint->iColumn != CHANGES_SINCE_VTAB_CVAL) {
-      colName = getClockTblColName(pConstraint->iColumn);
-    }
-
+    colName = getClockTblColName(pConstraint->iColumn);
     if (colName != 0) {
       const char *opString = getOperatorString(pConstraint->op);
       if (opString == 0) {
@@ -574,6 +585,7 @@ static int changesBestIndex(sqlite3_vtab *tab, sqlite3_index_info *pIdxInfo) {
   pIdxInfo->idxNum = idxNum;
   pIdxInfo->orderByConsumed = 1;
   pIdxInfo->idxStr = sqlite3_str_finish(pStr);
+  // printf("q: %s\n", pIdxInfo->idxStr);
   pIdxInfo->needToFreeIdxStr = 1;
   return SQLITE_OK;
 }

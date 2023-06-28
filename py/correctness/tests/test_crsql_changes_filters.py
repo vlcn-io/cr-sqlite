@@ -19,7 +19,7 @@ def setup_db():
     c.execute("DELETE FROM item WHERE id = 411")
     c.commit()
 
-    return (c, c.execute(changes_query).fetchall())
+    return (c, c.execute(changes_query + " ORDER BY db_version, seq ASC").fetchall())
 
 
 changes_query = "SELECT [table], pk, cid, val, col_version, db_version, site_id, seq FROM crsql_changes"

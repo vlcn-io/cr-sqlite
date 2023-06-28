@@ -539,6 +539,10 @@ static int changesBestIndex(sqlite3_vtab *tab, sqlite3_index_info *pIdxInfo) {
   int desc = 0;
   if (pIdxInfo->nOrderBy > 0) {
     sqlite3_str_appendall(pStr, " ORDER BY ");
+  } else {
+    // The user didn't provide an ordering? Tack on a default one that will
+    // retrieve changes in-order
+    sqlite3_str_appendall(pStr, " ORDER BY db_vrsn, seq ASC");
   }
   firstConstraint = 1;
   for (int i = 0; i < pIdxInfo->nOrderBy; i++) {

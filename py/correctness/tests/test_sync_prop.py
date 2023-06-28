@@ -214,10 +214,10 @@ def sync_from_random_peers(num_peers_to_sync, db, dbs, since_is_rowid):
 def sync_left_to_right(l, r, since, since_is_rowid):
     if since_is_rowid:
         changes = l.execute(
-            "SELECT *, rowid FROM crsql_changes WHERE rowid > ?", (since,))
+            "SELECT *, rowid FROM crsql_changes WHERE rowid > ? ORDER BY db_version, seq ASC", (since,))
     else:
         changes = l.execute(
-            "SELECT * FROM crsql_changes WHERE db_version > ?", (since,))
+            "SELECT * FROM crsql_changes WHERE db_version > ? ORDER BY db_version, seq ASC", (since,))
 
     ret = 0
     for change in changes:

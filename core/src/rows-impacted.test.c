@@ -356,6 +356,8 @@ void rowsImpactedTestSuite() {
   testManyTxns();
   testUpdateThatDoesNotChangeAnything();
   testDeleteThatDoesNotChangeAnything();
+  testCreateThatDoesNotChangeAnything();
   testValueWin();
   testClockWin();
+  testDelete();
 }

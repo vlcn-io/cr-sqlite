@@ -51,7 +51,7 @@ def run_test(constraint, operation_subset=None, range=range(5)):
         for (opcode, predicate) in operations:
             if operation_subset is None or opcode in operation_subset:
                 tbl_changes = c.execute(
-                    changes_query + " WHERE [{}] {} ?".format(constraint, opcode), (x, )).fetchall()
+                    changes_query + " WHERE [{}] {} ? ORDER BY db_version, seq ASC".format(constraint, opcode), (x, )).fetchall()
                 mnl_changes = list(
                     filter(lambda row: predicate(row[col_mapping[constraint]], x), all_changes))
                 assert (tbl_changes == mnl_changes)

@@ -46,7 +46,6 @@ Perf data: https://github.com/vlcn-io/cr-sqlite/blob/main/py/perf/perf.ipynb
 - Currently inserts into CRRs are 2.5-3x slower than inserts into regular SQLite tables.
 - Reads are the same speed
 
-
 # Usage
 
 The full documentation site is available [here](https://vlcn.io/background).
@@ -227,12 +226,9 @@ This is much more akin to git and event sourcing but with the drawback being tha
 
 # Building
 
-You'll need to install Rust and the nightly toolchain.
+You'll need to install Rust.
 
 - Installing Rust: https://www.rust-lang.org/tools/install
-- Adding the nightly toolchain: `rustup toolchain install nightly`
-
-If you're building on windows: `rustup toolchain install nightly-x86_64-pc-windows-gnu`
 
 ## [Run Time Loadable Extension](https://www.sqlite.org/loadext.htmla)
 
@@ -311,4 +307,3 @@ cr-sqlite was inspired by and built on ideas from these papers:
 - [Time, Clocks, and the Ordering of Events in a Distributed System](https://lamport.azurewebsites.net/pubs/time-clocks.pdf)
 - [Replicated abstract data types: Building blocks for collaborative applications](http://csl.skku.edu/papers/jpdc11.pdf)
 - [CRDTs for Brrr](https://josephg.com/blog/crdts-go-brrr/)
-

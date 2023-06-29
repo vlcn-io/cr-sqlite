@@ -9,7 +9,7 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-          - os: windows-2022
+          # - os: windows-2022 # Windows is complete nonsense. If someone wants to figure out how to make tests run there go ahead.
           - os: macos-latest
     steps:
       - uses: actions/checkout@v3

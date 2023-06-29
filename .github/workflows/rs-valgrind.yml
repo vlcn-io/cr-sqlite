@@ -21,11 +21,6 @@ jobs:
           path: ./
           load-mode: strict
 
-      - name: Rust Nightly
-        run: |
-          rustup default nightly
-          rustup update
-
       - name: Install valgrind
         run: sudo apt install -y valgrind
 

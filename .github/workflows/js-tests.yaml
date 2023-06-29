@@ -23,19 +23,6 @@ jobs:
           path: ./
           load-mode: strict
 
-      - name: Rust Nightly
-        run: |
-          rustup default nightly
-          rustup update
-
-      - name: Rustup Target - Linux
-        if: runner.os == 'Linux'
-        run: rustup component add rust-src --toolchain nightly-2023-06-17-x86_64-unknown-linux-gnu
-
-      - name: Rustup Target - Mac
-        if: runner.os == 'macOS'
-        run: rustup component add rust-src --toolchain nightly-2023-06-17-x86_64-apple-darwin
-
       - uses: cachix/install-nix-action@v22
         with:
           nix_path: nixpkgs=channel:nixos-unstable

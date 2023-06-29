@@ -13,6 +13,8 @@ size_t crsql_strnlen(const char *s, size_t n) {
   return p ? p - s : n;
 }
 
+// TODO: I don't think we need these crsql_ specific ones anymore now that we've
+// set the allocator symbol in the WASM builds
 char *crsql_strndup(const char *s, size_t n) {
   size_t l = crsql_strnlen(s, n);
   char *d = sqlite3_malloc(l + 1);

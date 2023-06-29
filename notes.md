@@ -1,3 +1,8 @@
+# Prepared read
+
+- parse values and use correct types for binding
+-
+
 # in-order in-tx + cursoring
 
 - clock tbls without rowid

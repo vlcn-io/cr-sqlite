@@ -73,7 +73,7 @@ jobs:
 
       - name: Rust Nightly
         run: |
-          rustup default nightly
+          rustup default nightly-2023-06-17
           rustup update
           rustup target add aarch64-apple-darwin
 

@@ -49,7 +49,8 @@ ext_files=src/crsqlite.c \
 	src/changes-vtab-common.c \
 	src/changes-vtab-write.c \
 	src/ext-data.c \
-	src/get-table.c
+	src/get-table.c \
+	src/stmt-cache.c
 ext_headers=src/crsqlite.h \
 	src/util.h \
 	src/tableinfo.h \
@@ -58,7 +59,8 @@ ext_headers=src/crsqlite.h \
 	src/changes-vtab-read.h \
 	src/changes-vtab-common.h \
 	src/changes-vtab-write.h \
-	src/ext-data.h
+	src/ext-data.h \
+	src/stmt-cache.h
 
 $(prefix):
 	mkdir -p $(prefix)

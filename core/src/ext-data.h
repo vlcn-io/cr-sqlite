@@ -5,6 +5,14 @@
 SQLITE_EXTENSION_INIT3
 
 #include "tableinfo.h"
+#include "uthash.h"
+
+typedef struct crsql_CachedStmt crsql_CachedStmt;
+struct crsql_CachedStmt {
+  char *key;
+  sqlite3_stmt *value;
+  UT_hash_handle hh;
+};
 
 typedef struct crsql_ExtData crsql_ExtData;
 struct crsql_ExtData {
@@ -33,6 +41,8 @@ struct crsql_ExtData {
   int rowsImpacted;
 
   int seq;
+
+  crsql_CachedStmt *hStmts;
 };
 
 crsql_ExtData *crsql_newExtData(sqlite3 *db);

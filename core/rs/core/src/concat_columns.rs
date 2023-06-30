@@ -33,7 +33,15 @@ fn concat_columns(args: &[*mut sqlite::value]) -> Result<Vec<u8>, ResultCode> {
     let mut buf = vec![];
     /*
      * Format:
-     * [num_columns:u8,...[type:u8, length?:i32, ...bytes:u8[]]]
+     * [num_columns:u8,...[(type(0-3),num_bytes?(3-7)):u8, length?:i32, ...bytes:u8[]]]
+     *
+     * The byte used for column type also encodes the number of bytes used for the integer.
+     * e.g.: (type(0-3),num_bytes?(3-7)):u8
+     * first 3 bits are type
+     * last 5 encode how long the following integer, if there is a following integer, is. 1, 2, 3, ... 8 bytes.
+     *
+     * Not packing an integer into the minimal number of bytes required is rather wasteful.
+     * E.g., the number `0` would take 8 bytes rather than 1 byte.
      */
     let len_result: Result<u8, _> = args.len().try_into();
     if let Ok(len) = len_result {
@@ -41,8 +49,11 @@ fn concat_columns(args: &[*mut sqlite::value]) -> Result<Vec<u8>, ResultCode> {
         for value in args {
             match value.value_type() {
                 ColumnType::Blob => {
-                    buf.put_u8(ColumnType::Blob as u8);
-                    buf.put_i32(value.bytes());
+                    let len = value.bytes();
+                    let num_bytes_for_len = num_bytes_needed_i32(len);
+                    let type_byte = num_bytes_for_len << 3 | (ColumnType::Blob as u8);
+                    buf.put_u8(type_byte);
+                    buf.put_int(len as i64, num_bytes_for_len as usize);
                     buf.put_slice(value.blob());
                 }
                 ColumnType::Null => {
@@ -53,12 +64,18 @@ fn concat_columns(args: &[*mut sqlite::value]) -> Result<Vec<u8>, ResultCode> {
                     buf.put_f64(value.double());
                 }
                 ColumnType::Integer => {
-                    buf.put_u8(ColumnType::Integer as u8);
-                    buf.put_i64(value.int64());
+                    let val = value.int64();
+                    let num_bytes_for_int = num_bytes_needed_i64(val);
+                    let type_byte = num_bytes_for_int << 3 | (ColumnType::Integer as u8);
+                    buf.put_u8(type_byte);
+                    buf.put_int(val, num_bytes_for_int as usize);
                 }
                 ColumnType::Text => {
-                    buf.put_u8(ColumnType::Text as u8);
-                    buf.put_i32(value.bytes());
+                    let len = value.bytes();
+                    let num_bytes_for_len = num_bytes_needed_i32(len);
+                    let type_byte = num_bytes_for_len << 3 | (ColumnType::Text as u8);
+                    buf.put_u8(type_byte);
+                    buf.put_int(len as i64, num_bytes_for_len as usize);
                     buf.put_slice(value.blob());
                 }
             }
@@ -66,6 +83,34 @@ fn concat_columns(args: &[*mut sqlite::value]) -> Result<Vec<u8>, ResultCode> {
         Ok(buf)
     } else {
         Err(ResultCode::ABORT)
+    }
+}
+
+fn num_bytes_needed_i32(val: i32) -> u8 {
+    if val & 0xFF000000u32 as i32 != 0 {
+        return 4;
+    } else if val & 0x00FF0000 != 0 {
+        return 3;
+    } else if val & 0x0000FF00 != 0 {
+        return 2;
+    } else if val * 0x000000FF != 0 {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+fn num_bytes_needed_i64(val: i64) -> u8 {
+    if val & 0xFF00000000000000u64 as i64 != 0 {
+        return 8;
+    } else if val & 0x00FF000000000000 != 0 {
+        return 7;
+    } else if val & 0x0000FF0000000000 != 0 {
+        return 6;
+    } else if val & 0x000000FF00000000 != 0 {
+        return 5;
+    } else {
+        return num_bytes_needed_i32(val as i32);
     }
 }
 
@@ -77,6 +122,7 @@ pub enum ColumnValue {
     Text(String),
 }
 
+// TODO: make this a table valued function that can be used to extract a row per packed column?
 pub fn unpack_columns(data: Vec<u8>) -> Result<Vec<ColumnValue>, ResultCode> {
     let mut ret = vec![];
     let mut buf = &data[..];
@@ -86,14 +132,17 @@ pub fn unpack_columns(data: Vec<u8>) -> Result<Vec<ColumnValue>, ResultCode> {
         if !buf.has_remaining() {
             return Err(ResultCode::ABORT);
         }
-        let column_type = ColumnType::from_u8(buf.get_u8());
+        let column_type_and_maybe_intlen = buf.get_u8();
+        let column_type = ColumnType::from_u8(column_type_and_maybe_intlen & 0x07);
+        let intlen = (column_type_and_maybe_intlen >> 3 & 0xFF) as usize;
 
         match column_type {
             Some(ColumnType::Blob) => {
-                if buf.remaining() < 4 {
+                if buf.remaining() < intlen {
                     return Err(ResultCode::ABORT);
                 }
-                let len = buf.get_i32() as usize;
+                // let len = get_varint();
+                let len = 0;
                 if buf.remaining() < len {
                     return Err(ResultCode::ABORT);
                 }

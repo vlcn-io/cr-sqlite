@@ -88,6 +88,7 @@ fn migrate_to(
     local_db: *mut sqlite3,
     mem_db: &ManagedConnection,
 ) -> Result<ResultCode, ResultCode> {
+    // TODO: why not HashSet?
     let mut mem_tables: BTreeSet<String> = BTreeSet::new();
 
     let sql = "SELECT name FROM sqlite_master WHERE type = 'table'

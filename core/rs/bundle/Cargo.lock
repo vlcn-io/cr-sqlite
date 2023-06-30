@@ -82,6 +82,7 @@ name = "crsql_core"
 version = "0.1.0"
 dependencies = [
  "bytes",
+ "num-derive",
  "num-traits",
  "sqlite_nostd",
 ]

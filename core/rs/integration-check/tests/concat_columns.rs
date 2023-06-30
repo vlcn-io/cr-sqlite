@@ -24,5 +24,21 @@ fn concat_columns_impl() -> Result<(), ResultCode> {
     select_stmt.step()?;
     let result = select_stmt.column_text(0)?;
     println!("{}", result);
+    assert!(result == "x'0301000000000000000C03000000037374720400000003010203'");
+    // cols:03
+    // type: 01 (integer)
+    // value: 00 00 00 00 00 00 00 0C (12) TODO: encode as variable length integers to save space?
+    // type: 03 (text)
+    // len: 00 00 00 03 (3)
+    // byes: 73 (s) 74 (t) 72 (r)
+    // type: 04 (blob)
+    // len: 00 00 00 03 (3)
+    // bytes: 01 02 03
+    // vs string:
+    // 12|'str'|x'010203'
+    // ^ 18 bytes
+    // vs
+    // 26 bytes
+    // 13 wasted bytes due to not variable length encoding our integers
     Ok(())
 }

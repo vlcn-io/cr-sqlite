@@ -14,6 +14,8 @@ use alloc::vec::Vec;
 pub use automigrate::*;
 pub use backfill::*;
 use concat_columns::crsql_concat_columns;
+pub use concat_columns::unpack_columns;
+pub use concat_columns::ColumnValue;
 use core::ffi::{c_int, CStr};
 pub use is_crr::*;
 use sqlite::ResultCode;

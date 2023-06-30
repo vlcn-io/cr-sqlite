@@ -126,7 +126,7 @@ pub enum ColumnValue {
 // TODO: make this a table valued function that can be used to extract a row per packed column?
 // For use from C we'll just do statement prepartion in Rust and pass back the pointer
 // to the sqlite statement.
-fn unpack_columns(data: &[u8]) -> Result<Vec<ColumnValue>, ResultCode> {
+pub fn unpack_columns(data: &[u8]) -> Result<Vec<ColumnValue>, ResultCode> {
     let mut ret = vec![];
     let mut buf = data;
     let num_columns = buf.get_u8();

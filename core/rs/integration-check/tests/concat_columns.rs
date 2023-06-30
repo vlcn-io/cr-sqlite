@@ -1,3 +1,5 @@
+use crsql_core::unpack_columns;
+use crsql_core::ColumnValue;
 use sqlite::{Connection, ResultCode};
 use sqlite_nostd as sqlite;
 
@@ -64,6 +66,56 @@ fn concat_columns_impl() -> Result<(), ResultCode> {
     select_stmt.step()?;
     let result = select_stmt.column_blob(0)?;
     assert!(result.len() == 13);
+    let unpacked = unpack_columns(result)?;
+    assert!(unpacked.len() == 3);
+
+    if let ColumnValue::Integer(i) = unpacked[0] {
+        assert!(i == 12);
+    } else {
+        assert!("unexpected type" == "");
+    }
+    if let ColumnValue::Text(s) = &unpacked[1] {
+        assert!(s == "str")
+    } else {
+        assert!("unexpected type" == "");
+    }
+    if let ColumnValue::Blob(b) = &unpacked[2] {
+        assert!(b[..] == blob);
+    } else {
+        assert!("unexpected type" == "");
+    }
+
+    db.db.exec_safe("DELETE FROM foo")?;
+    let insert_stmt = db.db.prepare_v2("INSERT INTO foo VALUES (?, ?, ?)")?;
+
+    insert_stmt.bind_int(1, 0)?;
+    insert_stmt.bind_int(2, 10000000)?;
+    insert_stmt.bind_int(3, -2500000)?;
+    insert_stmt.step()?;
+
+    let select_stmt = db
+        .db
+        .prepare_v2("SELECT crsql_concat_columns(id, x, y) FROM foo")?;
+    select_stmt.step()?;
+    let result = select_stmt.column_blob(0)?;
+    let unpacked = unpack_columns(result)?;
+    assert!(unpacked.len() == 3);
+
+    if let ColumnValue::Integer(i) = unpacked[0] {
+        assert!(i == 0);
+    } else {
+        assert!("unexpected type" == "");
+    }
+    if let ColumnValue::Integer(i) = unpacked[1] {
+        assert!(i == 10000000)
+    } else {
+        assert!("unexpected type" == "");
+    }
+    if let ColumnValue::Integer(i) = unpacked[2] {
+        assert!(i == -2500000);
+    } else {
+        assert!("unexpected type" == "");
+    }
 
     Ok(())
 }

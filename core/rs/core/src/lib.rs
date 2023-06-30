@@ -2,6 +2,7 @@
 
 mod automigrate;
 mod backfill;
+mod concat_columns;
 mod is_crr;
 mod teardown;
 mod util;
@@ -12,6 +13,7 @@ use alloc::string::String;
 use alloc::vec::Vec;
 pub use automigrate::*;
 pub use backfill::*;
+use concat_columns::crsql_concat_columns;
 use core::ffi::{c_int, CStr};
 pub use is_crr::*;
 use sqlite::ResultCode;
@@ -70,6 +72,22 @@ pub extern "C" fn sqlite3_crsqlcore_init(
             sqlite::UTF8,
             None,
             Some(crsql_automigrate),
+            None,
+            None,
+            None,
+        )
+        .unwrap_or(sqlite::ResultCode::ERROR);
+    if rc != ResultCode::OK {
+        return rc as c_int;
+    }
+
+    let rc = db
+        .create_function_v2(
+            "crsql_concat_columns",
+            -1,
+            sqlite::UTF8,
+            None,
+            Some(crsql_concat_columns),
             None,
             None,
             None,

@@ -26,7 +26,6 @@ fn concat_columns_impl() -> Result<(), ResultCode> {
         .prepare_v2("SELECT quote(crsql_concat_columns(id, x, y)) FROM foo")?;
     select_stmt.step()?;
     let result = select_stmt.column_text(0)?;
-    println!("{}", result);
     assert!(result == "X'03090C0B037374720C03010203'");
     // 03 09 0C 0B 03 73 74 72 0C 03 01 02 03
     // cols: 03
@@ -65,7 +64,6 @@ fn concat_columns_impl() -> Result<(), ResultCode> {
     select_stmt.step()?;
     let result = select_stmt.column_blob(0)?;
     assert!(result.len() == 13);
-    // TODO: pass thru extract function
 
     Ok(())
 }

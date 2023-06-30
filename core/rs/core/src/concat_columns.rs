@@ -4,6 +4,7 @@ use alloc::string::String;
 use alloc::vec;
 use alloc::vec::Vec;
 use bytes::{Buf, BufMut};
+use core::ffi::c_int;
 use core::slice;
 #[cfg(not(feature = "std"))]
 use num_traits::FromPrimitive;
@@ -123,9 +124,11 @@ pub enum ColumnValue {
 }
 
 // TODO: make this a table valued function that can be used to extract a row per packed column?
-pub fn unpack_columns(data: Vec<u8>) -> Result<Vec<ColumnValue>, ResultCode> {
+// For use from C we'll just do statement prepartion in Rust and pass back the pointer
+// to the sqlite statement.
+fn unpack_columns(data: &[u8]) -> Result<Vec<ColumnValue>, ResultCode> {
     let mut ret = vec![];
-    let mut buf = &data[..];
+    let mut buf = data;
     let num_columns = buf.get_u8();
 
     for _i in 0..num_columns {
@@ -141,8 +144,7 @@ pub fn unpack_columns(data: Vec<u8>) -> Result<Vec<ColumnValue>, ResultCode> {
                 if buf.remaining() < intlen {
                     return Err(ResultCode::ABORT);
                 }
-                // let len = get_varint();
-                let len = 0;
+                let len = buf.get_int(intlen) as usize;
                 if buf.remaining() < len {
                     return Err(ResultCode::ABORT);
                 }
@@ -156,19 +158,19 @@ pub fn unpack_columns(data: Vec<u8>) -> Result<Vec<ColumnValue>, ResultCode> {
                 ret.push(ColumnValue::Float(buf.get_f64()));
             }
             Some(ColumnType::Integer) => {
-                if buf.remaining() < 8 {
+                if buf.remaining() < intlen {
                     return Err(ResultCode::ABORT);
                 }
-                ret.push(ColumnValue::Integer(buf.get_i64()));
+                ret.push(ColumnValue::Integer(buf.get_int(intlen)));
             }
             Some(ColumnType::Null) => {
                 ret.push(ColumnValue::Null);
             }
             Some(ColumnType::Text) => {
-                if buf.remaining() < 4 {
+                if buf.remaining() < intlen {
                     return Err(ResultCode::ABORT);
                 }
-                let len = buf.get_i32() as usize;
+                let len = buf.get_int(intlen) as usize;
                 if buf.remaining() < len {
                     return Err(ResultCode::ABORT);
                 }

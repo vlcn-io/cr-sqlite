@@ -4,15 +4,15 @@ use sqlite::{Connection, ResultCode};
 use sqlite_nostd as sqlite;
 
 #[test]
-fn concat_columns() {
+fn pack_columns() {
     // concat then unpack
-    concat_columns_impl().unwrap();
+    pack_columns_impl().unwrap();
 }
 
 // The rust test is mainly to check with valgrind and ensure we're correctly
 // freeing data as we do some passing of destructors from rust to SQLite.
 // Complete property based tests for encode & decode exist in python.
-fn concat_columns_impl() -> Result<(), ResultCode> {
+fn pack_columns_impl() -> Result<(), ResultCode> {
     let db = integration_utils::opendb()?;
     db.db.exec_safe("CREATE TABLE foo (id PRIMARY KEY, x, y)")?;
     let insert_stmt = db.db.prepare_v2("INSERT INTO foo VALUES (?, ?, ?)")?;
@@ -25,7 +25,7 @@ fn concat_columns_impl() -> Result<(), ResultCode> {
 
     let select_stmt = db
         .db
-        .prepare_v2("SELECT quote(crsql_concat_columns(id, x, y)) FROM foo")?;
+        .prepare_v2("SELECT quote(crsql_pack_columns(id, x, y)) FROM foo")?;
     select_stmt.step()?;
     let result = select_stmt.column_text(0)?;
     assert!(result == "X'03090C0B037374720C03010203'");
@@ -62,7 +62,7 @@ fn concat_columns_impl() -> Result<(), ResultCode> {
 
     let select_stmt = db
         .db
-        .prepare_v2("SELECT crsql_concat_columns(id, x, y) FROM foo")?;
+        .prepare_v2("SELECT crsql_pack_columns(id, x, y) FROM foo")?;
     select_stmt.step()?;
     let result = select_stmt.column_blob(0)?;
     assert!(result.len() == 13);
@@ -95,7 +95,7 @@ fn concat_columns_impl() -> Result<(), ResultCode> {
 
     let select_stmt = db
         .db
-        .prepare_v2("SELECT crsql_concat_columns(id, x, y) FROM foo")?;
+        .prepare_v2("SELECT crsql_pack_columns(id, x, y) FROM foo")?;
     select_stmt.step()?;
     let result = select_stmt.column_blob(0)?;
     let unpacked = unpack_columns(result)?;

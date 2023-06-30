@@ -2,8 +2,8 @@
 
 mod automigrate;
 mod backfill;
-mod concat_columns;
 mod is_crr;
+mod pack_columns;
 mod teardown;
 mod util;
 
@@ -13,11 +13,11 @@ use alloc::string::String;
 use alloc::vec::Vec;
 pub use automigrate::*;
 pub use backfill::*;
-use concat_columns::crsql_concat_columns;
-pub use concat_columns::unpack_columns;
-pub use concat_columns::ColumnValue;
 use core::ffi::{c_int, CStr};
 pub use is_crr::*;
+use pack_columns::crsql_pack_columns;
+pub use pack_columns::unpack_columns;
+pub use pack_columns::ColumnValue;
 use sqlite::ResultCode;
 use sqlite_nostd as sqlite;
 use sqlite_nostd::{context, Connection, Context, Value};
@@ -85,11 +85,11 @@ pub extern "C" fn sqlite3_crsqlcore_init(
 
     let rc = db
         .create_function_v2(
-            "crsql_concat_columns",
+            "crsql_pack_columns",
             -1,
             sqlite::UTF8,
             None,
-            Some(crsql_concat_columns),
+            Some(crsql_pack_columns),
             None,
             None,
             None,

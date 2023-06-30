@@ -9,18 +9,18 @@ use core::slice;
 #[cfg(not(feature = "std"))]
 use num_traits::FromPrimitive;
 use sqlite_nostd as sqlite;
-use sqlite_nostd::{ColumnType, Context, ResultCode, Value};
+use sqlite_nostd::{ColumnType, Context, ResultCode, Stmt, Value};
 
-pub extern "C" fn crsql_concat_columns(
+pub extern "C" fn crsql_pack_columns(
     ctx: *mut sqlite::context,
     argc: i32,
     argv: *mut *mut sqlite::value,
 ) {
     let args = sqlite::args!(argc, argv);
 
-    match concat_columns(args) {
+    match pack_columns(args) {
         Err(code) => {
-            ctx.result_error("Failed to concatenate columns");
+            ctx.result_error("Failed to pack columns");
             ctx.result_error_code(code);
         }
         Ok(blob) => {
@@ -30,7 +30,7 @@ pub extern "C" fn crsql_concat_columns(
     }
 }
 
-fn concat_columns(args: &[*mut sqlite::value]) -> Result<Vec<u8>, ResultCode> {
+fn pack_columns(args: &[*mut sqlite::value]) -> Result<Vec<u8>, ResultCode> {
     let mut buf = vec![];
     /*
      * Format:
@@ -184,4 +184,59 @@ pub fn unpack_columns(data: &[u8]) -> Result<Vec<ColumnValue>, ResultCode> {
     }
 
     Ok(ret)
+}
+
+/**
+* Takes:
+* 1. a pointer to a prepared statement
+* 2. packed columns
+*
+* And
+* 1. unpacks the columns
+* 2. binds them to the stmt start at the first bind position
+*/
+#[no_mangle]
+pub extern "C" fn crsql_bind_packed_values(
+    stmt: *mut sqlite::stmt,
+    packed_columns: *const u8,
+    packed_columns_len: c_int,
+) -> c_int {
+    let packed_columns =
+        unsafe { core::slice::from_raw_parts(packed_columns, packed_columns_len as usize) };
+    if let Ok(unpacked) = crate::unpack_columns(packed_columns) {
+        if let Ok(code) = bind_to_stmt(stmt, unpacked) {
+            return code as c_int;
+        }
+    }
+
+    return ResultCode::ERROR as c_int;
+}
+
+fn bind_to_stmt(
+    stmt: *mut sqlite::stmt,
+    values: Vec<crate::ColumnValue>,
+) -> Result<ResultCode, ResultCode> {
+    for (i, val) in values.into_iter().enumerate() {
+        bind_slot(i + 1, val, stmt)?;
+    }
+    Ok(ResultCode::OK)
+}
+
+fn bind_slot(
+    slot_num: usize,
+    val: ColumnValue,
+    stmt: *mut sqlite::stmt,
+) -> Result<ResultCode, ResultCode> {
+    match val {
+        ColumnValue::Blob(b) => {
+            // passes ownership of the blob to SQLite
+            // SQLite will free it once the statement is finalized
+            // or bindings are cleared.
+            stmt.bind_blob_owned(slot_num as i32, b)
+        }
+        ColumnValue::Float(f) => stmt.bind_double(slot_num as i32, f),
+        ColumnValue::Integer(i) => stmt.bind_int64(slot_num as i32, i),
+        ColumnValue::Null => stmt.bind_null(slot_num as i32),
+        ColumnValue::Text(t) => stmt.bind_text_owned(slot_num as i32, t),
+    }
 }

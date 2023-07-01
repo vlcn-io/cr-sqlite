@@ -253,9 +253,7 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
   // from tblInfo
   const unsigned char *insertTbl =
       sqlite3_value_text(argv[2 + CHANGES_SINCE_VTAB_TBL]);
-  // `splitQuoteConcat` will validate these
-  const unsigned char *insertPks =
-      sqlite3_value_text(argv[2 + CHANGES_SINCE_VTAB_PK]);
+  const sqlite3_value *insertPks = argv[2 + CHANGES_SINCE_VTAB_PK];
 
   int inesrtColNameLen = sqlite3_value_bytes(argv[2 + CHANGES_SINCE_VTAB_CID]);
   if (inesrtColNameLen > MAX_TBL_NAME_LEN) {
@@ -303,14 +301,14 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
   int isDelete = strcmp(DELETE_CID_SENTINEL, insertColName) == 0;
   int isPkOnly = strcmp(PKS_ONLY_CID_SENTINEL, insertColName) == 0;
 
-  char *pkWhereList = crsql_extractWhereList(tblInfo->pks, tblInfo->pksLen,
-                                             (const char *)insertPks);
+  char *pkWhereList = crsql_extractWhereList(tblInfo->pks, tblInfo->pksLen);
   if (pkWhereList == 0) {
     *errmsg =
         sqlite3_mprintf("crsql - failed decoding primary keys for insert");
     return SQLITE_ERROR;
   }
 
+  // TODO: bind insertPks for where list!
   rc = crsql_checkForLocalDelete(db, tblInfo->tblName, pkWhereList);
   if (rc == DELETED_LOCALLY) {
     rc = SQLITE_OK;
@@ -322,9 +320,8 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
   // This happens if the state is a delete
   // We must `checkForLocalDelete` prior to merging a delete (happens above).
   // mergeDelete assumes we've already checked for a local delete.
-  char *pkValsStr =
-      crsql_quoteConcatedValuesAsList((const char *)insertPks, tblInfo->pksLen);
-  if (pkValsStr == 0) {
+  char *pkBindingList = crsql_bindingList(tblInfo->pksLen);
+  if (pkBindingList == 0) {
     sqlite3_free(pkWhereList);
     *errmsg = sqlite3_mprintf("Failed sanitizing pk values");
     return SQLITE_ERROR;
@@ -333,12 +330,13 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
   char *pkIdentifierList =
       crsql_asIdentifierList(tblInfo->pks, tblInfo->pksLen, 0);
   if (isDelete) {
+    // TODO: bind insertPks for where list!
     sqlite3_int64 rowid = crsql_mergeDelete(
-        db, tblInfo, pkWhereList, pkValsStr, pkIdentifierList, insertColVrsn,
-        insertDbVrsn, insertSiteId, insertSiteIdLen);
+        db, tblInfo, pkWhereList, pkBindingList, pkIdentifierList,
+        insertColVrsn, insertDbVrsn, insertSiteId, insertSiteIdLen);
 
     sqlite3_free(pkWhereList);
-    sqlite3_free(pkValsStr);
+    sqlite3_free(pkBindingList);
     sqlite3_free(pkIdentifierList);
     if (rowid == -1) {
       *errmsg = sqlite3_mprintf("Failed inserting changeset");
@@ -351,11 +349,12 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
 
   if (isPkOnly ||
       !crsql_columnExists(insertColName, tblInfo->nonPks, tblInfo->nonPksLen)) {
+    // TODO: bind insertPks for binding list!
     sqlite3_int64 rowid = crsql_mergePkOnlyInsert(
-        db, tblInfo, pkValsStr, pkIdentifierList, insertColVrsn, insertDbVrsn,
-        insertSiteId, insertSiteIdLen);
+        db, tblInfo, pkBindingList, pkIdentifierList, insertColVrsn,
+        insertDbVrsn, insertSiteId, insertSiteIdLen);
     sqlite3_free(pkWhereList);
-    sqlite3_free(pkValsStr);
+    sqlite3_free(pkBindingList);
     sqlite3_free(pkIdentifierList);
     if (rowid == -1) {
       *errmsg = sqlite3_mprintf("Failed inserting changeset");
@@ -366,12 +365,13 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
     return SQLITE_OK;
   }
 
+  // TODO: bind insertPks for pkWhereList!
   int doesCidWin =
       crsql_didCidWin(db, pTab->pExtData->siteId, tblInfo->tblName, pkWhereList,
                       insertColName, insertVal, insertColVrsn, errmsg);
   sqlite3_free(pkWhereList);
   if (doesCidWin == -1 || doesCidWin == 0) {
-    sqlite3_free(pkValsStr);
+    sqlite3_free(pkBindingList);
     sqlite3_free(pkIdentifierList);
     // doesCidWin == 0? compared against our clocks, nothing wins. OK and
     // Done.
@@ -381,17 +381,18 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
     return doesCidWin == 0 ? SQLITE_OK : SQLITE_ERROR;
   }
 
+  // TODO: bind insertPks for pkBindingList!
   zSql = sqlite3_mprintf(
       "INSERT INTO \"%w\" (%s, \"%w\")\
       VALUES (%s, ?)\
       ON CONFLICT DO UPDATE\
       SET \"%w\" = ?",
-      tblInfo->tblName, pkIdentifierList, insertColName, pkValsStr,
+      tblInfo->tblName, pkIdentifierList, insertColName, pkBindingList,
       insertColName);
 
   rc = sqlite3_exec(db, SET_SYNC_BIT, 0, 0, errmsg);
   if (rc != SQLITE_OK) {
-    sqlite3_free(pkValsStr);
+    sqlite3_free(pkBindingList);
     sqlite3_free(pkIdentifierList);
     sqlite3_exec(db, CLEAR_SYNC_BIT, 0, 0, 0);
     sqlite3_free(zSql);
@@ -419,17 +420,18 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
   sqlite3_exec(db, CLEAR_SYNC_BIT, 0, 0, 0);
 
   if (rc != SQLITE_OK) {
-    sqlite3_free(pkValsStr);
+    sqlite3_free(pkBindingList);
     sqlite3_free(pkIdentifierList);
     *errmsg = sqlite3_mprintf("Failed inserting changeset");
     return rc;
   }
 
+  // TODO: bind insertPks for pkBindingList!!
   sqlite3_int64 rowid = crsql_setWinnerClock(
-      db, tblInfo, pkIdentifierList, pkValsStr, insertColName, insertColVrsn,
-      insertDbVrsn, insertSiteId, insertSiteIdLen);
+      db, tblInfo, pkIdentifierList, pkBindingList, insertColName,
+      insertColVrsn, insertDbVrsn, insertSiteId, insertSiteIdLen);
   sqlite3_free(pkIdentifierList);
-  sqlite3_free(pkValsStr);
+  sqlite3_free(pkBindingList);
 
   if (rowid == -1) {
     *errmsg = sqlite3_mprintf("Failed updating winner clock");

@@ -72,10 +72,10 @@ fn new_nonempty_table_impl(apply_twice: bool) -> Result<(), ResultCode> {
         cnt = cnt + 1;
         if cnt == 1 {
             assert_eq!(stmt.column_text(1)?, "1"); // pk
-            assert_eq!(stmt.column_text(3)?, "'one'"); // col value
+            assert_eq!(stmt.column_text(3)?, "one"); // col value
         } else {
             assert_eq!(stmt.column_text(1)?, "2"); // pk
-            assert_eq!(stmt.column_text(3)?, "'two'"); // col value
+            assert_eq!(stmt.column_text(3)?, "two"); // col value
         }
         assert_eq!(stmt.column_text(0)?, "foo"); // table name
         assert_eq!(stmt.column_text(2)?, "name"); // col name

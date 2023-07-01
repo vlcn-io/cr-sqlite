@@ -3,7 +3,6 @@
 
 #include "sqlite3ext.h"
 SQLITE_EXTENSION_INIT3
-
 #include "tableinfo.h"
 #include "uthash.h"
 

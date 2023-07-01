@@ -2,6 +2,7 @@
 
 #include "consts.h"
 #include "get-table.h"
+#include "stmt-cache.h"
 #include "util.h"
 
 crsql_ExtData *crsql_newExtData(sqlite3 *db) {
@@ -62,6 +63,7 @@ void crsql_freeExtData(crsql_ExtData *pExtData) {
   sqlite3_finalize(pExtData->pPragmaSchemaVersionStmt);
   sqlite3_finalize(pExtData->pPragmaDataVersionStmt);
   crsql_freeAllTableInfos(pExtData->zpTableInfos, pExtData->tableInfosLen);
+  crsql_clearStmtCache(pExtData);
   sqlite3_free(pExtData);
 }
 

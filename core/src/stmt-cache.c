@@ -1,5 +1,6 @@
 #include "stmt-cache.h"
 
+#include "ext-data.h"
 #include "uthash.h"
 #include "util.h"
 
@@ -11,55 +12,43 @@
  */
 
 /**
- * @brief Frees the entry _after_ already being removed from the hash table.
+ * @brief Frees the entry _after_ being removed from the hash table.
  *
  * @param pEntry
  */
 static void freeEntry(crsql_CachedStmt *pEntry) {
   sqlite3_free(pEntry->key);
-  sqlite3_free(pEntry->value);
+  sqlite3_finalize(pEntry->value);
   sqlite3_free(pEntry);
 }
 
 /**
- * Pull a statement from the cache if one already exists for the given key.
- *
- * 1. Callers own the memory pointed to be zKey and zSql.
- * 2. Callers must not obtain two references to the same statement at the same
- * time.
- * 3. Callers are responsible for `resetting` the statement and unbinding values
- * when they are done with it.
- * 4. The statement must be reset before another call obtains a reference to it.
- * 5. Callers should not finalize the returned statements.
- *
- * No way is currently provided to evict cached statements so this cache should
- * only be used for bounded use cases.
+ * @brief Look up a cache entry. Caller retains ownership of the key.
  */
-sqlite3_stmt *crsql_getOrPrepareCachedStmt(sqlite3 *pDb,
-                                           crsql_ExtData *pExtData,
-                                           const char *zKey, const char *zSql) {
+sqlite3_stmt *crsql_getCachedStmt(crsql_ExtData *pExtData, const char *zKey) {
   crsql_CachedStmt *pResult = NULL;
-  int rc = SQLITE_OK;
   HASH_FIND_STR(pExtData->hStmts, zKey, pResult);
-
   if (pResult == NULL) {
-    pResult = sqlite3_malloc(sizeof *pResult);
-    pResult->key = crsql_strdup(zKey);
-
-    rc = sqlite3_prepare_v3(pDb, zSql, -1, SQLITE_PREPARE_PERSISTENT,
-                            &pResult->value, 0);
-    if (rc != SQLITE_OK) {
-      freeEntry(pResult);
-      return NULL;
-    }
-    HASH_ADD_KEYPTR(hh, pExtData->hStmts, pResult->key, strlen(pResult->key),
-                    pResult);
+    return NULL;
   }
-
   return pResult->value;
 }
 
-void crsql_clearStmtCache(sqlite3 *pDb, crsql_ExtData *pExtData) {
+/**
+ * @brief Set a cache entry. Ownership of key and stmt are transferred to the
+ * cache.
+ */
+void crsql_setCachedStmt(crsql_ExtData *pExtData, char *zKey,
+                         sqlite3_stmt *pStmt) {
+  crsql_CachedStmt *pEntry = NULL;
+  pEntry = sqlite3_malloc(sizeof *pEntry);
+  pEntry->key = zKey;
+  pEntry->value = pStmt;
+  HASH_ADD_KEYPTR(hh, pExtData->hStmts, pEntry->key, strlen(pEntry->key),
+                  pEntry);
+}
+
+void crsql_clearStmtCache(crsql_ExtData *pExtData) {
   crsql_CachedStmt *crsr, *tmp;
 
   HASH_ITER(hh, pExtData->hStmts, crsr, tmp) {

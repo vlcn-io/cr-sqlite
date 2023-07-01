@@ -21,6 +21,6 @@ char *crsql_changesQueryForTable(crsql_TableInfo *tableInfo);
 char *crsql_changesUnionQuery(crsql_TableInfo **tableInfos, int tableInfosLen,
                               const char *idxStr);
 char *crsql_rowPatchDataQuery(sqlite3 *db, crsql_TableInfo *tblInfo,
-                              const char *colName, const char *pks);
+                              const char *colName);
 
 #endif

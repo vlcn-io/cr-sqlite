@@ -216,7 +216,7 @@ static int changesNext(sqlite3_vtab_cursor *cur) {
     pCur->rowType = ROW_TYPE_UPDATE;
   }
 
-  char *zSql = crsql_rowPatchDataQuery(pCur->pTab->db, tblInfo, cid, pks);
+  char *zSql = crsql_rowPatchDataQuery(pCur->pTab->db, tblInfo, cid);
   if (zSql == 0) {
     pTabBase->zErrMsg = sqlite3_mprintf(
         "crsql internal error generationg raw data fetch query for table "
@@ -227,6 +227,7 @@ static int changesNext(sqlite3_vtab_cursor *cur) {
 
   sqlite3_stmt *pRowStmt;
   rc = sqlite3_prepare_v2(pCur->pTab->db, zSql, -1, &pRowStmt, 0);
+  // TODO: bind pks!
   sqlite3_free(zSql);
 
   if (rc != SQLITE_OK) {

@@ -15,7 +15,7 @@
  */
 int crsql_didCidWin(sqlite3 *db, const unsigned char *localSiteId,
                     const char *insertTbl, const char *pkWhereList,
-                    const char *colName, const char *sanitizedInsertVal,
+                    const char *colName, const sqlite3_value *insertVal,
                     sqlite3_int64 colVersion, char **errmsg) {
   char *zSql = 0;
 
@@ -64,7 +64,7 @@ int crsql_didCidWin(sqlite3 *db, const unsigned char *localSiteId,
   // - pull curr value
   // - compare for tie break
   // TODO: pull bytes and memcmp instead of strcmp?
-  zSql = sqlite3_mprintf("SELECT quote(\"%w\") FROM \"%w\" WHERE %s", colName,
+  zSql = sqlite3_mprintf("SELECT \"%w\" FROM \"%w\" WHERE %s", colName,
                          insertTbl, pkWhereList);
   rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
   sqlite3_free(zSql);
@@ -84,8 +84,8 @@ int crsql_didCidWin(sqlite3 *db, const unsigned char *localSiteId,
     return -1;
   }
 
-  const char *localValue = (const char *)sqlite3_column_text(pStmt, 0);
-  int ret = strcmp(sanitizedInsertVal, localValue);
+  const sqlite3_value *localValue = sqlite3_column_value(pStmt, 0);
+  int ret = crsql_compare_sqlite_values(insertVal, localValue);
   sqlite3_finalize(pStmt);
 
   return ret > 0;
@@ -267,8 +267,7 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
 
   // `splitQuoteConcat` will validate these -- even tho 1 val should do
   // splitquoteconcat for the validation
-  const unsigned char *insertVal =
-      sqlite3_value_text(argv[2 + CHANGES_SINCE_VTAB_CVAL]);
+  const sqlite3_value *insertVal = argv[2 + CHANGES_SINCE_VTAB_CVAL];
   sqlite3_int64 insertColVrsn =
       sqlite3_value_int64(argv[2 + CHANGES_SINCE_VTAB_COL_VRSN]);
   sqlite3_int64 insertDbVrsn =
@@ -367,26 +366,13 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
     return SQLITE_OK;
   }
 
-  char **sanitizedInsertVal =
-      crsql_splitQuoteConcat((const char *)insertVal, 1);
-
-  if (sanitizedInsertVal == 0) {
-    sqlite3_free(pkValsStr);
-    sqlite3_free(pkIdentifierList);
-    *errmsg = sqlite3_mprintf("Failed sanitizing value for changeset (%s)",
-                              insertVal);
-    return SQLITE_ERROR;
-  }
-
-  int doesCidWin = crsql_didCidWin(
-      db, pTab->pExtData->siteId, tblInfo->tblName, pkWhereList, insertColName,
-      sanitizedInsertVal[0], insertColVrsn, errmsg);
+  int doesCidWin =
+      crsql_didCidWin(db, pTab->pExtData->siteId, tblInfo->tblName, pkWhereList,
+                      insertColName, insertVal, insertColVrsn, errmsg);
   sqlite3_free(pkWhereList);
   if (doesCidWin == -1 || doesCidWin == 0) {
     sqlite3_free(pkValsStr);
     sqlite3_free(pkIdentifierList);
-    sqlite3_free(sanitizedInsertVal[0]);
-    sqlite3_free(sanitizedInsertVal);
     // doesCidWin == 0? compared against our clocks, nothing wins. OK and
     // Done.
     if (doesCidWin == -1 && *errmsg == 0) {
@@ -397,14 +383,11 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
 
   zSql = sqlite3_mprintf(
       "INSERT INTO \"%w\" (%s, \"%w\")\
-      VALUES (%s, %s)\
+      VALUES (%s, ?)\
       ON CONFLICT DO UPDATE\
-      SET \"%w\" = %s",
+      SET \"%w\" = ?",
       tblInfo->tblName, pkIdentifierList, insertColName, pkValsStr,
-      sanitizedInsertVal[0], insertColName, sanitizedInsertVal[0]);
-
-  sqlite3_free(sanitizedInsertVal[0]);
-  sqlite3_free(sanitizedInsertVal);
+      insertColName);
 
   rc = sqlite3_exec(db, SET_SYNC_BIT, 0, 0, errmsg);
   if (rc != SQLITE_OK) {
@@ -416,8 +399,23 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
     return rc;
   }
 
-  rc = sqlite3_exec(db, zSql, 0, 0, errmsg);
+  sqlite3_stmt *pStmt = 0;
+  rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
   sqlite3_free(zSql);
+  if (rc == SQLITE_OK) {
+    rc = sqlite3_bind_value(pStmt, 1, insertVal);
+    rc += sqlite3_bind_value(pStmt, 2, insertVal);
+    if (rc == SQLITE_OK) {
+      rc = sqlite3_step(pStmt);
+      if (rc != SQLITE_DONE) {
+        rc = SQLITE_ERROR;
+      } else {
+        rc = SQLITE_OK;
+      }
+    }
+  }
+
+  sqlite3_finalize(pStmt);
   sqlite3_exec(db, CLEAR_SYNC_BIT, 0, 0, 0);
 
   if (rc != SQLITE_OK) {

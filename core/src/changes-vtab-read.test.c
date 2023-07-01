@@ -126,7 +126,7 @@ static void testRowPatchDataQuery() {
   const char *cid = "b";
   char *pks = "1";
   char *q = crsql_rowPatchDataQuery(db, tblInfo, cid, pks);
-  assert(strcmp(q, "SELECT quote(\"b\") FROM \"foo\" WHERE \"a\" = 1") == 0);
+  assert(strcmp(q, "SELECT \"b\" FROM \"foo\" WHERE \"a\" = 1") == 0);
   sqlite3_free(q);
 
   printf("\t\e[0;32mSuccess\e[0m\n");

@@ -106,11 +106,11 @@ char *crsql_rowPatchDataQuery(sqlite3 *db, crsql_TableInfo *tblInfo,
   if (pkWhereList == 0) {
     return 0;
   }
-  // TODO: should we `quote([])` so it fatals on missing columns?
+  // TODO: should we `%w as []` so it fatals on missing columns?
   // we'd need something other than `%w` to escape [
   // %w assumes and escapes \"
-  char *zSql = sqlite3_mprintf("SELECT quote(\"%w\") FROM \"%w\" WHERE %z",
-                               colName, tblInfo->tblName, pkWhereList);
+  char *zSql = sqlite3_mprintf("SELECT \"%w\" FROM \"%w\" WHERE %z", colName,
+                               tblInfo->tblName, pkWhereList);
 
   return zSql;
 }

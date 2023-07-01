@@ -11,7 +11,7 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
 
 int crsql_didCidWin(sqlite3 *db, const unsigned char *localSiteId,
                     const char *insertTbl, const char *pkWhereList,
-                    const char *colName, const char *sanitizedInsertVal,
+                    const char *colName, const sqlite3_value *insertVal,
                     sqlite3_int64 dbVersion, char **errmsg);
 
 #endif

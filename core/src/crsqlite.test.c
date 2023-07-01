@@ -344,7 +344,7 @@ static void testSelectChangesAfterChangingColumnName() {
   while ((rc = sqlite3_step(pStmt)) == SQLITE_ROW) {
     ++numRows;
     assert(strcmp((const char *)sqlite3_column_text(pStmt, 0), "c") == 0);
-    assert(strcmp((const char *)sqlite3_column_text(pStmt, 1), "NULL") == 0);
+    assert(sqlite3_column_type(pStmt, 1) == SQLITE_NULL);
   }
   sqlite3_finalize(pStmt);
   // we should still have a change given we never dropped the row
@@ -508,6 +508,8 @@ static void testLamportCondition() {
   sqlite3_finalize(pStmt);
 
   rc = crsql_close(db1);
+  printf("Error code:%d\n", rc);
+  printf("Msg: %s\n", sqlite3_errmsg(db1));
   assert(rc == SQLITE_OK);
   rc += crsql_close(db2);
   assert(rc == SQLITE_OK);

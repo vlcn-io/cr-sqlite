@@ -48,21 +48,6 @@ void crsql_freeColumnInfoContents(crsql_ColumnInfo *columnInfo) {
   sqlite3_free(columnInfo->type);
 }
 
-static char *quote(const char *in) {
-  return sqlite3_mprintf("quote(\"%s\")", in);
-}
-
-char *crsql_quoteConcat(crsql_ColumnInfo *cols, int len) {
-  char **names = sqlite3_malloc(len * sizeof(char *));
-  for (int i = 0; i < len; ++i) {
-    names[i] = cols[i].name;
-  }
-
-  char *ret = crsql_join2(&quote, names, len, " || '|' || ");
-  sqlite3_free(names);
-  return ret;
-}
-
 static void crsql_freeColumnInfos(crsql_ColumnInfo *columnInfos, int len) {
   if (columnInfos == 0) {
     return;

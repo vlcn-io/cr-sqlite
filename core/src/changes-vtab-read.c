@@ -17,7 +17,7 @@ char *crsql_changesQueryForTable(crsql_TableInfo *tableInfo) {
   char *zSql = sqlite3_mprintf(
       "SELECT\
       '%s' as tbl,\
-      %z as pks,\
+      crsql_pack_columns(%z) as pks,\
       __crsql_col_name as cid,\
       __crsql_col_version as col_vrsn,\
       __crsql_db_version as db_vrsn,\
@@ -25,7 +25,8 @@ char *crsql_changesQueryForTable(crsql_TableInfo *tableInfo) {
       _rowid_,\
       __crsql_seq as seq\
     FROM \"%s__crsql_clock\"",
-      tableInfo->tblName, crsql_quoteConcat(tableInfo->pks, tableInfo->pksLen),
+      tableInfo->tblName,
+      crsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, 0),
       tableInfo->tblName);
 
   return zSql;

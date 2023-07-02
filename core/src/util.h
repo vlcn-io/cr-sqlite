@@ -28,9 +28,7 @@ char *crsql_join2(char *(*map)(const char *), char **in, size_t len,
                   char *delim);
 const char *crsql_identity(const char *x);
 int crsql_isIdentifierOpenQuote(char c);
-char **crsql_split(const char *in, char *delim, int partsLen);
 int crsql_siteIdCmp(const void *zLeft, int leftLen, const void *zRight,
                     int rightLen);
-char **crsql_splitQuoteConcat(const char *in, int partsLen);
 
 #endif

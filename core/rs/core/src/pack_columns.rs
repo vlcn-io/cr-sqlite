@@ -138,12 +138,8 @@ pub struct RawVec {
  * C will own this memory once returned to C.
  */
 #[no_mangle]
-pub extern "C" fn crsql_unpack_columns(
-    packed_columns: *const u8,
-    packed_columns_len: c_int,
-) -> RawVec {
-    let packed_columns =
-        unsafe { core::slice::from_raw_parts(packed_columns, packed_columns_len as usize) };
+pub extern "C" fn crsql_unpack_columns(value: *mut sqlite::value) -> RawVec {
+    let packed_columns = value.blob();
     match unpack_columns(packed_columns) {
         Ok(unpacked) => {
             let (ptr, len, cap) = unpacked.into_raw_parts();
@@ -220,6 +216,18 @@ pub fn unpack_columns(data: &[u8]) -> Result<Vec<ColumnValue>, ResultCode> {
     }
 
     Ok(ret)
+}
+
+#[no_mangle]
+pub extern "C" fn crsql_free_unpacked_values(values: RawVec) {
+    let unpacked = unsafe {
+        Vec::from_raw_parts(
+            values.ptr as *mut ColumnValue,
+            values.len as usize,
+            values.cap as usize,
+        )
+    };
+    drop(unpacked);
 }
 
 /**

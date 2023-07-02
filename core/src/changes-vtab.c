@@ -10,6 +10,7 @@
 #include "consts.h"
 #include "crsqlite.h"
 #include "ext-data.h"
+#include "rust.h"
 #include "util.h"
 
 /**
@@ -178,9 +179,7 @@ static int changesNext(sqlite3_vtab_cursor *cur) {
 
   // todo: pChangesStmt should also pull rowid from the underlying clock tbls
   const char *tbl = (const char *)sqlite3_column_text(pCur->pChangesStmt, TBL);
-  // TODO: this should not be column_text but rather column_blob
-  // and then we unpack and bind.
-  const char *pks = (const char *)sqlite3_column_text(pCur->pChangesStmt, PKS);
+  sqlite3_value *pks = sqlite3_column_value(pCur->pChangesStmt, PKS);
   const char *cid = (const char *)sqlite3_column_text(pCur->pChangesStmt, CID);
   sqlite3_int64 dbVersion = sqlite3_column_int64(pCur->pChangesStmt, DB_VRSN);
   sqlite3_int64 changesRowid =
@@ -229,7 +228,6 @@ static int changesNext(sqlite3_vtab_cursor *cur) {
 
   sqlite3_stmt *pRowStmt;
   rc = sqlite3_prepare_v2(pCur->pTab->db, zSql, -1, &pRowStmt, 0);
-  // TODO: bind pks!
   sqlite3_free(zSql);
 
   if (rc != SQLITE_OK) {
@@ -239,7 +237,22 @@ static int changesNext(sqlite3_vtab_cursor *cur) {
     return rc;
   }
 
+  RawVec unpackedPks = crsql_unpack_columns(pks);
+  if (unpackedPks.ptr == 0) {
+    sqlite3_finalize(pRowStmt);
+    pTabBase->zErrMsg = sqlite3_mprintf("unable to unpack primary keys");
+    return unpackedPks.len;
+  }
+  rc = crsql_bind_unpacked_values(pRowStmt, unpackedPks);
+  if (rc != SQLITE_OK) {
+    sqlite3_finalize(pRowStmt);
+    pTabBase->zErrMsg = sqlite3_mprintf(
+        "crsql internal error preparing row data fetch statement");
+    return rc;
+  }
+
   rc = sqlite3_step(pRowStmt);
+  crsql_free_unpacked_values(unpackedPks);
   if (rc != SQLITE_ROW) {
     sqlite3_finalize(pRowStmt);
     // getting 0 rows for something we have clock entries for is not an

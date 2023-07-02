@@ -178,6 +178,8 @@ static int changesNext(sqlite3_vtab_cursor *cur) {
 
   // todo: pChangesStmt should also pull rowid from the underlying clock tbls
   const char *tbl = (const char *)sqlite3_column_text(pCur->pChangesStmt, TBL);
+  // TODO: this should not be column_text but rather column_blob
+  // and then we unpack and bind.
   const char *pks = (const char *)sqlite3_column_text(pCur->pChangesStmt, PKS);
   const char *cid = (const char *)sqlite3_column_text(pCur->pChangesStmt, CID);
   sqlite3_int64 dbVersion = sqlite3_column_int64(pCur->pChangesStmt, DB_VRSN);

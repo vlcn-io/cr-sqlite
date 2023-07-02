@@ -33,6 +33,4 @@ int crsql_siteIdCmp(const void *zLeft, int leftLen, const void *zRight,
                     int rightLen);
 char **crsql_splitQuoteConcat(const char *in, int partsLen);
 
-int crsql_compare_sqlite_values(const sqlite3_value *l, const sqlite3_value *r);
-
 #endif

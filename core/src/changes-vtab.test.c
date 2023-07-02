@@ -25,12 +25,20 @@ static void testManyPkTable() {
   rc += sqlite3_exec(db, "INSERT INTO foo VALUES (4,5,6);", 0, 0, 0);
   assert(rc == SQLITE_OK);
 
-  rc += sqlite3_prepare_v2(db, "SELECT * FROM crsql_changes", -1, &pStmt, 0);
+  rc += sqlite3_prepare_v2(db, "SELECT [table], quote(pk) FROM crsql_changes",
+                           -1, &pStmt, 0);
   assert(rc == SQLITE_OK);
 
   while (sqlite3_step(pStmt) == SQLITE_ROW) {
     const unsigned char *pk = sqlite3_column_text(pStmt, 1);
-    assert(strcmp("4|5", (char *)pk) == 0);
+    // pk: 4, 5
+    // X'0209040905'
+    // 02 -> columns
+    // 09 -> 1 byte integer
+    // 04 -> 4
+    // 09 -> 1 byte integer
+    // 05 -> 5
+    assert(strcmp("X'0209040905'", (char *)pk) == 0);
   }
 
   sqlite3_finalize(pStmt);

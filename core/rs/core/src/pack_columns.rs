@@ -4,7 +4,8 @@ use alloc::string::String;
 use alloc::vec;
 use alloc::vec::Vec;
 use bytes::{Buf, BufMut};
-use core::ffi::c_int;
+use core::ffi::{c_int, c_void};
+use core::mem;
 use core::slice;
 #[cfg(not(feature = "std"))]
 use num_traits::FromPrimitive;
@@ -123,9 +124,44 @@ pub enum ColumnValue {
     Text(String),
 }
 
-// TODO: make this a table valued function that can be used to extract a row per packed column?
-// For use from C we'll just do statement prepartion in Rust and pass back the pointer
-// to the sqlite statement.
+#[repr(C)]
+pub struct RawVec {
+    ptr: *mut c_void,
+    len: c_int,
+    cap: c_int,
+}
+
+/**
+ * Interface for C to unpack the columns. Returns a raw pointer to the Vec<ColumnValue> which
+ * holds the columns.
+ *
+ * C will own this memory once returned to C.
+ */
+#[no_mangle]
+pub extern "C" fn crsql_unpack_columns(
+    packed_columns: *const u8,
+    packed_columns_len: c_int,
+) -> RawVec {
+    let packed_columns =
+        unsafe { core::slice::from_raw_parts(packed_columns, packed_columns_len as usize) };
+    match unpack_columns(packed_columns) {
+        Ok(unpacked) => {
+            let (ptr, len, cap) = unpacked.into_raw_parts();
+            RawVec {
+                ptr: ptr as *mut c_void,
+                len: len as c_int,
+                cap: cap as c_int,
+            }
+        }
+        Err(code) => RawVec {
+            ptr: core::ptr::null_mut(),
+            len: code as c_int,
+            cap: 0,
+        },
+    }
+}
+
+// TODO: make a table valued function that can be used to extract a row per packed column?
 pub fn unpack_columns(data: &[u8]) -> Result<Vec<ColumnValue>, ResultCode> {
     let mut ret = vec![];
     let mut buf = data;
@@ -187,26 +223,24 @@ pub fn unpack_columns(data: &[u8]) -> Result<Vec<ColumnValue>, ResultCode> {
 }
 
 /**
-* Takes:
-* 1. a pointer to a prepared statement
-* 2. packed columns
-*
-* And
-* 1. unpacks the columns
-* 2. binds them to the stmt start at the first bind position
+* Allows C to pass a reference to previously unpacked values.
+* C owns the memory of all unpacked values and must clean it up.
 */
 #[no_mangle]
-pub extern "C" fn crsql_bind_packed_values(
-    stmt: *mut sqlite::stmt,
-    packed_columns: *const u8,
-    packed_columns_len: c_int,
-) -> c_int {
-    let packed_columns =
-        unsafe { core::slice::from_raw_parts(packed_columns, packed_columns_len as usize) };
-    if let Ok(unpacked) = crate::unpack_columns(packed_columns) {
-        if let Ok(code) = bind_to_stmt(stmt, unpacked) {
-            return code as c_int;
-        }
+pub extern "C" fn crsql_bind_unpacked_values(stmt: *mut sqlite::stmt, columns: RawVec) -> c_int {
+    let unpacked = unsafe {
+        Vec::from_raw_parts(
+            columns.ptr as *mut ColumnValue,
+            columns.len as usize,
+            columns.cap as usize,
+        )
+    };
+    let bind_result = bind_to_stmt(stmt, &unpacked);
+    // forget our ownership of the vec. C owns it.
+    mem::forget(unpacked);
+
+    if let Ok(code) = bind_result {
+        return code as c_int;
     }
 
     return ResultCode::ERROR as c_int;
@@ -214,9 +248,9 @@ pub extern "C" fn crsql_bind_packed_values(
 
 fn bind_to_stmt(
     stmt: *mut sqlite::stmt,
-    values: Vec<crate::ColumnValue>,
+    values: &Vec<crate::ColumnValue>,
 ) -> Result<ResultCode, ResultCode> {
-    for (i, val) in values.into_iter().enumerate() {
+    for (i, val) in values.iter().enumerate() {
         bind_slot(i + 1, val, stmt)?;
     }
     Ok(ResultCode::OK)
@@ -224,19 +258,14 @@ fn bind_to_stmt(
 
 fn bind_slot(
     slot_num: usize,
-    val: ColumnValue,
+    val: &ColumnValue,
     stmt: *mut sqlite::stmt,
 ) -> Result<ResultCode, ResultCode> {
     match val {
-        ColumnValue::Blob(b) => {
-            // passes ownership of the blob to SQLite
-            // SQLite will free it once the statement is finalized
-            // or bindings are cleared.
-            stmt.bind_blob_owned(slot_num as i32, b)
-        }
-        ColumnValue::Float(f) => stmt.bind_double(slot_num as i32, f),
-        ColumnValue::Integer(i) => stmt.bind_int64(slot_num as i32, i),
+        ColumnValue::Blob(b) => stmt.bind_blob(slot_num as i32, b, sqlite::Destructor::STATIC),
+        ColumnValue::Float(f) => stmt.bind_double(slot_num as i32, *f),
+        ColumnValue::Integer(i) => stmt.bind_int64(slot_num as i32, *i),
         ColumnValue::Null => stmt.bind_null(slot_num as i32),
-        ColumnValue::Text(t) => stmt.bind_text_owned(slot_num as i32, t),
+        ColumnValue::Text(t) => stmt.bind_text(slot_num as i32, t, sqlite::Destructor::STATIC),
     }
 }

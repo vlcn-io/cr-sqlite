@@ -7,7 +7,6 @@
 #include "consts.h"
 #include "crsqlite.h"
 #include "ext-data.h"
-#include "rust.h"
 #include "tableinfo.h"
 #include "util.h"
 
@@ -16,8 +15,9 @@
  */
 int crsql_didCidWin(sqlite3 *db, const unsigned char *localSiteId,
                     const char *insertTbl, const char *pkWhereList,
-                    const char *colName, const sqlite3_value *insertVal,
-                    sqlite3_int64 colVersion, char **errmsg) {
+                    RawVec unpackedPks, const char *colName,
+                    const sqlite3_value *insertVal, sqlite3_int64 colVersion,
+                    char **errmsg) {
   char *zSql = 0;
 
   zSql = sqlite3_mprintf(
@@ -34,6 +34,14 @@ int crsql_didCidWin(sqlite3 *db, const unsigned char *localSiteId,
     sqlite3_finalize(pStmt);
     *errmsg =
         sqlite3_mprintf("Failed preparing stmt to select local column version");
+    return -1;
+  }
+
+  rc = crsql_bind_unpacked_values(pStmt, unpackedPks);
+  if (rc != SQLITE_OK) {
+    sqlite3_finalize(pStmt);
+    *errmsg = sqlite3_mprintf(
+        "Failed binding unpacked columns to select local column version");
     return -1;
   }
 
@@ -64,7 +72,6 @@ int crsql_didCidWin(sqlite3 *db, const unsigned char *localSiteId,
   // else -- versions are equal
   // - pull curr value
   // - compare for tie break
-  // TODO: pull bytes and memcmp instead of strcmp?
   zSql = sqlite3_mprintf("SELECT \"%w\" FROM \"%w\" WHERE %s", colName,
                          insertTbl, pkWhereList);
   rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
@@ -74,6 +81,13 @@ int crsql_didCidWin(sqlite3 *db, const unsigned char *localSiteId,
     sqlite3_finalize(pStmt);
     *errmsg = sqlite3_mprintf(
         "could not prepare statement to find row to merge with. %s", insertTbl);
+    return -1;
+  }
+
+  rc = crsql_bind_unpacked_values(pStmt, unpackedPks);
+  if (rc != SQLITE_OK) {
+    *errmsg = sqlite3_mprintf(
+        "Failed binding unpacked columns to select current val for tie break");
     return -1;
   }
 
@@ -94,7 +108,7 @@ int crsql_didCidWin(sqlite3 *db, const unsigned char *localSiteId,
 
 #define DELETED_LOCALLY -1
 int crsql_checkForLocalDelete(sqlite3 *db, const char *tblName,
-                              char *pkWhereList) {
+                              char *pkWhereList, RawVec unpackedPks) {
   char *zSql = sqlite3_mprintf(
       "SELECT count(*) FROM \"%s__crsql_clock\" WHERE %s AND "
       "__crsql_col_name "
@@ -107,6 +121,12 @@ int crsql_checkForLocalDelete(sqlite3 *db, const char *tblName,
   if (rc != SQLITE_OK) {
     sqlite3_finalize(pStmt);
     return rc;
+  }
+
+  rc = crsql_bind_unpacked_values(pStmt, unpackedPks);
+  if (rc != SQLITE_OK) {
+    sqlite3_finalize(pStmt);
+    crsql_free_unpacked_values(unpackedPks);
   }
 
   rc = sqlite3_step(pStmt);
@@ -126,7 +146,7 @@ int crsql_checkForLocalDelete(sqlite3 *db, const char *tblName,
 
 sqlite3_int64 crsql_setWinnerClock(
     sqlite3 *db, crsql_TableInfo *tblInfo, const char *pkIdentifierList,
-    const char *pkValsStr, const char *insertColName,
+    const char *pkBindList, RawVec unpackedPks, const char *insertColName,
     sqlite3_int64 insertColVrsn, sqlite3_int64 insertDbVrsn,
     const void *insertSiteId, int insertSiteIdLen) {
   int rc = SQLITE_OK;
@@ -141,7 +161,7 @@ sqlite3_int64 crsql_setWinnerClock(
         crsql_increment_and_get_seq(),\
         ?\
       ) RETURNING _rowid_",
-      tblInfo->tblName, pkIdentifierList, pkValsStr, insertColName,
+      tblInfo->tblName, pkIdentifierList, pkBindList, insertColName,
       insertColVrsn, insertDbVrsn);
 
   sqlite3_stmt *pStmt = 0;
@@ -153,14 +173,17 @@ sqlite3_int64 crsql_setWinnerClock(
     return -1;
   }
 
+  rc = crsql_bind_unpacked_values(pStmt, unpackedPks);
   if (insertSiteId == 0) {
-    sqlite3_bind_null(pStmt, 1);
+    rc += sqlite3_bind_null(pStmt, 1);
   } else {
-    sqlite3_bind_blob(pStmt, 1, insertSiteId, insertSiteIdLen,
-                      SQLITE_TRANSIENT);
+    rc += sqlite3_bind_blob(pStmt, 1, insertSiteId, insertSiteIdLen,
+                            SQLITE_TRANSIENT);
   }
 
-  rc = sqlite3_step(pStmt);
+  if (rc == SQLITE_OK) {
+    rc = sqlite3_step(pStmt);
+  }
 
   if (rc == SQLITE_ROW) {
     sqlite3_int64 rowid = sqlite3_column_int64(pStmt, 0);
@@ -172,58 +195,85 @@ sqlite3_int64 crsql_setWinnerClock(
   }
 }
 
-sqlite3_int64 crsql_mergePkOnlyInsert(sqlite3 *db, crsql_TableInfo *tblInfo,
-                                      const char *pkValsStr,
-                                      const char *pkIdentifiers,
-                                      sqlite3_int64 remoteColVersion,
-                                      sqlite3_int64 remoteDbVersion,
-                                      const void *remoteSiteId,
-                                      int remoteSiteIdLen) {
+sqlite3_int64 crsql_mergePkOnlyInsert(
+    sqlite3 *db, crsql_TableInfo *tblInfo, const char *pkBindingsList,
+    RawVec unpackedPks, const char *pkIdentifiers,
+    sqlite3_int64 remoteColVersion, sqlite3_int64 remoteDbVersion,
+    const void *remoteSiteId, int remoteSiteIdLen) {
   char *zSql = sqlite3_mprintf("INSERT OR IGNORE INTO \"%s\" (%s) VALUES (%s)",
-                               tblInfo->tblName, pkIdentifiers, pkValsStr);
+                               tblInfo->tblName, pkIdentifiers, pkBindingsList);
   int rc = sqlite3_exec(db, SET_SYNC_BIT, 0, 0, 0);
   if (rc != SQLITE_OK) {
     sqlite3_free(zSql);
     return -1;
   }
 
-  rc = sqlite3_exec(db, zSql, 0, 0, 0);
+  sqlite3_stmt *pStmt;
+  rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
   sqlite3_free(zSql);
+
+  if (rc == SQLITE_OK) {
+    rc = crsql_bind_unpacked_values(pStmt, unpackedPks);
+    if (rc == SQLITE_OK) {
+      rc = sqlite3_step(pStmt);
+      if (rc == SQLITE_DONE) {
+        rc = SQLITE_OK;
+      }
+    }
+  }
+  sqlite3_finalize(pStmt);
+
   sqlite3_exec(db, CLEAR_SYNC_BIT, 0, 0, 0);
   if (rc != SQLITE_OK) {
     return -1;
   }
 
   // TODO: if insert was ignored, no reason to change clock
-  return crsql_setWinnerClock(db, tblInfo, pkIdentifiers, pkValsStr,
-                              PKS_ONLY_CID_SENTINEL, remoteColVersion,
-                              remoteDbVersion, remoteSiteId, remoteSiteIdLen);
+  return crsql_setWinnerClock(db, tblInfo, pkIdentifiers, pkBindingsList,
+                              unpackedPks, PKS_ONLY_CID_SENTINEL,
+                              remoteColVersion, remoteDbVersion, remoteSiteId,
+                              remoteSiteIdLen);
 }
 
 sqlite3_int64 crsql_mergeDelete(sqlite3 *db, crsql_TableInfo *tblInfo,
-                                const char *pkWhereList, const char *pkValsStr,
+                                const char *pkWhereList, RawVec unpackedPks,
+                                const char *pkBindList,
                                 const char *pkIdentifiers,
                                 sqlite3_int64 remoteColVersion,
                                 sqlite3_int64 remoteDbVersion,
                                 const void *remoteSiteId, int remoteSiteIdLen) {
   char *zSql = sqlite3_mprintf("DELETE FROM \"%w\" WHERE %s", tblInfo->tblName,
                                pkWhereList);
+  // TODO: perma prepare sync bit stmts
   int rc = sqlite3_exec(db, SET_SYNC_BIT, 0, 0, 0);
   if (rc != SQLITE_OK) {
     sqlite3_free(zSql);
     return -1;
   }
 
-  rc = sqlite3_exec(db, zSql, 0, 0, 0);
+  sqlite3_stmt *pStmt;
+  rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
   sqlite3_free(zSql);
+
+  if (rc == SQLITE_OK) {
+    rc = crsql_bind_unpacked_values(pStmt, unpackedPks);
+    if (rc == SQLITE_OK) {
+      rc = sqlite3_step(pStmt);
+      if (rc == SQLITE_DONE) {
+        rc = SQLITE_OK;
+      }
+    }
+  }
+  sqlite3_finalize(pStmt);
+
   sqlite3_exec(db, CLEAR_SYNC_BIT, 0, 0, 0);
   if (rc != SQLITE_OK) {
     return -1;
   }
 
-  return crsql_setWinnerClock(db, tblInfo, pkIdentifiers, pkValsStr,
-                              DELETE_CID_SENTINEL, remoteColVersion,
-                              remoteDbVersion, remoteSiteId, remoteSiteIdLen);
+  return crsql_setWinnerClock(
+      db, tblInfo, pkIdentifiers, pkBindList, unpackedPks, DELETE_CID_SENTINEL,
+      remoteColVersion, remoteDbVersion, remoteSiteId, remoteSiteIdLen);
 }
 
 int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
@@ -254,7 +304,7 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
   // from tblInfo
   const unsigned char *insertTbl =
       sqlite3_value_text(argv[2 + CHANGES_SINCE_VTAB_TBL]);
-  const sqlite3_value *insertPks = argv[2 + CHANGES_SINCE_VTAB_PK];
+  sqlite3_value *insertPks = argv[2 + CHANGES_SINCE_VTAB_PK];
 
   int inesrtColNameLen = sqlite3_value_bytes(argv[2 + CHANGES_SINCE_VTAB_CID]);
   if (inesrtColNameLen > MAX_TBL_NAME_LEN) {
@@ -304,17 +354,24 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
 
   char *pkWhereList = crsql_extractWhereList(tblInfo->pks, tblInfo->pksLen);
   if (pkWhereList == 0) {
-    *errmsg =
-        sqlite3_mprintf("crsql - failed decoding primary keys for insert");
+    *errmsg = sqlite3_mprintf("crsql - failed creating where list for insert");
     return SQLITE_ERROR;
   }
 
-  // TODO: bind insertPks for where list!
-  rc = crsql_checkForLocalDelete(db, tblInfo->tblName, pkWhereList);
+  RawVec unpackedPks = crsql_unpack_columns(insertPks);
+  if (unpackedPks.ptr == 0) {
+    // if ptr is null, len is an error code.
+    sqlite3_free(pkWhereList);
+    return unpackedPks.len;
+  }
+
+  rc =
+      crsql_checkForLocalDelete(db, tblInfo->tblName, pkWhereList, unpackedPks);
   if (rc == DELETED_LOCALLY) {
     rc = SQLITE_OK;
     // delete wins. we're all done.
     sqlite3_free(pkWhereList);
+    crsql_free_unpacked_values(unpackedPks);
     return rc;
   }
 
@@ -324,6 +381,7 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
   char *pkBindingList = crsql_bindingList(tblInfo->pksLen);
   if (pkBindingList == 0) {
     sqlite3_free(pkWhereList);
+    crsql_free_unpacked_values(unpackedPks);
     *errmsg = sqlite3_mprintf("Failed sanitizing pk values");
     return SQLITE_ERROR;
   }
@@ -331,12 +389,12 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
   char *pkIdentifierList =
       crsql_asIdentifierList(tblInfo->pks, tblInfo->pksLen, 0);
   if (isDelete) {
-    // TODO: bind insertPks for where list!
     sqlite3_int64 rowid = crsql_mergeDelete(
-        db, tblInfo, pkWhereList, pkBindingList, pkIdentifierList,
+        db, tblInfo, pkWhereList, unpackedPks, pkBindingList, pkIdentifierList,
         insertColVrsn, insertDbVrsn, insertSiteId, insertSiteIdLen);
 
     sqlite3_free(pkWhereList);
+    crsql_free_unpacked_values(unpackedPks);
     sqlite3_free(pkBindingList);
     sqlite3_free(pkIdentifierList);
     if (rowid == -1) {
@@ -350,11 +408,11 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
 
   if (isPkOnly ||
       !crsql_columnExists(insertColName, tblInfo->nonPks, tblInfo->nonPksLen)) {
-    // TODO: bind insertPks for binding list!
     sqlite3_int64 rowid = crsql_mergePkOnlyInsert(
-        db, tblInfo, pkBindingList, pkIdentifierList, insertColVrsn,
-        insertDbVrsn, insertSiteId, insertSiteIdLen);
+        db, tblInfo, pkBindingList, unpackedPks, pkIdentifierList,
+        insertColVrsn, insertDbVrsn, insertSiteId, insertSiteIdLen);
     sqlite3_free(pkWhereList);
+    crsql_free_unpacked_values(unpackedPks);
     sqlite3_free(pkBindingList);
     sqlite3_free(pkIdentifierList);
     if (rowid == -1) {
@@ -366,10 +424,9 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
     return SQLITE_OK;
   }
 
-  // TODO: bind insertPks for pkWhereList!
-  int doesCidWin =
-      crsql_didCidWin(db, pTab->pExtData->siteId, tblInfo->tblName, pkWhereList,
-                      insertColName, insertVal, insertColVrsn, errmsg);
+  int doesCidWin = crsql_didCidWin(db, pTab->pExtData->siteId, tblInfo->tblName,
+                                   pkWhereList, unpackedPks, insertColName,
+                                   insertVal, insertColVrsn, errmsg);
   sqlite3_free(pkWhereList);
   if (doesCidWin == -1 || doesCidWin == 0) {
     sqlite3_free(pkBindingList);
@@ -382,7 +439,6 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
     return doesCidWin == 0 ? SQLITE_OK : SQLITE_ERROR;
   }
 
-  // TODO: bind insertPks for pkBindingList!
   zSql = sqlite3_mprintf(
       "INSERT INTO \"%w\" (%s, \"%w\")\
       VALUES (%s, ?)\
@@ -405,8 +461,9 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
   rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
   sqlite3_free(zSql);
   if (rc == SQLITE_OK) {
-    rc = sqlite3_bind_value(pStmt, 1, insertVal);
-    rc += sqlite3_bind_value(pStmt, 2, insertVal);
+    rc += crsql_bind_unpacked_values(pStmt, unpackedPks);
+    rc = sqlite3_bind_value(pStmt, unpackedPks.len + 1, insertVal);
+    rc += sqlite3_bind_value(pStmt, unpackedPks.len + 2, insertVal);
     if (rc == SQLITE_OK) {
       rc = sqlite3_step(pStmt);
       if (rc != SQLITE_DONE) {
@@ -427,9 +484,8 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
     return rc;
   }
 
-  // TODO: bind insertPks for pkBindingList!!
   sqlite3_int64 rowid = crsql_setWinnerClock(
-      db, tblInfo, pkIdentifierList, pkBindingList, insertColName,
+      db, tblInfo, pkIdentifierList, pkBindingList, unpackedPks, insertColName,
       insertColVrsn, insertDbVrsn, insertSiteId, insertSiteIdLen);
   sqlite3_free(pkIdentifierList);
   sqlite3_free(pkBindingList);

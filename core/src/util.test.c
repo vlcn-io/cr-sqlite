@@ -214,125 +214,6 @@ void testSiteIdCmp() {
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
-#define FREE_PARTS(L)           \
-  for (int i = 0; i < L; ++i) { \
-    sqlite3_free(parts[i]);     \
-  }                             \
-  sqlite3_free(parts);
-
-void testSplitQuoteConcat() {
-  // test NULL
-  char **parts = crsql_splitQuoteConcat("NULL", 1);
-  assert(strcmp(parts[0], "NULL") == 0);
-  FREE_PARTS(1)
-
-  // test num
-  parts = crsql_splitQuoteConcat("1.23", 1);
-  assert(strcmp(parts[0], "1.23") == 0);
-  FREE_PARTS(1)
-
-  // test empty string
-  parts = crsql_splitQuoteConcat("''", 1);
-  assert(strcmp(parts[0], "''") == 0);
-  FREE_PARTS(1)
-
-  // test string
-  parts = crsql_splitQuoteConcat("'this is a''string'''", 1);
-  assert(strcmp(parts[0], "'this is a''string'''") == 0);
-  FREE_PARTS(1)
-
-  parts = crsql_splitQuoteConcat("'this is another'", 1);
-  assert(strcmp(parts[0], "'this is another'") == 0);
-  FREE_PARTS(1)
-
-  // test hex
-  parts = crsql_splitQuoteConcat("X'aa'", 1);
-  assert(strcmp(parts[0], "X'aa'") == 0);
-  FREE_PARTS(1)
-
-  // test many nulls
-  parts = crsql_splitQuoteConcat("NULL|NULL|NULL", 3);
-  assert(strcmp(parts[0], "NULL") == 0);
-  assert(strcmp(parts[1], "NULL") == 0);
-  assert(strcmp(parts[2], "NULL") == 0);
-  FREE_PARTS(3)
-
-  // test many nums
-  parts = crsql_splitQuoteConcat("12|23324|2.2", 3);
-  assert(strcmp(parts[0], "12") == 0);
-  assert(strcmp(parts[1], "23324") == 0);
-  assert(strcmp(parts[2], "2.2") == 0);
-  FREE_PARTS(3)
-
-  // test many empty strings
-  parts = crsql_splitQuoteConcat("''|''|''", 3);
-  assert(strcmp(parts[0], "''") == 0);
-  assert(strcmp(parts[1], "''") == 0);
-  assert(strcmp(parts[2], "''") == 0);
-  FREE_PARTS(3)
-
-  // test many hex
-  parts = crsql_splitQuoteConcat("X'aa'|X'ff'|X'cc'", 3);
-  assert(strcmp(parts[0], "X'aa'") == 0);
-  assert(strcmp(parts[1], "X'ff'") == 0);
-  assert(strcmp(parts[2], "X'cc'") == 0);
-  FREE_PARTS(3)
-
-  // test many strings
-  parts = crsql_splitQuoteConcat("'foo'|'bar'|'ba''z'", 3);
-  assert(strcmp(parts[0], "'foo'") == 0);
-  assert(strcmp(parts[1], "'bar'") == 0);
-  assert(strcmp(parts[2], "'ba''z'") == 0);
-  FREE_PARTS(3)
-
-  // test not enough parts
-  parts = crsql_splitQuoteConcat("'foo'|'bar'", 3);
-  assert(parts == 0);
-
-  // test too many parts
-  parts = crsql_splitQuoteConcat("'foo'|'bar'|1", 2);
-  assert(parts == 0);
-
-  // test combinations of types
-  parts = crsql_splitQuoteConcat("'foo'|'bar'|1", 3);
-  assert(strcmp(parts[0], "'foo'") == 0);
-  assert(strcmp(parts[1], "'bar'") == 0);
-  assert(strcmp(parts[2], "1") == 0);
-  FREE_PARTS(3)
-
-  parts = crsql_splitQuoteConcat("X'foo'|123|NULL", 3);
-  assert(strcmp(parts[0], "X'foo'") == 0);
-  assert(strcmp(parts[1], "123") == 0);
-  assert(strcmp(parts[2], "NULL") == 0);
-  FREE_PARTS(3)
-
-  // test incorrectly escaped string
-  parts = crsql_splitQuoteConcat("'dude''", 1);
-  assert(parts == 0);
-  parts = crsql_splitQuoteConcat("'du'de'", 1);
-  assert(parts == 0);
-
-  // test unquoted string
-  parts = crsql_splitQuoteConcat("s", 1);
-  assert(parts == 0);
-
-  // test digits with chars
-  parts = crsql_splitQuoteConcat("12s", 1);
-  assert(parts == 0);
-
-  // test X str
-  parts = crsql_splitQuoteConcat("Xs", 1);
-  assert(parts == 0);
-  parts = crsql_splitQuoteConcat("X's", 1);
-  assert(parts == 0);
-  parts = crsql_splitQuoteConcat("X's''", 1);
-  assert(parts == 0);
-
-  // test string missing end quote
-  parts = crsql_splitQuoteConcat("'s", 1);
-  assert(parts == 0);
-}
-
 void crsqlUtilTestSuite() {
   printf("\e[47m\e[1;30mSuite: crsql_util\e[0m\n");
 
@@ -344,7 +225,6 @@ void crsqlUtilTestSuite() {
   testAsIdentifierListStr();
   testJoin2();
   testSiteIdCmp();
-  testSplitQuoteConcat();
 
   // TODO: test pk pulling and correct sorting of pks
   // TODO: create a fn to create test tables for all tests.

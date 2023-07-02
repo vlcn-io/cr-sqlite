@@ -7,8 +7,6 @@
 #define MIN_POSSIBLE_DB_VERSION 0L
 
 #define __CRSQL_CLOCK_LEN 13
-// NB: crsql_quoteConcat
-#define QC_DELIM '|'
 
 #define DELETE_CID_SENTINEL "__crsql_del"
 #define PKS_ONLY_CID_SENTINEL "__crsql_pko"

@@ -26,7 +26,8 @@ static void testChangesQueryForTable() {
   char *query = crsql_changesQueryForTable(tblInfo);
 
   assert(strcmp(query,
-                "SELECT      \'foo\' as tbl,      quote(\"a\") as pks,      "
+                "SELECT      \'foo\' as tbl,      crsql_pack_columns(\"a\") as "
+                "pks,      "
                 "__crsql_col_name as cid,      __crsql_col_version as "
                 "col_vrsn,      __crsql_db_version as db_vrsn,      "
                 "__crsql_site_id as site_id,      _rowid_,      __crsql_seq as "
@@ -66,12 +67,14 @@ static void testChangesUnionQuery() {
           query,
           "SELECT tbl, pks, cid, col_vrsn, db_vrsn, site_id, _rowid_, seq FROM "
           "(SELECT    "
-          "  'foo' as tbl,      quote(\"a\") as pks,      __crsql_col_name "
+          "  'foo' as tbl,      crsql_pack_columns(\"a\") as pks,      "
+          "__crsql_col_name "
           "as cid,      __crsql_col_version as col_vrsn,      "
           "__crsql_db_version as db_vrsn,      __crsql_site_id as site_id,  "
           "    _rowid_,      __crsql_seq as seq   "
           " FROM \"foo__crsql_clock\" UNION ALL SELECT      'bar' as tbl,      "
-          "quote(\"x\") as pks,      __crsql_col_name as cid,      "
+          "crsql_pack_columns(\"x\") as pks,      __crsql_col_name as cid,     "
+          " "
           "__crsql_col_version as col_vrsn,      __crsql_db_version as "
           "db_vrsn,      __crsql_site_id as site_id,      _rowid_,      "
           "__crsql_seq as seq    FROM "
@@ -86,12 +89,14 @@ static void testChangesUnionQuery() {
           query,
           "SELECT tbl, pks, cid, col_vrsn, db_vrsn, site_id, _rowid_, seq FROM "
           "(SELECT    "
-          "  'foo' as tbl,      quote(\"a\") as pks,      __crsql_col_name "
+          "  'foo' as tbl,      crsql_pack_columns(\"a\") as pks,      "
+          "__crsql_col_name "
           "as cid,      __crsql_col_version as col_vrsn,      "
           "__crsql_db_version as db_vrsn,      __crsql_site_id as site_id,  "
           "    _rowid_,      __crsql_seq as seq   "
           " FROM \"foo__crsql_clock\" UNION ALL SELECT      'bar' as tbl,      "
-          "quote(\"x\") as pks,      __crsql_col_name as cid,      "
+          "crsql_pack_columns(\"x\") as pks,      __crsql_col_name as cid,     "
+          " "
           "__crsql_col_version as col_vrsn,      __crsql_db_version as "
           "db_vrsn,      __crsql_site_id as site_id,      _rowid_,      "
           "__crsql_seq as seq    FROM "

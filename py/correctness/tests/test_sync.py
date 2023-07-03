@@ -2,6 +2,7 @@ from crsql_correctness import connect, close, min_db_v
 import pprint
 
 # js_tests includes a Fast-Check driven merge test which is much more complete than what we have here
+# test_sync_prop.py also include Hypothesis driven tests
 
 
 def init():
@@ -178,7 +179,6 @@ def test_merging_on_defaults():
     # db2 set b to 2 this should be the winner
     changes = db1.execute("SELECT * FROM crsql_changes").fetchall()
     # w a db version change since a write happened
-    pprint.pprint(changes)
     assert (changes == [('foo', b'\x01\x09\x01', 'b', 2, 1, 2, None)])
 
     close(db1)
@@ -412,7 +412,7 @@ def test_merge_larger_clock_larger_value():
     (db1, db2) = make_dbs()
     sync_left_to_right(db1, db2, 0)
     changes = db2.execute("SELECT * FROM crsql_changes").fetchall()
-    assert (changes == [('foo', '1', 'b', 3, 2, 2, None)])
+    assert (changes == [('foo', b'\x01\x09\x01', 'b', 3, 2, 2, None)])
 
     (db1, db2) = make_dbs()
     sync_left_to_right(db2, db1, 0)

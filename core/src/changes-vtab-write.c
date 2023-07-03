@@ -175,10 +175,10 @@ sqlite3_int64 crsql_setWinnerClock(
 
   rc = crsql_bind_unpacked_values(pStmt, unpackedPks);
   if (insertSiteId == 0) {
-    rc += sqlite3_bind_null(pStmt, 1);
+    rc += sqlite3_bind_null(pStmt, unpackedPks.len + 1);
   } else {
-    rc += sqlite3_bind_blob(pStmt, 1, insertSiteId, insertSiteIdLen,
-                            SQLITE_TRANSIENT);
+    rc += sqlite3_bind_blob(pStmt, unpackedPks.len + 1, insertSiteId,
+                            insertSiteIdLen, SQLITE_TRANSIENT);
   }
 
   if (rc == SQLITE_OK) {

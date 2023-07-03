@@ -508,8 +508,6 @@ static void testLamportCondition() {
   sqlite3_finalize(pStmt);
 
   rc = crsql_close(db1);
-  printf("Error code:%d\n", rc);
-  printf("Msg: %s\n", sqlite3_errmsg(db1));
   assert(rc == SQLITE_OK);
   rc += crsql_close(db2);
   assert(rc == SQLITE_OK);

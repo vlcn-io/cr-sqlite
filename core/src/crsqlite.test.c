@@ -367,12 +367,14 @@ static void testSelectChangesAfterChangingColumnName() {
     }
     assert(strcmp("foo", (const char *)sqlite3_column_text(
                              pStmt, CHANGES_SINCE_VTAB_TBL)) == 0);
-    assert(strcmp("2", (const char *)sqlite3_column_text(
-                           pStmt, CHANGES_SINCE_VTAB_PK)) == 0);
+    const unsigned char *pkBlob = (const unsigned char *)sqlite3_column_blob(
+        pStmt, CHANGES_SINCE_VTAB_PK);
+    assert(pkBlob[0] == 0x01);
+    assert(pkBlob[1] == 0x09);
+    assert(pkBlob[2] == 0x02);
     assert(strcmp("c", (const char *)sqlite3_column_text(
                            pStmt, CHANGES_SINCE_VTAB_CID)) == 0);
-    assert(strcmp("3", (const char *)sqlite3_column_text(
-                           pStmt, CHANGES_SINCE_VTAB_CVAL)) == 0);
+    assert(3 == sqlite3_column_int(pStmt, CHANGES_SINCE_VTAB_CVAL));
     ++numRows;
   }
   sqlite3_finalize(pStmt);

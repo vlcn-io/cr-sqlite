@@ -26,8 +26,9 @@ static void testSingleInsertSingleTx() {
 
   rc = sqlite3_exec(db, "BEGIN", 0, 0, 0);
   rc += sqlite3_exec(
-      db, "INSERT INTO crsql_changes VALUES ('foo', 1, 'b', 2, 1, 1, NULL)", 0,
-      0, &err);
+      db,
+      "INSERT INTO crsql_changes VALUES ('foo', X'010901', 'b', 2, 1, 1, NULL)",
+      0, 0, &err);
   sqlite3_prepare_v2(db, "SELECT crsql_rows_impacted()", -1, &pStmt, 0);
   sqlite3_step(pStmt);
   assert(sqlite3_column_int(pStmt, 0) == 1);
@@ -55,14 +56,17 @@ static void testManyInsertsInATx() {
 
   rc = sqlite3_exec(db, "BEGIN", 0, 0, 0);
   rc += sqlite3_exec(
-      db, "INSERT INTO crsql_changes VALUES ('foo', 1, 'b', 2, 1, 1, NULL)", 0,
-      0, &err);
+      db,
+      "INSERT INTO crsql_changes VALUES ('foo', X'010901', 'b', 2, 1, 1, NULL)",
+      0, 0, &err);
   rc += sqlite3_exec(
-      db, "INSERT INTO crsql_changes VALUES ('foo', 2, 'b', 2, 1, 1, NULL)", 0,
-      0, &err);
+      db,
+      "INSERT INTO crsql_changes VALUES ('foo', X'010902', 'b', 2, 1, 1, NULL)",
+      0, 0, &err);
   rc += sqlite3_exec(
-      db, "INSERT INTO crsql_changes VALUES ('foo', 3, 'b', 2, 1, 1, NULL)", 0,
-      0, &err);
+      db,
+      "INSERT INTO crsql_changes VALUES ('foo', X'010903', 'b', 2, 1, 1, NULL)",
+      0, 0, &err);
   sqlite3_prepare_v2(db, "SELECT crsql_rows_impacted()", -1, &pStmt, 0);
   sqlite3_step(pStmt);
   assert(sqlite3_column_int(pStmt, 0) == 3);
@@ -88,11 +92,12 @@ static void testMultipartInsertInTx() {
   sqlite3_stmt *pStmt = 0;
 
   rc = sqlite3_exec(db, "BEGIN", 0, 0, 0);
-  rc += sqlite3_exec(
-      db,
-      "INSERT INTO crsql_changes VALUES ('foo', 1, 'b', 2, 1, 1, NULL), "
-      "('foo', 2, 'b', 2, 1, 1, NULL), ('foo', 3, 'b', 2, 1, 1, NULL)",
-      0, 0, &err);
+  rc += sqlite3_exec(db,
+                     "INSERT INTO crsql_changes VALUES ('foo', X'010901', 'b', "
+                     "2, 1, 1, NULL), "
+                     "('foo', X'010902', 'b', 2, 1, 1, NULL), ('foo', "
+                     "X'010903', 'b', 2, 1, 1, NULL)",
+                     0, 0, &err);
   sqlite3_prepare_v2(db, "SELECT crsql_rows_impacted()", -1, &pStmt, 0);
   sqlite3_step(pStmt);
   assert(sqlite3_column_int(pStmt, 0) == 3);
@@ -120,8 +125,9 @@ static void testManyTxns() {
 
   rc = sqlite3_exec(db, "BEGIN", 0, 0, 0);
   rc += sqlite3_exec(
-      db, "INSERT INTO crsql_changes VALUES ('foo', 1, 'b', 2, 1, 1, NULL)", 0,
-      0, &err);
+      db,
+      "INSERT INTO crsql_changes VALUES ('foo', X'010901', 'b', 2, 1, 1, NULL)",
+      0, 0, &err);
   sqlite3_prepare_v2(db, "SELECT crsql_rows_impacted()", -1, &pStmt, 0);
   sqlite3_step(pStmt);
   assert(sqlite3_column_int(pStmt, 0) == 1);
@@ -131,11 +137,13 @@ static void testManyTxns() {
 
   rc = sqlite3_exec(db, "BEGIN", 0, 0, 0);
   rc += sqlite3_exec(
-      db, "INSERT INTO crsql_changes VALUES ('foo', 2, 'b', 2, 1, 1, NULL)", 0,
-      0, &err);
+      db,
+      "INSERT INTO crsql_changes VALUES ('foo', X'010902', 'b', 2, 1, 1, NULL)",
+      0, 0, &err);
   rc += sqlite3_exec(
-      db, "INSERT INTO crsql_changes VALUES ('foo', 3, 'b', 2, 1, 1, NULL)", 0,
-      0, &err);
+      db,
+      "INSERT INTO crsql_changes VALUES ('foo', X'010903', 'b', 2, 1, 1, NULL)",
+      0, 0, &err);
   sqlite3_prepare_v2(db, "SELECT crsql_rows_impacted()", -1, &pStmt, 0);
   sqlite3_step(pStmt);
   int impacted = sqlite3_column_int(pStmt, 0);
@@ -186,9 +194,10 @@ static void testUpdateThatDoesNotChangeAnything() {
   rc = sqlite3_exec(db, "INSERT INTO foo VALUES (1, 2)", 0, 0, 0);
 
   rc += sqlite3_exec(db, "BEGIN", 0, 0, 0);
-  rc += sqlite3_exec(
-      db, "INSERT INTO crsql_changes VALUES ('foo', 1, 'b', 2, 1, 1, NULL)", 0,
-      0, &err);
+  rc += sqlite3_exec(db,
+                     "INSERT INTO crsql_changes VALUES ('foo', "
+                     "crsql_pack_columns(1), 'b', 2, 1, 1, NULL)",
+                     0, 0, &err);
   sqlite3_prepare_v2(db, "SELECT crsql_rows_impacted()", -1, &pStmt, 0);
   sqlite3_step(pStmt);
   assert(sqlite3_column_int(pStmt, 0) == 0);
@@ -198,9 +207,10 @@ static void testUpdateThatDoesNotChangeAnything() {
 
   // now test value <
   rc += sqlite3_exec(db, "BEGIN", 0, 0, 0);
-  rc += sqlite3_exec(
-      db, "INSERT INTO crsql_changes VALUES ('foo', 1, 'b', 0, 1, 1, NULL)", 0,
-      0, &err);
+  rc += sqlite3_exec(db,
+                     "INSERT INTO crsql_changes VALUES ('foo', "
+                     "crsql_pack_columns(1), 'b', 0, 1, 1, NULL)",
+                     0, 0, &err);
   sqlite3_prepare_v2(db, "SELECT crsql_rows_impacted()", -1, &pStmt, 0);
   sqlite3_step(pStmt);
   assert(sqlite3_column_int(pStmt, 0) == 0);
@@ -210,9 +220,10 @@ static void testUpdateThatDoesNotChangeAnything() {
 
   // now test clock <
   rc += sqlite3_exec(db, "BEGIN", 0, 0, 0);
-  rc += sqlite3_exec(
-      db, "INSERT INTO crsql_changes VALUES ('foo', 1, 'b', 2, 0, 0, NULL)", 0,
-      0, &err);
+  rc += sqlite3_exec(db,
+                     "INSERT INTO crsql_changes VALUES ('foo', "
+                     "crsql_pack_columns(1), 'b', 2, 0, 0, NULL)",
+                     0, 0, &err);
   sqlite3_prepare_v2(db, "SELECT crsql_rows_impacted()", -1, &pStmt, 0);
   sqlite3_step(pStmt);
   assert(sqlite3_column_int(pStmt, 0) == 0);
@@ -235,10 +246,11 @@ static void testDeleteThatDoesNotChangeAnything() {
   rc = sqlite3_exec(db, "DELETE FROM foo", 0, 0, 0);
 
   rc += sqlite3_exec(db, "BEGIN", 0, 0, 0);
-  rc += sqlite3_exec(db,
-                     "INSERT INTO crsql_changes VALUES ('foo', 1, "
-                     "'__crsql_del', NULL, 1, 2, NULL)",
-                     0, 0, &err);
+  rc += sqlite3_exec(
+      db,
+      "INSERT INTO crsql_changes VALUES ('foo', crsql_pack_columns(1), "
+      "'__crsql_del', NULL, 1, 2, NULL)",
+      0, 0, &err);
   sqlite3_prepare_v2(db, "SELECT crsql_rows_impacted()", -1, &pStmt, 0);
   sqlite3_step(pStmt);
   assert(sqlite3_column_int(pStmt, 0) == 0);
@@ -261,7 +273,7 @@ static void testDelete() {
 
   rc += sqlite3_exec(db, "BEGIN", 0, 0, 0);
   rc += sqlite3_exec(db,
-                     "INSERT INTO crsql_changes VALUES ('foo', 1, "
+                     "INSERT INTO crsql_changes VALUES ('foo', X'010901', "
                      "'__crsql_del', NULL, 1, 2, NULL)",
                      0, 0, &err);
   sqlite3_prepare_v2(db, "SELECT crsql_rows_impacted()", -1, &pStmt, 0);
@@ -286,8 +298,9 @@ static void testCreateThatDoesNotChangeAnything() {
 
   rc += sqlite3_exec(db, "BEGIN", 0, 0, 0);
   rc += sqlite3_exec(
-      db, "INSERT INTO crsql_changes VALUES ('foo', 1, 'b', 2, 1, 1, NULL)", 0,
-      0, &err);
+      db,
+      "INSERT INTO crsql_changes VALUES ('foo', X'010901', 'b', 2, 1, 1, NULL)",
+      0, 0, &err);
   sqlite3_prepare_v2(db, "SELECT crsql_rows_impacted()", -1, &pStmt, 0);
   sqlite3_step(pStmt);
   assert(sqlite3_column_int(pStmt, 0) == 0);
@@ -310,8 +323,9 @@ static void testValueWin() {
 
   rc = sqlite3_exec(db, "BEGIN", 0, 0, 0);
   rc += sqlite3_exec(
-      db, "INSERT INTO crsql_changes VALUES ('foo', 1, 'b', 3, 1, 1, NULL)", 0,
-      0, &err);
+      db,
+      "INSERT INTO crsql_changes VALUES ('foo', X'010901', 'b', 3, 1, 1, NULL)",
+      0, 0, &err);
   sqlite3_prepare_v2(db, "SELECT crsql_rows_impacted()", -1, &pStmt, 0);
   sqlite3_step(pStmt);
   assert(sqlite3_column_int(pStmt, 0) == 1);
@@ -334,8 +348,9 @@ static void testClockWin() {
 
   rc = sqlite3_exec(db, "BEGIN", 0, 0, 0);
   rc += sqlite3_exec(
-      db, "INSERT INTO crsql_changes VALUES ('foo', 1, 'b', 2, 2, 2, NULL)", 0,
-      0, &err);
+      db,
+      "INSERT INTO crsql_changes VALUES ('foo', X'010901', 'b', 2, 2, 2, NULL)",
+      0, 0, &err);
   sqlite3_prepare_v2(db, "SELECT crsql_rows_impacted()", -1, &pStmt, 0);
   sqlite3_step(pStmt);
   assert(sqlite3_column_int(pStmt, 0) == 1);

@@ -19,7 +19,7 @@ test("pk only table", () => {
   ).toEqual([
     {
       table: "data",
-      pk: "42",
+      pk: Buffer.from(Uint8Array.from([1, 9, 42])),
       cid: "__crsql_pko",
       val: null,
       col_version: 1,
@@ -53,7 +53,7 @@ test("failed to increment?", () => {
   expect(database.prepare(`SELECT * FROM crsql_changes`).all()).toEqual([
     {
       table: "a",
-      pk: "10",
+      pk: Buffer.from(Uint8Array.from([1, 9, 10])),
       cid: "data",
       val: 123,
       col_version: 1,
@@ -62,7 +62,7 @@ test("failed to increment?", () => {
     },
     {
       table: "b",
-      pk: "0",
+      pk: Buffer.from(Uint8Array.from([1, 1])),
       cid: "data",
       val: 10,
       col_version: 2,

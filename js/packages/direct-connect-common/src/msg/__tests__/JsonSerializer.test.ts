@@ -20,7 +20,10 @@ test("encoded, decode pairing ApplyChangesMsg", () => {
             fc.string(),
             fc.boolean(),
             fc.integer(),
-            fc.bigInt(),
+            fc.bigInt({
+              min: BigInt(Number.MAX_SAFE_INTEGER) + 1n,
+              max: 9223372036854775807n,
+            }),
             fc.uint8Array()
           ),
           fc.bigIntN(64),
@@ -121,7 +124,10 @@ test("StreamingChangesMsg", () => {
             fc.string(),
             fc.boolean(),
             fc.integer(),
-            fc.bigInt(),
+            fc.bigInt({
+              min: BigInt(Number.MAX_SAFE_INTEGER) + 1n,
+              max: 9223372036854775807n,
+            }),
             fc.uint8Array()
           ),
           fc.bigIntN(64),

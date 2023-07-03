@@ -123,4 +123,6 @@ function decodeMaybeNumer(maybeNumber: any) {
     }
     return maybeNumber;
   }
+
+  return maybeNumber;
 }

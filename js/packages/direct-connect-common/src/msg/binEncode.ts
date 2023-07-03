@@ -4,7 +4,6 @@
 
 import * as encoding from "lib0/encoding";
 import { Change, Msg, tags } from "../types.js";
-import { uint8Array } from "lib0/prng.js";
 
 export default function encode(msg: Msg): Uint8Array {
   const encoder = encoding.createEncoder();
@@ -116,11 +115,14 @@ function writeChanges(encoder: encoding.Encoder, changes: readonly Change[]) {
       } else if (typeof change[3] === "boolean") {
         encoding.writeUint8(encoder, BOOL);
         encoding.writeUint8(encoder, change[3] ? 1 : 0);
-      } else if (change[3].constructor === uint8Array) {
+      } else if (change[3].constructor === Uint8Array) {
         encoding.writeUint8(encoder, BLOB);
         encoding.writeVarUint8Array(encoder, change[3]);
       } else {
-        throw new Error(`Unsupported value type: ${typeof change[3]}`);
+        console.log(change[3]);
+        throw new Error(
+          `Unsupported value type: ${typeof change[3]} ${change[3]}`
+        );
       }
     }
     encoding.writeBigInt64(encoder, change[4]);

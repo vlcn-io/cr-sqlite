@@ -28,7 +28,7 @@ int crsql_close(sqlite3 *db);
  * @param since
  * @return int
  */
-static int syncLeftToRight(sqlite3 *db1, sqlite3 *db2, sqlite3_int64 since) {
+int syncLeftToRight(sqlite3 *db1, sqlite3 *db2, sqlite3_int64 since) {
   sqlite3_stmt *pStmtRead = 0;
   sqlite3_stmt *pStmtWrite = 0;
   sqlite3_stmt *pStmt = 0;

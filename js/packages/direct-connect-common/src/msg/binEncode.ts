@@ -4,6 +4,7 @@
 
 import * as encoding from "lib0/encoding";
 import { Change, Msg, tags } from "../types.js";
+import { uint8Array } from "lib0/prng.js";
 
 export default function encode(msg: Msg): Uint8Array {
   const encoder = encoding.createEncoder();
@@ -87,17 +88,40 @@ export default function encode(msg: Msg): Uint8Array {
   }
 }
 
+export const NULL = 0;
+export const BIGINT = 1;
+export const NUMBER = 2;
+export const STRING = 3;
+export const BOOL = 4;
+export const BLOB = 5;
+
 function writeChanges(encoder: encoding.Encoder, changes: readonly Change[]) {
   encoding.writeVarUint(encoder, changes.length);
   for (const change of changes) {
     encoding.writeVarString(encoder, change[0]);
-    encoding.writeVarString(encoder, change[1]);
+    encoding.writeVarUint8Array(encoder, change[1]);
     encoding.writeVarString(encoder, change[2]);
     if (change[3] === null) {
-      encoding.writeUint8(encoder, 0);
+      encoding.writeUint8(encoder, NULL);
     } else {
-      encoding.writeUint8(encoder, 1);
-      encoding.writeVarString(encoder, change[3]);
+      if (typeof change[3] === "bigint") {
+        encoding.writeUint8(encoder, BIGINT);
+        encoding.writeBigInt64(encoder, change[3]);
+      } else if (typeof change[3] === "number") {
+        encoding.writeUint8(encoder, NUMBER);
+        encoding.writeVarInt(encoder, change[3]);
+      } else if (typeof change[3] === "string") {
+        encoding.writeUint8(encoder, STRING);
+        encoding.writeVarString(encoder, change[3]);
+      } else if (typeof change[3] === "boolean") {
+        encoding.writeUint8(encoder, BOOL);
+        encoding.writeUint8(encoder, change[3] ? 1 : 0);
+      } else if (change[3].constructor === uint8Array) {
+        encoding.writeUint8(encoder, BLOB);
+        encoding.writeVarUint8Array(encoder, change[3]);
+      } else {
+        throw new Error(`Unsupported value type: ${typeof change[3]}`);
+      }
     }
     encoding.writeBigInt64(encoder, change[4]);
     encoding.writeBigInt64(encoder, change[5]);

@@ -27,9 +27,15 @@ test("encoded, decode pairing ApplyChangesMsg", () => {
       fc.array(
         fc.tuple(
           fc.string(),
+          fc.uint8Array({ minLength: 1, maxLength: 10 }),
           fc.string(),
-          fc.string(),
-          fc.string(),
+          fc.oneof(
+            fc.string(),
+            fc.boolean(),
+            fc.integer(),
+            fc.bigInt(),
+            fc.uint8Array()
+          ),
           fc.bigIntN(64),
           fc.bigIntN(64)
         )
@@ -122,9 +128,15 @@ test("StreamingChangesMsg", () => {
       fc.array(
         fc.tuple(
           fc.string(),
+          fc.uint8Array({ minLength: 1, maxLength: 10 }),
           fc.string(),
-          fc.string(),
-          fc.string(),
+          fc.oneof(
+            fc.string(),
+            fc.boolean(),
+            fc.integer(),
+            fc.bigInt(),
+            fc.uint8Array()
+          ),
           fc.bigIntN(64),
           fc.bigIntN(64)
         )

@@ -1,10 +1,10 @@
 export type Seq = readonly [bigint, number];
 
 export type CID = string;
-export type QuoteConcatedPKs = string;
+export type PackedPks = Uint8Array;
 export type TableName = string;
 export type Version = bigint;
-export type Val = string | null;
+export type Val = any;
 
 export interface ISerializer {
   readonly contentType: "application/json" | "application/octet-stream";
@@ -33,7 +33,7 @@ export type Tag = typeof tags;
 
 export type Change = readonly [
   TableName,
-  QuoteConcatedPKs,
+  PackedPks,
   CID,
   Val,
   Version, // col version

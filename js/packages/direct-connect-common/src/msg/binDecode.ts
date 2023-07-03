@@ -4,6 +4,7 @@
 
 import * as decoding from "lib0/decoding";
 import { Change, Msg, tags } from "../types.js";
+import { BIGINT, BLOB, BOOL, NULL, NUMBER, STRING } from "./binEncode.js";
 
 export default function decode(msg: Uint8Array): Msg {
   const decoder = decoding.createDecoder(msg);
@@ -121,14 +122,25 @@ export default function decode(msg: Uint8Array): Msg {
 function readChanges(decoder: decoding.Decoder) {
   return Array.from({ length: decoding.readVarUint(decoder) }, () => [
     decoding.readVarString(decoder),
-    decoding.readVarString(decoder),
+    decoding.readVarUint8Array(decoder),
     decoding.readVarString(decoder),
     (() => {
-      const present = decoding.readUint8(decoder);
-      if (present == 1) {
-        return decoding.readVarString(decoder);
+      const type = decoding.readUint8(decoder);
+      switch (type) {
+        case NULL:
+          return null;
+        case BIGINT:
+          return decoding.readBigInt64(decoder);
+        case NUMBER:
+          return decoding.readVarInt(decoder);
+        case STRING:
+          return decoding.readVarString(decoder);
+        case BOOL:
+          return decoding.readUint8(decoder) === 1 ? true : false;
+        case BLOB:
+          return decoding.readVarUint8Array(decoder);
       }
-      return null;
+      throw new Error(`Unknown type ${type}`);
     })(),
     decoding.readBigInt64(decoder),
     decoding.readBigInt64(decoder),

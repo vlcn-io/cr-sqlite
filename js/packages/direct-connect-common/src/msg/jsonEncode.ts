@@ -94,6 +94,33 @@ export default function encode(msg: Msg): Object {
 
 function encodeChanges(changes: readonly Change[]): readonly any[] {
   return changes.map((c) => {
-    return [c[0], c[1], c[2], c[3], c[4].toString(), c[5].toString()];
+    return [
+      c[0],
+      bytesToHex(c[1]),
+      c[2],
+      safelyEncodeIfBigNumber(c[3]),
+      c[4].toString(),
+      c[5].toString(),
+    ];
   });
+}
+
+/**
+ * A comedy of problems.
+ * 1. JavaScript Number type only goes up to 53 bits.
+ * 2. JavaScript does have BigInt to get around this.
+ * 3. BigInt, however, cannot be serialized to JSON.
+ *
+ * Given (3), we need to convert BigInts to Numbers but given (1)
+ * we have to convert BigInts > 53 bits to strings.
+ */
+function safelyEncodeIfBigNumber(x: any) {
+  if (typeof x === "bigint") {
+    if (x > Number.MAX_SAFE_INTEGER) {
+      return x.toString();
+    } else {
+      return Number(x);
+    }
+  }
+  return x;
 }

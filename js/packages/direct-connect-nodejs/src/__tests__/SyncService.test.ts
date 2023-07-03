@@ -277,7 +277,9 @@ test("apply changes", () => {
     schemaVersion: 1n,
   });
 
-  const changes: Change[] = [["foo", "1", "b", "2", 1n, 1n]];
+  const changes: Change[] = [
+    ["foo", new Uint8Array([1, 9, 1]), "b", 2, 1n, 1n],
+  ];
 
   let since = svc.getLastSeen({
     _tag: tags.getLastSeen,

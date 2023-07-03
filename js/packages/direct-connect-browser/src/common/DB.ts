@@ -6,6 +6,7 @@ import {
   SCHEMA_NAME,
   SCHEMA_VERSION,
   hexToBytes,
+  Change as Changeset,
 } from "@vlcn.io/direct-connect-common";
 
 export type CID = string;
@@ -18,19 +19,6 @@ export type Seq = readonly [Version, number];
 export const RECEIVE = 0 as const;
 export const SEND = 1 as const;
 type VersionEvent = typeof RECEIVE | typeof SEND;
-
-export type Changeset = readonly [
-  TableName,
-  QuoteConcatedPKs,
-  CID,
-  Val,
-  Version, // col version
-  Version // db version
-  // site_id is omitted. Will be applied by the receiver
-  // who always knows site ids in client-server setup.
-  // server masks site ids of clients. This masking
-  // is disallowed in p2p topologies.
-];
 
 export class DB {
   public readonly remoteDbidBytes: Uint8Array;

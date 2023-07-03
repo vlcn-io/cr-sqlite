@@ -431,6 +431,7 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
   if (doesCidWin == -1 || doesCidWin == 0) {
     sqlite3_free(pkBindingList);
     sqlite3_free(pkIdentifierList);
+    crsql_free_unpacked_values(unpackedPks);
     // doesCidWin == 0? compared against our clocks, nothing wins. OK and
     // Done.
     if (doesCidWin == -1 && *errmsg == 0) {
@@ -451,6 +452,7 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
   if (rc != SQLITE_OK) {
     sqlite3_free(pkBindingList);
     sqlite3_free(pkIdentifierList);
+    crsql_free_unpacked_values(unpackedPks);
     sqlite3_exec(db, CLEAR_SYNC_BIT, 0, 0, 0);
     sqlite3_free(zSql);
     *errmsg = sqlite3_mprintf("Failed setting sync bit");
@@ -480,6 +482,7 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
   if (rc != SQLITE_OK) {
     sqlite3_free(pkBindingList);
     sqlite3_free(pkIdentifierList);
+    crsql_free_unpacked_values(unpackedPks);
     *errmsg = sqlite3_mprintf("Failed inserting changeset");
     return rc;
   }
@@ -489,6 +492,7 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
       insertColVrsn, insertDbVrsn, insertSiteId, insertSiteIdLen);
   sqlite3_free(pkIdentifierList);
   sqlite3_free(pkBindingList);
+  crsql_free_unpacked_values(unpackedPks);
 
   if (rowid == -1) {
     *errmsg = sqlite3_mprintf("Failed updating winner clock");

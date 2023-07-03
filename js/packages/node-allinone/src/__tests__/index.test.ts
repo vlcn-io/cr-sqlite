@@ -167,15 +167,18 @@ test("failing two -- discord: https://discord.com/channels/989870439897653248/98
 
   const change = [
     "title",
-    "'xc2yf7z5qb'",
+    Uint8Array.from([
+      0x01, 0x0b, 0x0a, 0x78, 0x63, 0x32, 0x79, 0x66, 0x37, 0x7a, 0x35, 0x71,
+      0x62,
+    ]),
     Uint8Array.from([
       175, 106, 146, 40, 65, 48, 77, 20, 164, 67, 221, 188, 211, 100, 105, 188,
     ]),
     "todos",
-    "'123'",
+    123,
     1,
     1,
-  ];
+  ] as const;
 
   db.exec(
     `INSERT INTO crsql_changes ("cid", "pk", "site_id", "table", "val", "col_version", "db_version") VALUES (?,?,?,?,?,?,?)`,

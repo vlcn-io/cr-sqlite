@@ -98,6 +98,7 @@ function encodeChanges(changes: readonly Change[]): readonly any[] {
       c[0],
       bytesToHex(c[1]),
       c[2],
+      // TODO: support blob encoding.... Likely need a type arg on value.
       safelyEncodeIfBigNumber(c[3]),
       c[4].toString(),
       c[5].toString(),

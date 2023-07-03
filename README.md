@@ -38,6 +38,7 @@ Discussions of these problems in the application space:
 - [![reflect-app](https://reflect.app/_next/image?url=%2Fsite%2Ficons%2F1024x1024.png&w=32&q=100) Reflect](https://reflect.app/)
 - [robinvasan](https://github.com/robinvasan)
 - [iansinnott](https://github.com/iansinnott)
+- [davefowler](https://github.com/davefowler)
 
 # Perf
 

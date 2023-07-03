@@ -155,14 +155,13 @@ sqlite3_int64 crsql_setWinnerClock(
       (%s, \"__crsql_col_name\", \"__crsql_col_version\", \"__crsql_db_version\", \"__crsql_seq\", \"__crsql_site_id\")\
       VALUES (\
         %s,\
-        %Q,\
-        %lld,\
-        MAX(crsql_nextdbversion(), %lld),\
+        ?,\
+        ?,\
+        MAX(crsql_nextdbversion(), ?),\
         crsql_increment_and_get_seq(),\
         ?\
       ) RETURNING _rowid_",
-      tblInfo->tblName, pkIdentifierList, pkBindList, insertColName,
-      insertColVrsn, insertDbVrsn);
+      tblInfo->tblName, pkIdentifierList, pkBindList);
 
   sqlite3_stmt *pStmt = 0;
   rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
@@ -174,10 +173,14 @@ sqlite3_int64 crsql_setWinnerClock(
   }
 
   rc = crsql_bind_unpacked_values(pStmt, unpackedPks);
+  rc += sqlite3_bind_text(pStmt, unpackedPks.len + 1, insertColName, -1,
+                          SQLITE_STATIC);
+  rc += sqlite3_bind_int64(pStmt, unpackedPks.len + 2, insertColVrsn);
+  rc += sqlite3_bind_int64(pStmt, unpackedPks.len + 3, insertDbVrsn);
   if (insertSiteId == 0) {
-    rc += sqlite3_bind_null(pStmt, unpackedPks.len + 1);
+    rc += sqlite3_bind_null(pStmt, unpackedPks.len + 4);
   } else {
-    rc += sqlite3_bind_blob(pStmt, unpackedPks.len + 1, insertSiteId,
+    rc += sqlite3_bind_blob(pStmt, unpackedPks.len + 4, insertSiteId,
                             insertSiteIdLen, SQLITE_TRANSIENT);
   }
 

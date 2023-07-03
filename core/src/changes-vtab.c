@@ -246,6 +246,7 @@ static int changesNext(sqlite3_vtab_cursor *cur) {
   rc = crsql_bind_unpacked_values(pRowStmt, unpackedPks);
   if (rc != SQLITE_OK) {
     sqlite3_finalize(pRowStmt);
+    crsql_free_unpacked_values(unpackedPks);
     pTabBase->zErrMsg = sqlite3_mprintf(
         "crsql internal error preparing row data fetch statement");
     return rc;

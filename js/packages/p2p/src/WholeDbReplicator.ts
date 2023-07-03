@@ -3,7 +3,7 @@ import { parse as uuidParse, stringify as uuidStringify } from "uuid";
 export type SiteIDWire = string;
 export type SiteIDLocal = Uint8Array;
 type CID = string;
-type QuoteConcatedPKs = string | number;
+type PackedPks = Uint8Array;
 type TableName = string;
 type Version = number | string;
 type TODO = any;
@@ -75,7 +75,7 @@ export interface PokeProtocol {
 
 export type Changeset = [
   TableName,
-  QuoteConcatedPKs,
+  PackedPks,
   CID,
   any, // val,
   Version,

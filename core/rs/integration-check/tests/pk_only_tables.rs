@@ -37,7 +37,7 @@ fn junction_table() {
 
 // https://discord.com/channels/989870439897653248/989870440585494530/1081084118680485938
 #[test]
-fn dicord_report_1() {
+fn discord_report_1() {
     discord_report_1_impl().unwrap();
 }
 
@@ -260,8 +260,8 @@ fn discord_report_1_impl() -> Result<(), ResultCode> {
 
     let table = stmt.column_text(0)?;
     assert_eq!(table, "data");
-    let pk_val = stmt.column_text(1)?;
-    assert_eq!(pk_val, "42");
+    let pk_val = stmt.column_blob(1)?;
+    assert_eq!(pk_val, [0x01, 0x09, 0x2A]);
     let cid = stmt.column_text(2)?;
     assert_eq!(cid, "__crsql_pko");
     let val_type = stmt.column_type(3)?;

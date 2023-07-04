@@ -20,10 +20,11 @@ int crsql_didCidWin(sqlite3 *db, const unsigned char *localSiteId,
                     char **errmsg) {
   char *zSql = 0;
 
+  // CACHED_STMT_GET_COL_VERSION
   zSql = sqlite3_mprintf(
-      "SELECT __crsql_col_version FROM \"%s__crsql_clock\" WHERE %s AND %Q = "
+      "SELECT __crsql_col_version FROM \"%s__crsql_clock\" WHERE %s AND ? = "
       "__crsql_col_name",
-      insertTbl, pkWhereList, colName);
+      insertTbl, pkWhereList);
 
   // run zSql
   sqlite3_stmt *pStmt = 0;
@@ -38,6 +39,8 @@ int crsql_didCidWin(sqlite3 *db, const unsigned char *localSiteId,
   }
 
   rc = crsql_bind_unpacked_values(pStmt, unpackedPks);
+  rc +=
+      sqlite3_bind_text(pStmt, unpackedPks.len + 1, colName, -1, SQLITE_STATIC);
   if (rc != SQLITE_OK) {
     sqlite3_finalize(pStmt);
     *errmsg = sqlite3_mprintf(
@@ -72,6 +75,7 @@ int crsql_didCidWin(sqlite3 *db, const unsigned char *localSiteId,
   // else -- versions are equal
   // - pull curr value
   // - compare for tie break
+  // CACHED_STMT_GET_CURR_VALUE
   zSql = sqlite3_mprintf("SELECT \"%w\" FROM \"%w\" WHERE %s", colName,
                          insertTbl, pkWhereList);
   rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
@@ -109,6 +113,7 @@ int crsql_didCidWin(sqlite3 *db, const unsigned char *localSiteId,
 #define DELETED_LOCALLY -1
 int crsql_checkForLocalDelete(sqlite3 *db, const char *tblName,
                               char *pkWhereList, RawVec unpackedPks) {
+  // CACHED_STMT_CHECK_FOR_LOCAL_DELETE
   char *zSql = sqlite3_mprintf(
       "SELECT count(*) FROM \"%s__crsql_clock\" WHERE %s AND "
       "__crsql_col_name "
@@ -150,6 +155,7 @@ sqlite3_int64 crsql_setWinnerClock(
     sqlite3_int64 insertColVrsn, sqlite3_int64 insertDbVrsn,
     const void *insertSiteId, int insertSiteIdLen) {
   int rc = SQLITE_OK;
+  // CACHED_STMT_SET_WINNER_CLOCK
   char *zSql = sqlite3_mprintf(
       "INSERT OR REPLACE INTO \"%s__crsql_clock\" \
       (%s, \"__crsql_col_name\", \"__crsql_col_version\", \"__crsql_db_version\", \"__crsql_seq\", \"__crsql_site_id\")\
@@ -203,6 +209,7 @@ sqlite3_int64 crsql_mergePkOnlyInsert(
     RawVec unpackedPks, const char *pkIdentifiers,
     sqlite3_int64 remoteColVersion, sqlite3_int64 remoteDbVersion,
     const void *remoteSiteId, int remoteSiteIdLen) {
+  // CACHED_STMT_MERGE_PK_ONLY_INSERT
   char *zSql = sqlite3_mprintf("INSERT OR IGNORE INTO \"%s\" (%s) VALUES (%s)",
                                tblInfo->tblName, pkIdentifiers, pkBindingsList);
   int rc = sqlite3_exec(db, SET_SYNC_BIT, 0, 0, 0);
@@ -245,6 +252,7 @@ sqlite3_int64 crsql_mergeDelete(sqlite3 *db, crsql_TableInfo *tblInfo,
                                 sqlite3_int64 remoteColVersion,
                                 sqlite3_int64 remoteDbVersion,
                                 const void *remoteSiteId, int remoteSiteIdLen) {
+  // CACHED_STMT_MERGE_DELETE
   char *zSql = sqlite3_mprintf("DELETE FROM \"%w\" WHERE %s", tblInfo->tblName,
                                pkWhereList);
   // TODO: perma prepare sync bit stmts
@@ -443,6 +451,7 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
     return doesCidWin == 0 ? SQLITE_OK : SQLITE_ERROR;
   }
 
+  // CACHED_STMT_MERGE_INSERT
   zSql = sqlite3_mprintf(
       "INSERT INTO \"%w\" (%s, \"%w\")\
       VALUES (%s, ?)\

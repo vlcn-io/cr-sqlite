@@ -22,6 +22,25 @@ static void freeEntry(crsql_CachedStmt *pEntry) {
   sqlite3_free(pEntry);
 }
 
+// Winner clock key is simply the table name itself as column is an argument in
+// this case.
+#define CACHED_STMT_SET_WINNER_CLOCK 0
+#define CACHED_STMT_CHECK_FOR_LOCAL_DELETE 1
+#define CACHED_STMT_GET_COL_VERSION 2
+#define CACHED_STMT_GET_CURR_VALUE 3
+#define CACHED_STMT_MERGE_PK_ONLY_INSERT 4
+#define CACHED_STMT_MERGE_DELETE 5
+#define CACHED_STMT_MERGE_INSERT 6
+
+/**
+ * Winner clock key is simply the table name itself.
+ */
+char *crsql_setWinnerClockKey(const char *tblName) {
+  // tbl_name + _ + type ?
+}
+
+char *crsql_checkForLocalDeleteKey(const char *tblName) {}
+
 /**
  * @brief Look up a cache entry. Caller retains ownership of the key.
  */

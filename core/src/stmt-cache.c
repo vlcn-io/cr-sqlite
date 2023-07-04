@@ -22,17 +22,6 @@ static void freeEntry(crsql_CachedStmt *pEntry) {
   sqlite3_free(pEntry);
 }
 
-// Winner clock key is simply the table name itself as column is an argument in
-// this case.
-#define CACHED_STMT_SET_WINNER_CLOCK 0
-#define CACHED_STMT_CHECK_FOR_LOCAL_DELETE 1
-#define CACHED_STMT_GET_COL_VERSION 2
-#define CACHED_STMT_GET_CURR_VALUE 3
-#define CACHED_STMT_MERGE_PK_ONLY_INSERT 4
-#define CACHED_STMT_MERGE_DELETE 5
-#define CACHED_STMT_MERGE_INSERT 6
-#define CACHED_STMT_ROW_PATCH_DATA 7
-
 char *crsql_getCacheKeyForStmtType(int stmtType, const char *zTblName,
                                    const char *mzColName) {
   char *zRet;
@@ -81,6 +70,9 @@ char *crsql_getCacheKeyForStmtType(int stmtType, const char *zTblName,
 }
 
 int crsql_resetCachedStmt(sqlite3_stmt *pStmt) {
+  if (pStmt == 0) {
+    return SQLITE_OK;
+  }
   int rc = sqlite3_clear_bindings(pStmt);
   rc += sqlite3_reset(pStmt);
   return rc;
@@ -113,10 +105,14 @@ void crsql_setCachedStmt(crsql_ExtData *pExtData, char *zKey,
 }
 
 void crsql_clearStmtCache(crsql_ExtData *pExtData) {
+  if (pExtData->hStmts == 0) {
+    return;
+  }
   crsql_CachedStmt *crsr, *tmp;
 
   HASH_ITER(hh, pExtData->hStmts, crsr, tmp) {
     HASH_DEL(pExtData->hStmts, crsr);
     freeEntry(crsr);
   }
+  HASH_CLEAR(hh, pExtData->hStmts);
 }

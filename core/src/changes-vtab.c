@@ -11,6 +11,7 @@
 #include "crsqlite.h"
 #include "ext-data.h"
 #include "rust.h"
+#include "stmt-cache.h"
 #include "util.h"
 
 /**
@@ -91,7 +92,7 @@ static int changesCrsrFinalize(crsql_Changes_cursor *crsr) {
   int rc = SQLITE_OK;
   rc += sqlite3_finalize(crsr->pChangesStmt);
   crsr->pChangesStmt = 0;
-  rc += sqlite3_finalize(crsr->pRowStmt);
+  rc += crsql_resetCachedStmt(crsr->pRowStmt);
   crsr->pRowStmt = 0;
 
   crsr->dbVersion = MIN_POSSIBLE_DB_VERSION;
@@ -164,8 +165,11 @@ static int changesNext(sqlite3_vtab_cursor *cur) {
     // a new table.
     // An optimization would be to keep (rewind) it if we're processing the
     // same table for many rows.
-    sqlite3_finalize(pCur->pRowStmt);
+    rc = crsql_resetCachedStmt(pCur->pRowStmt);
     pCur->pRowStmt = 0;
+    if (rc != SQLITE_OK) {
+      return rc;
+    }
   }
 
   // step to next
@@ -217,35 +221,41 @@ static int changesNext(sqlite3_vtab_cursor *cur) {
     pCur->rowType = ROW_TYPE_UPDATE;
   }
 
-  char *zSql = crsql_rowPatchDataQuery(pCur->pTab->db, tblInfo, cid);
-  if (zSql == 0) {
-    pTabBase->zErrMsg = sqlite3_mprintf(
-        "crsql internal error generationg raw data fetch query for table "
-        "%s",
-        tbl);
-    return SQLITE_ERROR;
-  }
+  sqlite3_stmt *pRowStmt = pCur->pRowStmt;
+  // CACHED_STMT_ROW_PATCH_DATA
+  char *zStmtKey = crsql_getCacheKeyForStmtType(CACHED_STMT_ROW_PATCH_DATA,
+                                                tblInfo->tblName, cid);
+  pRowStmt = crsql_getCachedStmt(pCur->pTab->pExtData, zStmtKey);
+  if (pRowStmt == 0) {
+    char *zSql = crsql_rowPatchDataQuery(pCur->pTab->db, tblInfo, cid);
+    if (zSql == 0) {
+      pTabBase->zErrMsg = sqlite3_mprintf(
+          "crsql internal error generationg raw data fetch query for table "
+          "%s",
+          tbl);
+      return SQLITE_ERROR;
+    }
 
-  sqlite3_stmt *pRowStmt;
-  rc = sqlite3_prepare_v2(pCur->pTab->db, zSql, -1, &pRowStmt, 0);
-  sqlite3_free(zSql);
+    rc = sqlite3_prepare_v2(pCur->pTab->db, zSql, -1, &pRowStmt, 0);
+    sqlite3_free(zSql);
 
-  if (rc != SQLITE_OK) {
-    pTabBase->zErrMsg = sqlite3_mprintf(
-        "crsql internal error preparing row data fetch statement");
-    sqlite3_finalize(pRowStmt);
-    return rc;
+    if (rc != SQLITE_OK) {
+      pTabBase->zErrMsg = sqlite3_mprintf(
+          "crsql internal error preparing row data fetch statement");
+      sqlite3_finalize(pRowStmt);
+      return rc;
+    }
+    crsql_setCachedStmt(pCur->pTab->pExtData, zStmtKey, pRowStmt);
   }
 
   RawVec unpackedPks = crsql_unpack_columns(pks);
   if (unpackedPks.ptr == 0) {
-    sqlite3_finalize(pRowStmt);
     pTabBase->zErrMsg = sqlite3_mprintf("unable to unpack primary keys");
     return unpackedPks.len;
   }
   rc = crsql_bind_unpacked_values(pRowStmt, unpackedPks);
   if (rc != SQLITE_OK) {
-    sqlite3_finalize(pRowStmt);
+    crsql_resetCachedStmt(pRowStmt);
     crsql_free_unpacked_values(unpackedPks);
     pTabBase->zErrMsg = sqlite3_mprintf(
         "crsql internal error preparing row data fetch statement");
@@ -255,7 +265,7 @@ static int changesNext(sqlite3_vtab_cursor *cur) {
   rc = sqlite3_step(pRowStmt);
   crsql_free_unpacked_values(unpackedPks);
   if (rc != SQLITE_ROW) {
-    sqlite3_finalize(pRowStmt);
+    crsql_resetCachedStmt(pRowStmt);
     // getting 0 rows for something we have clock entries for is not an
     // error it could just be the case that the thing was deleted so we have
     // nothing to retrieve to fill in values for do we re-write cids in this

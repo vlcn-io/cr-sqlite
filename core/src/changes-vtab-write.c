@@ -197,7 +197,7 @@ static int crsql_checkForLocalDelete(sqlite3 *db, crsql_ExtData *pExtData,
   return SQLITE_OK;
 }
 
-sqlite3_int64 crsql_setWinnerClock(
+static sqlite3_int64 crsql_setWinnerClock(
     sqlite3 *db, crsql_ExtData *pExtData, crsql_TableInfo *tblInfo,
     const char *pkIdentifierList, const char *pkBindList, RawVec unpackedPks,
     const char *insertColName, sqlite3_int64 insertColVrsn,
@@ -325,22 +325,35 @@ static sqlite3_int64 crsql_mergeDelete(
     const char *pkIdentifiers, sqlite3_int64 remoteColVersion,
     sqlite3_int64 remoteDbVersion, const void *remoteSiteId,
     int remoteSiteIdLen) {
-  // CACHED_STMT_MERGE_DELETE
-  char *zSql = sqlite3_mprintf("DELETE FROM \"%w\" WHERE %s", tblInfo->tblName,
-                               pkWhereList);
-  // TODO: perma prepare sync bit stmts
-  int rc = sqlite3_exec(db, SET_SYNC_BIT, 0, 0, 0);
-  if (rc != SQLITE_OK) {
-    sqlite3_free(zSql);
+  int rc = SQLITE_OK;
+  char *zStmtCacheKey = crsql_getCacheKeyForStmtType(CACHED_STMT_MERGE_DELETE,
+                                                     tblInfo->tblName, 0);
+  if (zStmtCacheKey == 0) {
     return -1;
   }
-
   sqlite3_stmt *pStmt;
-  rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
-  sqlite3_free(zSql);
+  pStmt = crsql_getCachedStmt(pExtData, zStmtCacheKey);
+  if (pStmt == 0) {
+    char *zSql = sqlite3_mprintf("DELETE FROM \"%w\" WHERE %s",
+                                 tblInfo->tblName, pkWhereList);
+    rc = sqlite3_prepare_v3(db, zSql, -1, SQLITE_PREPARE_PERSISTENT, &pStmt, 0);
+    sqlite3_free(zSql);
 
+    if (rc != SQLITE_OK) {
+      sqlite3_free(zStmtCacheKey);
+      sqlite3_finalize(pStmt);
+      return rc;
+    }
+    crsql_setCachedStmt(pExtData, zStmtCacheKey, pStmt);
+  } else {
+    sqlite3_free(zStmtCacheKey);
+    zStmtCacheKey = 0;
+  }
+
+  rc = crsql_bind_unpacked_values(pStmt, unpackedPks);
   if (rc == SQLITE_OK) {
-    rc = crsql_bind_unpacked_values(pStmt, unpackedPks);
+    // TODO: perma prepare sync bit stmts
+    rc = sqlite3_exec(db, SET_SYNC_BIT, 0, 0, 0);
     if (rc == SQLITE_OK) {
       rc = sqlite3_step(pStmt);
       if (rc == SQLITE_DONE) {
@@ -348,7 +361,7 @@ static sqlite3_int64 crsql_mergeDelete(
       }
     }
   }
-  sqlite3_finalize(pStmt);
+  crsql_resetCachedStmt(pStmt);
 
   sqlite3_exec(db, CLEAR_SYNC_BIT, 0, 0, 0);
   if (rc != SQLITE_OK) {

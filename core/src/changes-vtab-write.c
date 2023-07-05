@@ -7,42 +7,56 @@
 #include "consts.h"
 #include "crsqlite.h"
 #include "ext-data.h"
+#include "stmt-cache.h"
 #include "tableinfo.h"
 #include "util.h"
 
 /**
  *
  */
-int crsql_didCidWin(sqlite3 *db, const unsigned char *localSiteId,
-                    const char *insertTbl, const char *pkWhereList,
-                    RawVec unpackedPks, const char *colName,
-                    const sqlite3_value *insertVal, sqlite3_int64 colVersion,
-                    char **errmsg) {
+static int crsql_didCidWin(sqlite3 *db, crsql_ExtData *pExtData,
+                           const unsigned char *localSiteId,
+                           const char *insertTbl, const char *pkWhereList,
+                           RawVec unpackedPks, const char *colName,
+                           const sqlite3_value *insertVal,
+                           sqlite3_int64 colVersion, char **errmsg) {
   char *zSql = 0;
+  int rc = SQLITE_OK;
 
   // CACHED_STMT_GET_COL_VERSION
-  zSql = sqlite3_mprintf(
-      "SELECT __crsql_col_version FROM \"%s__crsql_clock\" WHERE %s AND ? = "
-      "__crsql_col_name",
-      insertTbl, pkWhereList);
-
-  // run zSql
-  sqlite3_stmt *pStmt = 0;
-  int rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
-  sqlite3_free(zSql);
-
-  if (rc != SQLITE_OK) {
-    sqlite3_finalize(pStmt);
-    *errmsg =
-        sqlite3_mprintf("Failed preparing stmt to select local column version");
+  char *zStmtCacheKey =
+      crsql_getCacheKeyForStmtType(CACHED_STMT_GET_COL_VERSION, insertTbl, 0);
+  if (zStmtCacheKey == 0) {
+    *errmsg = sqlite3_mprintf("Failed creating cache key");
     return -1;
+  }
+  sqlite3_stmt *pStmt = 0;
+  pStmt = crsql_getCachedStmt(pExtData, zStmtCacheKey);
+  if (pStmt == 0) {
+    zSql = sqlite3_mprintf(
+        "SELECT __crsql_col_version FROM \"%s__crsql_clock\" WHERE %s AND ? = "
+        "__crsql_col_name",
+        insertTbl, pkWhereList);
+
+    rc = sqlite3_prepare_v3(db, zSql, -1, SQLITE_PREPARE_PERSISTENT, &pStmt, 0);
+    sqlite3_free(zSql);
+
+    if (rc != SQLITE_OK) {
+      sqlite3_finalize(pStmt);
+      *errmsg = sqlite3_mprintf(
+          "Failed preparing stmt to select local column version");
+      return -1;
+    }
+    crsql_setCachedStmt(pExtData, zStmtCacheKey, pStmt);
+  } else {
+    sqlite3_free(zStmtCacheKey);
   }
 
   rc = crsql_bind_unpacked_values(pStmt, unpackedPks);
   rc +=
       sqlite3_bind_text(pStmt, unpackedPks.len + 1, colName, -1, SQLITE_STATIC);
   if (rc != SQLITE_OK) {
-    sqlite3_finalize(pStmt);
+    crsql_resetCachedStmt(pStmt);
     *errmsg = sqlite3_mprintf(
         "Failed binding unpacked columns to select local column version");
     return -1;
@@ -50,21 +64,21 @@ int crsql_didCidWin(sqlite3 *db, const unsigned char *localSiteId,
 
   rc = sqlite3_step(pStmt);
   if (rc == SQLITE_DONE) {
-    sqlite3_finalize(pStmt);
+    crsql_resetCachedStmt(pStmt);
     // no rows returned
     // we of course win if there's nothing there.
     return 1;
   }
 
   if (rc != SQLITE_ROW) {
-    sqlite3_finalize(pStmt);
+    crsql_resetCachedStmt(pStmt);
     *errmsg = sqlite3_mprintf(
         "Bad return code (%d) when selecting local column version", rc);
     return -1;
   }
 
   sqlite3_int64 localVersion = sqlite3_column_int64(pStmt, 0);
-  sqlite3_finalize(pStmt);
+  crsql_resetCachedStmt(pStmt);
 
   if (colVersion > localVersion) {
     return 1;
@@ -435,9 +449,9 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
     return SQLITE_OK;
   }
 
-  int doesCidWin = crsql_didCidWin(db, pTab->pExtData->siteId, tblInfo->tblName,
-                                   pkWhereList, unpackedPks, insertColName,
-                                   insertVal, insertColVrsn, errmsg);
+  int doesCidWin = crsql_didCidWin(
+      db, pTab->pExtData, pTab->pExtData->siteId, tblInfo->tblName, pkWhereList,
+      unpackedPks, insertColName, insertVal, insertColVrsn, errmsg);
   sqlite3_free(pkWhereList);
   if (doesCidWin == -1 || doesCidWin == 0) {
     sqlite3_free(pkBindingList);

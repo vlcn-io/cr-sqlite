@@ -27,7 +27,8 @@ static int crsql_didCidWin(sqlite3 *db, crsql_ExtData *pExtData,
   char *zStmtCacheKey =
       crsql_getCacheKeyForStmtType(CACHED_STMT_GET_COL_VERSION, insertTbl, 0);
   if (zStmtCacheKey == 0) {
-    *errmsg = sqlite3_mprintf("Failed creating cache key");
+    *errmsg = sqlite3_mprintf(
+        "Failed creating cache key for CACHED_STMT_GET_COL_VERSION");
     return -1;
   }
   sqlite3_stmt *pStmt = 0;
@@ -50,6 +51,7 @@ static int crsql_didCidWin(sqlite3 *db, crsql_ExtData *pExtData,
     crsql_setCachedStmt(pExtData, zStmtCacheKey, pStmt);
   } else {
     sqlite3_free(zStmtCacheKey);
+    zStmtCacheKey = 0;
   }
 
   rc = crsql_bind_unpacked_values(pStmt, unpackedPks);
@@ -90,20 +92,35 @@ static int crsql_didCidWin(sqlite3 *db, crsql_ExtData *pExtData,
   // - pull curr value
   // - compare for tie break
   // CACHED_STMT_GET_CURR_VALUE
-  zSql = sqlite3_mprintf("SELECT \"%w\" FROM \"%w\" WHERE %s", colName,
-                         insertTbl, pkWhereList);
-  rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
-  sqlite3_free(zSql);
-
-  if (rc != SQLITE_OK) {
-    sqlite3_finalize(pStmt);
+  zStmtCacheKey = crsql_getCacheKeyForStmtType(CACHED_STMT_GET_CURR_VALUE,
+                                               insertTbl, colName);
+  if (zStmtCacheKey == 0) {
     *errmsg = sqlite3_mprintf(
-        "could not prepare statement to find row to merge with. %s", insertTbl);
+        "Failed creating cache key for CACHED_STMT_GET_CURR_VALUE");
     return -1;
+  }
+  pStmt = crsql_getCachedStmt(pExtData, zStmtCacheKey);
+  if (pStmt == 0) {
+    zSql = sqlite3_mprintf("SELECT \"%w\" FROM \"%w\" WHERE %s", colName,
+                           insertTbl, pkWhereList);
+    rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
+    sqlite3_free(zSql);
+
+    if (rc != SQLITE_OK) {
+      sqlite3_finalize(pStmt);
+      *errmsg = sqlite3_mprintf(
+          "could not prepare statement to find row to merge with. %s",
+          insertTbl);
+      return -1;
+    }
+    crsql_setCachedStmt(pExtData, zStmtCacheKey, pStmt);
+  } else {
+    sqlite3_free(zStmtCacheKey);
   }
 
   rc = crsql_bind_unpacked_values(pStmt, unpackedPks);
   if (rc != SQLITE_OK) {
+    crsql_resetCachedStmt(pStmt);
     *errmsg = sqlite3_mprintf(
         "Failed binding unpacked columns to select current val for tie break");
     return -1;
@@ -113,13 +130,13 @@ static int crsql_didCidWin(sqlite3 *db, crsql_ExtData *pExtData,
   if (rc != SQLITE_ROW) {
     *errmsg = sqlite3_mprintf("could not find row to merge with for tbl %s",
                               insertTbl);
-    sqlite3_finalize(pStmt);
+    crsql_resetCachedStmt(pStmt);
     return -1;
   }
 
   const sqlite3_value *localValue = sqlite3_column_value(pStmt, 0);
   int ret = crsql_compare_sqlite_values(insertVal, localValue);
-  sqlite3_finalize(pStmt);
+  crsql_resetCachedStmt(pStmt);
 
   return ret > 0;
 }

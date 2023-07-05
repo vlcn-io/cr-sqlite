@@ -12,30 +12,16 @@ crsql_ExtData *crsql_newExtData(sqlite3 *db) {
   int rc = sqlite3_prepare_v3(db, "PRAGMA schema_version", -1,
                               SQLITE_PREPARE_PERSISTENT,
                               &(pExtData->pPragmaSchemaVersionStmt), 0);
-  if (rc != SQLITE_OK) {
-    sqlite3_finalize(pExtData->pPragmaSchemaVersionStmt);
-    pExtData->pPragmaSchemaVersionStmt = 0;
-    return 0;
-  }
   pExtData->pPragmaDataVersionStmt = 0;
-  rc = sqlite3_prepare_v3(db, "PRAGMA data_version", -1,
-                          SQLITE_PREPARE_PERSISTENT,
-                          &(pExtData->pPragmaDataVersionStmt), 0);
-  if (rc != SQLITE_OK) {
-    sqlite3_finalize(pExtData->pPragmaDataVersionStmt);
-    sqlite3_finalize(pExtData->pPragmaSchemaVersionStmt);
-    pExtData->pPragmaDataVersionStmt = 0;
-    pExtData->pPragmaSchemaVersionStmt = 0;
-    return 0;
-  }
-
-  if (rc != SQLITE_OK) {
-    sqlite3_finalize(pExtData->pPragmaDataVersionStmt);
-    sqlite3_finalize(pExtData->pPragmaSchemaVersionStmt);
-    pExtData->pPragmaDataVersionStmt = 0;
-    pExtData->pPragmaSchemaVersionStmt = 0;
-    return 0;
-  }
+  rc += sqlite3_prepare_v3(db, "PRAGMA data_version", -1,
+                           SQLITE_PREPARE_PERSISTENT,
+                           &(pExtData->pPragmaDataVersionStmt), 0);
+  pExtData->pSetSyncBitStmt = 0;
+  rc += sqlite3_prepare_v3(db, SET_SYNC_BIT, -1, SQLITE_PREPARE_PERSISTENT,
+                           &(pExtData->pSetSyncBitStmt), 0);
+  pExtData->pClearSyncBitStmt = 0;
+  rc += sqlite3_prepare_v3(db, CLEAR_SYNC_BIT, -1, SQLITE_PREPARE_PERSISTENT,
+                           &(pExtData->pClearSyncBitStmt), 0);
 
   pExtData->dbVersion = -1;
   pExtData->seq = 0;
@@ -49,8 +35,9 @@ crsql_ExtData *crsql_newExtData(sqlite3 *db) {
   pExtData->rowsImpacted = 0;
   pExtData->hStmts = 0;
 
-  rc = crsql_fetchPragmaDataVersion(db, pExtData);
-  if (rc == -1) {
+  int pv = crsql_fetchPragmaDataVersion(db, pExtData);
+  if (pv == -1 || rc != SQLITE_OK) {
+    crsql_freeExtData(pExtData);
     return 0;
   }
 
@@ -62,6 +49,8 @@ void crsql_freeExtData(crsql_ExtData *pExtData) {
   sqlite3_finalize(pExtData->pDbVersionStmt);
   sqlite3_finalize(pExtData->pPragmaSchemaVersionStmt);
   sqlite3_finalize(pExtData->pPragmaDataVersionStmt);
+  sqlite3_finalize(pExtData->pSetSyncBitStmt);
+  sqlite3_finalize(pExtData->pClearSyncBitStmt);
   crsql_freeAllTableInfos(pExtData->zpTableInfos, pExtData->tableInfosLen);
   crsql_clearStmtCache(pExtData);
   sqlite3_free(pExtData);
@@ -76,10 +65,14 @@ void crsql_finalize(crsql_ExtData *pExtData) {
   sqlite3_finalize(pExtData->pDbVersionStmt);
   sqlite3_finalize(pExtData->pPragmaSchemaVersionStmt);
   sqlite3_finalize(pExtData->pPragmaDataVersionStmt);
+  sqlite3_finalize(pExtData->pSetSyncBitStmt);
+  sqlite3_finalize(pExtData->pClearSyncBitStmt);
   crsql_clearStmtCache(pExtData);
   pExtData->pDbVersionStmt = 0;
   pExtData->pPragmaSchemaVersionStmt = 0;
   pExtData->pPragmaDataVersionStmt = 0;
+  pExtData->pSetSyncBitStmt = 0;
+  pExtData->pClearSyncBitStmt = 0;
 }
 
 #define DB_VERSION_SCHEMA_VERSION 0

@@ -246,6 +246,8 @@ static int changesNext(sqlite3_vtab_cursor *cur) {
       return rc;
     }
     crsql_setCachedStmt(pCur->pTab->pExtData, zStmtKey, pRowStmt);
+  } else {
+    sqlite3_free(zStmtKey);
   }
 
   RawVec unpackedPks = crsql_unpack_columns(pks);

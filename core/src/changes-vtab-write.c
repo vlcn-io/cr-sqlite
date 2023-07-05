@@ -540,33 +540,43 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
     return doesCidWin == 0 ? SQLITE_OK : SQLITE_ERROR;
   }
 
-  // CACHED_STMT_MERGE_INSERT
-  zSql = sqlite3_mprintf(
-      "INSERT INTO \"%w\" (%s, \"%w\")\
+  char *zStmtCacheKey = crsql_getCacheKeyForStmtType(
+      CACHED_STMT_MERGE_INSERT, tblInfo->tblName, insertColName);
+  sqlite3_stmt *pStmt = 0;
+  if (zStmtCacheKey == 0) {
+    *errmsg = sqlite3_mprintf(
+        "Failed creating cache key for CACHED_STMT_MERGE_INSERT");
+    return SQLITE_ERROR;
+  }
+  pStmt = crsql_getCachedStmt(pTab->pExtData, zStmtCacheKey);
+  if (pStmt == 0) {
+    zSql = sqlite3_mprintf(
+        "INSERT INTO \"%w\" (%s, \"%w\")\
       VALUES (%s, ?)\
       ON CONFLICT DO UPDATE\
       SET \"%w\" = ?",
-      tblInfo->tblName, pkIdentifierList, insertColName, pkBindingList,
-      insertColName);
-
-  rc = sqlite3_exec(db, SET_SYNC_BIT, 0, 0, errmsg);
-  if (rc != SQLITE_OK) {
-    sqlite3_free(pkBindingList);
-    sqlite3_free(pkIdentifierList);
-    crsql_free_unpacked_values(unpackedPks);
-    sqlite3_exec(db, CLEAR_SYNC_BIT, 0, 0, 0);
+        tblInfo->tblName, pkIdentifierList, insertColName, pkBindingList,
+        insertColName);
+    rc = sqlite3_prepare_v3(db, zSql, -1, SQLITE_PREPARE_PERSISTENT, &pStmt, 0);
     sqlite3_free(zSql);
-    *errmsg = sqlite3_mprintf("Failed setting sync bit");
-    return rc;
+
+    if (rc != SQLITE_OK) {
+      sqlite3_free(zStmtCacheKey);
+      sqlite3_finalize(pStmt);
+      *errmsg = sqlite3_mprintf("Failed preparing CACHED_STMT_MERGE_INSERT");
+      return rc;
+    }
+    crsql_setCachedStmt(pTab->pExtData, zStmtCacheKey, pStmt);
+  } else {
+    sqlite3_free(zStmtCacheKey);
+    zStmtCacheKey = 0;
   }
 
-  sqlite3_stmt *pStmt = 0;
-  rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
-  sqlite3_free(zSql);
+  rc += crsql_bind_unpacked_values(pStmt, unpackedPks);
+  rc = sqlite3_bind_value(pStmt, unpackedPks.len + 1, insertVal);
+  rc += sqlite3_bind_value(pStmt, unpackedPks.len + 2, insertVal);
   if (rc == SQLITE_OK) {
-    rc += crsql_bind_unpacked_values(pStmt, unpackedPks);
-    rc = sqlite3_bind_value(pStmt, unpackedPks.len + 1, insertVal);
-    rc += sqlite3_bind_value(pStmt, unpackedPks.len + 2, insertVal);
+    rc = sqlite3_exec(db, SET_SYNC_BIT, 0, 0, errmsg);
     if (rc == SQLITE_OK) {
       rc = sqlite3_step(pStmt);
       if (rc != SQLITE_DONE) {
@@ -577,7 +587,7 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
     }
   }
 
-  sqlite3_finalize(pStmt);
+  crsql_resetCachedStmt(pStmt);
   sqlite3_exec(db, CLEAR_SYNC_BIT, 0, 0, 0);
 
   if (rc != SQLITE_OK) {

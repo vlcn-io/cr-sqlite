@@ -224,7 +224,7 @@ sqlite3_int64 crsql_setWinnerClock(
       ) RETURNING _rowid_",
         tblInfo->tblName, pkIdentifierList, pkBindList);
 
-    rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
+    rc = sqlite3_prepare_v3(db, zSql, -1, SQLITE_PREPARE_PERSISTENT, &pStmt, 0);
     sqlite3_free(zSql);
 
     if (rc != SQLITE_OK) {
@@ -269,21 +269,35 @@ static sqlite3_int64 crsql_mergePkOnlyInsert(
     const char *pkBindingsList, RawVec unpackedPks, const char *pkIdentifiers,
     sqlite3_int64 remoteColVersion, sqlite3_int64 remoteDbVersion,
     const void *remoteSiteId, int remoteSiteIdLen) {
-  // CACHED_STMT_MERGE_PK_ONLY_INSERT
-  char *zSql = sqlite3_mprintf("INSERT OR IGNORE INTO \"%s\" (%s) VALUES (%s)",
-                               tblInfo->tblName, pkIdentifiers, pkBindingsList);
-  int rc = sqlite3_exec(db, SET_SYNC_BIT, 0, 0, 0);
-  if (rc != SQLITE_OK) {
-    sqlite3_free(zSql);
+  int rc = SQLITE_OK;
+  char *zStmtCacheKey = crsql_getCacheKeyForStmtType(
+      CACHED_STMT_MERGE_PK_ONLY_INSERT, tblInfo->tblName, 0);
+  if (zStmtCacheKey == 0) {
     return -1;
   }
-
   sqlite3_stmt *pStmt;
-  rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
-  sqlite3_free(zSql);
+  pStmt = crsql_getCachedStmt(pExtData, zStmtCacheKey);
+  if (pStmt == 0) {
+    char *zSql =
+        sqlite3_mprintf("INSERT OR IGNORE INTO \"%s\" (%s) VALUES (%s)",
+                        tblInfo->tblName, pkIdentifiers, pkBindingsList);
+    rc = sqlite3_prepare_v3(db, zSql, -1, SQLITE_PREPARE_PERSISTENT, &pStmt, 0);
+    sqlite3_free(zSql);
 
+    if (rc != SQLITE_OK) {
+      sqlite3_free(zStmtCacheKey);
+      sqlite3_finalize(pStmt);
+      return rc;
+    }
+    crsql_setCachedStmt(pExtData, zStmtCacheKey, pStmt);
+  } else {
+    sqlite3_free(zStmtCacheKey);
+    zStmtCacheKey = 0;
+  }
+
+  rc = crsql_bind_unpacked_values(pStmt, unpackedPks);
   if (rc == SQLITE_OK) {
-    rc = crsql_bind_unpacked_values(pStmt, unpackedPks);
+    rc = sqlite3_exec(db, SET_SYNC_BIT, 0, 0, 0);
     if (rc == SQLITE_OK) {
       rc = sqlite3_step(pStmt);
       if (rc == SQLITE_DONE) {
@@ -291,7 +305,7 @@ static sqlite3_int64 crsql_mergePkOnlyInsert(
       }
     }
   }
-  sqlite3_finalize(pStmt);
+  crsql_resetCachedStmt(pStmt);
 
   sqlite3_exec(db, CLEAR_SYNC_BIT, 0, 0, 0);
   if (rc != SQLITE_OK) {

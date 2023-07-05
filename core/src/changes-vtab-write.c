@@ -588,7 +588,7 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
   }
 
   rc += crsql_bind_unpacked_values(pStmt, unpackedPks);
-  rc = sqlite3_bind_value(pStmt, unpackedPks.len + 1, insertVal);
+  rc += sqlite3_bind_value(pStmt, unpackedPks.len + 1, insertVal);
   rc += sqlite3_bind_value(pStmt, unpackedPks.len + 2, insertVal);
   if (rc == SQLITE_OK) {
     rc = sqlite3_step(pTab->pExtData->pSetSyncBitStmt);

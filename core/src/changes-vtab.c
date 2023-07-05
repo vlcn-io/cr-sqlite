@@ -236,7 +236,8 @@ static int changesNext(sqlite3_vtab_cursor *cur) {
       return SQLITE_ERROR;
     }
 
-    rc = sqlite3_prepare_v2(pCur->pTab->db, zSql, -1, &pRowStmt, 0);
+    rc = sqlite3_prepare_v3(pCur->pTab->db, zSql, -1, SQLITE_PREPARE_PERSISTENT,
+                            &pRowStmt, 0);
     sqlite3_free(zSql);
 
     if (rc != SQLITE_OK) {

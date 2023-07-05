@@ -433,6 +433,7 @@ static void crsqlSyncBit(sqlite3_context *context, int argc,
   // Args? We're setting the value of the bit
   int newValue = sqlite3_value_int(argv[0]);
   *syncBit = newValue;
+  sqlite3_result_int(context, newValue);
 }
 
 /**
@@ -741,6 +742,24 @@ __declspec(dllexport)
     return rc;
   }
 
+  // Register a thread & connection local bit to toggle on or off
+  // our triggers depending on the source of updates to a table.
+  int *syncBit = sqlite3_malloc(sizeof *syncBit);
+  *syncBit = 0;
+  rc = sqlite3_create_function_v2(
+      db, "crsql_internal_sync_bit",
+      -1,                              // num args: -1 -> 0 or more
+      SQLITE_UTF8 | SQLITE_INNOCUOUS,  // configuration
+      syncBit,                         // user data
+      crsqlSyncBit,
+      0,            // step
+      0,            // final
+      sqlite3_free  // destroy / free syncBit
+  );
+  if (rc != SQLITE_OK) {
+    return rc;
+  }
+
   crsql_ExtData *pExtData = crsql_newExtData(db);
   if (pExtData == 0) {
     return SQLITE_ERROR;
@@ -818,23 +837,6 @@ __declspec(dllexport)
     rc = sqlite3_create_function(db, "crsql_rows_impacted", 0,
                                  SQLITE_UTF8 | SQLITE_INNOCUOUS, pExtData,
                                  crsqlRowsImpacted, 0, 0);
-  }
-
-  if (rc == SQLITE_OK) {
-    // Register a thread & connection local bit to toggle on or off
-    // our triggers depending on the source of updates to a table.
-    int *syncBit = sqlite3_malloc(sizeof *syncBit);
-    *syncBit = 0;
-    rc = sqlite3_create_function_v2(
-        db, "crsql_internal_sync_bit",
-        -1,                              // num args: -1 -> 0 or more
-        SQLITE_UTF8 | SQLITE_INNOCUOUS,  // configuration
-        syncBit,                         // user data
-        crsqlSyncBit,
-        0,            // step
-        0,            // final
-        sqlite3_free  // destroy / free syncBit
-    );
   }
 
   if (rc == SQLITE_OK) {

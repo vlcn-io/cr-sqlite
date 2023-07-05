@@ -297,7 +297,11 @@ static sqlite3_int64 crsql_mergePkOnlyInsert(
 
   rc = crsql_bind_unpacked_values(pStmt, unpackedPks);
   if (rc == SQLITE_OK) {
-    rc = sqlite3_exec(db, SET_SYNC_BIT, 0, 0, 0);
+    rc = sqlite3_step(pExtData->pSetSyncBitStmt);
+    if (rc == SQLITE_ROW) {
+      rc = SQLITE_OK;
+    }
+    rc += sqlite3_reset(pExtData->pSetSyncBitStmt);
     if (rc == SQLITE_OK) {
       rc = sqlite3_step(pStmt);
       if (rc == SQLITE_DONE) {
@@ -307,8 +311,12 @@ static sqlite3_int64 crsql_mergePkOnlyInsert(
   }
   crsql_resetCachedStmt(pStmt);
 
-  sqlite3_exec(db, CLEAR_SYNC_BIT, 0, 0, 0);
-  if (rc != SQLITE_OK) {
+  int syncrc = sqlite3_step(pExtData->pClearSyncBitStmt);
+  if (syncrc == SQLITE_ROW) {
+    syncrc = SQLITE_OK;
+  }
+  syncrc += sqlite3_reset(pExtData->pClearSyncBitStmt);
+  if (rc != SQLITE_OK || syncrc != SQLITE_OK) {
     return -1;
   }
 
@@ -352,8 +360,11 @@ static sqlite3_int64 crsql_mergeDelete(
 
   rc = crsql_bind_unpacked_values(pStmt, unpackedPks);
   if (rc == SQLITE_OK) {
-    // TODO: perma prepare sync bit stmts
-    rc = sqlite3_exec(db, SET_SYNC_BIT, 0, 0, 0);
+    rc = sqlite3_step(pExtData->pSetSyncBitStmt);
+    if (rc == SQLITE_ROW) {
+      rc = SQLITE_OK;
+    }
+    rc += sqlite3_reset(pExtData->pSetSyncBitStmt);
     if (rc == SQLITE_OK) {
       rc = sqlite3_step(pStmt);
       if (rc == SQLITE_DONE) {
@@ -363,8 +374,12 @@ static sqlite3_int64 crsql_mergeDelete(
   }
   crsql_resetCachedStmt(pStmt);
 
-  sqlite3_exec(db, CLEAR_SYNC_BIT, 0, 0, 0);
-  if (rc != SQLITE_OK) {
+  int syncrc = sqlite3_step(pExtData->pClearSyncBitStmt);
+  if (syncrc == SQLITE_ROW) {
+    syncrc = SQLITE_OK;
+  }
+  syncrc += sqlite3_reset(pExtData->pClearSyncBitStmt);
+  if (rc != SQLITE_OK || syncrc != SQLITE_OK) {
     return -1;
   }
 
@@ -576,7 +591,11 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
   rc = sqlite3_bind_value(pStmt, unpackedPks.len + 1, insertVal);
   rc += sqlite3_bind_value(pStmt, unpackedPks.len + 2, insertVal);
   if (rc == SQLITE_OK) {
-    rc = sqlite3_exec(db, SET_SYNC_BIT, 0, 0, errmsg);
+    rc = sqlite3_step(pTab->pExtData->pSetSyncBitStmt);
+    if (rc == SQLITE_ROW) {
+      rc = SQLITE_OK;
+    }
+    rc += sqlite3_reset(pTab->pExtData->pSetSyncBitStmt);
     if (rc == SQLITE_OK) {
       rc = sqlite3_step(pStmt);
       if (rc != SQLITE_DONE) {
@@ -588,9 +607,13 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
   }
 
   crsql_resetCachedStmt(pStmt);
-  sqlite3_exec(db, CLEAR_SYNC_BIT, 0, 0, 0);
+  int syncrc = sqlite3_step(pTab->pExtData->pClearSyncBitStmt);
+  if (syncrc == SQLITE_ROW) {
+    syncrc = SQLITE_OK;
+  }
+  syncrc += sqlite3_reset(pTab->pExtData->pClearSyncBitStmt);
 
-  if (rc != SQLITE_OK) {
+  if (rc != SQLITE_OK || syncrc != SQLITE_OK) {
     sqlite3_free(pkBindingList);
     sqlite3_free(pkIdentifierList);
     crsql_free_unpacked_values(unpackedPks);

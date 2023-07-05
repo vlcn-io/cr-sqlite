@@ -18,8 +18,8 @@
   "SELECT tbl_name FROM sqlite_master WHERE type='table' AND tbl_name LIKE " \
   "'%__crsql_clock'"
 
-#define SET_SYNC_BIT "select crsql_internal_sync_bit(1)"
-#define CLEAR_SYNC_BIT "select crsql_internal_sync_bit(0)"
+#define SET_SYNC_BIT "SELECT crsql_internal_sync_bit(1)"
+#define CLEAR_SYNC_BIT "SELECT crsql_internal_sync_bit(0)"
 
 #define TBL_SITE_ID "__crsql_siteid"
 #define TBL_DB_VERSION "__crsql_dbversion"

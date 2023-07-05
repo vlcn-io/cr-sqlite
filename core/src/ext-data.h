@@ -41,6 +41,8 @@ struct crsql_ExtData {
 
   int seq;
 
+  sqlite3_stmt *pSetSyncBitStmt;
+  sqlite3_stmt *pClearSyncBitStmt;
   crsql_CachedStmt *hStmts;
 };
 

@@ -103,7 +103,7 @@ static int crsql_didCidWin(sqlite3 *db, crsql_ExtData *pExtData,
   if (pStmt == 0) {
     zSql = sqlite3_mprintf("SELECT \"%w\" FROM \"%w\" WHERE %s", colName,
                            insertTbl, pkWhereList);
-    rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
+    rc = sqlite3_prepare_v3(db, zSql, -1, SQLITE_PREPARE_PERSISTENT, &pStmt, 0);
     sqlite3_free(zSql);
 
     if (rc != SQLITE_OK) {
@@ -142,37 +142,51 @@ static int crsql_didCidWin(sqlite3 *db, crsql_ExtData *pExtData,
 }
 
 #define DELETED_LOCALLY -1
-int crsql_checkForLocalDelete(sqlite3 *db, const char *tblName,
-                              char *pkWhereList, RawVec unpackedPks) {
-  // CACHED_STMT_CHECK_FOR_LOCAL_DELETE
-  char *zSql = sqlite3_mprintf(
-      "SELECT count(*) FROM \"%s__crsql_clock\" WHERE %s AND "
-      "__crsql_col_name "
-      "= %Q",
-      tblName, pkWhereList, DELETE_CID_SENTINEL);
+static int crsql_checkForLocalDelete(sqlite3 *db, crsql_ExtData *pExtData,
+                                     const char *tblName, char *pkWhereList,
+                                     RawVec unpackedPks) {
+  int rc = SQLITE_OK;
+  char *zStmtCacheKey = crsql_getCacheKeyForStmtType(
+      CACHED_STMT_CHECK_FOR_LOCAL_DELETE, tblName, 0);
+  if (zStmtCacheKey == 0) {
+    return SQLITE_ERROR;
+  }
   sqlite3_stmt *pStmt;
-  int rc = sqlite3_prepare(db, zSql, -1, &pStmt, 0);
-  sqlite3_free(zSql);
+  pStmt = crsql_getCachedStmt(pExtData, zStmtCacheKey);
+  if (pStmt == 0) {
+    char *zSql = sqlite3_mprintf(
+        "SELECT count(*) FROM \"%s__crsql_clock\" WHERE %s AND "
+        "__crsql_col_name "
+        "= %Q",
+        tblName, pkWhereList, DELETE_CID_SENTINEL);
 
-  if (rc != SQLITE_OK) {
-    sqlite3_finalize(pStmt);
-    return rc;
+    rc = sqlite3_prepare_v3(db, zSql, -1, SQLITE_PREPARE_PERSISTENT, &pStmt, 0);
+    sqlite3_free(zSql);
+
+    if (rc != SQLITE_OK) {
+      sqlite3_finalize(pStmt);
+      return rc;
+    }
+    crsql_setCachedStmt(pExtData, zStmtCacheKey, pStmt);
+  } else {
+    sqlite3_free(zStmtCacheKey);
+    zStmtCacheKey = 0;
   }
 
   rc = crsql_bind_unpacked_values(pStmt, unpackedPks);
   if (rc != SQLITE_OK) {
-    sqlite3_finalize(pStmt);
+    crsql_resetCachedStmt(pStmt);
     crsql_free_unpacked_values(unpackedPks);
   }
 
   rc = sqlite3_step(pStmt);
   if (rc != SQLITE_ROW) {
-    sqlite3_finalize(pStmt);
+    crsql_resetCachedStmt(pStmt);
     return SQLITE_ERROR;
   }
 
   int count = sqlite3_column_int(pStmt, 0);
-  sqlite3_finalize(pStmt);
+  crsql_resetCachedStmt(pStmt);
   if (count == 1) {
     return DELETED_LOCALLY;
   }
@@ -407,8 +421,8 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
     return unpackedPks.len;
   }
 
-  rc =
-      crsql_checkForLocalDelete(db, tblInfo->tblName, pkWhereList, unpackedPks);
+  rc = crsql_checkForLocalDelete(db, pTab->pExtData, tblInfo->tblName,
+                                 pkWhereList, unpackedPks);
   if (rc == DELETED_LOCALLY) {
     rc = SQLITE_OK;
     // delete wins. we're all done.

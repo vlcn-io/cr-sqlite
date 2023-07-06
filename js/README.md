@@ -4,9 +4,9 @@ JavaScript packages to use `cr-sqlite` in the browser, node, react and other JS 
 
 # Quickstart
 
-Scaffolding a new project -- todo: add a vlcn / cr-sqlite application template
+Scaffolding a new project -- https://github.com/vlcn-io/vite-starter/tree/main
 
-Example apps to look at until then:
+Example apps:
 
 - https://github.com/vlcn-io/live-examples
 - [Observable Notebook](https://observablehq.com/@tantaman/cr-sqlite-basic-setup)

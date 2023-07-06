@@ -8,10 +8,14 @@ test("sandbox", () => {
     _tag: tags.streamingChanges,
     seqStart: [0n, 0],
     seqEnd: [0n, 0],
-    changes: [["", Uint8Array.from([0]), "", "", 0n, 0n]],
+    changes: [
+      ["", Uint8Array.from([0]), "", Uint8Array.from([1, 1, 1]), 0n, 0n],
+    ],
   } as const;
   const s = new JsonSerializer();
 
-  const encoded = s.encode(msg);
-  const decoded = s.decode(encoded);
+  const encoded = JSON.stringify(s.encode(msg));
+  const decoded = s.decode(JSON.parse(encoded));
+  console.log(encoded);
+  console.log(decoded);
 });

@@ -1,5 +1,17 @@
 # @vlcn.io/browser-tests
 
+## 0.12.0-next.0
+
+### Minor Changes
+
+- binary encoded primary keys, no string encoding on values, cache prepared statements on merge, fix webkit JIT crash
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/crsqlite-wasm@0.14.0-next.0
+  - @vlcn.io/xplat-tests@0.12.0-next.0
+
 ## 0.11.0
 
 ### Minor Changes

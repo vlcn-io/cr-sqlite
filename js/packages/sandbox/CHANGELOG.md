@@ -1,5 +1,21 @@
 # sandbox
 
+## 0.5.0-next.0
+
+### Minor Changes
+
+- binary encoded primary keys, no string encoding on values, cache prepared statements on merge, fix webkit JIT crash
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/crsqlite-wasm@0.14.0-next.0
+  - @vlcn.io/direct-connect-browser@0.4.0-next.0
+  - @vlcn.io/direct-connect-common@0.5.0-next.0
+  - @vlcn.io/direct-connect-nodejs@0.5.0-next.0
+  - @vlcn.io/react@2.4.0-next.0
+  - @vlcn.io/rx-tbl@0.13.0-next.0
+
 ## 0.4.0
 
 ### Minor Changes

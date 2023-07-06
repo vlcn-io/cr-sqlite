@@ -1,5 +1,11 @@
 # @vlcn.io/py-correctness
 
+## 0.12.0-next.0
+
+### Minor Changes
+
+- binary encoded primary keys, no string encoding on values, cache prepared statements on merge, fix webkit JIT crash
+
 ## 0.11.0
 
 ### Minor Changes

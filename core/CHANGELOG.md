@@ -1,5 +1,11 @@
 # @vlcn.io/crsqlite
 
+## 0.14.0-next.0
+
+### Minor Changes
+
+- binary encoded primary keys, no string encoding on values, cache prepared statements on merge, fix webkit JIT crash
+
 ## 0.13.0
 
 ### Minor Changes

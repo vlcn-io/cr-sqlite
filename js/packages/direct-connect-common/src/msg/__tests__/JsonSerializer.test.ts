@@ -49,6 +49,20 @@ test("encoded, decode pairing ApplyChangesMsg", () => {
   );
 });
 
+test("null", () => {
+  const msg = {
+    _tag: tags.streamingChanges,
+    seqStart: [0n, 0],
+    seqEnd: [0n, 0],
+    changes: [["", Uint8Array.from([0]), "", null, 0n, 0n]],
+  } as const;
+  const s = new JsonSerializer();
+
+  const encoded = JSON.stringify(s.encode(msg));
+  const decoded = s.decode(JSON.parse(encoded));
+  expect(decoded).toEqual(msg);
+});
+
 test("encode, decode pairing for GetChangesMsg", () => {
   fc.assert(
     fc.property(

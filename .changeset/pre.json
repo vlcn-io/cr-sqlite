@@ -23,6 +23,7 @@
     "@vlcn.io/py-correctness": "0.11.0"
   },
   "changesets": [
+    "itchy-ants-warn",
     "shiny-horses-count"
   ]
 }

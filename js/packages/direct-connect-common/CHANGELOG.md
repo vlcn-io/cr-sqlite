@@ -1,5 +1,11 @@
 # @vlcn.io/direct-connect-common
 
+## 0.5.0-next.1
+
+### Patch Changes
+
+- deal with null values
+
 ## 0.5.0-next.0
 
 ### Minor Changes

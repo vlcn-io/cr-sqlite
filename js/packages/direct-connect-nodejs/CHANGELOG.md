@@ -1,5 +1,12 @@
 # @vlcn.io/direct-connect-nodejs
 
+## 0.5.0-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/direct-connect-common@0.5.0-next.1
+
 ## 0.5.0-next.0
 
 ### Minor Changes

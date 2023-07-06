@@ -131,6 +131,8 @@ function encodeValue(x: any) {
     } else {
       return Number(x);
     }
+  } else if (x == null) {
+    return null;
   } else if (typeof x === "object" && x.constructor === Uint8Array) {
     const hex = bytesToHex(x);
     return [hex];

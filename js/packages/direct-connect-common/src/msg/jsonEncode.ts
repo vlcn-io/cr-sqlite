@@ -86,9 +86,19 @@ export default function encode(msg: Msg): Object {
     case tags.establishOutboundStreamResponse:
       return msg;
     case tags.uploadSchema:
-      return msg;
+      return {
+        _tag: msg._tag,
+        name: msg.name,
+        version: msg.version.toString(),
+        content: msg.content,
+        activate: msg.activate,
+      };
     case tags.activateSchema:
-      return msg;
+      return {
+        _tag: tags.activateSchema,
+        name: msg.name,
+        version: msg.version.toString(),
+      };
   }
 }
 
@@ -98,8 +108,7 @@ function encodeChanges(changes: readonly Change[]): readonly any[] {
       c[0],
       bytesToHex(c[1]),
       c[2],
-      // TODO: support blob encoding.... Likely need a type arg on value.
-      safelyEncodeIfBigNumber(c[3]),
+      encodeValue(c[3]),
       c[4].toString(),
       c[5].toString(),
     ];
@@ -115,13 +124,16 @@ function encodeChanges(changes: readonly Change[]): readonly any[] {
  * Given (3), we need to convert BigInts to Numbers but given (1)
  * we have to convert BigInts > 53 bits to strings.
  */
-function safelyEncodeIfBigNumber(x: any) {
+function encodeValue(x: any) {
   if (typeof x === "bigint") {
     if (x > Number.MAX_SAFE_INTEGER) {
       return x.toString();
     } else {
       return Number(x);
     }
+  } else if (typeof x === "object" && x.constructor === Uint8Array) {
+    const hex = bytesToHex(x);
+    return [hex];
   }
   return x;
 }

@@ -86,9 +86,19 @@ export default function decode(parsed: { [key: string]: any }): Msg {
     case tags.establishOutboundStreamResponse:
       return parsed as Msg;
     case tags.uploadSchema:
-      return parsed as Msg;
+      return {
+        _tag: parsed._tag,
+        name: parsed.name,
+        version: BigInt(parsed.version),
+        content: parsed.content,
+        activate: parsed.activate,
+      };
     case tags.activateSchema:
-      return parsed as Msg;
+      return {
+        _tag: parsed._tag,
+        name: parsed.name,
+        version: BigInt(parsed.version),
+      };
   }
 }
 
@@ -98,7 +108,7 @@ function decodeChanges(changes: any[]): Change[] {
       c[0],
       hexToBytes(c[1]),
       c[2],
-      decodeMaybeNumer(c[3]),
+      decodeValue(c[3]),
       BigInt(c[4]),
       BigInt(c[5]),
     ];
@@ -106,9 +116,13 @@ function decodeChanges(changes: any[]): Change[] {
 }
 
 /**
- * See `safelyEncodeIfBigNumber`
+ * See `jsonEncode.encodeValue`
  */
-function decodeMaybeNumer(maybeNumber: any) {
+function decodeValue(maybeNumber: any) {
+  // we encode Uint8Array into an array of 1 entry of the blob for JSON.
+  if (Array.isArray(maybeNumber) && typeof maybeNumber[0] === "string") {
+    return hexToBytes(maybeNumber[0]);
+  }
   if (typeof maybeNumber !== "string") {
     return maybeNumber;
   }

@@ -41,8 +41,8 @@ test("encoded, decode pairing ApplyChangesMsg", () => {
           seqEnd,
           changes,
         } as const;
-        const encoded = serializer.encode(msg);
-        const decoded = serializer.decode(encoded);
+        const encoded = JSON.stringify(serializer.encode(msg));
+        const decoded = serializer.decode(JSON.parse(encoded));
         expect(decoded).toEqual(msg);
       }
     )
@@ -65,8 +65,8 @@ test("encode, decode pairing for GetChangesMsg", () => {
           since,
           schemaVersion,
         } as const;
-        const encoded = serializer.encode(msg);
-        const decoded = serializer.decode(encoded);
+        const encoded = JSON.stringify(serializer.encode(msg));
+        const decoded = serializer.decode(JSON.parse(encoded));
         expect(decoded).toEqual(msg);
       }
     )
@@ -90,8 +90,8 @@ test("encode, decode pairing for EstablishOutboundStreamMsg", () => {
           seqStart,
           schemaVersion,
         } as const;
-        const encoded = serializer.encode(msg);
-        const decoded = serializer.decode(encoded);
+        const encoded = JSON.stringify(serializer.encode(msg));
+        const decoded = serializer.decode(JSON.parse(encoded));
         expect(decoded).toEqual(msg);
       }
     )
@@ -103,8 +103,8 @@ test("encode, decode pairing for AckChangesMsg", () => {
     fc.property(fc.tuple(fc.bigIntN(64), fc.integer({ min: 0 })), (seqEnd) => {
       const serializer = new JsonSerializer();
       const msg = { _tag: tags.ackChanges, seqEnd } as const;
-      const encoded = serializer.encode(msg);
-      const decoded = serializer.decode(encoded);
+      const encoded = JSON.stringify(serializer.encode(msg));
+      const decoded = serializer.decode(JSON.parse(encoded));
       expect(decoded).toEqual(msg);
     })
   );
@@ -142,8 +142,8 @@ test("StreamingChangesMsg", () => {
           seqEnd,
           changes,
         } as const;
-        const encoded = serializer.encode(msg);
-        const decoded = serializer.decode(encoded);
+        const encoded = JSON.stringify(serializer.encode(msg));
+        const decoded = serializer.decode(JSON.parse(encoded));
         expect(decoded).toEqual(msg);
       }
     )
@@ -155,8 +155,8 @@ test("ApplyChangesResponse", () => {
   const msg = {
     _tag: tags.applyChangesResponse,
   } as const;
-  const encoded = serializer.encode(msg as any);
-  const decoded = serializer.decode(encoded);
+  const encoded = JSON.stringify(serializer.encode(msg as any));
+  const decoded = serializer.decode(JSON.parse(encoded));
   expect(decoded).toEqual(msg);
 });
 
@@ -176,8 +176,8 @@ test("CreateOrMigrateResponse", () => {
           seq,
           status,
         } as const;
-        const encoded = serializer.encode(msg as any);
-        const decoded = serializer.decode(encoded);
+        const encoded = JSON.stringify(serializer.encode(msg as any));
+        const decoded = serializer.decode(JSON.parse(encoded));
         expect(decoded).toEqual(msg);
       }
     )
@@ -200,8 +200,8 @@ test("CreateOrMigrateMsg", () => {
           schemaName,
           schemaVersion,
         } as const;
-        const encoded = serializer.encode(msg);
-        const decoded = serializer.decode(encoded);
+        const encoded = JSON.stringify(serializer.encode(msg));
+        const decoded = serializer.decode(JSON.parse(encoded));
         expect(decoded).toEqual(msg);
       }
     )
@@ -220,8 +220,8 @@ test("GetLastSeenMsg", () => {
           toDbid,
           fromDbid,
         } as const;
-        const encoded = serializer.encode(msg);
-        const decoded = serializer.decode(encoded);
+        const encoded = JSON.stringify(serializer.encode(msg));
+        const decoded = serializer.decode(JSON.parse(encoded));
         expect(decoded).toEqual(msg);
       }
     )
@@ -236,8 +236,8 @@ test("GetLastSeenResponse", () => {
         _tag: tags.getLastSeenResponse,
         seq,
       } as const;
-      const encoded = serializer.encode(msg);
-      const decoded = serializer.decode(encoded);
+      const encoded = JSON.stringify(serializer.encode(msg));
+      const decoded = serializer.decode(JSON.parse(encoded));
       expect(decoded).toEqual(msg);
     })
   );
@@ -259,8 +259,8 @@ test("UploadSchemaMsg", () => {
           content,
           activate,
         } as const;
-        const encoded = serializer.encode(msg);
-        const decoded = serializer.decode(encoded);
+        const encoded = JSON.stringify(serializer.encode(msg));
+        const decoded = serializer.decode(JSON.parse(encoded));
         expect(decoded).toEqual(msg);
       }
     )
@@ -276,8 +276,8 @@ test("ActivateSchemaMsg", () => {
         name,
         version,
       } as const;
-      const encoded = serializer.encode(msg);
-      const decoded = serializer.decode(encoded);
+      const encoded = JSON.stringify(serializer.encode(msg));
+      const decoded = serializer.decode(JSON.parse(encoded));
       expect(decoded).toEqual(msg);
     })
   );

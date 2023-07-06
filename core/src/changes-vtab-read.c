@@ -45,7 +45,7 @@ char *crsql_changesQueryForTable(crsql_TableInfo *tableInfo) {
  * set of changes
  */
 char *crsql_changesUnionQuery(crsql_TableInfo **tableInfos, int tableInfosLen,
-                              const char *idxStr) {
+                              const char *idxStr, int isDistinct) {
   char **unionsArr = sqlite3_malloc(tableInfosLen * sizeof(char *));
   char *unionsStr = 0;
   int i = 0;

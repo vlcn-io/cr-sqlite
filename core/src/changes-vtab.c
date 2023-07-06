@@ -394,7 +394,8 @@ static int changesFilter(sqlite3_vtab_cursor *pVtabCursor, int idxNum,
   }
 
   char *zSql = crsql_changesUnionQuery(pTab->pExtData->zpTableInfos,
-                                       pTab->pExtData->tableInfosLen, idxStr);
+                                       pTab->pExtData->tableInfosLen, idxStr,
+                                       idxNum & 1 == 1);
 
   if (zSql == 0) {
     pTabBase->zErrMsg = sqlite3_mprintf(
@@ -614,6 +615,10 @@ static int changesBestIndex(sqlite3_vtab *tab, sqlite3_index_info *pIdxInfo) {
   else {
     pIdxInfo->estimatedCost = (double)2147483647;
     pIdxInfo->estimatedRows = 2147483647;
+  }
+
+  if (sqlite3_vtab_distinct(pIdxInfo) >= 2) {
+    idxNum += 1;
   }
 
   pIdxInfo->idxNum = idxNum;

@@ -35,10 +35,16 @@ Discussions of these problems in the application space:
 
 # Sponsors
 
-- [![reflect-app](https://reflect.app/_next/image?url=%2Fsite%2Ficons%2F1024x1024.png&w=32&q=100) Reflect](https://reflect.app/)
-- [robinvasan](https://github.com/robinvasan)
-- [iansinnott](https://github.com/iansinnott)
-- [davefowler](https://github.com/davefowler)
+[![reflect-app](https://reflect.app/_next/image?url=%2Fsite%2Ficons%2F1024x1024.png&w=64&q=100)](https://reflect.app/)
+<img src="https://images.ctfassets.net/8fv5t5my8687/01j7yaLj77zqmYK62Y49g7/aee841e7bd176864aa5388448db0f8ef/iku-turquoise.svg" width="64" />
+
+[robinvasan](https://github.com/robinvasan) | [iansinnott](https://github.com/iansinnott) | [davefowler](https://github.com/davefowler)
+
+# Contributors & Collaborators
+
+<img src="https://fly.io/static/images/brand/logo-portrait.svg" width="96" />
+
+[riffle.systems](https://riffle.systems/)
 
 # Perf
 
@@ -49,7 +55,7 @@ Perf data: https://github.com/vlcn-io/cr-sqlite/blob/main/py/perf/perf.ipynb
 
 # Usage
 
-The full documentation site is available [here](https://vlcn.io/background).
+The full documentation site is available [here](https://vlcn.io/docs).
 
 `crsqlite` exposes three main APIs:
 

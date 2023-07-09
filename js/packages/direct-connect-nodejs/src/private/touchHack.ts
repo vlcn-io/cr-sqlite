@@ -7,7 +7,7 @@ const apply = throttle(25, (config: Config, dbid: Uint8Array) => {
 });
 
 export default function touchHack(config: Config, dbid: Uint8Array) {
-  if (!util.isDarwin()) {
+  if (!util.needsTouchHack()) {
     return;
   }
 

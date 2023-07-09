@@ -4,6 +4,7 @@ import util from "./util.js";
 import DB from "./DB.js";
 import chokidar from "chokidar";
 import { collect } from "./collapser.js";
+import path from "path";
 
 /**
  * Notifies outbound streams of changes to the database file.
@@ -22,7 +23,7 @@ export default class FSNotify {
     // If we're OSX, only watch poke files.
     // TODO: collapse events over some period? So we only notify for 1 db at most once every N ms.
     console.log("Pat:", this.config.dbsDir + "/*");
-    this.watcher = chokidar.watch(this.config.dbsDir + "/*", {
+    this.watcher = chokidar.watch(this.config.dbsDir + path.sep + "*", {
       followSymlinks: false,
       usePolling: false,
       interval: 100,

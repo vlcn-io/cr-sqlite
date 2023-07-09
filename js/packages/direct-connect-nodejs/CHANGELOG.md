@@ -1,5 +1,11 @@
 # @vlcn.io/direct-connect-nodejs
 
+## 0.5.0-next.4
+
+### Patch Changes
+
+- us os.path
+
 ## 0.5.0-next.3
 
 ### Patch Changes

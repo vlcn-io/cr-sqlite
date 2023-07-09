@@ -4,7 +4,7 @@ import os from "os";
 import fs from "fs";
 import { bytesToHex } from "@vlcn.io/direct-connect-common";
 
-const isDarwin = os.platform() === "darwin";
+const needsTouchHack = os.platform() === "darwin" || os.platform() === "win32";
 const ex = {
   getDbFilename(config: Config, dbid: Uint8Array): string {
     const ret = path.join(config.dbsDir, bytesToHex(dbid) + ".db");
@@ -22,12 +22,12 @@ const ex = {
     return path.parse(filename).name;
   },
 
-  isDarwin() {
-    return isDarwin;
+  needsTouchHack() {
+    return needsTouchHack;
   },
 
   touchFile(config: Config, dbid: Uint8Array): Promise<void> {
-    if (!isDarwin) {
+    if (!needsTouchHack) {
       throw new Error("Touch hack is only required for darwin");
     }
     return fs.promises

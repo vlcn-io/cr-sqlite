@@ -15,7 +15,7 @@ test("writes to the database notify fs listeners", async () => {
   db.pragma("journal_mode = WAL");
   db.pragma("synchronous = NORMAL");
   db.exec("CREATE TABLE IF NOT EXISTS test2 (a, b)");
-  if (util.isDarwin()) {
+  if (util.needsTouchHack()) {
     await util.touchFile(TestConfig, dbid);
   }
   await sleep(500);
@@ -38,7 +38,7 @@ test("writes to the database notify fs listeners", async () => {
   expect(notified).toBe(true);
 
   db.exec("INSERT INTO test2 VALUES (1, 2)");
-  if (util.isDarwin()) {
+  if (util.needsTouchHack()) {
     await util.touchFile(TestConfig, dbid);
   }
 

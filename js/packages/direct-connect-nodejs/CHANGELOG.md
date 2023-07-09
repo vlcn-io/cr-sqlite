@@ -1,5 +1,11 @@
 # @vlcn.io/direct-connect-nodejs
 
+## 0.5.0-next.3
+
+### Patch Changes
+
+- touch workaround for windows
+
 ## 0.5.0-next.2
 
 ### Patch Changes

@@ -24,6 +24,7 @@
   },
   "changesets": [
     "itchy-ants-warn",
+    "mighty-goats-sell",
     "shiny-horses-count"
   ]
 }

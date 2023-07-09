@@ -1,5 +1,11 @@
 # @vlcn.io/direct-connect-nodejs
 
+## 0.5.0-next.2
+
+### Patch Changes
+
+- fix path resolution for windows
+
 ## 0.5.0-next.1
 
 ### Patch Changes

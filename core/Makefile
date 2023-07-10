@@ -26,8 +26,8 @@ ifdef CONFIG_WINDOWS
 LOADABLE_EXTENSION=dll
 endif
 
-ifdef BUILD_FOR_IOS
-CI_MAYBE_TARGET=aarch64-apple-ios
+ifdef IOS_TARGET
+CI_MAYBE_TARGET=$(IOS_TARGET)
 rs_build_flags = -Zbuild-std
 sysroot_option = --sysroot=/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk
 endif

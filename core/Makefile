@@ -26,6 +26,12 @@ ifdef CONFIG_WINDOWS
 LOADABLE_EXTENSION=dll
 endif
 
+ifdef BUILD_FOR_IOS
+CI_MAYBE_TARGET=aarch64-apple-ios
+rs_build_flags = -Zbuild-std
+sysroot_option = --sysroot=/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk
+endif
+
 prefix=./dist
 dbg_prefix=./dbg
 
@@ -137,11 +143,14 @@ $(TARGET_LOADABLE): $(prefix) $(ext_files) $(rs_lib_loadable_cpy)
 	$(CC) -O2 -I./src/ -I./src/sqlite \
 	$(LOADABLE_CFLAGS) \
 	$(C_TARGET) \
+	$(sysroot_option) \
 	$(ext_files) $(rs_lib_loadable_cpy) -o $@
 
 $(TARGET_DBG_LOADABLE): $(dbg_prefix) $(ext_files) $(rs_lib_dbg_loadable_cpy)
 	$(CC) -g -I./src/ -I./src/sqlite \
 	$(LOADABLE_CFLAGS) \
+	$(C_TARGET) \
+	$(sysroot_option) \
 	$(ext_files) $(rs_lib_dbg_loadable_cpy) -o $@
 
 # Build a SQLite CLI that pre-loads cr-sqlite.

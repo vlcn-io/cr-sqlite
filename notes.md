@@ -1,3 +1,25 @@
+# ios
+
+https://mozilla.github.io/firefox-browser-architecture/experiments/2017-09-06-rust-on-ios.html
+cargo install cargo-lipo
+^-- https://github.com/TimNN/cargo-lipo/issues/60
+https://www.reddit.com/r/rust/comments/12w9h4s/how_to_make_armv7appleios_target_by_myself/
+
+```
+cargo build -Zbuild-std --target=aarch64-apple-ios --features static,omit_load_extension
+```
+
+```
+export CI_MAYBE_TARGET=aarch64-apple-ios
+make loadable
+clang: warning: using sysroot for 'MacOSX' but targeting 'iPhone' [-Wincompatible-sysroot]
+```
+
+^- repeat for every ios arch? How to universal binary?
+
+https://stackoverflow.com/questions/823706/compiling-custom-sqlite-for-an-iphone-app
+https://github.com/swiftlyfalling/SQLiteLib
+
 # Prepared read
 
 - parse values and use correct types for binding

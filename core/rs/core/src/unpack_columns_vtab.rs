@@ -7,14 +7,36 @@ use sqlite::Connection;
 use sqlite_nostd as sqlite;
 use sqlite_nostd::ResultCode;
 
+enum Columns {
+    CELL = 0,
+    PACKAGE = 1,
+}
+
 extern "C" fn connect(
     db: *mut sqlite::sqlite3,
-    aux: *mut c_void,
-    argc: c_int,
-    argv: *const *const c_char,
+    _aux: *mut c_void,
+    _argc: c_int,
+    _argv: *const *const c_char,
     vtab: *mut *mut sqlite::vtab,
-    err: *mut *mut c_char,
+    _err: *mut *mut c_char,
 ) -> c_int {
+    // TODO: more ergonomic rust binding for this
+    let rc = sqlite::declare_vtab(
+        db,
+        sqlite::strlit!("CREATE TABLE x(cell ANY, package BLOB hidden);"),
+    );
+    if rc != 0 {
+        return rc;
+    }
+    unsafe {
+        // TODO: more ergonomic rust bindings
+        *vtab = Box::into_raw(Box::new(sqlite::vtab {
+            nRef: 0,
+            pModule: core::ptr::null(),
+            zErrMsg: core::ptr::null_mut(),
+        }));
+        sqlite::vtab_config(db, sqlite::INNOCUOUS);
+    }
     ResultCode::OK as c_int
 }
 

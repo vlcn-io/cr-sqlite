@@ -3,9 +3,13 @@ extern crate alloc;
 use core::ffi::{c_char, c_int, c_void};
 
 use alloc::boxed::Box;
+use alloc::vec;
+use alloc::vec::Vec;
 use sqlite::Connection;
 use sqlite_nostd as sqlite;
 use sqlite_nostd::ResultCode;
+
+use crate::ColumnValue;
 
 enum Columns {
     CELL = 0,
@@ -40,7 +44,9 @@ extern "C" fn connect(
     ResultCode::OK as c_int
 }
 
-extern "C" fn best_index(vtab: *mut sqlite::vtab, index_info: *mut sqlite::index_info) -> c_int {
+extern "C" fn best_index(_vtab: *mut sqlite::vtab, _index_info: *mut sqlite::index_info) -> c_int {
+    // Assert that package is passed and required via iColumn on pConstraint matches columns::PACKAGE
+    // Set the argvindex on it to 0
     ResultCode::OK as c_int
 }
 
@@ -49,7 +55,28 @@ extern "C" fn disconnect(vtab: *mut sqlite::vtab) -> c_int {
     ResultCode::OK as c_int
 }
 
-extern "C" fn open(vtab: *mut sqlite::vtab, cursor: *mut *mut sqlite::vtab_cursor) -> c_int {
+#[repr(C)]
+struct Cursor {
+    base: sqlite::vtab_cursor,
+    crsr: usize,
+    unpacked: Option<Vec<ColumnValue>>,
+}
+
+extern "C" fn open(_vtab: *mut sqlite::vtab, cursor: *mut *mut sqlite::vtab_cursor) -> c_int {
+    // allocate our cursor object
+    // e.g., https://www.sqlite.org/src/artifact?ci=trunk&filename=ext/misc/series.c
+    unsafe {
+        let boxed = Box::new(Cursor {
+            base: sqlite::vtab_cursor {
+                pVtab: core::ptr::null_mut(),
+            },
+            crsr: 0,
+            unpacked: None,
+        });
+        let raw_cursor = Box::into_raw(boxed);
+        *cursor = raw_cursor.cast::<sqlite::vtab_cursor>();
+    }
+
     ResultCode::OK as c_int
 }
 
@@ -64,6 +91,7 @@ extern "C" fn filter(
     argc: c_int,
     argv: *mut *mut sqlite::value,
 ) -> c_int {
+    // pull out package arg.
     ResultCode::OK as c_int
 }
 

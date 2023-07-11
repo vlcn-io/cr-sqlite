@@ -47,6 +47,14 @@ extern "C" fn connect(
     ResultCode::OK as c_int
 }
 
+extern "C" fn disconnect(vtab: *mut sqlite::vtab) -> c_int {
+    sqlite::free(vtab);
+    // unsafe {
+    // drop(Box::from_raw(vtab));
+    // }
+    ResultCode::OK as c_int
+}
+
 extern "C" fn best_index(vtab: *mut sqlite::vtab, index_info: *mut sqlite::index_info) -> c_int {
     // TODO: better bindings to create this slice for the user
     let constraints = unsafe {
@@ -84,17 +92,10 @@ extern "C" fn best_index(vtab: *mut sqlite::vtab, index_info: *mut sqlite::index
     ResultCode::OK as c_int
 }
 
-extern "C" fn disconnect(vtab: *mut sqlite::vtab) -> c_int {
-    unsafe {
-        drop(Box::from_raw(vtab));
-    }
-    ResultCode::OK as c_int
-}
-
 #[repr(C)]
 struct Cursor {
     base: sqlite::vtab_cursor,
-    crsr: i32,
+    crsr: usize,
     unpacked: Option<Vec<ColumnValue>>,
 }
 
@@ -104,7 +105,7 @@ extern "C" fn open(_vtab: *mut sqlite::vtab, cursor: *mut *mut sqlite::vtab_curs
             base: sqlite::vtab_cursor {
                 pVtab: core::ptr::null_mut(),
             },
-            crsr: -1,
+            crsr: 0,
             unpacked: None,
         });
         let raw_cursor = Box::into_raw(boxed);
@@ -115,10 +116,11 @@ extern "C" fn open(_vtab: *mut sqlite::vtab, cursor: *mut *mut sqlite::vtab_curs
 }
 
 extern "C" fn close(cursor: *mut sqlite::vtab_cursor) -> c_int {
-    let crsr = cursor.cast::<Cursor>();
-    unsafe {
-        drop(Box::from_raw(crsr));
-    }
+    // let crsr = cursor.cast::<Cursor>();
+    sqlite::free(cursor);
+    // unsafe {
+    //     drop(Box::from_raw(crsr));
+    // }
     ResultCode::OK as c_int
 }
 
@@ -144,7 +146,7 @@ extern "C" fn filter(
     unsafe {
         if let Ok(cols) = unpack_columns(args[0].blob()) {
             (*crsr).unpacked = Some(cols);
-            (*crsr).crsr = -1;
+            (*crsr).crsr = 0;
         } else {
             return ResultCode::ERROR as c_int;
         }
@@ -170,7 +172,7 @@ extern "C" fn eof(cursor: *mut sqlite::vtab_cursor) -> c_int {
     unsafe {
         match &(*crsr).unpacked {
             Some(cols) => {
-                if (*crsr).crsr >= cols.len() as i32 {
+                if (*crsr).crsr >= cols.len() {
                     1
                 } else {
                     0
@@ -191,9 +193,11 @@ extern "C" fn column(
         unsafe {
             if let Some(cols) = &(*crsr).unpacked {
                 if (*crsr).crsr < 0 {
+                    (*(*cursor).pVtab).zErrMsg = CString::new("Cursor is less than 0!")
+                        .map_or(core::ptr::null_mut(), |f| f.into_raw());
                     ResultCode::ABORT as c_int
                 } else {
-                    let col_value = &cols[(*crsr).crsr as usize];
+                    let col_value = &cols[(*crsr).crsr];
                     match col_value {
                         ColumnValue::Blob(b) => {
                             ctx.result_blob_static(b);

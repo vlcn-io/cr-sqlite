@@ -4,7 +4,8 @@ use core::ffi::{c_char, c_int, c_void};
 use core::slice;
 
 use alloc::boxed::Box;
-use alloc::vec;
+use alloc::ffi::CString;
+use alloc::format;
 use alloc::vec::Vec;
 use sqlite::{Connection, Context, Value};
 use sqlite_nostd as sqlite;
@@ -12,6 +13,7 @@ use sqlite_nostd::ResultCode;
 
 use crate::{unpack_columns, ColumnValue};
 
+#[derive(Debug)]
 enum Columns {
     CELL = 0,
     PACKAGE = 1,
@@ -45,7 +47,7 @@ extern "C" fn connect(
     ResultCode::OK as c_int
 }
 
-extern "C" fn best_index(_vtab: *mut sqlite::vtab, index_info: *mut sqlite::index_info) -> c_int {
+extern "C" fn best_index(vtab: *mut sqlite::vtab, index_info: *mut sqlite::index_info) -> c_int {
     // TODO: better bindings to create this slice for the user
     let constraints = unsafe {
         slice::from_raw_parts_mut(
@@ -65,6 +67,13 @@ extern "C" fn best_index(_vtab: *mut sqlite::vtab, index_info: *mut sqlite::inde
             continue;
         }
         if constraint.iColumn != Columns::PACKAGE as i32 {
+            unsafe {
+                (*vtab).zErrMsg = CString::new(format!(
+                    "no package column specified. Got {:?} instead",
+                    Columns::PACKAGE
+                ))
+                .map_or(core::ptr::null_mut(), |f| f.into_raw());
+            }
             return ResultCode::MISUSE as c_int;
         } else {
             constraint_usage[i].argvIndex = 1;
@@ -123,7 +132,11 @@ extern "C" fn filter(
     // pull out package arg as set up by xBestIndex (should always be argv0)
     // stick into cursor
     let args = sqlite::args!(argc, argv);
-    if args.len() != 1 {
+    if args.len() < 1 {
+        unsafe {
+            (*(*cursor).pVtab).zErrMsg = CString::new("Zero args passed to filter")
+                .map_or(core::ptr::null_mut(), |f| f.into_raw());
+        }
         return ResultCode::MISUSE as c_int;
     }
 
@@ -201,10 +214,17 @@ extern "C" fn column(
                     ResultCode::OK as c_int
                 }
             } else {
+                (*(*cursor).pVtab).zErrMsg = CString::new("No columns to unpack!")
+                    .map_or(core::ptr::null_mut(), |f| f.into_raw());
                 ResultCode::ABORT as c_int
             }
         }
     } else {
+        unsafe {
+            (*(*cursor).pVtab).zErrMsg =
+                CString::new(format!("Selected a column besides cell! {}", col_num))
+                    .map_or(core::ptr::null_mut(), |f| f.into_raw());
+        }
         ResultCode::MISUSE as c_int
     }
 }

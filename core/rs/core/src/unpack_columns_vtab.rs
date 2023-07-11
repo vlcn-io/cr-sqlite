@@ -63,8 +63,6 @@ struct Cursor {
 }
 
 extern "C" fn open(_vtab: *mut sqlite::vtab, cursor: *mut *mut sqlite::vtab_cursor) -> c_int {
-    // allocate our cursor object
-    // e.g., https://www.sqlite.org/src/artifact?ci=trunk&filename=ext/misc/series.c
     unsafe {
         let boxed = Box::new(Cursor {
             base: sqlite::vtab_cursor {
@@ -81,6 +79,7 @@ extern "C" fn open(_vtab: *mut sqlite::vtab, cursor: *mut *mut sqlite::vtab_curs
 }
 
 extern "C" fn close(vtab: *mut sqlite::vtab_cursor) -> c_int {
+    sqlite::free(vtab as *mut c_void);
     ResultCode::OK as c_int
 }
 
@@ -91,15 +90,20 @@ extern "C" fn filter(
     argc: c_int,
     argv: *mut *mut sqlite::value,
 ) -> c_int {
-    // pull out package arg.
+    // pull out package arg as set up by xBestIndex (should always be argv0)
+    // stick into cursor
     ResultCode::OK as c_int
 }
 
 extern "C" fn next(cursor: *mut sqlite::vtab_cursor) -> c_int {
+    // go so long as crsr < unpacked.len
+    // if crsr == unpacked.len continue
+    // else, return done
     ResultCode::OK as c_int
 }
 
 extern "C" fn eof(cursor: *mut sqlite::vtab_cursor) -> c_int {
+    // crsr >= unpacked.len
     ResultCode::OK as c_int
 }
 
@@ -108,10 +112,14 @@ extern "C" fn column(
     context: *mut sqlite::context,
     col_num: c_int,
 ) -> c_int {
+    // columns enum to pull what was selected
+    // they can only select cell.
+    // allow selecting the hidden col? We'd need to keep the original
     ResultCode::OK as c_int
 }
 
 extern "C" fn rowid(cursor: *mut sqlite::vtab_cursor, row_id: *mut sqlite::int64) -> c_int {
+    // rowid is just crsr
     ResultCode::OK as c_int
 }
 

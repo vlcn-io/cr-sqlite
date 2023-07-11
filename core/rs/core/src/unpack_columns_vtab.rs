@@ -48,7 +48,7 @@ extern "C" fn connect(
 }
 
 extern "C" fn disconnect(vtab: *mut sqlite::vtab) -> c_int {
-    sqlite::free(vtab);
+    sqlite::free(vtab as *mut c_void);
     // unsafe {
     // drop(Box::from_raw(vtab));
     // }
@@ -117,7 +117,7 @@ extern "C" fn open(_vtab: *mut sqlite::vtab, cursor: *mut *mut sqlite::vtab_curs
 
 extern "C" fn close(cursor: *mut sqlite::vtab_cursor) -> c_int {
     // let crsr = cursor.cast::<Cursor>();
-    sqlite::free(cursor);
+    sqlite::free(cursor as *mut c_void);
     // unsafe {
     //     drop(Box::from_raw(crsr));
     // }

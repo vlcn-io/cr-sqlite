@@ -48,10 +48,9 @@ extern "C" fn connect(
 }
 
 extern "C" fn disconnect(vtab: *mut sqlite::vtab) -> c_int {
-    sqlite::free(vtab as *mut c_void);
-    // unsafe {
-    // drop(Box::from_raw(vtab));
-    // }
+    unsafe {
+        drop(Box::from_raw(vtab));
+    }
     ResultCode::OK as c_int
 }
 
@@ -116,11 +115,10 @@ extern "C" fn open(_vtab: *mut sqlite::vtab, cursor: *mut *mut sqlite::vtab_curs
 }
 
 extern "C" fn close(cursor: *mut sqlite::vtab_cursor) -> c_int {
-    // let crsr = cursor.cast::<Cursor>();
-    sqlite::free(cursor as *mut c_void);
-    // unsafe {
-    //     drop(Box::from_raw(crsr));
-    // }
+    let crsr = cursor.cast::<Cursor>();
+    unsafe {
+        drop(Box::from_raw(crsr));
+    }
     ResultCode::OK as c_int
 }
 
@@ -239,38 +237,39 @@ extern "C" fn rowid(cursor: *mut sqlite::vtab_cursor, row_id: *mut sqlite::int64
     ResultCode::OK as c_int
 }
 
+static MODULE: sqlite_nostd::module = sqlite_nostd::module {
+    iVersion: 0,
+    xCreate: None,
+    xConnect: Some(connect),
+    xBestIndex: Some(best_index),
+    xDisconnect: Some(disconnect),
+    xDestroy: None,
+    xOpen: Some(open),
+    xClose: Some(close),
+    xFilter: Some(filter),
+    xNext: Some(next),
+    xEof: Some(eof),
+    xColumn: Some(column),
+    xRowid: Some(rowid),
+    xUpdate: None,
+    xBegin: None,
+    xSync: None,
+    xCommit: None,
+    xRollback: None,
+    xFindFunction: None,
+    xRename: None,
+    xSavepoint: None,
+    xRelease: None,
+    xRollbackTo: None,
+    xShadowName: None,
+};
+
 /**
  * CREATE TABLE [x] (cell, package HIDDEN);
  * SELECT cell FROM crsql_unpack_columns WHERE package = ___;
  */
 pub fn create_module(db: *mut sqlite::sqlite3) -> Result<ResultCode, ResultCode> {
-    let module = Box::new(sqlite_nostd::module {
-        iVersion: 0,
-        xCreate: None,
-        xConnect: Some(connect),
-        xBestIndex: Some(best_index),
-        xDisconnect: Some(disconnect),
-        xDestroy: None,
-        xOpen: Some(open),
-        xClose: Some(close),
-        xFilter: Some(filter),
-        xNext: Some(next),
-        xEof: Some(eof),
-        xColumn: Some(column),
-        xRowid: Some(rowid),
-        xUpdate: None,
-        xBegin: None,
-        xSync: None,
-        xCommit: None,
-        xRollback: None,
-        xFindFunction: None,
-        xRename: None,
-        xSavepoint: None,
-        xRelease: None,
-        xRollbackTo: None,
-        xShadowName: None,
-    });
-    db.create_module_v2("crsql_unpack_columns", Box::into_raw(module), None, None)?;
+    db.create_module_v2("crsql_unpack_columns", &MODULE, None, None)?;
 
     Ok(ResultCode::OK)
 }

@@ -165,6 +165,12 @@ int crsql_createUpdateTrigger(sqlite3 *db, crsql_TableInfo *tableInfo,
         tableInfo->tblName, pkList, pkNewList, PKS_ONLY_CID_SENTINEL);
   }
 
+  // all other triggers can remain the same since we still must compare value on
+  // update pk cols should get update of triggers, however, so we can invoke the
+  // additional delete or whatever logic.
+  // leverage when clauses? rather than sync bit where stuff.. as well as new !=
+  // old stuff.
+
   for (int i = 0; i < tableInfo->nonPksLen; ++i) {
     // updates are conditionally inserted on the new value not being
     // the same as the old value.

@@ -50,6 +50,7 @@ export default class DB {
       `SELECT "table", "pk", "cid", "val", "col_version", "db_version" FROM crsql_changes WHERE db_version > ? AND site_id IS NOT ?`
     );
     this.#pullChangesetStmt.raw(true);
+    this.#pullChangesetStmt.safeIntegers(true);
     const applyChangesetStmt = this.db.prepare(
       `INSERT INTO crsql_changes ("table", "pk", "cid", "val", "col_version", "db_version", "site_id") VALUES (?, ?, ?, ?, ?, ?, ?)`
     );

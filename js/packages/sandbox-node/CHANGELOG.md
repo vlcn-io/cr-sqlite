@@ -1,5 +1,11 @@
 # sandbox-node
 
+## 0.5.0
+
+### Minor Changes
+
+- 68deb1c: binary encoded primary keys, no string encoding on values, cache prepared statements on merge, fix webkit JIT crash
+
 ## 0.5.0-next.0
 
 ### Minor Changes

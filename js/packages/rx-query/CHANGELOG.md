@@ -1,5 +1,16 @@
 # @vlcn.io/rx-query
 
+## 0.6.0
+
+### Minor Changes
+
+- 68deb1c: binary encoded primary keys, no string encoding on values, cache prepared statements on merge, fix webkit JIT crash
+
+### Patch Changes
+
+- Updated dependencies [68deb1c]
+  - @vlcn.io/xplat-api@0.13.0
+
 ## 0.6.0-next.0
 
 ### Minor Changes

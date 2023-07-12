@@ -1,5 +1,15 @@
 # @vlcn.io/direct-connect-common
 
+## 0.5.0
+
+### Minor Changes
+
+- 68deb1c: binary encoded primary keys, no string encoding on values, cache prepared statements on merge, fix webkit JIT crash
+
+### Patch Changes
+
+- 4f916e2: deal with null values
+
 ## 0.5.0-next.1
 
 ### Patch Changes

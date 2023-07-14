@@ -408,7 +408,34 @@ int crsql_isTableCompatible(sqlite3 *db, const char *tblName, char **errmsg) {
     return 0;
   }
 
-  // No foreign key constraints
+  // No auto-increment primary keys
+  zSql = sqlite3_mprintf(
+      "SELECT 1 FROM sqlite_master WHERE name = ? AND type = 'table' AND sql "
+      "LIKE '\%autoincrement\%' limit 1");
+  rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
+  sqlite3_free(zSql);
+
+  rc += sqlite3_bind_text(pStmt, 1, tblName, -1, SQLITE_STATIC);
+  if (rc != SQLITE_OK) {
+    *errmsg = sqlite3_mprintf("Failed to analyze autoincrement status for %s",
+                              tblName);
+    return 0;
+  }
+  rc = sqlite3_step(pStmt);
+  sqlite3_finalize(pStmt);
+  if (rc == SQLITE_ROW) {
+    *errmsg = sqlite3_mprintf(
+        "%s has auto-increment primary keys. This is likely a mistake as two "
+        "concurrent nodes will assign unrelated rows the same primary key. "
+        "Either use a primary key that represents the identity of your row or "
+        "use a database friendly UUID such as UUIDv7",
+        tblName);
+    return 0;
+  } else if (rc != SQLITE_DONE) {
+    return 0;
+  }
+
+  // No checked foreign key constraints
   zSql = sqlite3_mprintf("SELECT count(*) FROM pragma_foreign_key_list('%s')",
                          tblName);
   rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
@@ -428,8 +455,8 @@ int crsql_isTableCompatible(sqlite3 *db, const char *tblName, char **errmsg) {
       *errmsg = sqlite3_mprintf(
           "Table %s has checked foreign key constraints. CRRs may have foreign "
           "keys but must not have "
-          "checked "
-          "foreign key constraints as they can be violated by row level "
+          "checked foreign key constraints as they can be violated by row "
+          "level "
           "security or replication.",
           tblName);
       return 0;

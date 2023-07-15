@@ -3,6 +3,7 @@
 
 mod automigrate;
 mod backfill;
+mod c;
 mod compare_values;
 mod is_crr;
 mod pack_columns;

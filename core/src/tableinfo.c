@@ -409,11 +409,10 @@ int crsql_isTableCompatible(sqlite3 *db, const char *tblName, char **errmsg) {
   }
 
   // No auto-increment primary keys
-  zSql = sqlite3_mprintf(
+  zSql =
       "SELECT 1 FROM sqlite_master WHERE name = ? AND type = 'table' AND sql "
-      "LIKE '\%autoincrement\%' limit 1");
+      "LIKE '%autoincrement%' limit 1";
   rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
-  sqlite3_free(zSql);
 
   rc += sqlite3_bind_text(pStmt, 1, tblName, -1, SQLITE_STATIC);
   if (rc != SQLITE_OK) {

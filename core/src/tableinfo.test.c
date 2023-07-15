@@ -195,6 +195,19 @@ static void testIsTableCompatible() {
   rc = crsql_isTableCompatible(db, "atable", &errmsg);
   assert(rc == 1);
 
+  // no autoincrement
+  rc = sqlite3_exec(
+      db, "CREATE TABLE woom (a integer primary key autoincrement)", 0, 0, 0);
+  assert(rc == SQLITE_OK);
+  rc = crsql_isTableCompatible(db, "woom", &errmsg);
+  assert(rc == 0);
+
+  // aliased rowid
+  rc = sqlite3_exec(db, "CREATE TABLE loom (a integer primary key)", 0, 0, 0);
+  assert(rc == SQLITE_OK);
+  rc = crsql_isTableCompatible(db, "loom", &errmsg);
+  assert(rc == 1);
+
   rc = sqlite3_exec(
       db, "CREATE TABLE atable2 (\"id\" TEXT PRIMARY KEY, x TEXT) STRICT;", 0,
       0, 0);

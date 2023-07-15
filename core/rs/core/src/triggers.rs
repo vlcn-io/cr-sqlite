@@ -134,5 +134,3 @@ fn create_update_trigger(
 ) -> Result<ResultCode, ResultCode> {
     Ok(ResultCode::OK)
 }
-
-// TODO: #[test] for insert trigger creation

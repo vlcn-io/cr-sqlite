@@ -8,6 +8,7 @@ mod compare_values;
 mod is_crr;
 mod pack_columns;
 mod teardown;
+mod triggers;
 mod unpack_columns_vtab;
 mod util;
 
@@ -29,6 +30,10 @@ pub use teardown::*;
 
 fn escape_ident(ident: &str) -> String {
     return ident.replace("\"", "\"\"");
+}
+
+fn escape_ident_as_value(ident: &str) -> String {
+    return ident.replace("'", "''");
 }
 
 pub extern "C" fn crsql_as_table(

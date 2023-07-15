@@ -37,3 +37,8 @@ jobs:
         run: |
           cd core/rs/integration-check
           cargo valgrind test
+
+      - name: Test Core
+        run: |
+          cd core/rs/core
+          cargo test --features=loadable_extension

@@ -1,6 +1,16 @@
+extern crate alloc;
+use alloc::format;
+use alloc::string::String;
+use alloc::vec;
+use alloc::vec::Vec;
+use core::ffi::CStr;
+use core::str::Utf8Error;
+
 // Structs that still exist in C but will eventually be moved to Rust
 use sqlite_nostd::bindings::sqlite3_int64;
 use sqlite_nostd::bindings::sqlite3_stmt;
+
+pub static INSERT_SENTINEL: &str = "__crsql_pko";
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
@@ -45,6 +55,22 @@ pub struct crsql_ExtData {
     pub pSetSyncBitStmt: *mut sqlite3_stmt,
     pub pClearSyncBitStmt: *mut sqlite3_stmt,
     pub hStmts: *mut ::core::ffi::c_void,
+}
+
+pub fn as_identifier_list(
+    columns: &[crsql_ColumnInfo],
+    prefix: Option<&str>,
+) -> Result<String, Utf8Error> {
+    let mut result = vec![];
+    for c in columns {
+        let name = unsafe { CStr::from_ptr(c.name) };
+        result.push(if let Some(prefix) = prefix {
+            format!("{}\"{}\"", prefix, crate::escape_ident(name.to_str()?))
+        } else {
+            format!("\"{}\"", crate::escape_ident(name.to_str()?))
+        })
+    }
+    Ok(result.join(","))
 }
 
 #[test]

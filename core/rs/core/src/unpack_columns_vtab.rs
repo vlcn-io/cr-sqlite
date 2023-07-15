@@ -190,31 +190,25 @@ extern "C" fn column(
     if col_num == Columns::CELL as i32 {
         unsafe {
             if let Some(cols) = &(*crsr).unpacked {
-                if (*crsr).crsr < 0 {
-                    (*(*cursor).pVtab).zErrMsg = CString::new("Cursor is less than 0!")
-                        .map_or(core::ptr::null_mut(), |f| f.into_raw());
-                    ResultCode::ABORT as c_int
-                } else {
-                    let col_value = &cols[(*crsr).crsr];
-                    match col_value {
-                        ColumnValue::Blob(b) => {
-                            ctx.result_blob_static(b);
-                        }
-                        ColumnValue::Float(f) => {
-                            ctx.result_double(*f);
-                        }
-                        ColumnValue::Integer(i) => {
-                            ctx.result_int64(*i);
-                        }
-                        ColumnValue::Null => {
-                            ctx.result_null();
-                        }
-                        ColumnValue::Text(t) => {
-                            ctx.result_text_static(t);
-                        }
+                let col_value = &cols[(*crsr).crsr];
+                match col_value {
+                    ColumnValue::Blob(b) => {
+                        ctx.result_blob_static(b);
                     }
-                    ResultCode::OK as c_int
+                    ColumnValue::Float(f) => {
+                        ctx.result_double(*f);
+                    }
+                    ColumnValue::Integer(i) => {
+                        ctx.result_int64(*i);
+                    }
+                    ColumnValue::Null => {
+                        ctx.result_null();
+                    }
+                    ColumnValue::Text(t) => {
+                        ctx.result_text_static(t);
+                    }
                 }
+                ResultCode::OK as c_int
             } else {
                 (*(*cursor).pVtab).zErrMsg = CString::new("No columns to unpack!")
                     .map_or(core::ptr::null_mut(), |f| f.into_raw());

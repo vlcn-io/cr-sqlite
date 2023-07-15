@@ -8,7 +8,7 @@
 int crsql_createCrrTriggers(sqlite3 *db, crsql_TableInfo *tableInfo,
                             char **err);
 
-int crsql_createInsertTrigger(sqlite3 *db, crsql_TableInfo *tableInfo,
+int crsql_create_insert_trigger(sqlite3 *db, crsql_TableInfo *tableInfo,
                               char **err);
 
 int crsql_createUpdateTrigger(sqlite3 *db, crsql_TableInfo *tableInfo,

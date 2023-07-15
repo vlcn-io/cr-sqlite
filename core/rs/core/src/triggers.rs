@@ -3,6 +3,7 @@ use alloc::format;
 use alloc::string::String;
 use alloc::string::ToString;
 use alloc::vec;
+use sqlite::Connection;
 
 use core::{
     ffi::{c_char, c_int, CStr},
@@ -40,7 +41,7 @@ fn create_insert_trigger(
 
     let create_trigger_sql = format!(
         "CREATE TRIGGER IF NOT EXISTS \"{table_name}__crsql_itrig\"
-      AFTER INERT ON \"{table_name}\" WHEN crsql_internal_sync_bit() = 0
+      AFTER INSERT ON \"{table_name}\" WHEN crsql_internal_sync_bit() = 0
       BEGIN
         {trigger_body}
       END;",
@@ -48,9 +49,7 @@ fn create_insert_trigger(
         trigger_body = trigger_body
     );
 
-    // TODO: actually execute the sql!
-
-    Ok(ResultCode::OK)
+    db.exec_safe(&create_trigger_sql)
 }
 
 fn insert_trigger_body(
@@ -90,7 +89,7 @@ fn format_insert_trigger_component(
     col_name: &str,
 ) -> String {
     format!(
-        "INSERT INTO \"{table_name}\"__crsql_clock\" (
+        "INSERT INTO \"{table_name}__crsql_clock\" (
   {pk_list},
   __crsql_col_name,
   __crsql_col_version,
@@ -108,10 +107,32 @@ ON CONFLICT DO UPDATE SET
   __crsql_col_version = __crsql_col_version + 1,
   __crsql_db_version = crsql_nextdbversion(),
   __crsql_seq = crsql_get_seq() - 1,
-  __crsqlite_site_id = NULL;",
+  __crsql_site_id = NULL;",
         table_name = crate::escape_ident(table_name),
         pk_list = pk_list,
         pk_new_list = pk_new_list,
         col_name = crate::escape_ident_as_value(col_name)
     )
 }
+
+#[no_mangle]
+pub extern "C" fn crsql_create_update_trigger(
+    db: *mut sqlite3,
+    table_info: *mut crsql_TableInfo,
+    err: *mut *mut c_char,
+) -> c_int {
+    match create_update_trigger(db, table_info, err) {
+        Ok(code) => code as c_int,
+        Err(code) => code as c_int,
+    }
+}
+
+fn create_update_trigger(
+    db: *mut sqlite3,
+    table_info: *mut crsql_TableInfo,
+    err: *mut *mut c_char,
+) -> Result<ResultCode, ResultCode> {
+    Ok(ResultCode::OK)
+}
+
+// TODO: #[test] for insert trigger creation

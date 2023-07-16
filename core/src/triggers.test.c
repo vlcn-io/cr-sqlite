@@ -33,7 +33,7 @@ static void testCreateTriggers() {
     rc = crsql_create_insert_trigger(db, tableInfo, &errMsg);
   }
   if (rc == SQLITE_OK) {
-    rc = crsql_createUpdateTrigger(db, tableInfo, &errMsg);
+    rc = crsql_create_update_trigger(db, tableInfo, &errMsg);
   }
   if (rc == SQLITE_OK) {
     rc = crsql_createDeleteTrigger(db, tableInfo, &errMsg);

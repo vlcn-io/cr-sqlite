@@ -36,7 +36,7 @@ static void testCreateTriggers() {
     rc = crsql_create_update_trigger(db, tableInfo, &errMsg);
   }
   if (rc == SQLITE_OK) {
-    rc = crsql_createDeleteTrigger(db, tableInfo, &errMsg);
+    rc = crsql_create_delete_trigger(db, tableInfo, &errMsg);
   }
 
   crsql_freeTableInfo(tableInfo);
@@ -53,49 +53,9 @@ static void testCreateTriggers() {
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
-static void testDeleteTriggerQuery() {
-  printf("DeleteTriggerQuery\n");
-  sqlite3 *db = 0;
-  crsql_TableInfo *tableInfo;
-  char *errMsg = 0;
-  int rc = sqlite3_open(":memory:", &db);
-
-  rc +=
-      sqlite3_exec(db, "CREATE TABLE \"foo\" (\"a\" PRIMARY KEY, \"b\", \"c\")",
-                   0, 0, &errMsg);
-  rc += crsql_getTableInfo(db, "foo", &tableInfo, &errMsg);
-  rc += sqlite3_exec(db, "DROP TABLE foo", 0, 0, &errMsg);
-
-  char *query = crsql_deleteTriggerQuery(tableInfo);
-  assert(
-      strcmp(
-          "CREATE TRIGGER IF NOT EXISTS \"foo__crsql_dtrig\"      AFTER DELETE "
-          "ON \"foo\"    BEGIN      INSERT INTO \"foo__crsql_clock\" (        "
-          "\"a\",        __crsql_col_name,        __crsql_col_version,        "
-          "__crsql_db_version,        __crsql_seq,        __crsql_site_id      "
-          ") SELECT         OLD.\"a\",        '__crsql_del',        1,        "
-          "crsql_nextdbversion(),        crsql_increment_and_get_seq(),        "
-          "NULL      WHERE crsql_internal_sync_bit() = 0 ON CONFLICT DO UPDATE "
-          "SET      __crsql_col_version = __crsql_col_version + 1,      "
-          "__crsql_db_version = crsql_nextdbversion(),      __crsql_seq = "
-          "crsql_get_seq() - 1,      __crsql_site_id = NULL;         "
-          "   DELETE FROM \"foo__crsql_clock\" WHERE crsql_internal_sync_bit() "
-          "= 0 AND \"a\" = OLD.\"a\" AND __crsql_col_name != '__crsql_del';    "
-          "  END; ",
-          query) == 0);
-
-  crsql_freeTableInfo(tableInfo);
-  crsql_close(db);
-  sqlite3_free(query);
-  assert(rc == SQLITE_OK);
-
-  printf("\t\e[0;32mSuccess\e[0m\n");
-}
-
 void crsqlTriggersTestSuite() {
   printf("\e[47m\e[1;30mSuite: crsqlTriggers\e[0m\n");
 
-  testDeleteTriggerQuery();
   testCreateTriggers();
-  // testTriggerSyncBitInteraction();
+  // testTriggerSyncBitInteraction(); <-- implemented in rust tests
 }

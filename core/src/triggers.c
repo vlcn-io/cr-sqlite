@@ -36,8 +36,6 @@ int crsql_createUpdateTrigger(sqlite3 *db, crsql_TableInfo *tableInfo,
   // 1. delete of the old row
   // followed by
   // 2. create of a new row
-  // SQLite already calls the delete trigger for the old row
-  // for case 1 so that's covered.
   //
   // TODO: Do we not also need to record a creation event
   // if a pk was changed for a non pk only table?

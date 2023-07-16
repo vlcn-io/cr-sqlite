@@ -1,5 +1,3 @@
-#include "triggers.h"
-
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -7,6 +5,7 @@
 
 #include "consts.h"
 #include "crsqlite.h"
+#include "rust.h"
 #include "tableinfo.h"
 #include "util.h"
 
@@ -30,13 +29,7 @@ static void testCreateTriggers() {
   rc = crsql_getTableInfo(db, "foo", &tableInfo, &errMsg);
 
   if (rc == SQLITE_OK) {
-    rc = crsql_create_insert_trigger(db, tableInfo, &errMsg);
-  }
-  if (rc == SQLITE_OK) {
-    rc = crsql_create_update_trigger(db, tableInfo, &errMsg);
-  }
-  if (rc == SQLITE_OK) {
-    rc = crsql_create_delete_trigger(db, tableInfo, &errMsg);
+    rc = crsql_create_crr_triggers(db, tableInfo, &errMsg);
   }
 
   crsql_freeTableInfo(tableInfo);

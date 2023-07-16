@@ -12,7 +12,6 @@ SQLITE_EXTENSION_INIT1
 #include "ext-data.h"
 #include "rust.h"
 #include "tableinfo.h"
-#include "triggers.h"
 #include "util.h"
 
 // see
@@ -398,7 +397,7 @@ static int createCrr(sqlite3_context *context, sqlite3 *db,
   if (rc == SQLITE_OK) {
     rc = crsql_remove_crr_triggers_if_exist(db, tableInfo->tblName);
     if (rc == SQLITE_OK) {
-      rc = crsql_createCrrTriggers(db, tableInfo, err);
+      rc = crsql_create_crr_triggers(db, tableInfo, err);
     }
   }
 

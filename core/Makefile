@@ -49,7 +49,6 @@ TARGET_TEST_ASAN=$(prefix)/test-asan
 ext_files=src/crsqlite.c \
 	src/util.c \
 	src/tableinfo.c \
-	src/triggers.c \
 	src/changes-vtab.c \
 	src/changes-vtab-read.c \
 	src/changes-vtab-common.c \
@@ -60,7 +59,6 @@ ext_files=src/crsqlite.c \
 ext_headers=src/crsqlite.h \
 	src/util.h \
 	src/tableinfo.h \
-	src/triggers.h \
 	src/changes-vtab.h \
 	src/changes-vtab-read.h \
 	src/changes-vtab-common.h \

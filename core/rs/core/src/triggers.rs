@@ -1,7 +1,6 @@
 extern crate alloc;
 use alloc::format;
 use alloc::string::String;
-use alloc::string::ToString;
 use alloc::vec;
 use sqlite::Connection;
 
@@ -16,21 +15,31 @@ use sqlite::{sqlite3, ResultCode};
 use sqlite_nostd as sqlite;
 
 #[no_mangle]
-pub extern "C" fn crsql_create_insert_trigger(
+pub extern "C" fn crsql_create_crr_triggers(
     db: *mut sqlite3,
     table_info: *mut crsql_TableInfo,
     err: *mut *mut c_char,
 ) -> c_int {
-    match create_insert_trigger(db, table_info, err) {
+    match create_triggers(db, table_info, err) {
         Ok(code) => code as c_int,
         Err(code) => code as c_int,
     }
 }
 
-fn create_insert_trigger(
+fn create_triggers(
     db: *mut sqlite3,
     table_info: *mut crsql_TableInfo,
     err: *mut *mut c_char,
+) -> Result<ResultCode, ResultCode> {
+    create_insert_trigger(db, table_info, err)?;
+    create_update_trigger(db, table_info, err)?;
+    create_delete_trigger(db, table_info, err)
+}
+
+fn create_insert_trigger(
+    db: *mut sqlite3,
+    table_info: *mut crsql_TableInfo,
+    _err: *mut *mut c_char,
 ) -> Result<ResultCode, ResultCode> {
     let table_name = unsafe { CStr::from_ptr((*table_info).tblName).to_str()? };
     let pk_columns =
@@ -115,22 +124,10 @@ ON CONFLICT DO UPDATE SET
     )
 }
 
-#[no_mangle]
-pub extern "C" fn crsql_create_update_trigger(
-    db: *mut sqlite3,
-    table_info: *mut crsql_TableInfo,
-    err: *mut *mut c_char,
-) -> c_int {
-    match create_update_trigger(db, table_info, err) {
-        Ok(code) => code as c_int,
-        Err(code) => code as c_int,
-    }
-}
-
 fn create_update_trigger(
     db: *mut sqlite3,
     table_info: *mut crsql_TableInfo,
-    err: *mut *mut c_char,
+    _err: *mut *mut c_char,
 ) -> Result<ResultCode, ResultCode> {
     let table_name = unsafe { CStr::from_ptr((*table_info).tblName).to_str()? };
     let pk_columns =
@@ -235,22 +232,10 @@ fn update_trigger_body(
     Ok(trigger_components.join("\n"))
 }
 
-#[no_mangle]
-pub extern "C" fn crsql_create_delete_trigger(
-    db: *mut sqlite3,
-    table_info: *mut crsql_TableInfo,
-    err: *mut *mut c_char,
-) -> c_int {
-    match create_delete_trigger(db, table_info, err) {
-        Ok(code) => code as c_int,
-        Err(code) => code as c_int,
-    }
-}
-
 fn create_delete_trigger(
     db: *mut sqlite3,
     table_info: *mut crsql_TableInfo,
-    err: *mut *mut c_char,
+    _err: *mut *mut c_char,
 ) -> Result<ResultCode, ResultCode> {
     let table_name = unsafe { CStr::from_ptr((*table_info).tblName).to_str()? };
     let pk_columns =

@@ -11,6 +11,7 @@ use sqlite_nostd::bindings::sqlite3_int64;
 use sqlite_nostd::bindings::sqlite3_stmt;
 
 pub static INSERT_SENTINEL: &str = "__crsql_pko";
+pub static DELETE_SENTINEL: &str = "__crsql_del";
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
@@ -71,6 +72,29 @@ pub fn as_identifier_list(
         })
     }
     Ok(result.join(","))
+}
+
+pub fn pk_where_list(
+    columns: &[crsql_ColumnInfo],
+    rhs_prefix: Option<&str>,
+) -> Result<String, Utf8Error> {
+    let mut result = vec![];
+    for c in columns {
+        let name = unsafe { CStr::from_ptr(c.name) };
+        result.push(if let Some(prefix) = rhs_prefix {
+            format!(
+                "\"{col_name}\" = {prefix}\"{col_name}\"",
+                prefix = prefix,
+                col_name = crate::escape_ident(name.to_str()?)
+            )
+        } else {
+            format!(
+                "\"{col_name}\" = \"{col_name}\"",
+                col_name = crate::escape_ident(name.to_str()?)
+            )
+        })
+    }
+    Ok(result.join(" AND "))
 }
 
 #[test]

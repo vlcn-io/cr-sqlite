@@ -234,3 +234,62 @@ fn update_trigger_body(
 
     Ok(trigger_components.join("\n"))
 }
+
+#[no_mangle]
+pub extern "C" fn crsql_create_delete_trigger(
+    db: *mut sqlite3,
+    table_info: *mut crsql_TableInfo,
+    err: *mut *mut c_char,
+) -> c_int {
+    match create_delete_trigger(db, table_info, err) {
+        Ok(code) => code as c_int,
+        Err(code) => code as c_int,
+    }
+}
+
+fn create_delete_trigger(
+    db: *mut sqlite3,
+    table_info: *mut crsql_TableInfo,
+    err: *mut *mut c_char,
+) -> Result<ResultCode, ResultCode> {
+    let table_name = unsafe { CStr::from_ptr((*table_info).tblName).to_str()? };
+    let pk_columns =
+        unsafe { slice::from_raw_parts((*table_info).pks, (*table_info).pksLen as usize) };
+    let pk_list = crate::c::as_identifier_list(pk_columns, None)?;
+    let pk_old_list = crate::c::as_identifier_list(pk_columns, Some("OLD."))?;
+    let pk_where_list = crate::c::pk_where_list(pk_columns, Some("OLD."))?;
+
+    let create_trigger_sql = format!(
+        "CREATE TRIGGER IF NOT EXISTS \"{table_name}__crsql_dtrig\"
+    AFTER DELETE ON \"{table_name}\" WHEN crsql_internal_sync_bit() = 0
+    BEGIN
+      INSERT INTO \"{table_name}__crsql_clock\" (
+        {pk_list},
+        __crsql_col_name,
+        __crsql_col_version,
+        __crsql_db_version,
+        __crsql_seq,
+        __crsql_site_id
+      ) SELECT
+        {pk_old_list},
+        '{sentinel}',
+        1,
+        crsql_nextdbversion(),
+        crsql_increment_and_get_seq(),
+        NULL WHERE true
+      ON CONFLICT DO UPDATE SET
+        __crsql_col_version = __crsql_col_version + 1,
+        __crsql_db_version = crsql_nextdbversion(),
+        __crsql_seq = crsql_get_seq() - 1,
+        __crsql_site_id = NULL;
+      DELETE FROM \"{table_name}__crsql_clock\"
+        WHERE {pk_where_list} AND __crsql_col_name != '{sentinel}';
+    END;",
+        table_name = crate::escape_ident(table_name),
+        sentinel = crate::c::DELETE_SENTINEL,
+        pk_where_list = pk_where_list,
+        pk_old_list = pk_old_list
+    );
+
+    db.exec_safe(&create_trigger_sql)
+}

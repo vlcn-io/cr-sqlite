@@ -31,8 +31,10 @@ int crsql_create_crr_triggers(sqlite3 *db, crsql_TableInfo *tableInfo,
 int crsql_remove_crr_triggers_if_exist(sqlite3 *db, const char *tblName);
 
 char *crsql_changes_union_query(crsql_TableInfo **tableInfos, int tableInfosLen,
-                               const char *idxStr);
+                                const char *idxStr);
 char *crsql_row_patch_data_query(crsql_TableInfo *tblInfo, const char *colName);
+int crsql_create_clock_table(sqlite3 *db, crsql_TableInfo *tableInfo,
+                             char **err);
 
 #define TBL 0
 #define PKS 1

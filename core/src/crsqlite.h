@@ -14,6 +14,4 @@ SQLITE_EXTENSION_INIT3
 #define STATIC
 #endif
 
-int crsql_createClockTable(sqlite3 *db, crsql_TableInfo *tableInfo, char **err);
-
 #endif

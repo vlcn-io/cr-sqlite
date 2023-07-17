@@ -10,7 +10,6 @@
 #include "get-table.h"
 #include "util.h"
 
-// Bug here? see crsql_asIdentifierListStr
 char *crsql_asIdentifierList(crsql_ColumnInfo *in, size_t inlen, char *prefix) {
   if (inlen <= 0) {
     return 0;

@@ -20,7 +20,7 @@ char *crsql_changesQueryForTable(crsql_TableInfo *tableInfo);
 
 char *crsql_changesUnionQuery(crsql_TableInfo **tableInfos, int tableInfosLen,
                               const char *idxStr);
-char *crsql_rowPatchDataQuery(sqlite3 *db, crsql_TableInfo *tblInfo,
+char *crsql_rowPatchDataQuery(crsql_TableInfo *tblInfo,
                               const char *colName);
 
 #endif

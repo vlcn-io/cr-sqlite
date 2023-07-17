@@ -4,6 +4,7 @@
 mod automigrate;
 mod backfill;
 mod c;
+mod changes_vtab_read;
 mod compare_values;
 mod is_crr;
 mod pack_columns;

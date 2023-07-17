@@ -32,14 +32,6 @@ char *crsql_changesQueryForTable(crsql_TableInfo *tableInfo) {
   return zSql;
 }
 
-// TODO: here we could do all the filtering to remove:
-// - records with no longer existing columns
-// - all rows prior to a delete entry for a row
-//
-// or we can do that in `xNext`
-// or we can compact the table on `commit_alter`
-// compacting in commit alter is likely the simplest option
-// with minimal impact on perf of normal operations
 /**
  * Union all the crr tables together to get a comprehensive
  * set of changes
@@ -91,17 +83,9 @@ char *crsql_changesUnionQuery(crsql_TableInfo **tableInfos, int tableInfosLen,
  * with union query constraints. I.e., that all tables must have same
  * output number of columns.
  *
- * TODO: potential improvement would be to store a binary
- * representation of the data via flat buffers.
- *
  * This will fill pRowStmt in the cursor.
- *
- * TODO: We could theoretically prepare all of these queries up
- * front on vtab initialization so we don't have to
- * re-compile them for each row fetched.
  */
-char *crsql_rowPatchDataQuery(sqlite3 *db, crsql_TableInfo *tblInfo,
-                              const char *colName) {
+char *crsql_rowPatchDataQuery(crsql_TableInfo *tblInfo, const char *colName) {
   char *pkWhereList = crsql_extractWhereList(tblInfo->pks, tblInfo->pksLen);
   if (pkWhereList == 0) {
     return 0;

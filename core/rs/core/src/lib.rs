@@ -17,7 +17,6 @@ mod util;
 
 use core::{ffi::c_char, slice};
 extern crate alloc;
-use alloc::string::String;
 use alloc::vec::Vec;
 pub use automigrate::*;
 pub use backfill::*;

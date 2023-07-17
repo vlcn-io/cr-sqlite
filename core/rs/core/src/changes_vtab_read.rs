@@ -87,7 +87,7 @@ pub extern "C" fn crsql_row_patch_data_query(
         if let Ok(col_name) = unsafe { CStr::from_ptr(col_name).to_str() } {
             if let Ok(where_list) = crate::c::where_list(pk_columns) {
                 let query = format!(
-                    "SELECT \"{col_name}\" FROM \"{table_name}\" WHERE {where_list}",
+                    "SELECT \"{col_name}\" FROM \"{table_name}\" WHERE {where_list}\0",
                     col_name = crate::escape_ident(col_name),
                     table_name = crate::escape_ident(table_name),
                     where_list = where_list

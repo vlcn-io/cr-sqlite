@@ -1,6 +1,10 @@
 extern crate alloc;
 
+use crate::c::crsql_ColumnInfo;
+use alloc::format;
 use alloc::string::String;
+use alloc::vec;
+use core::{ffi::CStr, str::Utf8Error};
 use sqlite::{sqlite3, ColumnType, Connection, ResultCode};
 use sqlite_nostd as sqlite;
 
@@ -35,4 +39,35 @@ pub fn get_dflt_value(
     }
 
     return Ok(Some(String::from(stmt.column_text(0)?)));
+}
+
+pub fn pk_where_list(
+    columns: &[crsql_ColumnInfo],
+    rhs_prefix: Option<&str>,
+) -> Result<String, Utf8Error> {
+    let mut result = vec![];
+    for c in columns {
+        let name = unsafe { CStr::from_ptr(c.name) };
+        result.push(if let Some(prefix) = rhs_prefix {
+            format!(
+                "\"{col_name}\" = {prefix}\"{col_name}\"",
+                prefix = prefix,
+                col_name = crate::util::escape_ident(name.to_str()?)
+            )
+        } else {
+            format!(
+                "\"{col_name}\" = \"{col_name}\"",
+                col_name = crate::util::escape_ident(name.to_str()?)
+            )
+        })
+    }
+    Ok(result.join(" AND "))
+}
+
+pub fn escape_ident(ident: &str) -> String {
+    return ident.replace("\"", "\"\"");
+}
+
+pub fn escape_ident_as_value(ident: &str) -> String {
+    return ident.replace("'", "''");
 }

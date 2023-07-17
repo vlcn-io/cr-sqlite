@@ -21,18 +21,18 @@ pub fn backfill_table(
         "SELECT {pk_cols} FROM \"{table}\" AS t1
         WHERE NOT EXISTS
           (SELECT 1 FROM \"{table}__crsql_clock\" AS t2 WHERE {pk_where_conditions})",
-        table = crate::escape_ident(table),
+        table = crate::util::escape_ident(table),
         pk_cols = pk_cols
             .iter()
-            .map(|f| format!("t1.\"{}\"", crate::escape_ident(f)))
+            .map(|f| format!("t1.\"{}\"", crate::util::escape_ident(f)))
             .collect::<Vec<_>>()
             .join(", "),
         pk_where_conditions = pk_cols
             .iter()
             .map(|f| format!(
                 "t1.\"{}\" IS t2.\"{}\"",
-                crate::escape_ident(f),
-                crate::escape_ident(f)
+                crate::util::escape_ident(f),
+                crate::util::escape_ident(f)
             ))
             .collect::<Vec<_>>()
             .join(" AND "),
@@ -80,10 +80,10 @@ fn create_clock_rows_from_stmt(
         "INSERT INTO \"{table}__crsql_clock\"
           ({pk_cols}, __crsql_col_name, __crsql_col_version, __crsql_db_version, __crsql_seq) VALUES
           ({pk_values}, ?, 1, {dbversion_getter}, crsql_increment_and_get_seq())",
-        table = crate::escape_ident(table),
+        table = crate::util::escape_ident(table),
         pk_cols = pk_cols
             .iter()
-            .map(|f| format!("\"{}\"", crate::escape_ident(f)))
+            .map(|f| format!("\"{}\"", crate::util::escape_ident(f)))
             .collect::<Vec<_>>()
             .join(", "),
         pk_values = pk_cols.iter().map(|_| "?").collect::<Vec<_>>().join(", "),
@@ -159,22 +159,22 @@ fn fill_column(
         "SELECT {pk_cols} FROM {table} as t1
           LEFT JOIN \"{table}__crsql_clock\" as t2 ON {pk_on_conditions} AND t2.__crsql_col_name = ?
           WHERE t2.\"{first_pk}\" IS NULL {dflt_value_condition}",
-        table = crate::escape_ident(table),
+        table = crate::util::escape_ident(table),
         pk_cols = pk_cols
             .iter()
-            .map(|f| format!("t1.\"{}\"", crate::escape_ident(f)))
+            .map(|f| format!("t1.\"{}\"", crate::util::escape_ident(f)))
             .collect::<Vec<_>>()
             .join(", "),
         pk_on_conditions = pk_cols
             .iter()
             .map(|f| format!(
                 "t1.\"{}\" = t2.\"{}\"",
-                crate::escape_ident(f),
-                crate::escape_ident(f)
+                crate::util::escape_ident(f),
+                crate::util::escape_ident(f)
             ))
             .collect::<Vec<_>>()
             .join(" AND "),
-        first_pk = crate::escape_ident(pk_cols[0]),
+        first_pk = crate::util::escape_ident(pk_cols[0]),
         dflt_value_condition = if let Some(dflt) = dflt_value {
             format!("AND t1.\"{}\" IS NOT {}", non_pk_col, dflt)
         } else {

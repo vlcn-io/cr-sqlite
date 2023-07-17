@@ -58,6 +58,7 @@ pub struct crsql_ExtData {
     pub hStmts: *mut ::core::ffi::c_void,
 }
 
+// crsql_asIdentifierList
 pub fn as_identifier_list(
     columns: &[crsql_ColumnInfo],
     prefix: Option<&str>,
@@ -66,44 +67,26 @@ pub fn as_identifier_list(
     for c in columns {
         let name = unsafe { CStr::from_ptr(c.name) };
         result.push(if let Some(prefix) = prefix {
-            format!("{}\"{}\"", prefix, crate::escape_ident(name.to_str()?))
+            format!(
+                "{}\"{}\"",
+                prefix,
+                crate::util::escape_ident(name.to_str()?)
+            )
         } else {
-            format!("\"{}\"", crate::escape_ident(name.to_str()?))
+            format!("\"{}\"", crate::util::escape_ident(name.to_str()?))
         })
     }
     Ok(result.join(","))
 }
 
-pub fn pk_where_list(
-    columns: &[crsql_ColumnInfo],
-    rhs_prefix: Option<&str>,
-) -> Result<String, Utf8Error> {
-    let mut result = vec![];
-    for c in columns {
-        let name = unsafe { CStr::from_ptr(c.name) };
-        result.push(if let Some(prefix) = rhs_prefix {
-            format!(
-                "\"{col_name}\" = {prefix}\"{col_name}\"",
-                prefix = prefix,
-                col_name = crate::escape_ident(name.to_str()?)
-            )
-        } else {
-            format!(
-                "\"{col_name}\" = \"{col_name}\"",
-                col_name = crate::escape_ident(name.to_str()?)
-            )
-        })
-    }
-    Ok(result.join(" AND "))
-}
-
+// crsql_extractWhereList
 pub fn where_list(columns: &[crsql_ColumnInfo]) -> Result<String, Utf8Error> {
     let mut result = vec![];
     for c in columns {
         let name = unsafe { CStr::from_ptr(c.name) };
         result.push(format!(
             "\"{col_name}\" = ?",
-            col_name = crate::escape_ident(name.to_str()?)
+            col_name = crate::util::escape_ident(name.to_str()?)
         ));
     }
 

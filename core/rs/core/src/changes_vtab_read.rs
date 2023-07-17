@@ -36,9 +36,9 @@ fn crsql_changes_query_for_table(table_info: *mut crsql_TableInfo) -> Result<Str
           _rowid_,
           __crsql_seq as seq
       FROM \"{table_name_ident}__crsql_clock\"",
-        table_name_val = crate::escape_ident_as_value(table_name),
+        table_name_val = crate::util::escape_ident_as_value(table_name),
         pk_list = pk_list,
-        table_name_ident = crate::escape_ident(table_name)
+        table_name_ident = crate::util::escape_ident(table_name)
     ))
 }
 
@@ -88,8 +88,8 @@ pub extern "C" fn crsql_row_patch_data_query(
             if let Ok(where_list) = crate::c::where_list(pk_columns) {
                 let query = format!(
                     "SELECT \"{col_name}\" FROM \"{table_name}\" WHERE {where_list}\0",
-                    col_name = crate::escape_ident(col_name),
-                    table_name = crate::escape_ident(table_name),
+                    col_name = crate::util::escape_ident(col_name),
+                    table_name = crate::util::escape_ident(table_name),
                     where_list = where_list
                 );
                 // release ownership of the memory

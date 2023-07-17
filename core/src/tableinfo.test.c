@@ -201,6 +201,7 @@ static void testIsTableCompatible() {
   assert(rc == SQLITE_OK);
   rc = crsql_isTableCompatible(db, "woom", &errmsg);
   assert(rc == 0);
+  sqlite3_free(errmsg);
 
   // aliased rowid
   rc = sqlite3_exec(db, "CREATE TABLE loom (a integer primary key)", 0, 0, 0);

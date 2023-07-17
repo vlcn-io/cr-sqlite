@@ -22,135 +22,6 @@ SQLITE_EXTENSION_INIT1
 unsigned char __rust_no_alloc_shim_is_unstable;
 #endif
 
-static int initPeerTrackingTable(sqlite3 *db, char **pzErrMsg) {
-  return sqlite3_exec(
-      db,
-      "CREATE TABLE IF NOT EXISTS crsql_tracked_peers (\"site_id\" "
-      "BLOB NOT NULL, \"version\" INTEGER NOT NULL, \"seq\" INTEGER DEFAULT 0, "
-      "\"tag\" INTEGER, \"event\" "
-      "INTEGER, PRIMARY "
-      "KEY (\"site_id\", \"tag\", \"event\")) STRICT;",
-      0, 0, pzErrMsg);
-}
-
-static int createSchemaTableIfNotExists(sqlite3 *db) {
-  int rc = SQLITE_OK;
-
-  rc = sqlite3_exec(db, "SAVEPOINT crsql_create_schema_table;", 0, 0, 0);
-  if (rc != SQLITE_OK) {
-    return rc;
-  }
-
-  char *zSql = sqlite3_mprintf(
-      "CREATE TABLE IF NOT EXISTS \"%s\" (\"key\" TEXT PRIMARY KEY, \"value\" "
-      "ANY);",
-      TBL_SCHEMA);
-  rc = sqlite3_exec(db, zSql, 0, 0, 0);
-  sqlite3_free(zSql);
-
-  if (rc != SQLITE_OK) {
-    sqlite3_exec(db, "ROLLBACK;", 0, 0, 0);
-    return rc;
-  }
-
-  sqlite3_exec(db, "RELEASE crsql_create_schema_table;", 0, 0, 0);
-
-  return SQLITE_OK;
-}
-
-static int updateTo0_13_0(sqlite3 *db) {
-  // get all clock tables
-  // alter all to add column
-  // __crsql_clock
-  sqlite3_stmt *pStmt = 0;
-  int rc = sqlite3_prepare_v2(db, CLOCK_TABLES_SELECT, -1, &pStmt, 0);
-
-  if (rc != SQLITE_OK) {
-    return rc;
-  }
-
-  // add the __crsql_seq column that appeared in v0.13.0
-  while ((rc = sqlite3_step(pStmt)) == SQLITE_ROW) {
-    const unsigned char *tblName = sqlite3_column_text(pStmt, 0);
-    char *zSql = sqlite3_mprintf(
-        "ALTER TABLE \"%w\" ADD COLUMN \"__crsql_seq\" NOT NULL DEFAULT 0",
-        tblName);
-    rc = sqlite3_exec(db, zSql, 0, 0, 0);
-    sqlite3_free(zSql);
-    if (rc != SQLITE_OK) {
-      sqlite3_finalize(pStmt);
-      return rc;
-    }
-  }
-  sqlite3_finalize(pStmt);
-
-  if (rc != SQLITE_DONE) {
-    return rc;
-  }
-
-  return SQLITE_OK;
-}
-
-static int maybeUpdateDb(sqlite3 *db) {
-  // read the schema version for master
-  // if none, v0.12.0 or earlier
-  // if matches current version, we're good.
-  int rc = SQLITE_OK;
-  sqlite3_stmt *pStmt = 0;
-  int recordedVersion = 0;
-
-  rc = sqlite3_exec(db, "SAVEPOINT crsql_maybe_update_db;", 0, 0, 0);
-  if (rc != SQLITE_OK) {
-    return rc;
-  }
-
-  rc = sqlite3_prepare_v2(
-      db, "SELECT value FROM crsql_master WHERE key = 'crsqlite_version'", -1,
-      &pStmt, 0);
-
-  if (rc != SQLITE_OK) {
-    sqlite3_exec(db, "ROLLBACK;", 0, 0, 0);
-    return rc;
-  }
-
-  rc = sqlite3_step(pStmt);
-  if (rc == SQLITE_ROW) {
-    recordedVersion = sqlite3_column_int(pStmt, 0);
-  }
-  sqlite3_finalize(pStmt);
-  if (rc == SQLITE_DONE) {
-    // no version recorded.
-    // we are pre v0.13.0
-    updateTo0_13_0(db);
-  } else if (rc != SQLITE_ROW) {
-    sqlite3_exec(db, "ROLLBACK;", 0, 0, 0);
-    return rc;
-  }
-
-  if (recordedVersion < CRSQLITE_VERSION) {
-    rc = sqlite3_prepare(
-        db,
-        "INSERT OR REPLACE INTO crsql_master VALUES ('crsqlite_version', ?)",
-        -1, &pStmt, 0);
-    if (rc != SQLITE_OK) {
-      sqlite3_finalize(pStmt);
-      sqlite3_exec(db, "ROLLBACK;", 0, 0, 0);
-      return rc;
-    }
-    sqlite3_bind_int(pStmt, 1, CRSQLITE_VERSION);
-    rc = sqlite3_step(pStmt);
-    sqlite3_finalize(pStmt);
-
-    if (rc != SQLITE_DONE) {
-      sqlite3_exec(db, "ROLLBACK;", 0, 0, 0);
-      return rc;
-    }
-  }
-
-  sqlite3_exec(db, "RELEASE crsql_maybe_update_db;", 0, 0, 0);
-  return SQLITE_OK;
-}
-
 /**
  * return the uuid which uniquely identifies this database.
  *
@@ -596,7 +467,13 @@ __declspec(dllexport)
 
   SQLITE_EXTENSION_INIT2(pApi);
 
-  rc = initPeerTrackingTable(db, pzErrMsg);
+  // TODO: should be moved lower once we finish migrating to rust.
+  // RN it is safe here since the rust bundle init is largely just reigstering
+  // function pointers. we need to init the rust bundle otherwise sqlite api
+  // methods are not isntalled when we start calling rust
+  rc = sqlite3_crsqlrustbundle_init(db, pzErrMsg, pApi);
+
+  rc = crsql_init_peer_tracking_table(db);
   if (rc != SQLITE_OK) {
     return rc;
   }
@@ -624,18 +501,13 @@ __declspec(dllexport)
     return SQLITE_ERROR;
   }
 
-  // TODO: should be moved lower once we finish migrating to rust.
-  // RN it is safe here since the rust bundle init is largely just reigstering
-  // function pointers. we need to init the rust bundle otherwise sqlite api
-  // methods are not isntalled when we start calling rust
-  rc = sqlite3_crsqlrustbundle_init(db, pzErrMsg, pApi);
   if (rc == SQLITE_OK) {
     rc = crsql_init_site_id(db, pExtData->siteId);
-    rc += createSchemaTableIfNotExists(db);
+    rc += crsql_create_schema_table_if_not_exists(db);
   }
 
   if (rc == SQLITE_OK) {
-    rc = maybeUpdateDb(db);
+    rc = crsql_maybe_update_db(db);
   }
   if (rc == SQLITE_OK) {
     rc = sqlite3_create_function(

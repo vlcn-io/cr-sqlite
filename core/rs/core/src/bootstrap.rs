@@ -1,4 +1,4 @@
-use core::ffi::{c_char, c_int, c_void, CStr};
+use core::ffi::{c_char, c_int, CStr};
 
 use crate::{c::crsql_TableInfo, consts};
 use alloc::format;
@@ -43,8 +43,12 @@ fn create_site_id_and_site_id_table(db: *mut sqlite3) -> Result<[u8; 16], Result
     Ok(site_id)
 }
 
-fn init_peer_tracking_table(db: *mut sqlite3) -> Result<ResultCode, ResultCode> {
-    db.exec_safe("CREATE TABLE IF NOT EXISTS crsql_tracked_peers (\"site_id\" BLOB NOT NULL, \"version\" INTEGER NOT NULL, \"seq\" INTEGER DEFAULT 0, \"tag\" INTEGER, \"event\" INTEGER, PRIMARY KEY (\"site_id\", \"tag\", \"event\")) STRICT;")
+#[no_mangle]
+pub extern "C" fn crsql_init_peer_tracking_table(db: *mut sqlite3) -> c_int {
+    match db.exec_safe("CREATE TABLE IF NOT EXISTS crsql_tracked_peers (\"site_id\" BLOB NOT NULL, \"version\" INTEGER NOT NULL, \"seq\" INTEGER DEFAULT 0, \"tag\" INTEGER, \"event\" INTEGER, PRIMARY KEY (\"site_id\", \"tag\", \"event\")) STRICT;") {
+      Ok(_) => ResultCode::OK as c_int,
+      Err(code) => code as c_int
+    }
 }
 
 /**
@@ -74,16 +78,25 @@ fn init_site_id(db: *mut sqlite3) -> Result<[u8; 16], ResultCode> {
     Ok(ret)
 }
 
-fn create_schema_table_if_not_exists(db: *mut sqlite3) -> Result<ResultCode, ResultCode> {
-    db.exec_safe("SAVEPOINT crsql_create_schema_table;")?;
+#[no_mangle]
+pub extern "C" fn crsql_create_schema_table_if_not_exists(db: *mut sqlite3) -> c_int {
+    let r = db.exec_safe("SAVEPOINT crsql_create_schema_table;");
+    if let Err(code) = r {
+        return code as c_int;
+    }
 
-    if let Ok(r) = db.exec_safe(&format!(
+    if let Ok(_) = db.exec_safe(&format!(
         "CREATE TABLE IF NOT EXISTS \"{}\" (\"key\" TEXT PRIMARY KEY, \"value\" ANY);",
         consts::TBL_SCHEMA
     )) {
-        db.exec_safe("RELEASE crsql_create_schema_table;")
+        let result = db.exec_safe("RELEASE crsql_create_schema_table;");
+        match result {
+            Ok(_) => return ResultCode::OK as c_int,
+            Err(code) => return code as c_int,
+        }
     } else {
-        db.exec_safe("ROLLBACK")
+        let _ = db.exec_safe("ROLLBACK");
+        return ResultCode::ERROR as c_int;
     }
 }
 
@@ -104,12 +117,18 @@ fn update_to_0_13_0(db: *mut sqlite3) -> Result<ResultCode, ResultCode> {
     Ok(ResultCode::OK)
 }
 
-fn maybe_update_db(db: *mut sqlite3) -> Result<ResultCode, ResultCode> {
-    db.exec_safe("SAVEPOINT crsql_maybe_update_db;")?;
+#[no_mangle]
+pub extern "C" fn crsql_maybe_update_db(db: *mut sqlite3) -> c_int {
+    let r = db.exec_safe("SAVEPOINT crsql_maybe_update_db;");
+    if let Err(code) = r {
+        return code as c_int;
+    }
     if let Ok(_) = maybe_update_db_inner(db) {
-        db.exec_safe("RELEASE crsql_maybe_update_db;")
+        let _ = db.exec_safe("RELEASE crsql_maybe_update_db;");
+        return ResultCode::OK as c_int;
     } else {
-        db.exec_safe("ROLLBACK;")
+        let _ = db.exec_safe("ROLLBACK;");
+        return ResultCode::ERROR as c_int;
     }
 }
 
@@ -158,6 +177,17 @@ pub extern "C" fn crsql_create_clock_table(
     db: *mut sqlite3,
     table_info: *mut crsql_TableInfo,
     err: *mut *mut c_char,
+) -> c_int {
+    match create_clock_table(db, table_info, err) {
+        Ok(_) => ResultCode::OK as c_int,
+        Err(code) => code as c_int,
+    }
+}
+
+fn create_clock_table(
+    db: *mut sqlite3,
+    table_info: *mut crsql_TableInfo,
+    _err: *mut *mut c_char,
 ) -> Result<ResultCode, ResultCode> {
     let columns = sqlite::args!((*table_info).pksLen, (*table_info).pks);
     let pk_list = crate::c::as_identifier_list(columns, None)?;

@@ -108,37 +108,6 @@ char *crsql_join2(char *(*map)(const char *), char **in, size_t len,
   return ret;
 }
 
-// TODO:
-// have this take a function pointer that extracts the string so we can
-// delete crsql_asIdentifierList
-char *crsql_asIdentifierListStr(char **in, size_t inlen, char delim) {
-  int finalLen = 0;
-  char *ret = 0;
-  char **mapped = sqlite3_malloc(inlen * sizeof(char *));
-
-  for (size_t i = 0; i < inlen; ++i) {
-    mapped[i] = sqlite3_mprintf("\"%w\"", in[i]);
-    finalLen += strlen(mapped[i]);
-  }
-  // -1 for spearator not appended to last thing
-  finalLen += inlen - 1;
-
-  // + 1 for null terminator
-  ret = sqlite3_malloc(finalLen * sizeof(char) + 1);
-  ret[finalLen] = '\0';
-
-  crsql_joinWith(ret, mapped, inlen, delim);
-
-  // free everything we allocated, except ret.
-  // caller will free ret.
-  for (size_t i = 0; i < inlen; ++i) {
-    sqlite3_free(mapped[i]);
-  }
-  sqlite3_free(mapped);
-
-  return ret;
-}
-
 /**
  * @brief Given a list of clock table names, construct a union query to get the
  * max clock value for our site.

@@ -18,7 +18,6 @@ int crsql_doesTableExist(sqlite3 *db, const char *tblName);
 int crsql_getCount(sqlite3 *db, char *zSql);
 
 void crsql_joinWith(char *dest, char **src, size_t srcLen, char delim);
-char *crsql_asIdentifierListStr(char **idents, size_t identsLen, char delim);
 
 int crsql_getIndexedCols(sqlite3 *db, const char *indexName,
                          char ***pIndexedCols, int *pIndexedColsLen,

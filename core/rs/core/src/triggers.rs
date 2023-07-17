@@ -54,7 +54,7 @@ fn create_insert_trigger(
       BEGIN
         {trigger_body}
       END;",
-        table_name = crate::escape_ident(table_name),
+        table_name = crate::util::escape_ident(table_name),
         trigger_body = trigger_body
     );
 
@@ -117,10 +117,10 @@ ON CONFLICT DO UPDATE SET
   __crsql_db_version = crsql_nextdbversion(),
   __crsql_seq = crsql_get_seq() - 1,
   __crsql_site_id = NULL;",
-        table_name = crate::escape_ident(table_name),
+        table_name = crate::util::escape_ident(table_name),
         pk_list = pk_list,
         pk_new_list = pk_new_list,
-        col_name = crate::escape_ident_as_value(col_name)
+        col_name = crate::util::escape_ident_as_value(col_name)
     )
 }
 
@@ -147,7 +147,7 @@ fn create_update_trigger(
       BEGIN
         {trigger_body}
       END;",
-        table_name = crate::escape_ident(table_name),
+        table_name = crate::util::escape_ident(table_name),
         trigger_body = trigger_body
     );
 
@@ -192,7 +192,7 @@ fn update_trigger_body(
           __crsql_db_version = crsql_nextdbversion(),
           __crsql_seq = crsql_get_seq() - 1,
           __crsql_site_id = NULL;",
-            table_name = crate::escape_ident(table_name),
+            table_name = crate::util::escape_ident(table_name),
             pk_list = pk_list,
             pk_new_list = pk_new_list,
             sentinel = crate::c::INSERT_SENTINEL,
@@ -221,11 +221,11 @@ fn update_trigger_body(
           __crsql_db_version = crsql_nextdbversion(),
           __crsql_seq = crsql_get_seq() - 1,
           __crsql_site_id = NULL;",
-            table_name = crate::escape_ident(table_name),
+            table_name = crate::util::escape_ident(table_name),
             pk_list = pk_list,
             pk_new_list = pk_new_list,
-            col_name_val = crate::escape_ident_as_value(col_name),
-            col_name_ident = crate::escape_ident(col_name)
+            col_name_val = crate::util::escape_ident_as_value(col_name),
+            col_name_ident = crate::util::escape_ident(col_name)
         ))
     }
 
@@ -242,7 +242,7 @@ fn create_delete_trigger(
         unsafe { slice::from_raw_parts((*table_info).pks, (*table_info).pksLen as usize) };
     let pk_list = crate::c::as_identifier_list(pk_columns, None)?;
     let pk_old_list = crate::c::as_identifier_list(pk_columns, Some("OLD."))?;
-    let pk_where_list = crate::c::pk_where_list(pk_columns, Some("OLD."))?;
+    let pk_where_list = crate::util::pk_where_list(pk_columns, Some("OLD."))?;
 
     let create_trigger_sql = format!(
         "CREATE TRIGGER IF NOT EXISTS \"{table_name}__crsql_dtrig\"
@@ -270,7 +270,7 @@ fn create_delete_trigger(
       DELETE FROM \"{table_name}__crsql_clock\"
         WHERE {pk_where_list} AND __crsql_col_name != '{sentinel}';
     END;",
-        table_name = crate::escape_ident(table_name),
+        table_name = crate::util::escape_ident(table_name),
         sentinel = crate::c::DELETE_SENTINEL,
         pk_where_list = pk_where_list,
         pk_old_list = pk_old_list

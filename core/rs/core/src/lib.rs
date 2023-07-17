@@ -29,14 +29,6 @@ use sqlite_nostd as sqlite;
 use sqlite_nostd::{context, Connection, Context, Value};
 pub use teardown::*;
 
-fn escape_ident(ident: &str) -> String {
-    return ident.replace("\"", "\"\"");
-}
-
-fn escape_ident_as_value(ident: &str) -> String {
-    return ident.replace("'", "''");
-}
-
 pub extern "C" fn crsql_as_table(
     ctx: *mut sqlite::context,
     argc: i32,

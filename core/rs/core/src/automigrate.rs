@@ -151,7 +151,7 @@ fn drop_tables(local_db: *mut sqlite3, tables: Vec<String>) -> Result<ResultCode
     for table in tables {
         local_db.exec_safe(&format!(
             "DROP TABLE \"{table}\"",
-            table = crate::escape_ident(&table)
+            table = crate::util::escape_ident(&table)
         ))?;
     }
 
@@ -222,8 +222,8 @@ fn drop_columns(
     for col in columns {
         local_db.exec_safe(&format!(
             "ALTER TABLE \"{table}\" DROP \"{column}\"",
-            table = crate::escape_ident(table),
-            column = crate::escape_ident(&col)
+            table = crate::util::escape_ident(table),
+            column = crate::util::escape_ident(&col)
         ))?;
     }
 
@@ -294,8 +294,8 @@ fn add_column(
 
     local_db.exec_safe(&format!(
         "ALTER TABLE \"{table}\" ADD COLUMN \"{name}\" {col_type} {notnull} {dflt}",
-        table = crate::escape_ident(table),
-        name = crate::escape_ident(name),
+        table = crate::util::escape_ident(table),
+        name = crate::util::escape_ident(name),
         col_type = col_type,
         notnull = if notnull { "NOT NULL " } else { "" },
         dflt = dflt_val_str
@@ -352,7 +352,10 @@ fn drop_indices(local_db: *mut sqlite3, dropped: &Vec<String>) -> Result<ResultC
     // drop if exists given column dropping could have destroyed the index
     // already.
     for idx in dropped {
-        let sql = format!("DROP INDEX IF EXISTS \"{}\"", crate::escape_ident(&idx));
+        let sql = format!(
+            "DROP INDEX IF EXISTS \"{}\"",
+            crate::util::escape_ident(&idx)
+        );
         if let Err(e) = local_db.exec_safe(&sql) {
             return Err(e);
         }

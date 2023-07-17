@@ -7,6 +7,7 @@ mod bootstrap;
 mod c;
 mod changes_vtab_read;
 mod compare_values;
+mod consts;
 mod is_crr;
 mod pack_columns;
 mod teardown;

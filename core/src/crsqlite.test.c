@@ -7,6 +7,7 @@
 
 #include "changes-vtab-common.h"
 #include "consts.h"
+#include "rust.h"
 #include "tableinfo.h"
 #include "util.h"
 
@@ -96,13 +97,13 @@ static void testCreateClockTable() {
   rc = crsql_getTableInfo(db, "boo", &tc4, &err);
   CHECK_OK
 
-  rc = crsql_createClockTable(db, tc1, &err);
+  rc = crsql_create_clock_table(db, tc1, &err);
   CHECK_OK
-  rc = crsql_createClockTable(db, tc2, &err);
+  rc = crsql_create_clock_table(db, tc2, &err);
   CHECK_OK
-  rc = crsql_createClockTable(db, tc3, &err);
+  rc = crsql_create_clock_table(db, tc3, &err);
   CHECK_OK
-  rc = crsql_createClockTable(db, tc4, &err);
+  rc = crsql_create_clock_table(db, tc4, &err);
   CHECK_OK
 
   crsql_freeTableInfo(tc1);

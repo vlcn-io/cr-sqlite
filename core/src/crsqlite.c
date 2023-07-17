@@ -313,58 +313,6 @@ static void getSeqFunc(sqlite3_context *context, int argc,
 }
 
 /**
- * The clock table holds the versions for each column of a given row.
- *
- * These version are set to the dbversion at the time of the write to the
- * column.
- *
- * The dbversion is updated on transaction commit.
- * This allows us to find all columns written in the same transaction
- * albeit with caveats.
- *
- * The caveats being that two partiall overlapping transactions will
- * clobber the full transaction picture given we only keep latest
- * state and not a full causal history.
- *
- * @param tableInfo
- */
-int crsql_createClockTable(sqlite3 *db, crsql_TableInfo *tableInfo,
-                           char **err) {
-  char *zSql = 0;
-  char *pkList = 0;
-  int rc = SQLITE_OK;
-
-  pkList = crsql_asIdentifierList(tableInfo->pks, tableInfo->pksLen, 0);
-  zSql = sqlite3_mprintf(
-      "CREATE TABLE IF NOT EXISTS \"%s__crsql_clock\" (\
-      %s,\
-      \"__crsql_col_name\" NOT NULL,\
-      \"__crsql_col_version\" NOT NULL,\
-      \"__crsql_db_version\" NOT NULL,\
-      \"__crsql_site_id\",\
-      \"__crsql_seq\" NOT NULL,\
-      PRIMARY KEY (%s, \"__crsql_col_name\")\
-    )",
-      tableInfo->tblName, pkList, pkList);
-  sqlite3_free(pkList);
-
-  rc = sqlite3_exec(db, zSql, 0, 0, err);
-  sqlite3_free(zSql);
-  if (rc != SQLITE_OK) {
-    return rc;
-  }
-
-  zSql = sqlite3_mprintf(
-      "CREATE INDEX IF NOT EXISTS \"%s__crsql_clock_dbv_idx\" ON "
-      "\"%s__crsql_clock\" (\"__crsql_db_version\")",
-      tableInfo->tblName, tableInfo->tblName);
-  sqlite3_exec(db, zSql, 0, 0, err);
-  sqlite3_free(zSql);
-
-  return rc;
-}
-
-/**
  * Create a new crr --
  * all triggers, views, tables
  */
@@ -393,7 +341,7 @@ static int createCrr(sqlite3_context *context, sqlite3 *db,
     return rc;
   }
 
-  rc = crsql_createClockTable(db, tableInfo, err);
+  rc = crsql_create_clock_table(db, tableInfo, err);
   if (rc == SQLITE_OK) {
     rc = crsql_remove_crr_triggers_if_exist(db, tableInfo->tblName);
     if (rc == SQLITE_OK) {

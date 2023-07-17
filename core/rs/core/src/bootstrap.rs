@@ -143,7 +143,8 @@ fn maybe_update_db_inner(db: *mut sqlite3) -> Result<ResultCode, ResultCode> {
  *
  * @param tableInfo
  */
-fn crsql_create_clock_table(
+#[no_mangle]
+pub extern "C" fn crsql_create_clock_table(
     db: *mut sqlite3,
     table_info: *mut crsql_TableInfo,
     err: *mut *mut c_char,

@@ -1,4 +1,4 @@
-use core::ffi::{c_char, CStr};
+use core::ffi::{c_char, c_int, c_void, CStr};
 
 use crate::{c::crsql_TableInfo, consts};
 use alloc::format;
@@ -12,6 +12,17 @@ fn uuid() -> [u8; 16] {
     blob[6] = (blob[6] & 0x0f) + 0x40;
     blob[8] = (blob[8] & 0x3f) + 0x80;
     blob
+}
+
+#[no_mangle]
+pub extern "C" fn crsql_init_site_id(db: *mut sqlite3, ret: *mut u8) -> c_int {
+    let buffer: &mut [u8] = unsafe { slice::from_raw_parts_mut(ret, 16) };
+    if let Ok(site_id) = init_site_id(db) {
+        buffer.copy_from_slice(&site_id);
+        ResultCode::OK as c_int
+    } else {
+        ResultCode::ERROR as c_int
+    }
 }
 
 fn create_site_id_and_site_id_table(db: *mut sqlite3) -> Result<[u8; 16], ResultCode> {
@@ -50,8 +61,7 @@ fn init_site_id(db: *mut sqlite3) -> Result<[u8; 16], ResultCode> {
         return create_site_id_and_site_id_table(db);
     }
 
-    let stmt = db.prepare_v2("SELECT site_id FROM ?")?;
-    stmt.bind_text(1, consts::TBL_SITE_ID, Destructor::STATIC)?;
+    let stmt = db.prepare_v2(&format!("SELECT site_id FROM \"{}\"", consts::TBL_SITE_ID))?;
     let result_code = stmt.step()?;
 
     if result_code == ResultCode::DONE {

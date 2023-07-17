@@ -22,53 +22,6 @@ SQLITE_EXTENSION_INIT1
 unsigned char __rust_no_alloc_shim_is_unstable;
 #endif
 
-static void uuid(unsigned char *blob) {
-  sqlite3_randomness(16, blob);
-  blob[6] = (blob[6] & 0x0f) + 0x40;
-  blob[8] = (blob[8] & 0x3f) + 0x80;
-}
-
-/**
- * The site id table is used to persist the site id and
- * populate `siteIdBlob` on initialization of a connection.
- */
-static int createSiteIdAndSiteIdTable(sqlite3 *db, unsigned char *ret) {
-  int rc = SQLITE_OK;
-  sqlite3_stmt *pStmt = 0;
-  char *zSql = 0;
-
-  zSql = sqlite3_mprintf("CREATE TABLE \"%s\" (site_id)", TBL_SITE_ID);
-  rc = sqlite3_exec(db, zSql, 0, 0, 0);
-  sqlite3_free(zSql);
-
-  if (rc != SQLITE_OK) {
-    return rc;
-  }
-
-  zSql = sqlite3_mprintf("INSERT INTO \"%s\" (site_id) VALUES(?)", TBL_SITE_ID);
-  rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
-  sqlite3_free(zSql);
-
-  if (rc != SQLITE_OK) {
-    sqlite3_finalize(pStmt);
-    return rc;
-  }
-
-  uuid(ret);
-  rc = sqlite3_bind_blob(pStmt, 1, ret, SITE_ID_LEN, SQLITE_STATIC);
-  if (rc != SQLITE_OK) {
-    return rc;
-  }
-  rc = sqlite3_step(pStmt);
-  if (rc != SQLITE_DONE) {
-    sqlite3_finalize(pStmt);
-    return rc;
-  }
-
-  sqlite3_finalize(pStmt);
-  return SQLITE_OK;
-}
-
 static int initPeerTrackingTable(sqlite3 *db, char **pzErrMsg) {
   return sqlite3_exec(
       db,
@@ -78,47 +31,6 @@ static int initPeerTrackingTable(sqlite3 *db, char **pzErrMsg) {
       "INTEGER, PRIMARY "
       "KEY (\"site_id\", \"tag\", \"event\")) STRICT;",
       0, 0, pzErrMsg);
-}
-
-/**
- * Loads the siteId into memory. If a site id
- * cannot be found for the given database one is created
- * and saved to the site id table.
- */
-static int initSiteId(sqlite3 *db, unsigned char *ret) {
-  char *zSql = 0;
-  sqlite3_stmt *pStmt = 0;
-  int rc = SQLITE_OK;
-  int tableExists = 0;
-  const void *siteIdFromTable = 0;
-
-  // look for site id table
-  tableExists = crsql_doesTableExist(db, TBL_SITE_ID);
-
-  if (tableExists == 0) {
-    return createSiteIdAndSiteIdTable(db, ret);
-  }
-
-  // read site id from the table and return it
-  zSql = sqlite3_mprintf("SELECT site_id FROM %Q", TBL_SITE_ID);
-  rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
-  sqlite3_free(zSql);
-
-  if (rc != SQLITE_OK) {
-    return rc;
-  }
-
-  rc = sqlite3_step(pStmt);
-  if (rc != SQLITE_ROW) {
-    sqlite3_finalize(pStmt);
-    return rc;
-  }
-
-  siteIdFromTable = sqlite3_column_blob(pStmt, 0);
-  memcpy(ret, siteIdFromTable, SITE_ID_LEN);
-  sqlite3_finalize(pStmt);
-
-  return SQLITE_OK;
 }
 
 static int createSchemaTableIfNotExists(sqlite3 *db) {
@@ -712,8 +624,15 @@ __declspec(dllexport)
     return SQLITE_ERROR;
   }
 
-  rc = initSiteId(db, pExtData->siteId);
-  rc += createSchemaTableIfNotExists(db);
+  // TODO: should be moved lower once we finish migrating to rust.
+  // RN it is safe here since the rust bundle init is largely just reigstering
+  // function pointers. we need to init the rust bundle otherwise sqlite api
+  // methods are not isntalled when we start calling rust
+  rc = sqlite3_crsqlrustbundle_init(db, pzErrMsg, pApi);
+  if (rc == SQLITE_OK) {
+    rc = crsql_init_site_id(db, pExtData->siteId);
+    rc += createSchemaTableIfNotExists(db);
+  }
 
   if (rc == SQLITE_OK) {
     rc = maybeUpdateDb(db);
@@ -796,7 +715,6 @@ __declspec(dllexport)
     // it?
     sqlite3_commit_hook(db, commitHook, pExtData);
     sqlite3_rollback_hook(db, rollbackHook, pExtData);
-    rc = sqlite3_crsqlrustbundle_init(db, pzErrMsg, pApi);
   }
 
   return rc;

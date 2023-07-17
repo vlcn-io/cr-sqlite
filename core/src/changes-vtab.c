@@ -5,7 +5,6 @@
 #include <string.h>
 
 #include "changes-vtab-common.h"
-#include "changes-vtab-read.h"
 #include "changes-vtab-write.h"
 #include "consts.h"
 #include "crsqlite.h"
@@ -227,7 +226,7 @@ static int changesNext(sqlite3_vtab_cursor *cur) {
                                                 tblInfo->tblName, cid);
   pRowStmt = crsql_getCachedStmt(pCur->pTab->pExtData, zStmtKey);
   if (pRowStmt == 0) {
-    char *zSql = crsql_rowPatchDataQuery(tblInfo, cid);
+    char *zSql = crsql_row_patch_data_query(tblInfo, cid);
     if (zSql == 0) {
       pTabBase->zErrMsg = sqlite3_mprintf(
           "crsql internal error generationg raw data fetch query for table "
@@ -393,8 +392,8 @@ static int changesFilter(sqlite3_vtab_cursor *pVtabCursor, int idxNum,
     return SQLITE_OK;
   }
 
-  char *zSql = crsql_changesUnionQuery(pTab->pExtData->zpTableInfos,
-                                       pTab->pExtData->tableInfosLen, idxStr);
+  char *zSql = crsql_changes_union_query(pTab->pExtData->zpTableInfos,
+                                         pTab->pExtData->tableInfosLen, idxStr);
 
   if (zSql == 0) {
     pTabBase->zErrMsg = sqlite3_mprintf(

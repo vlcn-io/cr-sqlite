@@ -30,4 +30,17 @@ int crsql_create_crr_triggers(sqlite3 *db, crsql_TableInfo *tableInfo,
                               char **err);
 int crsql_remove_crr_triggers_if_exist(sqlite3 *db, const char *tblName);
 
+char *crsql_changes_union_query(crsql_TableInfo **tableInfos, int tableInfosLen,
+                               const char *idxStr);
+char *crsql_row_patch_data_query(crsql_TableInfo *tblInfo, const char *colName);
+
+#define TBL 0
+#define PKS 1
+#define CID 2
+#define COL_VRSN 3
+#define DB_VRSN 4
+#define SITE_ID 5
+#define CHANGES_ROWID 6
+#define SEQ 7
+
 #endif

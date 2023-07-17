@@ -50,7 +50,6 @@ ext_files=src/crsqlite.c \
 	src/util.c \
 	src/tableinfo.c \
 	src/changes-vtab.c \
-	src/changes-vtab-read.c \
 	src/changes-vtab-common.c \
 	src/changes-vtab-write.c \
 	src/ext-data.c \
@@ -60,7 +59,6 @@ ext_headers=src/crsqlite.h \
 	src/util.h \
 	src/tableinfo.h \
 	src/changes-vtab.h \
-	src/changes-vtab-read.h \
 	src/changes-vtab-common.h \
 	src/changes-vtab-write.h \
 	src/ext-data.h \

@@ -3,6 +3,7 @@
 
 mod automigrate;
 mod backfill;
+mod bootstrap;
 mod c;
 mod changes_vtab_read;
 mod compare_values;

@@ -130,7 +130,7 @@ static void testRowPatchDataQuery() {
   // TC1: single pk table, 1 col change
   const char *cid = "b";
   char *pks = "1";
-  char *q = crsql_rowPatchDataQuery(db, tblInfo, cid);
+  char *q = crsql_rowPatchDataQuery(tblInfo, cid);
   assert(strcmp(q, "SELECT \"b\" FROM \"foo\" WHERE \"a\" = ?") == 0);
   sqlite3_free(q);
 

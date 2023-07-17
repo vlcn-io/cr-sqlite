@@ -6,6 +6,7 @@ use core::ffi::CStr;
 use core::str::Utf8Error;
 
 // Structs that still exist in C but will eventually be moved to Rust
+// As well as functions re-defined in Rust but not yet deleted from C
 use sqlite_nostd::bindings::sqlite3_int64;
 use sqlite_nostd::bindings::sqlite3_stmt;
 
@@ -93,6 +94,19 @@ pub fn pk_where_list(
             )
         })
     }
+    Ok(result.join(" AND "))
+}
+
+pub fn where_list(columns: &[crsql_ColumnInfo]) -> Result<String, Utf8Error> {
+    let mut result = vec![];
+    for c in columns {
+        let name = unsafe { CStr::from_ptr(c.name) };
+        result.push(format!(
+            "\"{col_name}\" = ?",
+            col_name = crate::escape_ident(name.to_str()?)
+        ));
+    }
+
     Ok(result.join(" AND "))
 }
 

@@ -227,7 +227,7 @@ static int changesNext(sqlite3_vtab_cursor *cur) {
                                                 tblInfo->tblName, cid);
   pRowStmt = crsql_getCachedStmt(pCur->pTab->pExtData, zStmtKey);
   if (pRowStmt == 0) {
-    char *zSql = crsql_rowPatchDataQuery(pCur->pTab->db, tblInfo, cid);
+    char *zSql = crsql_rowPatchDataQuery(tblInfo, cid);
     if (zSql == 0) {
       pTabBase->zErrMsg = sqlite3_mprintf(
           "crsql internal error generationg raw data fetch query for table "

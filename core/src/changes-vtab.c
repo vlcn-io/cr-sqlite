@@ -119,25 +119,6 @@ static int changesClose(sqlite3_vtab_cursor *cur) {
   return SQLITE_OK;
 }
 
-/**
- * Update to invoke slab algorithm to generate rowids
- */
-static int changesRowid(sqlite3_vtab_cursor *cur, sqlite_int64 *pRowid) {
-  crsql_Changes_cursor *pCur = (crsql_Changes_cursor *)cur;
-  *pRowid = crsql_slabRowid(pCur->tblInfoIdx, pCur->changesRowid);
-  return SQLITE_OK;
-}
-
-/**
- * Returns true if the cursor has been moved off the last row.
- * `pChangesStmt` is finalized and set to null when this is the case as we
- * finalize `pChangeStmt` in `changesNext` when it returns `SQLITE_DONE`
- */
-static int changesEof(sqlite3_vtab_cursor *cur) {
-  crsql_Changes_cursor *pCur = (crsql_Changes_cursor *)cur;
-  return pCur->pChangesStmt == 0;
-}
-
 // char **crsql_extractValList() {
 
 // }
@@ -285,77 +266,6 @@ static int changesNext(sqlite3_vtab_cursor *cur) {
   pCur->pRowStmt = pRowStmt;
 
   return rc;
-}
-
-/**
- * Returns columns for the row at which
- * the cursor currently resides.
- */
-static int changesColumn(
-    sqlite3_vtab_cursor *cur, /* The cursor */
-    sqlite3_context *ctx,     /* First argument to sqlite3_result_...() */
-    int i                     /* Which column to return */
-) {
-  crsql_Changes_cursor *pCur = (crsql_Changes_cursor *)cur;
-  switch (i) {
-      // we clean up the cursor on moving to the next result
-      // so no need to tell sqlite to free these values.
-    case CHANGES_SINCE_VTAB_TBL:
-      sqlite3_result_value(ctx, sqlite3_column_value(pCur->pChangesStmt, TBL));
-      break;
-    case CHANGES_SINCE_VTAB_PK:
-      sqlite3_result_value(ctx, sqlite3_column_value(pCur->pChangesStmt, PKS));
-      break;
-    case CHANGES_SINCE_VTAB_CVAL:
-      // pRowStmt is null if the event was a delete. i.e., there is no row
-      // data.
-      // TODO: there's an edge case here where we can end up replicating a
-      // bunch of nulls for a row that is deleted but has prior events
-      // proceeding the delete. So on row delete we should, in our delete
-      // trigger, go drop all state records for the row except the delete
-      // event. "all" is actually quite small given we only keep max 1
-      // record per col in a row. so this drop is feasible on delete.
-      if (pCur->pRowStmt == 0) {
-        sqlite3_result_null(ctx);
-      } else {
-        sqlite3_result_value(ctx, sqlite3_column_value(pCur->pRowStmt, 0));
-      }
-      break;
-    case CHANGES_SINCE_VTAB_CID:
-      if (pCur->rowType == ROW_TYPE_PKONLY) {
-        sqlite3_result_text(ctx, PKS_ONLY_CID_SENTINEL, -1, SQLITE_STATIC);
-      } else if (pCur->rowType == ROW_TYPE_DELETE || pCur->pRowStmt == 0) {
-        sqlite3_result_text(ctx, DELETE_CID_SENTINEL, -1, SQLITE_STATIC);
-      } else {
-        sqlite3_result_value(ctx,
-                             sqlite3_column_value(pCur->pChangesStmt, CID));
-      }
-      break;
-    case CHANGES_SINCE_VTAB_COL_VRSN:
-      sqlite3_result_value(ctx,
-                           sqlite3_column_value(pCur->pChangesStmt, COL_VRSN));
-      break;
-    case CHANGES_SINCE_VTAB_DB_VRSN:
-      sqlite3_result_int64(ctx, pCur->dbVersion);
-      break;
-    case CHANGES_SINCE_VTAB_SITE_ID:
-      if (sqlite3_column_type(pCur->pChangesStmt, SITE_ID) == SQLITE_NULL) {
-        sqlite3_result_null(ctx);
-        // sqlite3_result_blob(ctx, pCur->pTab->pExtData->siteId, SITE_ID_LEN,
-        //                     SQLITE_STATIC);
-      } else {
-        sqlite3_result_value(ctx,
-                             sqlite3_column_value(pCur->pChangesStmt, SITE_ID));
-      }
-      break;
-    case CHANGES_SINCE_VTAB_SEQ:
-      sqlite3_result_value(ctx, sqlite3_column_value(pCur->pChangesStmt, SEQ));
-      break;
-    default:
-      return SQLITE_ERROR;
-  }
-  // sqlite3_result_value(ctx, sqlite3_column_value(pCur->pRowStmt, i));
-  return SQLITE_OK;
 }
 
 /**
@@ -623,42 +533,18 @@ static int changesBestIndex(sqlite3_vtab *tab, sqlite3_index_info *pIdxInfo) {
   return SQLITE_OK;
 }
 
-static int changesApply(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
-                        sqlite3_int64 *pRowid) {
-  int argv0Type = sqlite3_value_type(argv[0]);
-  char *errmsg = 0;
-  int rc = SQLITE_OK;
-  // if (argc == 1 && argv[0] != 0)
-  // {
-  //   // delete statement
-  //   return crsql_mergeDelete();
-  // }
-  if (argc > 1 && argv0Type == SQLITE_NULL) {
-    // insert statement
-    // argv[1] is the rowid.. but why would it ever be filled for us?
-    rc = crsql_mergeInsert(pVTab, argc, argv, pRowid, &errmsg);
-    if (rc != SQLITE_OK) {
-      pVTab->zErrMsg = errmsg;
-    }
-    return rc;
-  } else {
-    pVTab->zErrMsg = sqlite3_mprintf(
-        "Only INSERT and SELECT statements are allowed against the crsql "
-        "changes table.");
-    return SQLITE_MISUSE;
-  }
-
-  return SQLITE_OK;
-}
-
+int crsql_changes_update(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
+                         sqlite3_int64 *pRowid);
 // If xBegin is not defined xCommit is not called.
-static int xBegin(sqlite3_vtab *pVTab) { return SQLITE_OK; }
-
-static int xCommit(sqlite3_vtab *pVTab) {
-  crsql_Changes_vtab *crsqlTab = (crsql_Changes_vtab *)pVTab;
-  crsqlTab->pExtData->rowsImpacted = 0;
-  return SQLITE_OK;
-}
+int crsql_changes_begin(sqlite3_vtab *pVTab);
+int crsql_changes_commit(sqlite3_vtab *pVTab);
+int crsql_changes_rowid(sqlite3_vtab_cursor *cur, sqlite_int64 *pRowid);
+int crsql_changes_column(
+    sqlite3_vtab_cursor *cur, /* The cursor */
+    sqlite3_context *ctx,     /* First argument to sqlite3_result_...() */
+    int i                     /* Which column to return */
+);
+int crsql_changes_eof(sqlite3_vtab_cursor *cur);
 
 sqlite3_module crsql_changesModule = {
     /* iVersion    */ 0,
@@ -671,13 +557,13 @@ sqlite3_module crsql_changesModule = {
     /* xClose      */ changesClose,
     /* xFilter     */ changesFilter,
     /* xNext       */ changesNext,
-    /* xEof        */ changesEof,
-    /* xColumn     */ changesColumn,
-    /* xRowid      */ changesRowid,
-    /* xUpdate     */ changesApply,
-    /* xBegin      */ xBegin,
+    /* xEof        */ crsql_changes_eof,
+    /* xColumn     */ crsql_changes_column,
+    /* xRowid      */ crsql_changes_rowid,
+    /* xUpdate     */ crsql_changes_update,
+    /* xBegin      */ crsql_changes_begin,
     /* xSync       */ 0,
-    /* xCommit     */ xCommit,
+    /* xCommit     */ crsql_changes_commit,
     /* xRollback   */ 0,
     /* xFindMethod */ 0,
     /* xRename     */ 0,

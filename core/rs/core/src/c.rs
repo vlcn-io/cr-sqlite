@@ -7,15 +7,14 @@ use core::str::Utf8Error;
 
 // Structs that still exist in C but will eventually be moved to Rust
 // As well as functions re-defined in Rust but not yet deleted from C
-use sqlite_nostd::bindings::sqlite3_int64;
-use sqlite_nostd::bindings::sqlite3_stmt;
+use sqlite_nostd as sqlite;
 
 pub static INSERT_SENTINEL: &str = "__crsql_pko";
 pub static DELETE_SENTINEL: &str = "__crsql_del";
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-#[allow(non_snake_case)]
+#[allow(non_snake_case, non_camel_case_types)]
 pub struct crsql_TableInfo {
     pub tblName: *mut ::core::ffi::c_char,
     pub baseCols: *mut crsql_ColumnInfo,
@@ -28,7 +27,7 @@ pub struct crsql_TableInfo {
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-#[allow(non_snake_case)]
+#[allow(non_snake_case, non_camel_case_types)]
 pub struct crsql_ColumnInfo {
     pub cid: ::core::ffi::c_int,
     pub name: *mut ::core::ffi::c_char,
@@ -39,22 +38,22 @@ pub struct crsql_ColumnInfo {
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-#[allow(non_snake_case)]
+#[allow(non_snake_case, non_camel_case_types)]
 pub struct crsql_ExtData {
-    pub pPragmaSchemaVersionStmt: *mut sqlite3_stmt,
-    pub pPragmaDataVersionStmt: *mut sqlite3_stmt,
+    pub pPragmaSchemaVersionStmt: *mut sqlite::stmt,
+    pub pPragmaDataVersionStmt: *mut sqlite::stmt,
     pub pragmaDataVersion: ::core::ffi::c_int,
-    pub dbVersion: sqlite3_int64,
+    pub dbVersion: sqlite::int64,
     pub pragmaSchemaVersion: ::core::ffi::c_int,
     pub pragmaSchemaVersionForTableInfos: ::core::ffi::c_int,
     pub siteId: *mut ::core::ffi::c_uchar,
-    pub pDbVersionStmt: *mut sqlite3_stmt,
+    pub pDbVersionStmt: *mut sqlite::stmt,
     pub zpTableInfos: *mut *mut crsql_TableInfo,
     pub tableInfosLen: ::core::ffi::c_int,
     pub rowsImpacted: ::core::ffi::c_int,
     pub seq: ::core::ffi::c_int,
-    pub pSetSyncBitStmt: *mut sqlite3_stmt,
-    pub pClearSyncBitStmt: *mut sqlite3_stmt,
+    pub pSetSyncBitStmt: *mut sqlite::stmt,
+    pub pClearSyncBitStmt: *mut sqlite::stmt,
     pub hStmts: *mut ::core::ffi::c_void,
 }
 
@@ -91,6 +90,182 @@ pub fn where_list(columns: &[crsql_ColumnInfo]) -> Result<String, Utf8Error> {
     }
 
     Ok(result.join(" AND "))
+}
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+#[allow(non_snake_case, non_camel_case_types)]
+pub struct crsql_Changes_vtab {
+    pub base: sqlite::vtab,
+    pub db: *mut sqlite::sqlite3,
+    pub pExtData: *mut crsql_ExtData,
+}
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+#[allow(non_snake_case, non_camel_case_types)]
+pub struct crsql_Changes_cursor {
+    pub base: sqlite::vtab_cursor,
+    pub pTab: *mut crsql_Changes_vtab,
+    pub pChangesStmt: *mut sqlite::stmt,
+    pub pRowStmt: *mut sqlite::stmt,
+    pub dbVersion: sqlite::int64,
+    pub rowType: ::core::ffi::c_int,
+    pub changesRowid: sqlite::int64,
+    pub tblInfoIdx: ::core::ffi::c_int,
+}
+
+extern "C" {
+    pub fn crsql_mergeInsert(
+        pVTab: *mut sqlite::vtab,
+        argc: ::core::ffi::c_int,
+        argv: *mut *mut sqlite::value,
+        pRowid: *mut sqlite::int64,
+        errmsg: *mut *mut ::core::ffi::c_char,
+    ) -> ::core::ffi::c_int;
+}
+
+#[test]
+fn bindgen_test_layout_crsql_Changes_vtab() {
+    const UNINIT: ::core::mem::MaybeUninit<crsql_Changes_vtab> = ::core::mem::MaybeUninit::uninit();
+    let ptr = UNINIT.as_ptr();
+    assert_eq!(
+        ::core::mem::size_of::<crsql_Changes_vtab>(),
+        40usize,
+        concat!("Size of: ", stringify!(crsql_Changes_vtab))
+    );
+    assert_eq!(
+        ::core::mem::align_of::<crsql_Changes_vtab>(),
+        8usize,
+        concat!("Alignment of ", stringify!(crsql_Changes_vtab))
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).base) as usize - ptr as usize },
+        0usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(crsql_Changes_vtab),
+            "::",
+            stringify!(base)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).db) as usize - ptr as usize },
+        24usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(crsql_Changes_vtab),
+            "::",
+            stringify!(db)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).pExtData) as usize - ptr as usize },
+        32usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(crsql_Changes_vtab),
+            "::",
+            stringify!(pExtData)
+        )
+    );
+}
+
+#[test]
+fn bindgen_test_layout_crsql_Changes_cursor() {
+    const UNINIT: ::core::mem::MaybeUninit<crsql_Changes_cursor> =
+        ::core::mem::MaybeUninit::uninit();
+    let ptr = UNINIT.as_ptr();
+    assert_eq!(
+        ::core::mem::size_of::<crsql_Changes_cursor>(),
+        64usize,
+        concat!("Size of: ", stringify!(crsql_Changes_cursor))
+    );
+    assert_eq!(
+        ::core::mem::align_of::<crsql_Changes_cursor>(),
+        8usize,
+        concat!("Alignment of ", stringify!(crsql_Changes_cursor))
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).base) as usize - ptr as usize },
+        0usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(crsql_Changes_cursor),
+            "::",
+            stringify!(base)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).pTab) as usize - ptr as usize },
+        8usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(crsql_Changes_cursor),
+            "::",
+            stringify!(pTab)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).pChangesStmt) as usize - ptr as usize },
+        16usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(crsql_Changes_cursor),
+            "::",
+            stringify!(pChangesStmt)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).pRowStmt) as usize - ptr as usize },
+        24usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(crsql_Changes_cursor),
+            "::",
+            stringify!(pRowStmt)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).dbVersion) as usize - ptr as usize },
+        32usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(crsql_Changes_cursor),
+            "::",
+            stringify!(dbVersion)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).rowType) as usize - ptr as usize },
+        40usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(crsql_Changes_cursor),
+            "::",
+            stringify!(rowType)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).changesRowid) as usize - ptr as usize },
+        48usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(crsql_Changes_cursor),
+            "::",
+            stringify!(changesRowid)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).tblInfoIdx) as usize - ptr as usize },
+        56usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(crsql_Changes_cursor),
+            "::",
+            stringify!(tblInfoIdx)
+        )
+    );
 }
 
 #[test]

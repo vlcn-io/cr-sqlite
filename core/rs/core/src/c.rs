@@ -4,6 +4,8 @@ use alloc::string::String;
 use alloc::vec;
 use core::ffi::CStr;
 use core::str::Utf8Error;
+#[cfg(not(feature = "std"))]
+use num_derive::FromPrimitive;
 
 // Structs that still exist in C but will eventually be moved to Rust
 // As well as functions re-defined in Rust but not yet deleted from C
@@ -11,6 +13,37 @@ use sqlite_nostd as sqlite;
 
 pub static INSERT_SENTINEL: &str = "__crsql_pko";
 pub static DELETE_SENTINEL: &str = "__crsql_del";
+
+#[derive(FromPrimitive, PartialEq, Debug)]
+pub enum CrsqlChangesColumn {
+    Tbl = 0,
+    Pk = 1,
+    Cid = 2,
+    Cval = 3,
+    ColVrsn = 4,
+    DbVrsn = 5,
+    SiteId = 6,
+    Seq = 7,
+}
+
+#[derive(FromPrimitive, PartialEq, Debug)]
+pub enum ClockUnionColumn {
+    Tbl = 0,
+    Pks = 1,
+    Cid = 2,
+    ColVrsn = 3,
+    DbVrsn = 4,
+    SiteId = 5,
+    RowId = 6,
+    Seq = 7,
+}
+
+#[derive(FromPrimitive, PartialEq, Debug)]
+pub enum ChangeRowType {
+    Update = 0,
+    Delete = 1,
+    PkOnly = 2,
+}
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]

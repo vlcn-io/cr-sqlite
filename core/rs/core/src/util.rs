@@ -41,6 +41,15 @@ pub fn get_dflt_value(
     return Ok(Some(String::from(stmt.column_text(0)?)));
 }
 
+pub fn slab_rowid(idx: i32, rowid: sqlite::int64) -> sqlite::int64 {
+    if idx < 0 {
+        return -1;
+    }
+
+    let modulo = rowid % crate::consts::ROWID_SLAB_SIZE;
+    return (idx as i64) * crate::consts::ROWID_SLAB_SIZE + modulo;
+}
+
 pub fn pk_where_list(
     columns: &[crsql_ColumnInfo],
     rhs_prefix: Option<&str>,

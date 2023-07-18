@@ -16,6 +16,15 @@ use crate::c::{
     CrsqlChangesColumn,
 };
 
+extern "C" fn eof(cursor: *mut sqlite::vtab_cursor) -> c_int {
+    let cursor = cursor.cast::<crsql_Changes_cursor>();
+    if unsafe { (*cursor).pChangesStmt.is_null() } {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
 extern "C" fn column(
     cursor: *mut sqlite::vtab_cursor, /* The cursor */
     ctx: *mut sqlite::context,        /* First argument to sqlite3_result_...() */
@@ -152,7 +161,7 @@ static MODULE: sqlite_nostd::module = sqlite_nostd::module {
     xClose: None,  //Some(close),
     xFilter: None, //Some(filter),
     xNext: None,   //Some(next),
-    xEof: None,    //Some(eof),
+    xEof: Some(eof),
     xColumn: Some(column),
     xRowid: Some(rowid),
     xUpdate: Some(update),

@@ -206,7 +206,8 @@ unsafe extern "C" fn next(cursor: *mut sqlite::vtab_cursor) -> c_int {
 //   return rc;
 // }
 
-extern "C" fn eof(cursor: *mut sqlite::vtab_cursor) -> c_int {
+#[no_mangle]
+pub extern "C" fn crsql_changes_eof(cursor: *mut sqlite::vtab_cursor) -> c_int {
     let cursor = cursor.cast::<crsql_Changes_cursor>();
     if unsafe { (*cursor).pChangesStmt.is_null() } {
         return 1;
@@ -215,7 +216,8 @@ extern "C" fn eof(cursor: *mut sqlite::vtab_cursor) -> c_int {
     }
 }
 
-extern "C" fn column(
+#[no_mangle]
+pub extern "C" fn crsql_changes_column(
     cursor: *mut sqlite::vtab_cursor, /* The cursor */
     ctx: *mut sqlite::context,        /* First argument to sqlite3_result_...() */
     i: c_int,                         /* Which column to return */
@@ -283,7 +285,11 @@ fn column_impl(
     Ok(ResultCode::OK)
 }
 
-extern "C" fn rowid(cursor: *mut sqlite::vtab_cursor, rowid: *mut sqlite::int64) -> c_int {
+#[no_mangle]
+pub extern "C" fn crsql_changes_rowid(
+    cursor: *mut sqlite::vtab_cursor,
+    rowid: *mut sqlite::int64,
+) -> c_int {
     let cursor = cursor.cast::<crsql_Changes_cursor>();
     unsafe {
         *rowid = crate::util::slab_rowid((*cursor).tblInfoIdx, (*cursor).changesRowid);
@@ -294,7 +300,8 @@ extern "C" fn rowid(cursor: *mut sqlite::vtab_cursor, rowid: *mut sqlite::int64)
     return ResultCode::OK as c_int;
 }
 
-extern "C" fn update(
+#[no_mangle]
+pub extern "C" fn crsql_changes_update(
     vtab: *mut sqlite::vtab,
     argc: c_int,
     argv: *mut *mut sqlite::value,
@@ -328,11 +335,13 @@ extern "C" fn update(
 }
 
 // If xBegin is not defined xCommit is not called.
-extern "C" fn begin(vtab: *mut sqlite::vtab) -> c_int {
+#[no_mangle]
+pub extern "C" fn crsql_changes_begin(vtab: *mut sqlite::vtab) -> c_int {
     ResultCode::OK as c_int
 }
 
-extern "C" fn commit(vtab: *mut sqlite::vtab) -> c_int {
+#[no_mangle]
+pub extern "C" fn crsql_changes_commit(vtab: *mut sqlite::vtab) -> c_int {
     let tab = vtab.cast::<crsql_Changes_vtab>();
     unsafe {
         (*(*tab).pExtData).rowsImpacted = 0;

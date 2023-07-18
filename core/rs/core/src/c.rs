@@ -190,9 +190,12 @@ extern "C" {
         zKey: *mut c_char,
         pStmt: *mut sqlite::stmt,
     );
+    pub fn crsql_ensureTableInfosAreUpToDate(
+        db: *mut sqlite::sqlite3,
+        pExtData: *mut crsql_ExtData,
+        errmsg: *mut *mut c_char,
+    ) -> c_int;
 }
-
-extern "C" {}
 
 #[test]
 fn bindgen_test_layout_crsql_Changes_vtab() {

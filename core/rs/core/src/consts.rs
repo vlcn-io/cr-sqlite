@@ -5,3 +5,4 @@ pub const CLOCK_TABLES_SELECT: &'static str =
 pub const CRSQLITE_VERSION: i32 = 130000;
 pub const SITE_ID_LEN: usize = 16;
 pub const ROWID_SLAB_SIZE: i64 = 10000000000000;
+pub const MIN_POSSIBLE_DB_VERSION: i64 = 0;

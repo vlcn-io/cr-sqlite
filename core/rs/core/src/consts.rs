@@ -4,3 +4,4 @@ pub const CLOCK_TABLES_SELECT: &'static str =
     "SELECT tbl_name FROM sqlite_master WHERE type='table' AND tbl_name LIKE '%__crsql_clock'";
 pub const CRSQLITE_VERSION: i32 = 130000;
 pub const SITE_ID_LEN: usize = 16;
+pub const ROWID_SLAB_SIZE: i64 = 10000000000000;

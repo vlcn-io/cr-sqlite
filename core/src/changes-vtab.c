@@ -288,7 +288,7 @@ static int changesNext(sqlite3_vtab_cursor *cur) {
 }
 
 /**
- * Returns volums for the row at which
+ * Returns columns for the row at which
  * the cursor currently resides.
  */
 static int changesColumn(

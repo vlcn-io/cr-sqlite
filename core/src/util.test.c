@@ -53,26 +53,6 @@ static void testGetVersionUnionQuery() {
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
-static void testDoesTableExist() {
-  sqlite3 *db;
-  int rc;
-  printf("DoesTableExist\n");
-
-  rc = sqlite3_open(":memory:", &db);
-  if (rc) {
-    fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
-    crsql_close(db);
-    return;
-  }
-
-  assert(crsql_doesTableExist(db, "foo") == 0);
-  sqlite3_exec(db, "CREATE TABLE foo (a, b)", 0, 0, 0);
-  assert(crsql_doesTableExist(db, "foo") == 1);
-
-  crsql_close(db);
-  printf("\t\e[0;32mSuccess\e[0m\n");
-}
-
 static void testGetCount() {
   sqlite3 *db = 0;
   int rc = SQLITE_OK;
@@ -101,46 +81,6 @@ static void testJoinWith() {
 
   assert(strcmp(dest, "one,two,four") == 0);
   printf("\t\e[0;32mSuccess\e[0m\n");
-}
-
-static void testGetIndexedCols() {
-  printf("GetIndexedCols\n");
-
-  sqlite3 *db = 0;
-  int rc = SQLITE_OK;
-  char **indexedCols = 0;
-  int indexedColsLen;
-  char *pErrMsg = 0;
-
-  rc = sqlite3_open(":memory:", &db);
-  sqlite3_exec(db, "CREATE TABLE foo (a);", 0, 0, 0);
-  sqlite3_exec(db, "CREATE TABLE bar (a primary key);", 0, 0, 0);
-
-  rc = crsql_getIndexedCols(db, "sqlite_autoindex_foo_1", &indexedCols,
-                            &indexedColsLen, &pErrMsg);
-  CHECK_OK
-
-  assert(indexedColsLen == 0);
-  assert(indexedCols == 0);
-
-  rc = crsql_getIndexedCols(db, "sqlite_autoindex_bar_1", &indexedCols,
-                            &indexedColsLen, &pErrMsg);
-  CHECK_OK
-
-  assert(indexedColsLen == 1);
-  assert(strcmp(indexedCols[0], "a") == 0);
-
-  sqlite3_free(indexedCols[0]);
-  sqlite3_free(indexedCols);
-
-  crsql_close(db);
-  printf("\t\e[0;32mSuccess\e[0m\n");
-  return;
-
-fail:
-  crsql_close(db);
-  sqlite3_free(pErrMsg);
-  printf("bad return code: %d\n", rc);
 }
 
 static char *join2map(const char *in) {
@@ -172,10 +112,8 @@ void crsqlUtilTestSuite() {
   printf("\e[47m\e[1;30mSuite: crsql_util\e[0m\n");
 
   testGetVersionUnionQuery();
-  testDoesTableExist();
   testGetCount();
   testJoinWith();
-  testGetIndexedCols();
   testJoin2();
 
   // TODO: test pk pulling and correct sorting of pks

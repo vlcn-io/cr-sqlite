@@ -2,7 +2,7 @@ extern crate alloc;
 use alloc::format;
 use alloc::string::String;
 use alloc::vec;
-use core::ffi::CStr;
+use core::ffi::{c_char, c_int, CStr};
 use core::str::Utf8Error;
 #[cfg(not(feature = "std"))]
 use num_derive::FromPrimitive;
@@ -13,6 +13,17 @@ use sqlite_nostd as sqlite;
 
 pub static INSERT_SENTINEL: &str = "__crsql_pko";
 pub static DELETE_SENTINEL: &str = "__crsql_del";
+
+pub enum CachedStmtType {
+    SetWinnerClock = 0,
+    CheckForLocalDelete = 1,
+    GetColVersion = 2,
+    GetCurrValue = 3,
+    MergePkOnlyInsert = 4,
+    MergeDelete = 5,
+    MergeInsert = 6,
+    RowPatchData = 7,
+}
 
 #[derive(FromPrimitive, PartialEq, Debug)]
 pub enum CrsqlChangesColumn {
@@ -160,15 +171,23 @@ extern "C" {
 
 extern "C" {
     pub fn crsql_resetCachedStmt(stmt: *mut sqlite::stmt) -> ::core::ffi::c_int;
-}
-
-extern "C" {
     pub fn crsql_indexofTableInfo(
         tblInfos: *mut *mut crsql_TableInfo,
         len: ::core::ffi::c_int,
         tblName: *const ::core::ffi::c_char,
     ) -> ::core::ffi::c_int;
+    pub fn crsql_getCacheKeyForStmtType(
+        stmt_type: c_int,
+        zTblName: *const c_char,
+        mzColName: *const c_char,
+    ) -> *mut c_char;
+    pub fn crsql_getCachedStmt(
+        pExtData: *mut crsql_ExtData,
+        zKey: *const c_char,
+    ) -> *mut sqlite::stmt;
 }
+
+extern "C" {}
 
 #[test]
 fn bindgen_test_layout_crsql_Changes_vtab() {

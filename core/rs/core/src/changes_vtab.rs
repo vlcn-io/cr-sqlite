@@ -12,9 +12,10 @@ use sqlite_nostd as sqlite;
 use sqlite_nostd::ResultCode;
 
 use crate::c::{
-    crsql_Changes_cursor, crsql_Changes_vtab, crsql_mergeInsert, ChangeRowType, ClockUnionColumn,
-    CrsqlChangesColumn,
+    crsql_Changes_cursor, crsql_Changes_vtab, crsql_getCacheKeyForStmtType, crsql_getCachedStmt,
+    crsql_mergeInsert, ChangeRowType, ClockUnionColumn, CrsqlChangesColumn,
 };
+use crate::changes_vtab_read::{crsql_row_patch_data_query, row_patch_data_query};
 
 fn changes_crsr_finalize(crsr: *mut crsql_Changes_cursor) -> c_int {
     // Assign pointers to null after freeing
@@ -119,8 +120,18 @@ unsafe extern "C" fn next(cursor: *mut sqlite::vtab_cursor) -> c_int {
                 (*cursor).rowType = ChangeRowType::Update as c_int;
             }
 
-            // let row_stmt = (*cursor).pRowStmt;
-            // let stmt_key = crsql_getCacheKeyForStmtType();
+            let stmt_key = crsql_getCacheKeyForStmtType(
+                crate::c::CachedStmtType::RowPatchData as i32,
+                (*tbl_info).tblName,
+                cid.as_ptr() as *const c_char,
+            );
+            let row_stmt = crsql_getCachedStmt((*(*cursor).pTab).pExtData, stmt_key);
+            if row_stmt.is_null() {
+                let sql = row_patch_data_query(tbl_info, cid);
+                if let Some(sql) = sql {
+                } else {
+                }
+            }
 
             return 0;
         }
@@ -329,29 +340,29 @@ extern "C" fn commit(vtab: *mut sqlite::vtab) -> c_int {
     ResultCode::OK as c_int
 }
 
-static MODULE: sqlite_nostd::module = sqlite_nostd::module {
-    iVersion: 0,
-    xCreate: None,
-    xConnect: None,    //Some(connect),
-    xBestIndex: None,  //Some(best_index),
-    xDisconnect: None, //Some(disconnect),
-    xDestroy: None,
-    xOpen: None,   //Some(open),
-    xClose: None,  //Some(close),
-    xFilter: None, //Some(filter),
-    xNext: Some(next),
-    xEof: Some(eof),
-    xColumn: Some(column),
-    xRowid: Some(rowid),
-    xUpdate: Some(update),
-    xBegin: Some(begin),
-    xSync: None,
-    xCommit: Some(commit),
-    xRollback: None,
-    xFindFunction: None,
-    xRename: None,
-    xSavepoint: None,
-    xRelease: None,
-    xRollbackTo: None,
-    xShadowName: None,
-};
+// static MODULE: sqlite_nostd::module = sqlite_nostd::module {
+//     iVersion: 0,
+//     xCreate: None,
+//     xConnect: None,    //Some(connect),
+//     xBestIndex: None,  //Some(best_index),
+//     xDisconnect: None, //Some(disconnect),
+//     xDestroy: None,
+//     xOpen: None,   //Some(open),
+//     xClose: None,  //Some(close),
+//     xFilter: None, //Some(filter),
+//     xNext: Some(next),
+//     xEof: Some(eof),
+//     xColumn: Some(column),
+//     xRowid: Some(rowid),
+//     xUpdate: Some(update),
+//     xBegin: Some(begin),
+//     xSync: None,
+//     xCommit: Some(commit),
+//     xRollback: None,
+//     xFindFunction: None,
+//     xRename: None,
+//     xSavepoint: None,
+//     xRelease: None,
+//     xRollbackTo: None,
+//     xShadowName: None,
+// };

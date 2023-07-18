@@ -5,6 +5,7 @@ use alloc::string::String;
 use alloc::vec;
 use core::{
     ffi::{c_char, c_int, CStr},
+    ptr::null_mut,
     slice,
 };
 use sqlite::ResultCode;
@@ -81,24 +82,30 @@ pub extern "C" fn crsql_row_patch_data_query(
     table_info: *mut crsql_TableInfo,
     col_name: *const c_char,
 ) -> *mut c_char {
+    if let Ok(col_name) = unsafe { CStr::from_ptr(col_name).to_str() } {
+        if let Some(query) = row_patch_data_query(table_info, col_name) {
+            let (ptr, _, _) = query.into_raw_parts();
+            // release ownership of the memory
+            // return to c
+            return ptr as *mut c_char;
+        }
+    }
+    return null_mut();
+}
+
+pub fn row_patch_data_query(table_info: *mut crsql_TableInfo, col_name: &str) -> Option<String> {
     let pk_columns =
         unsafe { slice::from_raw_parts((*table_info).pks, (*table_info).pksLen as usize) };
     if let Ok(table_name) = unsafe { CStr::from_ptr((*table_info).tblName).to_str() } {
-        if let Ok(col_name) = unsafe { CStr::from_ptr(col_name).to_str() } {
-            if let Ok(where_list) = crate::c::where_list(pk_columns) {
-                let query = format!(
-                    "SELECT \"{col_name}\" FROM \"{table_name}\" WHERE {where_list}\0",
-                    col_name = crate::util::escape_ident(col_name),
-                    table_name = crate::util::escape_ident(table_name),
-                    where_list = where_list
-                );
-                // release ownership of the memory
-                let (ptr, _, _) = query.into_raw_parts();
-                // return to c
-                return ptr as *mut c_char;
-            }
+        if let Ok(where_list) = crate::c::where_list(pk_columns) {
+            return Some(format!(
+                "SELECT \"{col_name}\" FROM \"{table_name}\" WHERE {where_list}\0",
+                col_name = crate::util::escape_ident(col_name),
+                table_name = crate::util::escape_ident(table_name),
+                where_list = where_list
+            ));
         }
     }
 
-    return core::ptr::null_mut() as *mut c_char;
+    return None;
 }

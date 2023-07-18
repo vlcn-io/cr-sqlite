@@ -9,7 +9,18 @@ use sqlite::{ColumnType, Value};
 use sqlite_nostd as sqlite;
 use sqlite_nostd::ResultCode;
 
-use crate::c::{crsql_Changes_vtab, crsql_mergeInsert};
+use crate::c::{crsql_Changes_cursor, crsql_Changes_vtab, crsql_mergeInsert};
+
+extern "C" fn rowid(cursor: *mut sqlite::vtab_cursor, rowid: *mut sqlite::int64) -> c_int {
+    let cursor = cursor.cast::<crsql_Changes_cursor>();
+    unsafe {
+        *rowid = crsql_slab_rowid((*cursor).tblInfoIdx, (*cursor).changesRowid);
+        if *rowid < 0 {
+            return ResultCode::ERROR as c_int;
+        }
+    }
+    return ResultCode::OK as c_int;
+}
 
 extern "C" fn update(
     vtab: *mut sqlite::vtab,
@@ -70,7 +81,7 @@ static MODULE: sqlite_nostd::module = sqlite_nostd::module {
     xNext: None,   //Some(next),
     xEof: None,    //Some(eof),
     xColumn: None, //Some(column),
-    xRowid: None,  //Some(rowid),
+    xRowid: Some(rowid),
     xUpdate: Some(update),
     xBegin: Some(begin),
     xSync: None,

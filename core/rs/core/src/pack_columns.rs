@@ -243,7 +243,7 @@ pub extern "C" fn crsql_bind_unpacked_values(stmt: *mut sqlite::stmt, columns: R
             columns.cap as usize,
         )
     };
-    let bind_result = bind_to_stmt(stmt, &unpacked);
+    let bind_result = bind_package_to_stmt(stmt, &unpacked);
     // forget our ownership of the vec. C owns it.
     mem::forget(unpacked);
 
@@ -254,7 +254,7 @@ pub extern "C" fn crsql_bind_unpacked_values(stmt: *mut sqlite::stmt, columns: R
     return ResultCode::ERROR as c_int;
 }
 
-fn bind_to_stmt(
+pub fn bind_package_to_stmt(
     stmt: *mut sqlite::stmt,
     values: &Vec<crate::ColumnValue>,
 ) -> Result<ResultCode, ResultCode> {

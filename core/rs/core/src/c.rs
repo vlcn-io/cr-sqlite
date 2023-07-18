@@ -158,6 +158,18 @@ extern "C" {
     ) -> ::core::ffi::c_int;
 }
 
+extern "C" {
+    pub fn crsql_resetCachedStmt(stmt: *mut sqlite::stmt) -> ::core::ffi::c_int;
+}
+
+extern "C" {
+    pub fn crsql_indexofTableInfo(
+        tblInfos: *mut *mut crsql_TableInfo,
+        len: ::core::ffi::c_int,
+        tblName: *const ::core::ffi::c_char,
+    ) -> ::core::ffi::c_int;
+}
+
 #[test]
 fn bindgen_test_layout_crsql_Changes_vtab() {
     const UNINIT: ::core::mem::MaybeUninit<crsql_Changes_vtab> = ::core::mem::MaybeUninit::uninit();

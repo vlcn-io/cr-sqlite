@@ -1,6 +1,6 @@
 extern crate alloc;
-
-use core::ffi::c_int;
+use alloc::format;
+use core::ffi::{c_char, c_int};
 use core::ptr::null_mut;
 use core::slice;
 
@@ -15,6 +15,185 @@ use crate::c::{
     crsql_Changes_cursor, crsql_Changes_vtab, crsql_mergeInsert, ChangeRowType, ClockUnionColumn,
     CrsqlChangesColumn,
 };
+
+fn changes_crsr_finalize(crsr: *mut crsql_Changes_cursor) -> c_int {
+    // Assign pointers to null after freeing
+    // since we can get into this twice for the same cursor object.
+    unsafe {
+        let mut rc = 0;
+        rc += match (*crsr).pChangesStmt.finalize() {
+            Ok(rc) => rc as c_int,
+            Err(rc) => rc as c_int,
+        };
+        (*crsr).pChangesStmt = null_mut();
+        rc += crate::c::crsql_resetCachedStmt((*crsr).pRowStmt);
+        (*crsr).pRowStmt = null_mut();
+        (*crsr).dbVersion = crate::consts::MIN_POSSIBLE_DB_VERSION;
+
+        return rc;
+    }
+}
+
+/**
+ * Advances our Changes_cursor to its next row of output.
+ * TODO: this'll get more idiomatic as we move dependencies to Rust
+ */
+unsafe extern "C" fn next(cursor: *mut sqlite::vtab_cursor) -> c_int {
+    let cursor = cursor.cast::<crsql_Changes_cursor>();
+    let vtab = (*cursor).pTab.cast::<sqlite::vtab>();
+
+    if (*cursor).pChangesStmt.is_null() {
+        if let Ok(err) = CString::new("pChangesStmt is null in changes_next") {
+            (*vtab).zErrMsg = err.into_raw();
+            return ResultCode::ABORT as c_int;
+        }
+        return ResultCode::NOMEM as c_int;
+    }
+
+    if !(*cursor).pRowStmt.is_null() {
+        let rc = crate::c::crsql_resetCachedStmt((*cursor).pRowStmt);
+        (*cursor).pRowStmt = null_mut();
+        if rc != 0 {
+            return rc;
+        }
+    }
+
+    let rc = (*cursor).pChangesStmt.step();
+    match rc {
+        Err(rc) => {
+            changes_crsr_finalize(cursor);
+            return rc as c_int;
+        }
+        Ok(ResultCode::DONE) => return changes_crsr_finalize(cursor),
+        _ => {
+            // we had a row... we can do the rest
+            let tbl = (*cursor)
+                .pChangesStmt
+                .column_text(ClockUnionColumn::Tbl as i32);
+            let pks = (*cursor)
+                .pChangesStmt
+                .column_value(ClockUnionColumn::Pks as i32);
+            let cid = (*cursor)
+                .pChangesStmt
+                .column_text(ClockUnionColumn::Cid as i32);
+            let db_version = (*cursor)
+                .pChangesStmt
+                .column_int64(ClockUnionColumn::DbVrsn as i32);
+            let changes_rowid = (*cursor)
+                .pChangesStmt
+                .column_int64(ClockUnionColumn::RowId as i32);
+            (*cursor).dbVersion = db_version;
+
+            let tbl_info_index = crate::c::crsql_indexofTableInfo(
+                (*(*(*cursor).pTab).pExtData).zpTableInfos,
+                (*(*(*cursor).pTab).pExtData).tableInfosLen,
+                tbl.as_ptr() as *const c_char,
+            );
+
+            if tbl_info_index < 0 {
+                if let Ok(err) = CString::new(format!("could not find schema for table {}", tbl)) {
+                    (*vtab).zErrMsg = err.into_raw();
+                    return ResultCode::ERROR as c_int;
+                }
+                return ResultCode::NOMEM as c_int;
+            }
+
+            let tbl_info =
+                (*(*(*(*cursor).pTab).pExtData).zpTableInfos).offset(tbl_info_index as isize);
+            (*cursor).changesRowid = changes_rowid;
+            (*cursor).tblInfoIdx = tbl_info_index;
+
+            if (*tbl_info).pksLen == 0 {
+                if let Ok(err) = CString::new(format!("crr {} is missing primary keys", tbl)) {
+                    (*vtab).zErrMsg = err.into_raw();
+                    return ResultCode::ERROR as c_int;
+                }
+                return ResultCode::NOMEM as c_int;
+            }
+
+            if cid == crate::c::DELETE_SENTINEL {
+                (*cursor).rowType = ChangeRowType::Delete as c_int;
+            } else if cid == crate::c::INSERT_SENTINEL {
+                (*cursor).rowType = ChangeRowType::PkOnly as c_int;
+            } else {
+                (*cursor).rowType = ChangeRowType::Update as c_int;
+            }
+
+            // let row_stmt = (*cursor).pRowStmt;
+            // let stmt_key = crsql_getCacheKeyForStmtType();
+
+            return 0;
+        }
+    }
+}
+// static int changesNext(sqlite3_vtab_cursor *cur) {
+
+//   sqlite3_stmt *pRowStmt = pCur->pRowStmt;
+//   // CACHED_STMT_ROW_PATCH_DATA
+//   char *zStmtKey = crsql_getCacheKeyForStmtType(CACHED_STMT_ROW_PATCH_DATA,
+//                                                 tblInfo->tblName, cid);
+//   pRowStmt = crsql_getCachedStmt(pCur->pTab->pExtData, zStmtKey);
+//   if (pRowStmt == 0) {
+//     char *zSql = crsql_row_patch_data_query(tblInfo, cid);
+//     if (zSql == 0) {
+//       pTabBase->zErrMsg = sqlite3_mprintf(
+//           "crsql internal error generationg raw data fetch query for table "
+//           "%s",
+//           tbl);
+//       return SQLITE_ERROR;
+//     }
+
+//     rc = sqlite3_prepare_v3(pCur->pTab->db, zSql, -1, SQLITE_PREPARE_PERSISTENT,
+//                             &pRowStmt, 0);
+//     sqlite3_free(zSql);
+
+//     if (rc != SQLITE_OK) {
+//       pTabBase->zErrMsg = sqlite3_mprintf(
+//           "crsql internal error preparing row data fetch statement");
+//       sqlite3_finalize(pRowStmt);
+//       return rc;
+//     }
+//     crsql_setCachedStmt(pCur->pTab->pExtData, zStmtKey, pRowStmt);
+//   } else {
+//     sqlite3_free(zStmtKey);
+//   }
+
+//   RawVec unpackedPks = crsql_unpack_columns(pks);
+//   if (unpackedPks.ptr == 0) {
+//     pTabBase->zErrMsg = sqlite3_mprintf("unable to unpack primary keys");
+//     return unpackedPks.len;
+//   }
+//   rc = crsql_bind_unpacked_values(pRowStmt, unpackedPks);
+//   if (rc != SQLITE_OK) {
+//     crsql_resetCachedStmt(pRowStmt);
+//     crsql_free_unpacked_values(unpackedPks);
+//     pTabBase->zErrMsg = sqlite3_mprintf(
+//         "crsql internal error preparing row data fetch statement");
+//     return rc;
+//   }
+
+//   rc = sqlite3_step(pRowStmt);
+//   crsql_free_unpacked_values(unpackedPks);
+//   if (rc != SQLITE_ROW) {
+//     crsql_resetCachedStmt(pRowStmt);
+//     // getting 0 rows for something we have clock entries for is not an
+//     // error it could just be the case that the thing was deleted so we have
+//     // nothing to retrieve to fill in values for do we re-write cids in this
+//     // case?
+//     if (rc == SQLITE_DONE) {
+//       return SQLITE_OK;
+//     }
+//     pTabBase->zErrMsg =
+//         sqlite3_mprintf("crsql internal error fetching row data");
+//     return SQLITE_ERROR;
+//   } else {
+//     rc = SQLITE_OK;
+//   }
+
+//   pCur->pRowStmt = pRowStmt;
+
+//   return rc;
+// }
 
 extern "C" fn eof(cursor: *mut sqlite::vtab_cursor) -> c_int {
     let cursor = cursor.cast::<crsql_Changes_cursor>();
@@ -160,7 +339,7 @@ static MODULE: sqlite_nostd::module = sqlite_nostd::module {
     xOpen: None,   //Some(open),
     xClose: None,  //Some(close),
     xFilter: None, //Some(filter),
-    xNext: None,   //Some(next),
+    xNext: Some(next),
     xEof: Some(eof),
     xColumn: Some(column),
     xRowid: Some(rowid),

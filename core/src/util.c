@@ -153,27 +153,6 @@ char *crsql_getDbVersionUnionQuery(int numRows, char **tableNames) {
   return ret;
 }
 
-/**
- * Check if tblName exists.
- * Caller is responsible for freeing tblName.
- *
- * Returns -1 on error.
- */
-int crsql_doesTableExist(sqlite3 *db, const char *tblName) {
-  char *zSql;
-  int ret = 0;
-
-  zSql = sqlite3_mprintf(
-      "SELECT count(*) as c FROM sqlite_master WHERE type='table' AND "
-      "tbl_name "
-      "= '%s'",
-      tblName);
-  ret = crsql_getCount(db, zSql);
-  sqlite3_free(zSql);
-
-  return ret;
-}
-
 int crsql_getCount(sqlite3 *db, char *zSql) {
   int rc = SQLITE_OK;
   int count = 0;
@@ -195,86 +174,4 @@ int crsql_getCount(sqlite3 *db, char *zSql) {
   sqlite3_finalize(pStmt);
 
   return count;
-}
-
-/**
- * Given an index name, return all the columns in that index.
- * Fills pIndexedCols with an array of strings.
- * Caller is responsible for freeing pIndexedCols.
- */
-int crsql_getIndexedCols(sqlite3 *db, const char *indexName,
-                         char ***pIndexedCols, int *pIndexedColsLen,
-                         char **pErrMsg) {
-  int rc = SQLITE_OK;
-  int numCols = 0;
-  char **indexedCols;
-  sqlite3_stmt *pStmt = 0;
-  *pIndexedCols = 0;
-  *pIndexedColsLen = 0;
-
-  char *zSql = sqlite3_mprintf("SELECT count(*) FROM pragma_index_info('%s')",
-                               indexName);
-  numCols = crsql_getCount(db, zSql);
-  sqlite3_free(zSql);
-
-  if (numCols <= 0) {
-    return numCols;
-  }
-
-  zSql = sqlite3_mprintf(
-      "SELECT \"name\" FROM pragma_index_info('%s') ORDER BY \"seqno\" ASC",
-      indexName);
-  rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
-  sqlite3_free(zSql);
-  if (rc != SQLITE_OK) {
-    *pErrMsg = sqlite3_mprintf("Failed preparing pragma_index_info('%s') stmt",
-                               indexName);
-    sqlite3_finalize(pStmt);
-    return rc;
-  }
-
-  rc = sqlite3_step(pStmt);
-  if (rc != SQLITE_ROW) {
-    sqlite3_finalize(pStmt);
-    return SQLITE_OK;
-  }
-
-  int j = 0;
-  indexedCols = sqlite3_malloc(numCols * sizeof(char *));
-  while (rc == SQLITE_ROW) {
-    assert(j < numCols);
-
-    indexedCols[j] = crsql_strdup((const char *)sqlite3_column_text(pStmt, 0));
-
-    rc = sqlite3_step(pStmt);
-    ++j;
-  }
-  sqlite3_finalize(pStmt);
-
-  if (rc != SQLITE_DONE) {
-    for (int i = 0; i < j; ++i) {
-      sqlite3_free(indexedCols[i]);
-    }
-    sqlite3_free(indexedCols);
-    *pErrMsg = sqlite3_mprintf("Failed allocating index info");
-    return rc;
-  }
-
-  *pIndexedCols = indexedCols;
-  *pIndexedColsLen = numCols;
-
-  return SQLITE_OK;
-}
-
-int crsql_isIdentifierOpenQuote(char c) {
-  switch (c) {
-    case '[':
-      return 1;
-    case '`':
-      return 1;
-    case '"':
-      return 1;
-  }
-
-  return 0;
 }

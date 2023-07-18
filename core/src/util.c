@@ -278,21 +278,3 @@ int crsql_isIdentifierOpenQuote(char c) {
 
   return 0;
 }
-
-int crsql_siteIdCmp(const void *zLeft, int leftLen, const void *zRight,
-                    int rightLen) {
-  int minLen = leftLen < rightLen ? leftLen : rightLen;
-  int cmp = memcmp(zLeft, zRight, minLen);
-
-  if (cmp == 0) {
-    if (leftLen > rightLen) {
-      return 1;
-    } else if (leftLen < rightLen) {
-      return -1;
-    }
-
-    return 0;
-  }
-
-  return cmp > 0 ? 1 : -1;
-}

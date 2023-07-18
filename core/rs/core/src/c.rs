@@ -185,6 +185,11 @@ extern "C" {
         pExtData: *mut crsql_ExtData,
         zKey: *const c_char,
     ) -> *mut sqlite::stmt;
+    pub fn crsql_setCachedStmt(
+        pExtData: *mut crsql_ExtData,
+        zKey: *mut c_char,
+        pStmt: *mut sqlite::stmt,
+    );
 }
 
 extern "C" {}

@@ -13,6 +13,8 @@
 #include "stmt-cache.h"
 #include "util.h"
 
+int crsql_changes_next(sqlite3_vtab_cursor *cur);
+
 /**
  * Created when the virtual table is initialized.
  * This happens when the vtab is first used in a given connection.
@@ -124,151 +126,6 @@ static int changesClose(sqlite3_vtab_cursor *cur) {
 // }
 
 /**
- * Advances our Changes_cursor to its next row of output.
- */
-static int changesNext(sqlite3_vtab_cursor *cur) {
-  crsql_Changes_cursor *pCur = (crsql_Changes_cursor *)cur;
-  sqlite3_vtab *pTabBase = (sqlite3_vtab *)(pCur->pTab);
-  int rc = SQLITE_OK;
-
-  if (pCur->pChangesStmt == 0) {
-    pTabBase->zErrMsg = sqlite3_mprintf(
-        "crsql internal error: in an unexpected state. pChangesStmt is "
-        "null.");
-    return SQLITE_ERROR;
-  }
-
-  if (pCur->pRowStmt != 0) {
-    // Finalize the prior row result
-    // before getting the next row.
-    // Do not re-use the statement since we could be entering
-    // a new table.
-    // An optimization would be to keep (rewind) it if we're processing the
-    // same table for many rows.
-    rc = crsql_resetCachedStmt(pCur->pRowStmt);
-    pCur->pRowStmt = 0;
-    if (rc != SQLITE_OK) {
-      return rc;
-    }
-  }
-
-  // step to next
-  // if no row, tear down (finalize) statements
-  // set statements to null
-  rc = sqlite3_step(pCur->pChangesStmt);
-  if (rc != SQLITE_ROW) {
-    // tear down since we're done
-    return changesCrsrFinalize(pCur);
-  }
-
-  // todo: pChangesStmt should also pull rowid from the underlying clock tbls
-  const char *tbl = (const char *)sqlite3_column_text(pCur->pChangesStmt, TBL);
-  sqlite3_value *pks = sqlite3_column_value(pCur->pChangesStmt, PKS);
-  const char *cid = (const char *)sqlite3_column_text(pCur->pChangesStmt, CID);
-  sqlite3_int64 dbVersion = sqlite3_column_int64(pCur->pChangesStmt, DB_VRSN);
-  sqlite3_int64 changesRowid =
-      sqlite3_column_int64(pCur->pChangesStmt, CHANGES_ROWID);
-  pCur->dbVersion = dbVersion;
-
-  // get information required to calculate rowid slabs.
-  int tblInfoIndex =
-      crsql_indexofTableInfo(pCur->pTab->pExtData->zpTableInfos,
-                             pCur->pTab->pExtData->tableInfosLen, tbl);
-  if (tblInfoIndex < 0) {
-    pTabBase->zErrMsg = sqlite3_mprintf(
-        "crsql internal error. Could not find schema for table %s", tbl);
-    changesCrsrFinalize(pCur);
-    return SQLITE_ERROR;
-  }
-  crsql_TableInfo *tblInfo = pCur->pTab->pExtData->zpTableInfos[tblInfoIndex];
-  pCur->changesRowid = changesRowid;
-  pCur->tblInfoIdx = tblInfoIndex;
-
-  if (tblInfo->pksLen == 0) {
-    crsql_freeTableInfo(tblInfo);
-    pTabBase->zErrMsg = sqlite3_mprintf(
-        "crr table %s is missing primary key columns", tblInfo->tblName);
-    return SQLITE_ERROR;
-  }
-
-  if (strcmp(DELETE_CID_SENTINEL, cid) == 0) {
-    pCur->rowType = ROW_TYPE_DELETE;
-    return SQLITE_OK;
-  } else if (strcmp(PKS_ONLY_CID_SENTINEL, cid) == 0) {
-    pCur->rowType = ROW_TYPE_PKONLY;
-    return SQLITE_OK;
-  } else {
-    pCur->rowType = ROW_TYPE_UPDATE;
-  }
-
-  sqlite3_stmt *pRowStmt = pCur->pRowStmt;
-  // CACHED_STMT_ROW_PATCH_DATA
-  char *zStmtKey = crsql_getCacheKeyForStmtType(CACHED_STMT_ROW_PATCH_DATA,
-                                                tblInfo->tblName, cid);
-  pRowStmt = crsql_getCachedStmt(pCur->pTab->pExtData, zStmtKey);
-  if (pRowStmt == 0) {
-    char *zSql = crsql_row_patch_data_query(tblInfo, cid);
-    if (zSql == 0) {
-      pTabBase->zErrMsg = sqlite3_mprintf(
-          "crsql internal error generationg raw data fetch query for table "
-          "%s",
-          tbl);
-      return SQLITE_ERROR;
-    }
-
-    rc = sqlite3_prepare_v3(pCur->pTab->db, zSql, -1, SQLITE_PREPARE_PERSISTENT,
-                            &pRowStmt, 0);
-    sqlite3_free(zSql);
-
-    if (rc != SQLITE_OK) {
-      pTabBase->zErrMsg = sqlite3_mprintf(
-          "crsql internal error preparing row data fetch statement");
-      sqlite3_finalize(pRowStmt);
-      return rc;
-    }
-    crsql_setCachedStmt(pCur->pTab->pExtData, zStmtKey, pRowStmt);
-  } else {
-    sqlite3_free(zStmtKey);
-  }
-
-  RawVec unpackedPks = crsql_unpack_columns(pks);
-  if (unpackedPks.ptr == 0) {
-    pTabBase->zErrMsg = sqlite3_mprintf("unable to unpack primary keys");
-    return unpackedPks.len;
-  }
-  rc = crsql_bind_unpacked_values(pRowStmt, unpackedPks);
-  if (rc != SQLITE_OK) {
-    crsql_resetCachedStmt(pRowStmt);
-    crsql_free_unpacked_values(unpackedPks);
-    pTabBase->zErrMsg = sqlite3_mprintf(
-        "crsql internal error preparing row data fetch statement");
-    return rc;
-  }
-
-  rc = sqlite3_step(pRowStmt);
-  crsql_free_unpacked_values(unpackedPks);
-  if (rc != SQLITE_ROW) {
-    crsql_resetCachedStmt(pRowStmt);
-    // getting 0 rows for something we have clock entries for is not an
-    // error it could just be the case that the thing was deleted so we have
-    // nothing to retrieve to fill in values for do we re-write cids in this
-    // case?
-    if (rc == SQLITE_DONE) {
-      return SQLITE_OK;
-    }
-    pTabBase->zErrMsg =
-        sqlite3_mprintf("crsql internal error fetching row data");
-    return SQLITE_ERROR;
-  } else {
-    rc = SQLITE_OK;
-  }
-
-  pCur->pRowStmt = pRowStmt;
-
-  return rc;
-}
-
-/**
  * Invoked to kick off the pulling of rows from the virtual table.
  * Provides the constraints with which the vtab can work with
  * to compute what rows to pull.
@@ -335,7 +192,7 @@ static int changesFilter(sqlite3_vtab_cursor *pVtabCursor, int idxNum,
   }
 
   pCrsr->pChangesStmt = pStmt;
-  return changesNext((sqlite3_vtab_cursor *)pCrsr);
+  return crsql_changes_next((sqlite3_vtab_cursor *)pCrsr);
 }
 
 static const char *getOperatorString(unsigned char op) {
@@ -556,7 +413,7 @@ sqlite3_module crsql_changesModule = {
     /* xOpen       */ changesOpen,
     /* xClose      */ changesClose,
     /* xFilter     */ changesFilter,
-    /* xNext       */ changesNext,
+    /* xNext       */ crsql_changes_next,
     /* xEof        */ crsql_changes_eof,
     /* xColumn     */ crsql_changes_column,
     /* xRowid      */ crsql_changes_rowid,

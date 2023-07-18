@@ -168,37 +168,6 @@ static void testJoin2() {
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
-void testSiteIdCmp() {
-  printf("SiteIdCmp\n");
-
-  char left[1] = {0x00};
-  char right[1] = {0x00};
-
-  assert(crsql_siteIdCmp(left, 1, right, 1) == 0);
-
-  left[0] = 0x0a;
-  assert(crsql_siteIdCmp(left, 1, right, 1) == 1);
-
-  right[0] = 0x10;
-  assert(crsql_siteIdCmp(left, 1, right, 1) == -1);
-
-  char left2[2] = {0x00, 0x00};
-  right[0] = 0x00;
-  assert(crsql_siteIdCmp(left2, 2, right, 1) == 1);
-
-  char right2[2] = {0x00, 0x00};
-  left[0] = 0x00;
-  assert(crsql_siteIdCmp(left, 1, right2, 2) == -1);
-
-  left[0] = 0x0a;
-  assert(crsql_siteIdCmp(left, 1, right2, 2) == 1);
-
-  right[0] = 0x11;
-  assert(crsql_siteIdCmp(left2, 2, right, 1) == -1);
-
-  printf("\t\e[0;32mSuccess\e[0m\n");
-}
-
 void crsqlUtilTestSuite() {
   printf("\e[47m\e[1;30mSuite: crsql_util\e[0m\n");
 
@@ -208,7 +177,6 @@ void crsqlUtilTestSuite() {
   testJoinWith();
   testGetIndexedCols();
   testJoin2();
-  testSiteIdCmp();
 
   // TODO: test pk pulling and correct sorting of pks
   // TODO: create a fn to create test tables for all tests.

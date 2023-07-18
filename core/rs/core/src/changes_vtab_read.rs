@@ -49,32 +49,37 @@ pub extern "C" fn crsql_changes_union_query(
     table_infos_len: c_int,
     idx_str: *const c_char,
 ) -> *mut c_char {
-    let mut sub_queries = vec![];
-
-    let table_infos = sqlite::args!(table_infos_len, table_infos);
-    for table_info in table_infos {
-        if let Ok(query_part) = crsql_changes_query_for_table(*table_info) {
-            sub_queries.push(query_part);
-        } else {
-            return core::ptr::null_mut() as *mut c_char;
+    if let Ok(idx_str) = unsafe { CStr::from_ptr(idx_str).to_str() } {
+        let table_infos = sqlite::args!(table_infos_len, table_infos);
+        let query = changes_union_query(table_infos, idx_str);
+        if let Ok(query) = query {
+            // release ownership of the memory
+            let (ptr, _, _) = query.into_raw_parts();
+            // return to c
+            return ptr as *mut c_char;
         }
     }
+    return core::ptr::null_mut() as *mut c_char;
+}
 
-    if let Ok(idx_str) = unsafe { CStr::from_ptr(idx_str).to_str() } {
-        // Manually null-terminate the string so we don't have to copy it to create a CString.
-        // We can just extract the raw bytes of the Rust string.
-        let query = format!(
-          "SELECT tbl, pks, cid, col_vrsn, db_vrsn, site_id, _rowid_, seq FROM ({unions}) {idx_str}\0",
-          unions = sub_queries.join(" UNION ALL "),
-          idx_str = idx_str,
-        );
-        // release ownership of the memory
-        let (ptr, _, _) = query.into_raw_parts();
-        // return to c
-        return ptr as *mut c_char;
-    } else {
-        return core::ptr::null_mut() as *mut c_char;
+pub fn changes_union_query(
+    table_infos: &[*mut crsql_TableInfo],
+    idx_str: &str,
+) -> Result<String, ResultCode> {
+    let mut sub_queries = vec![];
+
+    for table_info in table_infos {
+        let query_part = crsql_changes_query_for_table(*table_info)?;
+        sub_queries.push(query_part);
     }
+
+    // Manually null-terminate the string so we don't have to copy it to create a CString.
+    // We can just extract the raw bytes of the Rust string.
+    return Ok(format!(
+      "SELECT tbl, pks, cid, col_vrsn, db_vrsn, site_id, _rowid_, seq FROM ({unions}) {idx_str}\0",
+      unions = sub_queries.join(" UNION ALL "),
+      idx_str = idx_str,
+    ));
 }
 
 #[no_mangle]

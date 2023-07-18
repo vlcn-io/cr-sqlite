@@ -1,6 +1,6 @@
 extern crate alloc;
 use alloc::format;
-use core::ffi::{c_char, c_int, c_void};
+use core::ffi::{c_char, c_int, c_void, CStr};
 use core::mem::forget;
 use core::ptr::null_mut;
 use core::slice;
@@ -13,11 +13,11 @@ use sqlite_nostd as sqlite;
 use sqlite_nostd::ResultCode;
 
 use crate::c::{
-    crsql_Changes_cursor, crsql_Changes_vtab, crsql_getCacheKeyForStmtType, crsql_getCachedStmt,
-    crsql_mergeInsert, crsql_resetCachedStmt, crsql_setCachedStmt, ChangeRowType, ClockUnionColumn,
-    CrsqlChangesColumn,
+    crsql_Changes_cursor, crsql_Changes_vtab, crsql_ensureTableInfosAreUpToDate,
+    crsql_getCacheKeyForStmtType, crsql_getCachedStmt, crsql_mergeInsert, crsql_resetCachedStmt,
+    crsql_setCachedStmt, ChangeRowType, ClockUnionColumn, CrsqlChangesColumn,
 };
-use crate::changes_vtab_read::row_patch_data_query;
+use crate::changes_vtab_read::{changes_union_query, row_patch_data_query};
 use crate::pack_columns::bind_package_to_stmt;
 use crate::unpack_columns;
 
@@ -39,6 +39,71 @@ fn changes_crsr_finalize(crsr: *mut crsql_Changes_cursor) -> c_int {
     }
 }
 
+// This'll become safe once more code is moved over to Rust
+#[no_mangle]
+pub unsafe extern "C" fn crsql_changes_filter(
+    cursor: *mut sqlite::vtab_cursor,
+    _idx_num: c_int,
+    idx_str: *const c_char,
+    argc: c_int,
+    argv: *mut *mut sqlite::value,
+) -> c_int {
+    let args = sqlite::args!(argc, argv);
+    let cursor = cursor.cast::<crsql_Changes_cursor>();
+    let idx_str = unsafe { CStr::from_ptr(idx_str).to_str() };
+    match idx_str {
+        Ok(idx_str) => match changes_filter(cursor, idx_str, args) {
+            Err(rc) | Ok(rc) => rc as c_int,
+        },
+        Err(_) => ResultCode::FORMAT as c_int,
+    }
+}
+
+unsafe fn changes_filter(
+    cursor: *mut crsql_Changes_cursor,
+    idx_str: &str,
+    args: &[*mut sqlite::value],
+) -> Result<ResultCode, ResultCode> {
+    let tab = (*cursor).pTab;
+    let db = (*tab).db;
+    // This should never happen. pChangesStmt should be finalized
+    // before filter is ever invoked.
+    if !(*cursor).pChangesStmt.is_null() {
+        (*cursor).pChangesStmt.finalize()?;
+        (*cursor).pChangesStmt = null_mut();
+    }
+
+    let c_rc =
+        crsql_ensureTableInfosAreUpToDate(db, (*tab).pExtData, &mut (*tab).base.zErrMsg as *mut _);
+    if c_rc != 0 {
+        if let Some(rc) = ResultCode::from_i32(c_rc) {
+            return Err(rc);
+        } else {
+            return Err(ResultCode::ERROR);
+        }
+    }
+
+    // nothing to fetch, no crrs exist.
+    if (*(*tab).pExtData).tableInfosLen == 0 {
+        return Ok(ResultCode::OK);
+    }
+
+    let table_infos = sqlite::args!(
+        (*(*tab).pExtData).tableInfosLen,
+        (*(*tab).pExtData).zpTableInfos
+    );
+    let sql = changes_union_query(table_infos, idx_str)?;
+
+    let stmt = db.prepare_v2(&sql)?;
+    for (i, arg) in args.iter().enumerate() {
+        stmt.bind_value(i as i32 + 1, *arg)?;
+    }
+    (*cursor).pChangesStmt = stmt.stmt;
+    // forget the stmt. it will be managed by the vtab
+    forget(stmt);
+    changes_next(cursor, (*cursor).pTab.cast::<sqlite::vtab>())
+}
+
 /**
  * Advances our Changes_cursor to its next row of output.
  * TODO: this'll get more idiomatic as we move dependencies to Rust
@@ -47,7 +112,7 @@ fn changes_crsr_finalize(crsr: *mut crsql_Changes_cursor) -> c_int {
 pub unsafe extern "C" fn crsql_changes_next(cursor: *mut sqlite::vtab_cursor) -> c_int {
     let cursor = cursor.cast::<crsql_Changes_cursor>();
     let vtab = (*cursor).pTab.cast::<sqlite::vtab>();
-    match next_impl(cursor, vtab) {
+    match changes_next(cursor, vtab) {
         Ok(rc) => rc as c_int,
         Err(rc) => {
             changes_crsr_finalize(cursor);
@@ -56,7 +121,8 @@ pub unsafe extern "C" fn crsql_changes_next(cursor: *mut sqlite::vtab_cursor) ->
     }
 }
 
-unsafe fn next_impl(
+// We'll get more idiomatic once we have more Rust and less C
+unsafe fn changes_next(
     cursor: *mut crsql_Changes_cursor,
     vtab: *mut sqlite::vtab,
 ) -> Result<ResultCode, ResultCode> {
@@ -316,7 +382,7 @@ pub extern "C" fn crsql_changes_update(
 
 // If xBegin is not defined xCommit is not called.
 #[no_mangle]
-pub extern "C" fn crsql_changes_begin(vtab: *mut sqlite::vtab) -> c_int {
+pub extern "C" fn crsql_changes_begin(_vtab: *mut sqlite::vtab) -> c_int {
     ResultCode::OK as c_int
 }
 

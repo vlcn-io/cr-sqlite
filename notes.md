@@ -1,5 +1,9 @@
 # ios
 
+proper sysroot and clang options:
+https://developer.apple.com/forums/thread/100545
+https://stackoverflow.com/questions/41007556/g-with-ios-sysroot-and-xcode-8-1
+
 https://mozilla.github.io/firefox-browser-architecture/experiments/2017-09-06-rust-on-ios.html
 cargo install cargo-lipo
 ^-- https://github.com/TimNN/cargo-lipo/issues/60

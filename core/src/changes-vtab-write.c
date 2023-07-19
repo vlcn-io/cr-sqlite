@@ -25,72 +25,11 @@ int crsql_check_for_local_delete(sqlite3 *db, crsql_ExtData *pExtData,
                                  const char *tblName, char *pkWhereList,
                                  RawVec unpackedPks);
 
-static sqlite3_int64 crsql_setWinnerClock(
+sqlite3_int64 crsql_set_winner_clock(
     sqlite3 *db, crsql_ExtData *pExtData, crsql_TableInfo *tblInfo,
     const char *pkIdentifierList, const char *pkBindList, RawVec unpackedPks,
     const char *insertColName, sqlite3_int64 insertColVrsn,
-    sqlite3_int64 insertDbVrsn, const void *insertSiteId, int insertSiteIdLen) {
-  int rc = SQLITE_OK;
-  char *zStmtCacheKey = crsql_getCacheKeyForStmtType(
-      CACHED_STMT_SET_WINNER_CLOCK, tblInfo->tblName, 0);
-  if (zStmtCacheKey == 0) {
-    return -1;
-  }
-  sqlite3_stmt *pStmt = 0;
-  pStmt = crsql_getCachedStmt(pExtData, zStmtCacheKey);
-  if (pStmt == 0) {
-    char *zSql = sqlite3_mprintf(
-        "INSERT OR REPLACE INTO \"%s__crsql_clock\" \
-      (%s, \"__crsql_col_name\", \"__crsql_col_version\", \"__crsql_db_version\", \"__crsql_seq\", \"__crsql_site_id\")\
-      VALUES (\
-        %s,\
-        ?,\
-        ?,\
-        MAX(crsql_nextdbversion(), ?),\
-        crsql_increment_and_get_seq(),\
-        ?\
-      ) RETURNING _rowid_",
-        tblInfo->tblName, pkIdentifierList, pkBindList);
-
-    rc = sqlite3_prepare_v3(db, zSql, -1, SQLITE_PREPARE_PERSISTENT, &pStmt, 0);
-    sqlite3_free(zSql);
-
-    if (rc != SQLITE_OK) {
-      sqlite3_free(zStmtCacheKey);
-      sqlite3_finalize(pStmt);
-      return -1;
-    }
-    crsql_setCachedStmt(pExtData, zStmtCacheKey, pStmt);
-  } else {
-    sqlite3_free(zStmtCacheKey);
-    zStmtCacheKey = 0;
-  }
-
-  rc = crsql_bind_unpacked_values(pStmt, unpackedPks);
-  rc += sqlite3_bind_text(pStmt, unpackedPks.len + 1, insertColName, -1,
-                          SQLITE_STATIC);
-  rc += sqlite3_bind_int64(pStmt, unpackedPks.len + 2, insertColVrsn);
-  rc += sqlite3_bind_int64(pStmt, unpackedPks.len + 3, insertDbVrsn);
-  if (insertSiteId == 0) {
-    rc += sqlite3_bind_null(pStmt, unpackedPks.len + 4);
-  } else {
-    rc += sqlite3_bind_blob(pStmt, unpackedPks.len + 4, insertSiteId,
-                            insertSiteIdLen, SQLITE_TRANSIENT);
-  }
-
-  if (rc == SQLITE_OK) {
-    rc = sqlite3_step(pStmt);
-  }
-
-  if (rc == SQLITE_ROW) {
-    sqlite3_int64 rowid = sqlite3_column_int64(pStmt, 0);
-    crsql_resetCachedStmt(pStmt);
-    return rowid;
-  } else {
-    crsql_resetCachedStmt(pStmt);
-    return -1;
-  }
-}
+    sqlite3_int64 insertDbVrsn, const void *insertSiteId, int insertSiteIdLen);
 
 static sqlite3_int64 crsql_mergePkOnlyInsert(
     sqlite3 *db, crsql_ExtData *pExtData, crsql_TableInfo *tblInfo,
@@ -149,10 +88,10 @@ static sqlite3_int64 crsql_mergePkOnlyInsert(
   }
 
   // TODO: if insert was ignored, no reason to change clock
-  return crsql_setWinnerClock(db, pExtData, tblInfo, pkIdentifiers,
-                              pkBindingsList, unpackedPks,
-                              PKS_ONLY_CID_SENTINEL, remoteColVersion,
-                              remoteDbVersion, remoteSiteId, remoteSiteIdLen);
+  return crsql_set_winner_clock(db, pExtData, tblInfo, pkIdentifiers,
+                                pkBindingsList, unpackedPks,
+                                PKS_ONLY_CID_SENTINEL, remoteColVersion,
+                                remoteDbVersion, remoteSiteId, remoteSiteIdLen);
 }
 
 static sqlite3_int64 crsql_mergeDelete(
@@ -211,10 +150,10 @@ static sqlite3_int64 crsql_mergeDelete(
     return -1;
   }
 
-  return crsql_setWinnerClock(db, pExtData, tblInfo, pkIdentifiers, pkBindList,
-                              unpackedPks, DELETE_CID_SENTINEL,
-                              remoteColVersion, remoteDbVersion, remoteSiteId,
-                              remoteSiteIdLen);
+  return crsql_set_winner_clock(db, pExtData, tblInfo, pkIdentifiers,
+                                pkBindList, unpackedPks, DELETE_CID_SENTINEL,
+                                remoteColVersion, remoteDbVersion, remoteSiteId,
+                                remoteSiteIdLen);
 }
 
 int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
@@ -449,7 +388,7 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
     return rc;
   }
 
-  sqlite3_int64 rowid = crsql_setWinnerClock(
+  sqlite3_int64 rowid = crsql_set_winner_clock(
       db, pTab->pExtData, tblInfo, pkIdentifierList, pkBindingList, unpackedPks,
       insertColName, insertColVrsn, insertDbVrsn, insertSiteId,
       insertSiteIdLen);

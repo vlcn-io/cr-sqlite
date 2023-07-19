@@ -14,134 +14,11 @@
 /**
  *
  */
-static int crsql_didCidWin(sqlite3 *db, crsql_ExtData *pExtData,
-                           const unsigned char *localSiteId,
-                           const char *insertTbl, const char *pkWhereList,
-                           RawVec unpackedPks, const char *colName,
-                           const sqlite3_value *insertVal,
-                           sqlite3_int64 colVersion, char **errmsg) {
-  char *zSql = 0;
-  int rc = SQLITE_OK;
-
-  // CACHED_STMT_GET_COL_VERSION
-  char *zStmtCacheKey =
-      crsql_getCacheKeyForStmtType(CACHED_STMT_GET_COL_VERSION, insertTbl, 0);
-  if (zStmtCacheKey == 0) {
-    *errmsg = sqlite3_mprintf(
-        "Failed creating cache key for CACHED_STMT_GET_COL_VERSION");
-    return -1;
-  }
-  sqlite3_stmt *pStmt = 0;
-  pStmt = crsql_getCachedStmt(pExtData, zStmtCacheKey);
-  if (pStmt == 0) {
-    zSql = sqlite3_mprintf(
-        "SELECT __crsql_col_version FROM \"%s__crsql_clock\" WHERE %s AND ? = "
-        "__crsql_col_name",
-        insertTbl, pkWhereList);
-
-    rc = sqlite3_prepare_v3(db, zSql, -1, SQLITE_PREPARE_PERSISTENT, &pStmt, 0);
-    sqlite3_free(zSql);
-
-    if (rc != SQLITE_OK) {
-      sqlite3_free(zStmtCacheKey);
-      sqlite3_finalize(pStmt);
-      *errmsg = sqlite3_mprintf(
-          "Failed preparing stmt to select local column version");
-      return -1;
-    }
-    crsql_setCachedStmt(pExtData, zStmtCacheKey, pStmt);
-  } else {
-    sqlite3_free(zStmtCacheKey);
-    zStmtCacheKey = 0;
-  }
-
-  rc = crsql_bind_unpacked_values(pStmt, unpackedPks);
-  rc +=
-      sqlite3_bind_text(pStmt, unpackedPks.len + 1, colName, -1, SQLITE_STATIC);
-  if (rc != SQLITE_OK) {
-    crsql_resetCachedStmt(pStmt);
-    *errmsg = sqlite3_mprintf(
-        "Failed binding unpacked columns to select local column version");
-    return -1;
-  }
-
-  rc = sqlite3_step(pStmt);
-  if (rc == SQLITE_DONE) {
-    crsql_resetCachedStmt(pStmt);
-    // no rows returned
-    // we of course win if there's nothing there.
-    return 1;
-  }
-
-  if (rc != SQLITE_ROW) {
-    crsql_resetCachedStmt(pStmt);
-    *errmsg = sqlite3_mprintf(
-        "Bad return code (%d) when selecting local column version", rc);
-    return -1;
-  }
-
-  sqlite3_int64 localVersion = sqlite3_column_int64(pStmt, 0);
-  crsql_resetCachedStmt(pStmt);
-
-  if (colVersion > localVersion) {
-    return 1;
-  } else if (colVersion < localVersion) {
-    return 0;
-  }
-
-  // else -- versions are equal
-  // - pull curr value
-  // - compare for tie break
-  // CACHED_STMT_GET_CURR_VALUE
-  zStmtCacheKey = crsql_getCacheKeyForStmtType(CACHED_STMT_GET_CURR_VALUE,
-                                               insertTbl, colName);
-  if (zStmtCacheKey == 0) {
-    *errmsg = sqlite3_mprintf(
-        "Failed creating cache key for CACHED_STMT_GET_CURR_VALUE");
-    return -1;
-  }
-  pStmt = crsql_getCachedStmt(pExtData, zStmtCacheKey);
-  if (pStmt == 0) {
-    zSql = sqlite3_mprintf("SELECT \"%w\" FROM \"%w\" WHERE %s", colName,
-                           insertTbl, pkWhereList);
-    rc = sqlite3_prepare_v3(db, zSql, -1, SQLITE_PREPARE_PERSISTENT, &pStmt, 0);
-    sqlite3_free(zSql);
-
-    if (rc != SQLITE_OK) {
-      sqlite3_free(zStmtCacheKey);
-      sqlite3_finalize(pStmt);
-      *errmsg = sqlite3_mprintf(
-          "could not prepare statement to find row to merge with. %s",
-          insertTbl);
-      return -1;
-    }
-    crsql_setCachedStmt(pExtData, zStmtCacheKey, pStmt);
-  } else {
-    sqlite3_free(zStmtCacheKey);
-  }
-
-  rc = crsql_bind_unpacked_values(pStmt, unpackedPks);
-  if (rc != SQLITE_OK) {
-    crsql_resetCachedStmt(pStmt);
-    *errmsg = sqlite3_mprintf(
-        "Failed binding unpacked columns to select current val for tie break");
-    return -1;
-  }
-
-  rc = sqlite3_step(pStmt);
-  if (rc != SQLITE_ROW) {
-    *errmsg = sqlite3_mprintf("could not find row to merge with for tbl %s",
-                              insertTbl);
-    crsql_resetCachedStmt(pStmt);
-    return -1;
-  }
-
-  const sqlite3_value *localValue = sqlite3_column_value(pStmt, 0);
-  int ret = crsql_compare_sqlite_values(insertVal, localValue);
-  crsql_resetCachedStmt(pStmt);
-
-  return ret > 0;
-}
+int crsql_did_cid_win(sqlite3 *db, crsql_ExtData *pExtData,
+                      const char *insertTbl, const char *pkWhereList,
+                      RawVec unpackedPks, const char *colName,
+                      sqlite3_value *insertVal, sqlite3_int64 colVersion,
+                      char **errmsg);
 
 #define DELETED_LOCALLY -1
 static int crsql_checkForLocalDelete(sqlite3 *db, crsql_ExtData *pExtData,
@@ -539,9 +416,9 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
     return SQLITE_OK;
   }
 
-  int doesCidWin = crsql_didCidWin(
-      db, pTab->pExtData, pTab->pExtData->siteId, tblInfo->tblName, pkWhereList,
-      unpackedPks, insertColName, insertVal, insertColVrsn, errmsg);
+  int doesCidWin = crsql_did_cid_win(db, pTab->pExtData, tblInfo->tblName,
+                                     pkWhereList, unpackedPks, insertColName,
+                                     insertVal, insertColVrsn, errmsg);
   sqlite3_free(pkWhereList);
   if (doesCidWin == -1 || doesCidWin == 0) {
     sqlite3_free(pkBindingList);

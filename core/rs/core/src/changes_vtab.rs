@@ -54,11 +54,10 @@ pub unsafe extern "C" fn crsql_changes_best_index(
 }
 
 fn changes_best_index(
-    vtab: *mut sqlite::vtab,
+    _vtab: *mut sqlite::vtab,
     index_info: *mut sqlite::index_info,
 ) -> Result<ResultCode, ResultCode> {
     let mut idx_num: i32 = 0;
-    let vtab = vtab.cast::<crsql_Changes_vtab>();
 
     let mut first_constraint = true;
     let mut str = String::new();
@@ -589,30 +588,3 @@ pub extern "C" fn crsql_changes_commit(vtab: *mut sqlite::vtab) -> c_int {
     }
     ResultCode::OK as c_int
 }
-
-// static MODULE: sqlite_nostd::module = sqlite_nostd::module {
-//     iVersion: 0,
-//     xCreate: None,
-//     xConnect: None,    //Some(connect),
-//     xBestIndex: None,  //Some(best_index),
-//     xDisconnect: None, //Some(disconnect),
-//     xDestroy: None,
-//     xOpen: None,   //Some(open),
-//     xClose: None,  //Some(close),
-//     xFilter: None, //Some(filter),
-//     xNext: Some(next),
-//     xEof: Some(eof),
-//     xColumn: Some(column),
-//     xRowid: Some(rowid),
-//     xUpdate: Some(update),
-//     xBegin: Some(begin),
-//     xSync: None,
-//     xCommit: Some(commit),
-//     xRollback: None,
-//     xFindFunction: None,
-//     xRename: None,
-//     xSavepoint: None,
-//     xRelease: None,
-//     xRollbackTo: None,
-//     xShadowName: None,
-// };

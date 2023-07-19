@@ -21,58 +21,9 @@ int crsql_did_cid_win(sqlite3 *db, crsql_ExtData *pExtData,
                       char **errmsg);
 
 #define DELETED_LOCALLY -1
-static int crsql_checkForLocalDelete(sqlite3 *db, crsql_ExtData *pExtData,
-                                     const char *tblName, char *pkWhereList,
-                                     RawVec unpackedPks) {
-  int rc = SQLITE_OK;
-  char *zStmtCacheKey = crsql_getCacheKeyForStmtType(
-      CACHED_STMT_CHECK_FOR_LOCAL_DELETE, tblName, 0);
-  if (zStmtCacheKey == 0) {
-    return SQLITE_ERROR;
-  }
-  sqlite3_stmt *pStmt;
-  pStmt = crsql_getCachedStmt(pExtData, zStmtCacheKey);
-  if (pStmt == 0) {
-    char *zSql = sqlite3_mprintf(
-        "SELECT count(*) FROM \"%s__crsql_clock\" WHERE %s AND "
-        "__crsql_col_name "
-        "= %Q",
-        tblName, pkWhereList, DELETE_CID_SENTINEL);
-
-    rc = sqlite3_prepare_v3(db, zSql, -1, SQLITE_PREPARE_PERSISTENT, &pStmt, 0);
-    sqlite3_free(zSql);
-
-    if (rc != SQLITE_OK) {
-      sqlite3_free(zStmtCacheKey);
-      sqlite3_finalize(pStmt);
-      return rc;
-    }
-    crsql_setCachedStmt(pExtData, zStmtCacheKey, pStmt);
-  } else {
-    sqlite3_free(zStmtCacheKey);
-    zStmtCacheKey = 0;
-  }
-
-  rc = crsql_bind_unpacked_values(pStmt, unpackedPks);
-  if (rc != SQLITE_OK) {
-    crsql_resetCachedStmt(pStmt);
-    crsql_free_unpacked_values(unpackedPks);
-  }
-
-  rc = sqlite3_step(pStmt);
-  if (rc != SQLITE_ROW) {
-    crsql_resetCachedStmt(pStmt);
-    return SQLITE_ERROR;
-  }
-
-  int count = sqlite3_column_int(pStmt, 0);
-  crsql_resetCachedStmt(pStmt);
-  if (count == 1) {
-    return DELETED_LOCALLY;
-  }
-
-  return SQLITE_OK;
-}
+int crsql_check_for_local_delete(sqlite3 *db, crsql_ExtData *pExtData,
+                                 const char *tblName, char *pkWhereList,
+                                 RawVec unpackedPks);
 
 static sqlite3_int64 crsql_setWinnerClock(
     sqlite3 *db, crsql_ExtData *pExtData, crsql_TableInfo *tblInfo,
@@ -355,8 +306,8 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
     return unpackedPks.len;
   }
 
-  rc = crsql_checkForLocalDelete(db, pTab->pExtData, tblInfo->tblName,
-                                 pkWhereList, unpackedPks);
+  rc = crsql_check_for_local_delete(db, pTab->pExtData, tblInfo->tblName,
+                                    pkWhereList, unpackedPks);
   if (rc == DELETED_LOCALLY) {
     rc = SQLITE_OK;
     // delete wins. we're all done.

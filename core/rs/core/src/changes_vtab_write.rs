@@ -465,9 +465,9 @@ unsafe fn merge_pk_only_insert(
         .step()
         .and_then(|_| (*ext_data).pSetSyncBitStmt.reset())
         .and_then(|_| merge_stmt.step());
+    crsql_resetCachedStmt(merge_stmt);
 
     if let Err(rc) = rc {
-        crsql_resetCachedStmt(merge_stmt);
         return Err(rc);
     }
 
@@ -477,7 +477,6 @@ unsafe fn merge_pk_only_insert(
         .and_then(|_| (*ext_data).pClearSyncBitStmt.reset());
 
     if let Err(rc) = rc {
-        crsql_resetCachedStmt(merge_stmt);
         return Err(rc);
     }
 
@@ -496,10 +495,106 @@ unsafe fn merge_pk_only_insert(
     )
 }
 
-pub unsafe extern "C" fn crsql_merge_delete(sqlite3 *db, crsql_ExtData *pExtData, crsql_TableInfo *tblInfo,
-  const char *pkWhereList, RawVec unpackedPks, const char *pkBindList,
-  const char *pkIdentifiers, sqlite3_int64 remoteColVersion,
-  sqlite3_int64 remoteDbVersion, const void *remoteSiteId,
-  int remoteSiteIdLen) -> sqlite::int64 {
+#[no_mangle]
+pub unsafe extern "C" fn crsql_merge_delete(
+    db: *mut sqlite3,
+    ext_data: *mut crsql_ExtData,
+    tbl_info: *mut crsql_TableInfo,
+    pk_where_list: *const c_char,
+    raw_pks: RawVec,
+    pk_bind_list: *const c_char,
+    pk_ident_list: *const c_char,
+    remote_col_vrsn: sqlite::int64,
+    remote_db_vrsn: sqlite::int64,
+    remote_site_id: *const c_void,
+    remote_site_id_len: c_int,
+) -> sqlite::int64 {
+    match merge_delete(
+        db,
+        ext_data,
+        tbl_info,
+        pk_where_list,
+        raw_pks,
+        pk_bind_list,
+        pk_ident_list,
+        remote_col_vrsn,
+        remote_db_vrsn,
+        remote_site_id,
+        remote_site_id_len,
+    ) {
+        Ok(rowid) => rowid,
+        Err(_) => -1,
+    }
+}
 
+// TODO: we can commonize this with `merge_pkonly_insert` -- basically the same logic.
+// although with CL they may diverge.
+unsafe fn merge_delete(
+    db: *mut sqlite3,
+    ext_data: *mut crsql_ExtData,
+    tbl_info: *mut crsql_TableInfo,
+    pk_where_list: *const c_char,
+    raw_pks: RawVec,
+    pk_bind_list: *const c_char,
+    pk_ident_list: *const c_char,
+    remote_col_vrsn: sqlite::int64,
+    remote_db_vrsn: sqlite::int64,
+    remote_site_id: *const c_void,
+    remote_site_id_len: c_int,
+) -> Result<sqlite::int64, ResultCode> {
+    let tbl_name_str = CStr::from_ptr((*tbl_info).tblName).to_str()?;
+    let pk_where_list_str = CStr::from_ptr(pk_where_list).to_str()?;
+    let stmt_key = crsql_getCacheKeyForStmtType(
+        CachedStmtType::MergeDelete as i32,
+        (*tbl_info).tblName,
+        null(),
+    );
+    if stmt_key.is_null() {
+        return Err(ResultCode::ERROR);
+    }
+    let delete_stmt = get_cached_stmt_rt_wt(db, ext_data, stmt_key, || {
+        format!(
+            "DELETE FROM \"{table_name}\" WHERE {pk_where_list}",
+            table_name = crate::util::escape_ident(tbl_name_str),
+            pk_where_list = pk_where_list_str
+        )
+    })?;
+
+    let rc = bind_unpacked_values(delete_stmt, &raw_pks);
+    if rc != ResultCode::OK as c_int {
+        return Err(ResultCode::ERROR);
+    }
+    let rc = (*ext_data)
+        .pSetSyncBitStmt
+        .step()
+        .and_then(|_| (*ext_data).pSetSyncBitStmt.reset())
+        .and_then(|_| delete_stmt.step());
+    crsql_resetCachedStmt(delete_stmt);
+
+    if let Err(rc) = rc {
+        return Err(rc);
+    }
+
+    let rc = (*ext_data)
+        .pClearSyncBitStmt
+        .step()
+        .and_then(|_| (*ext_data).pClearSyncBitStmt.reset());
+
+    if let Err(rc) = rc {
+        return Err(rc);
+    }
+
+    set_winner_clock(
+        db,
+        ext_data,
+        tbl_info,
+        pk_ident_list,
+        pk_bind_list,
+        raw_pks,
+        crate::c::DELETE_SENTINEL_CSTR.as_ptr() as *const c_char,
+        remote_col_vrsn,
+        remote_db_vrsn,
+        remote_site_id,
+        remote_site_id_len,
+    )
 }

@@ -5,74 +5,39 @@ use alloc::vec::Vec;
 use core::ffi::{c_char, c_int, c_void, CStr};
 use core::mem::forget;
 use core::ptr::null;
+use core::slice;
 use sqlite::{Connection, Stmt};
 use sqlite_nostd as sqlite;
-use sqlite_nostd::{sqlite3, ResultCode};
+use sqlite_nostd::{sqlite3, ResultCode, Value};
 
 use crate::c::{
-    crsql_TableInfo, crsql_getCacheKeyForStmtType, crsql_getCachedStmt, crsql_resetCachedStmt,
-    crsql_setCachedStmt, CachedStmtType,
+    crsql_Changes_vtab, crsql_TableInfo, crsql_ensureTableInfosAreUpToDate,
+    crsql_getCacheKeyForStmtType, crsql_getCachedStmt, crsql_indexofTableInfo,
+    crsql_resetCachedStmt, crsql_setCachedStmt, where_list, CachedStmtType, CrsqlChangesColumn,
 };
+use crate::c::{crsql_ExtData, crsql_columnExists};
 use crate::compare_values::crsql_compare_sqlite_values;
-use crate::pack_columns::{bind_package_to_stmt, bind_unpacked_values, crsql_bind_unpacked_values};
-use crate::{c::crsql_ExtData, pack_columns::RawVec};
-use crate::{consts, ColumnValue};
-
-/**
- * We can make this more idiomatic once we have no more c callers of this method.
- * I'm slowly moving up the stack converting all the callers to Rust.
- */
-#[no_mangle]
-pub unsafe extern "C" fn crsql_did_cid_win(
-    db: *mut sqlite3,
-    ext_data: *mut crsql_ExtData,
-    insert_tbl: *const c_char,
-    pk_where_list: *const c_char,
-    unpacked_pks: RawVec,
-    col_name: *const c_char,
-    insert_val: *mut sqlite::value,
-    col_version: sqlite::int64,
-    errmsg: *mut *mut c_char,
-) -> c_int {
-    match did_cid_win(
-        db,
-        ext_data,
-        insert_tbl,
-        pk_where_list,
-        unpacked_pks,
-        col_name,
-        insert_val,
-        col_version,
-        errmsg,
-    ) {
-        Ok(did_win) => {
-            if did_win {
-                1
-            } else {
-                0
-            }
-        }
-        Err(_) => -1,
-    }
-}
+use crate::pack_columns::bind_package_to_stmt;
+use crate::util::slab_rowid;
+use crate::{unpack_columns, ColumnValue};
 
 unsafe fn did_cid_win(
     db: *mut sqlite3,
     ext_data: *mut crsql_ExtData,
-    insert_tbl: *const c_char,
-    pk_where_list: *const c_char,
-    raw_pks: RawVec,
-    col_name: *const c_char,
+    insert_tbl: &str,
+    pk_where_list: &str,
+    unpacked_pks: &Vec<ColumnValue>,
+    col_name: &str,
     insert_val: *mut sqlite::value,
     col_version: sqlite::int64,
     errmsg: *mut *mut c_char,
 ) -> Result<bool, ResultCode> {
-    let insert_tbl_str = CStr::from_ptr(insert_tbl).to_str()?;
-    let col_name_str = CStr::from_ptr(col_name).to_str()?;
-    let pk_where_list = CStr::from_ptr(pk_where_list).to_str()?;
-
-    let stmt_key =
-        crsql_getCacheKeyForStmtType(CachedStmtType::GetColVersion as i32, insert_tbl, null());
+    let stmt_key = crsql_getCacheKeyForStmtType(
+        CachedStmtType::GetColVersion as i32,
+        // TODO: this is only safe so long as these are c strings!
+        insert_tbl.as_ptr() as *const c_char,
+        null(),
+    );
     if stmt_key.is_null() {
         let err = CString::new("Failed creating cache key for CACHED_STMT_GET_COL_VERSION")?;
         *errmsg = err.into_raw();
@@ -81,27 +46,19 @@ unsafe fn did_cid_win(
     let col_vrsn_stmt = get_cached_stmt_rt_wt(db, ext_data, stmt_key, || {
         format!(
           "SELECT __crsql_col_version FROM \"{table_name}__crsql_clock\" WHERE {pk_where_list} AND ? = __crsql_col_name",
-          table_name = crate::util::escape_ident(insert_tbl_str),
+          table_name = crate::util::escape_ident(insert_tbl),
           pk_where_list = pk_where_list,
         )
     })?;
 
-    let unpacked_pks = Vec::from_raw_parts(
-        raw_pks.ptr as *mut ColumnValue,
-        raw_pks.len as usize,
-        raw_pks.cap as usize,
-    );
     let bind_result = bind_package_to_stmt(col_vrsn_stmt, &unpacked_pks);
-    let unpacked_pks_len = unpacked_pks.len();
-    // c owns this memory currently. forget it in rust land.
-    forget(unpacked_pks);
     if let Err(rc) = bind_result {
         crsql_resetCachedStmt(col_vrsn_stmt);
         return Err(rc);
     }
     if let Err(rc) = col_vrsn_stmt.bind_text(
-        unpacked_pks_len as i32 + 1,
-        col_name_str,
+        unpacked_pks.len() as i32 + 1,
+        col_name,
         sqlite::Destructor::STATIC,
     ) {
         crsql_resetCachedStmt(col_vrsn_stmt);
@@ -136,8 +93,11 @@ unsafe fn did_cid_win(
     // need to pull the current value and compare
     // we could compare on site_id if we can guarantee site_id is always provided.
     // would be slightly more performant..
-    let stmt_key =
-        crsql_getCacheKeyForStmtType(CachedStmtType::GetCurrValue as i32, insert_tbl, col_name);
+    let stmt_key = crsql_getCacheKeyForStmtType(
+        CachedStmtType::GetCurrValue as i32,
+        insert_tbl.as_ptr() as *const c_char,
+        col_name.as_ptr() as *const c_char,
+    );
     if stmt_key.is_null() {
         let err = CString::new("Failed creating cache key for CACHED_STMT_GET_CURR_VALUE")?;
         *errmsg = err.into_raw();
@@ -146,21 +106,13 @@ unsafe fn did_cid_win(
     let col_val_stmt = get_cached_stmt_rt_wt(db, ext_data, stmt_key, || {
         format!(
             "SELECT \"{col_name}\" FROM \"{table_name}\" WHERE {pk_where_list}",
-            col_name = crate::util::escape_ident(col_name_str),
-            table_name = crate::util::escape_ident(insert_tbl_str),
+            col_name = crate::util::escape_ident(col_name),
+            table_name = crate::util::escape_ident(insert_tbl),
             pk_where_list = pk_where_list,
         )
     })?;
 
-    let unpacked_pks = Vec::from_raw_parts(
-        raw_pks.ptr as *mut ColumnValue,
-        raw_pks.len as usize,
-        raw_pks.cap as usize,
-    );
     let bind_result = bind_package_to_stmt(col_val_stmt, &unpacked_pks);
-    // c owns this memory currently. forget it in rust land.
-    forget(unpacked_pks);
-
     if let Err(rc) = bind_result {
         crsql_resetCachedStmt(col_val_stmt);
         return Err(rc);
@@ -180,7 +132,7 @@ unsafe fn did_cid_win(
             crsql_resetCachedStmt(col_val_stmt);
             let err = CString::new(format!(
                 "could not find row to merge with for tbl {}",
-                insert_tbl_str
+                insert_tbl
             ))?;
             *errmsg = err.into_raw();
             return Err(ResultCode::ERROR);
@@ -188,32 +140,18 @@ unsafe fn did_cid_win(
     }
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn crsql_check_for_local_delete(
-    db: *mut sqlite::sqlite3,
-    ext_data: *mut crsql_ExtData,
-    tbl_name: *const c_char,
-    pk_where_list: *mut c_char,
-    raw_pks: RawVec,
-) -> c_int {
-    match check_for_local_delete(db, ext_data, tbl_name, pk_where_list, raw_pks) {
-        Ok(c_rc) => c_rc,
-        Err(rc) => rc as c_int,
-    }
-}
-
 unsafe fn check_for_local_delete(
     db: *mut sqlite::sqlite3,
     ext_data: *mut crsql_ExtData,
-    tbl_name: *const c_char,
-    pk_where_list: *mut c_char,
-    raw_pks: RawVec,
-) -> Result<c_int, ResultCode> {
-    let tbl_name_str = CStr::from_ptr(tbl_name).to_str()?;
-    let pk_where_list = CStr::from_ptr(pk_where_list).to_str()?;
-
-    let stmt_key =
-        crsql_getCacheKeyForStmtType(CachedStmtType::CheckForLocalDelete as i32, tbl_name, null());
+    tbl_name: &str,
+    pk_where_list: &str,
+    unpacked_pks: &Vec<ColumnValue>,
+) -> Result<bool, ResultCode> {
+    let stmt_key = crsql_getCacheKeyForStmtType(
+        CachedStmtType::CheckForLocalDelete as i32,
+        tbl_name.as_ptr() as *const c_char,
+        null(),
+    );
     if stmt_key.is_null() {
         return Err(ResultCode::ERROR);
     }
@@ -221,23 +159,23 @@ unsafe fn check_for_local_delete(
     let check_del_stmt = get_cached_stmt_rt_wt(db, ext_data, stmt_key, || {
         format!(
           "SELECT 1 FROM \"{table_name}__crsql_clock\" WHERE {pk_where_list} AND __crsql_col_name = '{delete_sentinel}' LIMIT 1",
-          table_name = crate::util::escape_ident(tbl_name_str),
+          table_name = crate::util::escape_ident(tbl_name),
           pk_where_list = pk_where_list,
           delete_sentinel = crate::c::DELETE_SENTINEL,
         )
     })?;
 
-    let c_rc = crsql_bind_unpacked_values(check_del_stmt, raw_pks);
-    if c_rc != ResultCode::OK as c_int {
+    let rc = bind_package_to_stmt(check_del_stmt, unpacked_pks);
+    if let Err(rc) = rc {
         crsql_resetCachedStmt(check_del_stmt);
-        return Err(ResultCode::ERROR);
+        return Err(rc);
     }
 
     let step_result = check_del_stmt.step();
     crsql_resetCachedStmt(check_del_stmt);
     match step_result {
-        Ok(ResultCode::ROW) => Ok(consts::DELETED_LOCALLY),
-        Ok(ResultCode::DONE) => Ok(ResultCode::OK as c_int),
+        Ok(ResultCode::ROW) => Ok(true),
+        Ok(ResultCode::DONE) => Ok(false),
         Ok(rc) | Err(rc) => {
             crsql_resetCachedStmt(check_del_stmt);
             Err(rc)
@@ -272,55 +210,19 @@ where
     Ok(ret)
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn crsql_set_winner_clock(
-    db: *mut sqlite3,
-    ext_data: *mut crsql_ExtData,
-    tbl_info: *mut crsql_TableInfo,
-    pk_ident_list: *const c_char,
-    pk_bind_list: *const c_char,
-    unpacked_pks: RawVec,
-    insert_col_name: *const c_char,
-    insert_col_vrsn: sqlite::int64,
-    insert_db_vrsn: sqlite::int64,
-    insert_site_id: *const c_void,
-    insert_site_id_len: c_int,
-) -> sqlite::int64 {
-    match set_winner_clock(
-        db,
-        ext_data,
-        tbl_info,
-        pk_ident_list,
-        pk_bind_list,
-        unpacked_pks,
-        insert_col_name,
-        insert_col_vrsn,
-        insert_db_vrsn,
-        insert_site_id,
-        insert_site_id_len,
-    ) {
-        Ok(rowid) => rowid,
-        Err(_) => -1,
-    }
-}
-
 unsafe fn set_winner_clock(
     db: *mut sqlite3,
     ext_data: *mut crsql_ExtData,
     tbl_info: *mut crsql_TableInfo,
-    pk_ident_list: *const c_char,
-    pk_bind_list: *const c_char,
-    raw_pks: RawVec,
-    insert_col_name: *const c_char,
+    pk_ident_list: &str,
+    pk_bind_list: &str,
+    unpacked_pks: &Vec<ColumnValue>,
+    insert_col_name: &str,
     insert_col_vrsn: sqlite::int64,
     insert_db_vrsn: sqlite::int64,
-    insert_site_id: *const c_void,
-    insert_site_id_len: c_int,
+    insert_site_id: &[u8],
 ) -> Result<sqlite::int64, ResultCode> {
     let tbl_name_str = CStr::from_ptr((*tbl_info).tblName).to_str()?;
-    let pk_ident_list = CStr::from_ptr(pk_ident_list).to_str()?;
-    let pk_bind_list = CStr::from_ptr(pk_bind_list).to_str()?;
-    let insert_col_name = CStr::from_ptr(insert_col_name).to_str()?;
 
     let stmt_key = crsql_getCacheKeyForStmtType(
         CachedStmtType::SetWinnerClock as i32,
@@ -349,29 +251,28 @@ unsafe fn set_winner_clock(
         )
     })?;
 
-    let raw_pks_lens = raw_pks.len;
-    let bind_result = crsql_bind_unpacked_values(set_stmt, raw_pks);
-    if bind_result != ResultCode::OK as c_int {
+    let bind_result = bind_package_to_stmt(set_stmt, unpacked_pks);
+    if let Err(rc) = bind_result {
         crsql_resetCachedStmt(set_stmt);
-        return Err(ResultCode::ERROR);
+        return Err(rc);
     }
     let bind_result = set_stmt
         .bind_text(
-            raw_pks_lens + 1,
+            unpacked_pks.len() as i32 + 1,
             insert_col_name,
             sqlite::Destructor::STATIC,
         )
-        .and_then(|_| set_stmt.bind_int64(raw_pks_lens + 2, insert_col_vrsn))
-        .and_then(|_| set_stmt.bind_int64(raw_pks_lens + 3, insert_db_vrsn))
+        .and_then(|_| set_stmt.bind_int64(unpacked_pks.len() as i32 + 2, insert_col_vrsn))
+        .and_then(|_| set_stmt.bind_int64(unpacked_pks.len() as i32 + 3, insert_db_vrsn))
         .and_then(|_| {
-            if insert_site_id.is_null() {
-                set_stmt.bind_null(raw_pks_lens + 4)
+            if insert_site_id.is_empty() {
+                set_stmt.bind_null(unpacked_pks.len() as i32 + 4)
             } else {
-                let blob = core::slice::from_raw_parts(
-                    insert_site_id as *const u8,
-                    insert_site_id_len as usize,
-                );
-                set_stmt.bind_blob(raw_pks_lens + 4, blob, sqlite::Destructor::STATIC)
+                set_stmt.bind_blob(
+                    unpacked_pks.len() as i32 + 4,
+                    insert_site_id,
+                    sqlite::Destructor::STATIC,
+                )
             }
         });
 
@@ -393,51 +294,18 @@ unsafe fn set_winner_clock(
     }
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn crsql_merge_pk_only_insert(
-    db: *mut sqlite3,
-    ext_data: *mut crsql_ExtData,
-    tbl_info: *mut crsql_TableInfo,
-    pk_bind_list: *const c_char,
-    raw_pks: RawVec,
-    pk_ident_list: *const c_char,
-    remote_col_vrsn: sqlite::int64,
-    remote_db_vsn: sqlite::int64,
-    remote_site_id: *const c_void,
-    remote_site_id_len: c_int,
-) -> sqlite::int64 {
-    match merge_pk_only_insert(
-        db,
-        ext_data,
-        tbl_info,
-        pk_bind_list,
-        raw_pks,
-        pk_ident_list,
-        remote_col_vrsn,
-        remote_db_vsn,
-        remote_site_id,
-        remote_site_id_len,
-    ) {
-        Ok(rowid) => rowid,
-        Err(_) => -1,
-    }
-}
-
 unsafe fn merge_pk_only_insert(
     db: *mut sqlite3,
     ext_data: *mut crsql_ExtData,
     tbl_info: *mut crsql_TableInfo,
-    pk_bind_list: *const c_char,
-    raw_pks: RawVec,
-    pk_ident_list: *const c_char,
+    pk_bind_list: &str,
+    unpacked_pks: &Vec<ColumnValue>,
+    pk_ident_list: &str,
     remote_col_vrsn: sqlite::int64,
     remote_db_vsn: sqlite::int64,
-    remote_site_id: *const c_void,
-    remote_site_id_len: c_int,
+    remote_site_id: &[u8],
 ) -> Result<sqlite::int64, ResultCode> {
     let tbl_name_str = CStr::from_ptr((*tbl_info).tblName).to_str()?;
-    let pk_ident_list_str = CStr::from_ptr(pk_ident_list).to_str()?;
-    let pk_bind_list_str = CStr::from_ptr(pk_bind_list).to_str()?;
 
     let stmt_key = crsql_getCacheKeyForStmtType(
         CachedStmtType::MergePkOnlyInsert as i32,
@@ -451,31 +319,32 @@ unsafe fn merge_pk_only_insert(
         format!(
             "INSERT OR IGNORE INTO \"{table_name}\" ({pk_idents}) VALUES ({pk_bindings})",
             table_name = crate::util::escape_ident(tbl_name_str),
-            pk_idents = pk_ident_list_str,
-            pk_bindings = pk_bind_list_str
+            pk_idents = pk_ident_list,
+            pk_bindings = pk_bind_list
         )
     })?;
 
-    let rc = bind_unpacked_values(merge_stmt, &raw_pks);
-    if rc != ResultCode::OK as c_int {
-        return Err(ResultCode::ERROR);
+    let rc = bind_package_to_stmt(merge_stmt, unpacked_pks);
+    if let Err(rc) = rc {
+        crsql_resetCachedStmt(merge_stmt);
+        return Err(rc);
     }
     let rc = (*ext_data)
         .pSetSyncBitStmt
         .step()
         .and_then(|_| (*ext_data).pSetSyncBitStmt.reset())
         .and_then(|_| merge_stmt.step());
+
     crsql_resetCachedStmt(merge_stmt);
 
-    if let Err(rc) = rc {
-        return Err(rc);
-    }
-
-    let rc = (*ext_data)
+    let sync_rc = (*ext_data)
         .pClearSyncBitStmt
         .step()
         .and_then(|_| (*ext_data).pClearSyncBitStmt.reset());
 
+    if let Err(sync_rc) = sync_rc {
+        return Err(sync_rc);
+    }
     if let Err(rc) = rc {
         return Err(rc);
     }
@@ -486,45 +355,12 @@ unsafe fn merge_pk_only_insert(
         tbl_info,
         pk_ident_list,
         pk_bind_list,
-        raw_pks,
-        crate::c::INSERT_SENTINEL_CSTR.as_ptr() as *const c_char,
+        unpacked_pks,
+        crate::c::INSERT_SENTINEL,
         remote_col_vrsn,
         remote_db_vsn,
         remote_site_id,
-        remote_site_id_len,
     )
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn crsql_merge_delete(
-    db: *mut sqlite3,
-    ext_data: *mut crsql_ExtData,
-    tbl_info: *mut crsql_TableInfo,
-    pk_where_list: *const c_char,
-    raw_pks: RawVec,
-    pk_bind_list: *const c_char,
-    pk_ident_list: *const c_char,
-    remote_col_vrsn: sqlite::int64,
-    remote_db_vrsn: sqlite::int64,
-    remote_site_id: *const c_void,
-    remote_site_id_len: c_int,
-) -> sqlite::int64 {
-    match merge_delete(
-        db,
-        ext_data,
-        tbl_info,
-        pk_where_list,
-        raw_pks,
-        pk_bind_list,
-        pk_ident_list,
-        remote_col_vrsn,
-        remote_db_vrsn,
-        remote_site_id,
-        remote_site_id_len,
-    ) {
-        Ok(rowid) => rowid,
-        Err(_) => -1,
-    }
 }
 
 // TODO: we can commonize this with `merge_pkonly_insert` -- basically the same logic.
@@ -533,17 +369,15 @@ unsafe fn merge_delete(
     db: *mut sqlite3,
     ext_data: *mut crsql_ExtData,
     tbl_info: *mut crsql_TableInfo,
-    pk_where_list: *const c_char,
-    raw_pks: RawVec,
-    pk_bind_list: *const c_char,
-    pk_ident_list: *const c_char,
+    pk_where_list: &str,
+    unpacked_pks: &Vec<ColumnValue>,
+    pk_bind_list: &str,
+    pk_ident_list: &str,
     remote_col_vrsn: sqlite::int64,
     remote_db_vrsn: sqlite::int64,
-    remote_site_id: *const c_void,
-    remote_site_id_len: c_int,
+    remote_site_id: &[u8],
 ) -> Result<sqlite::int64, ResultCode> {
     let tbl_name_str = CStr::from_ptr((*tbl_info).tblName).to_str()?;
-    let pk_where_list_str = CStr::from_ptr(pk_where_list).to_str()?;
     let stmt_key = crsql_getCacheKeyForStmtType(
         CachedStmtType::MergeDelete as i32,
         (*tbl_info).tblName,
@@ -556,30 +390,30 @@ unsafe fn merge_delete(
         format!(
             "DELETE FROM \"{table_name}\" WHERE {pk_where_list}",
             table_name = crate::util::escape_ident(tbl_name_str),
-            pk_where_list = pk_where_list_str
+            pk_where_list = pk_where_list
         )
     })?;
 
-    let rc = bind_unpacked_values(delete_stmt, &raw_pks);
-    if rc != ResultCode::OK as c_int {
-        return Err(ResultCode::ERROR);
+    if let Err(rc) = bind_package_to_stmt(delete_stmt, unpacked_pks) {
+        crsql_resetCachedStmt(delete_stmt);
+        return Err(rc);
     }
     let rc = (*ext_data)
         .pSetSyncBitStmt
         .step()
         .and_then(|_| (*ext_data).pSetSyncBitStmt.reset())
         .and_then(|_| delete_stmt.step());
+
     crsql_resetCachedStmt(delete_stmt);
 
-    if let Err(rc) = rc {
-        return Err(rc);
-    }
-
-    let rc = (*ext_data)
+    let sync_rc = (*ext_data)
         .pClearSyncBitStmt
         .step()
         .and_then(|_| (*ext_data).pClearSyncBitStmt.reset());
 
+    if let Err(sync_rc) = sync_rc {
+        return Err(sync_rc);
+    }
     if let Err(rc) = rc {
         return Err(rc);
     }
@@ -590,11 +424,262 @@ unsafe fn merge_delete(
         tbl_info,
         pk_ident_list,
         pk_bind_list,
-        raw_pks,
-        crate::c::DELETE_SENTINEL_CSTR.as_ptr() as *const c_char,
+        unpacked_pks,
+        crate::c::DELETE_SENTINEL,
         remote_col_vrsn,
         remote_db_vrsn,
         remote_site_id,
-        remote_site_id_len,
     )
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn crsql_merge_insert(
+    vtab: *mut sqlite::vtab,
+    argc: c_int,
+    argv: *mut *mut sqlite::value,
+    rowid: *mut sqlite::int64,
+    errmsg: *mut *mut c_char,
+) -> c_int {
+    match merge_insert(vtab, argc, argv, rowid, errmsg) {
+        Err(rc) | Ok(rc) => rc as c_int,
+    }
+}
+
+unsafe fn merge_insert(
+    vtab: *mut sqlite::vtab,
+    argc: c_int,
+    argv: *mut *mut sqlite::value,
+    rowid: *mut sqlite::int64,
+    errmsg: *mut *mut c_char,
+) -> Result<ResultCode, ResultCode> {
+    let tab = vtab.cast::<crsql_Changes_vtab>();
+    let db = (*tab).db;
+
+    let rc = crsql_ensureTableInfosAreUpToDate(db, (*tab).pExtData, errmsg);
+    if rc != ResultCode::OK as i32 {
+        let err = CString::new("Failed to update CRR table information")?;
+        *errmsg = err.into_raw();
+        return Err(ResultCode::ERROR);
+    }
+
+    let args = sqlite::args!(argc, argv);
+    let insert_tbl = args[2 + CrsqlChangesColumn::Tbl as usize];
+    if insert_tbl.bytes() > crate::consts::MAX_TBL_NAME_LEN {
+        let err = CString::new("crsql - table name exceeded max length")?;
+        *errmsg = err.into_raw();
+        return Err(ResultCode::ERROR);
+    }
+
+    let insert_tbl = insert_tbl.text();
+    let insert_pks = args[2 + CrsqlChangesColumn::Pk as usize];
+    let insert_col = args[2 + CrsqlChangesColumn::Cid as usize];
+    if insert_col.bytes() > crate::consts::MAX_TBL_NAME_LEN {
+        let err = CString::new("crsql - column name exceeded max length")?;
+        *errmsg = err.into_raw();
+        return Err(ResultCode::ERROR);
+    }
+
+    let insert_col = insert_col.text();
+    let insert_val = args[2 + CrsqlChangesColumn::Cval as usize];
+    let insert_col_vrsn = args[2 + CrsqlChangesColumn::ColVrsn as usize].int64();
+    let insert_db_vrsn = args[2 + CrsqlChangesColumn::DbVrsn as usize].int64();
+    let insert_site_id = args[2 + CrsqlChangesColumn::SiteId as usize];
+
+    if insert_site_id.bytes() > crate::consts::SITE_ID_LEN {
+        let err = CString::new("crsql - site id exceeded max length")?;
+        *errmsg = err.into_raw();
+        return Err(ResultCode::ERROR);
+    }
+
+    let insert_site_id = insert_site_id.blob();
+    let tbl_info_index = crsql_indexofTableInfo(
+        (*(*tab).pExtData).zpTableInfos,
+        (*(*tab).pExtData).tableInfosLen,
+        insert_tbl.as_ptr() as *const c_char,
+    );
+
+    let tbl_infos = sqlite::args!(
+        (*(*tab).pExtData).tableInfosLen,
+        (*(*tab).pExtData).zpTableInfos
+    );
+    if tbl_info_index == -1 {
+        let err = CString::new(format!(
+            "crsql - could not find the schema information for table {}",
+            insert_tbl
+        ))?;
+        *errmsg = err.into_raw();
+        return Err(ResultCode::ERROR);
+    }
+
+    let tbl_info = tbl_infos[tbl_info_index as usize];
+
+    let is_delete = crate::c::DELETE_SENTINEL == insert_col;
+    let is_pk_only = crate::c::INSERT_SENTINEL == insert_col;
+
+    let pk_cols = sqlite::args!((*tbl_info).pksLen, (*tbl_info).pks);
+    let pk_where_list = where_list(pk_cols)?;
+    let unpacked_pks = unpack_columns(insert_pks.blob())?;
+
+    if check_for_local_delete(
+        db,
+        (*tab).pExtData,
+        insert_tbl,
+        &pk_where_list,
+        &unpacked_pks,
+    )? {
+        // Delete wins. Our work is done.
+        return Ok(ResultCode::OK);
+    }
+
+    let pk_bind_list = crate::c::binding_list(pk_cols.len());
+    let pk_ident_list = crate::c::as_identifier_list(pk_cols, None)?;
+    if is_delete {
+        let merge_result = merge_delete(
+            db,
+            (*tab).pExtData,
+            tbl_info,
+            &pk_where_list,
+            &unpacked_pks,
+            &pk_bind_list,
+            &pk_ident_list,
+            insert_col_vrsn,
+            insert_db_vrsn,
+            insert_site_id,
+        );
+        match merge_result {
+            Err(rc) => {
+                return Err(rc);
+            }
+            Ok(inner_rowid) => {
+                (*(*tab).pExtData).rowsImpacted += 1;
+                *rowid = slab_rowid(tbl_info_index, inner_rowid);
+                return Ok(ResultCode::OK);
+            }
+        }
+    }
+
+    if is_pk_only
+        || crsql_columnExists(
+            // TODO: only safe because we _know_ this is actually a cstr
+            insert_col.as_ptr() as *const c_char,
+            (*tbl_info).nonPks,
+            (*tbl_info).nonPksLen,
+        ) == 0
+    {
+        let merge_result = merge_pk_only_insert(
+            db,
+            (*tab).pExtData,
+            tbl_info,
+            &pk_bind_list,
+            &unpacked_pks,
+            &pk_ident_list,
+            insert_col_vrsn,
+            insert_db_vrsn,
+            insert_site_id,
+        );
+        match merge_result {
+            Err(rc) => {
+                return Err(rc);
+            }
+            Ok(inner_rowid) => {
+                (*(*tab).pExtData).rowsImpacted += 1;
+                *rowid = slab_rowid(tbl_info_index, inner_rowid);
+                return Ok(ResultCode::OK);
+            }
+        }
+    }
+
+    let does_cid_win = did_cid_win(
+        db,
+        (*tab).pExtData,
+        insert_tbl,
+        &pk_where_list,
+        &unpacked_pks,
+        insert_col,
+        insert_val,
+        insert_col_vrsn,
+        errmsg,
+    )?;
+
+    if does_cid_win == false {
+        // doesCidWin == 0? compared against our clocks, nothing wins. OK and
+        // Done.
+        return Ok(ResultCode::OK);
+    }
+
+    // TODO: this is all almost identical between all three merge cases!
+    let stmt_key = crsql_getCacheKeyForStmtType(
+        CachedStmtType::MergeInsert as i32,
+        // This is currently safe since these are c strings under the hood
+        insert_tbl.as_ptr() as *const c_char,
+        insert_col.as_ptr() as *const c_char,
+    );
+    if stmt_key.is_null() {
+        let err = CString::new("Failed creating cache key for CACHED_STMT_MERGE_INSERT")?;
+        *errmsg = err.into_raw();
+        return Err(ResultCode::ERROR);
+    }
+    let merge_stmt = get_cached_stmt_rt_wt(db, (*tab).pExtData, stmt_key, || {
+        format!(
+            "INSERT INTO \"{table_name}\" ({pk_list}, \"{col_name}\")
+            VALUES ({pk_bind_list}, ?)
+            ON CONFLICT DO UPDATE
+            SET \"{col_name}\" = ?",
+            table_name = crate::util::escape_ident(insert_tbl),
+            pk_list = pk_ident_list,
+            col_name = crate::util::escape_ident(insert_col),
+            pk_bind_list = pk_bind_list,
+        )
+    })?;
+
+    let bind_result = bind_package_to_stmt(merge_stmt, &unpacked_pks)
+        .and_then(|_| merge_stmt.bind_value(unpacked_pks.len() as i32 + 1, insert_val))
+        .and_then(|_| merge_stmt.bind_value(unpacked_pks.len() as i32 + 2, insert_val));
+    if let Err(rc) = bind_result {
+        crsql_resetCachedStmt(merge_stmt);
+        return Err(rc);
+    }
+
+    let rc = (*(*tab).pExtData)
+        .pSetSyncBitStmt
+        .step()
+        .and_then(|_| (*(*tab).pExtData).pSetSyncBitStmt.reset())
+        .and_then(|_| merge_stmt.step());
+
+    crsql_resetCachedStmt(merge_stmt);
+
+    let sync_rc = (*(*tab).pExtData)
+        .pClearSyncBitStmt
+        .step()
+        .and_then(|_| (*(*tab).pExtData).pClearSyncBitStmt.reset());
+
+    if let Err(rc) = rc {
+        return Err(rc);
+    }
+    if let Err(sync_rc) = sync_rc {
+        return Err(sync_rc);
+    }
+
+    let merge_result = set_winner_clock(
+        db,
+        (*tab).pExtData,
+        tbl_info,
+        &pk_ident_list,
+        &pk_bind_list,
+        &unpacked_pks,
+        insert_col,
+        insert_col_vrsn,
+        insert_db_vrsn,
+        insert_site_id,
+    );
+    match merge_result {
+        Err(rc) => {
+            return Err(rc);
+        }
+        Ok(inner_rowid) => {
+            (*(*tab).pExtData).rowsImpacted += 1;
+            *rowid = slab_rowid(tbl_info_index, inner_rowid);
+            return Ok(ResultCode::OK);
+        }
+    }
 }

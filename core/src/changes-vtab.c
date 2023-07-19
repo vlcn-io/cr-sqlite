@@ -5,7 +5,6 @@
 #include <string.h>
 
 #include "changes-vtab-common.h"
-#include "changes-vtab-write.h"
 #include "consts.h"
 #include "crsqlite.h"
 #include "ext-data.h"

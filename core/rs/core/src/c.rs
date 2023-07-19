@@ -1,7 +1,9 @@
 extern crate alloc;
+use crate::alloc::string::ToString;
 use alloc::format;
 use alloc::string::String;
 use alloc::vec;
+use alloc::vec::Vec;
 use core::ffi::{c_char, c_int, CStr};
 use core::str::Utf8Error;
 #[cfg(not(feature = "std"))]
@@ -13,8 +15,8 @@ use sqlite_nostd as sqlite;
 
 pub static INSERT_SENTINEL: &str = "__crsql_pko";
 pub static DELETE_SENTINEL: &str = "__crsql_del";
-pub static INSERT_SENTINEL_CSTR: &str = "__crsql_pko\0";
-pub static DELETE_SENTINEL_CSTR: &str = "__crsql_del\0";
+// pub static INSERT_SENTINEL_CSTR: &str = "__crsql_pko\0";
+// pub static DELETE_SENTINEL_CSTR: &str = "__crsql_del\0";
 
 pub enum CachedStmtType {
     SetWinnerClock = 0,
@@ -138,6 +140,14 @@ pub fn where_list(columns: &[crsql_ColumnInfo]) -> Result<String, Utf8Error> {
     Ok(result.join(" AND "))
 }
 
+pub fn binding_list(num_slots: usize) -> String {
+    core::iter::repeat('?')
+        .take(num_slots)
+        .map(|c| c.to_string())
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 #[allow(non_snake_case, non_camel_case_types)]
@@ -159,16 +169,6 @@ pub struct crsql_Changes_cursor {
     pub rowType: ::core::ffi::c_int,
     pub changesRowid: sqlite::int64,
     pub tblInfoIdx: ::core::ffi::c_int,
-}
-
-extern "C" {
-    pub fn crsql_mergeInsert(
-        pVTab: *mut sqlite::vtab,
-        argc: ::core::ffi::c_int,
-        argv: *mut *mut sqlite::value,
-        pRowid: *mut sqlite::int64,
-        errmsg: *mut *mut ::core::ffi::c_char,
-    ) -> ::core::ffi::c_int;
 }
 
 extern "C" {
@@ -196,6 +196,11 @@ extern "C" {
         db: *mut sqlite::sqlite3,
         pExtData: *mut crsql_ExtData,
         errmsg: *mut *mut c_char,
+    ) -> c_int;
+    pub fn crsql_columnExists(
+        colName: *const c_char,
+        colInfos: *mut crsql_ColumnInfo,
+        colInfosLen: c_int,
     ) -> c_int;
 }
 

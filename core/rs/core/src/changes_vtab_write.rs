@@ -14,7 +14,7 @@ use crate::c::{
     crsql_setCachedStmt, CachedStmtType,
 };
 use crate::compare_values::crsql_compare_sqlite_values;
-use crate::pack_columns::{bind_package_to_stmt, crsql_bind_unpacked_values};
+use crate::pack_columns::{bind_package_to_stmt, bind_unpacked_values, crsql_bind_unpacked_values};
 use crate::{c::crsql_ExtData, pack_columns::RawVec};
 use crate::{consts, ColumnValue};
 
@@ -361,9 +361,9 @@ unsafe fn set_winner_clock(
             insert_col_name,
             sqlite::Destructor::STATIC,
         )
-        .map(|_| set_stmt.bind_int64(raw_pks_lens + 2, insert_col_vrsn))
-        .map(|_| set_stmt.bind_int64(raw_pks_lens + 3, insert_db_vrsn))
-        .map(|_| {
+        .and_then(|_| set_stmt.bind_int64(raw_pks_lens + 2, insert_col_vrsn))
+        .and_then(|_| set_stmt.bind_int64(raw_pks_lens + 3, insert_db_vrsn))
+        .and_then(|_| {
             if insert_site_id.is_null() {
                 set_stmt.bind_null(raw_pks_lens + 4)
             } else {
@@ -391,4 +391,115 @@ unsafe fn set_winner_clock(
             Err(ResultCode::ERROR)
         }
     }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn crsql_merge_pk_only_insert(
+    db: *mut sqlite3,
+    ext_data: *mut crsql_ExtData,
+    tbl_info: *mut crsql_TableInfo,
+    pk_bind_list: *const c_char,
+    raw_pks: RawVec,
+    pk_ident_list: *const c_char,
+    remote_col_vrsn: sqlite::int64,
+    remote_db_vsn: sqlite::int64,
+    remote_site_id: *const c_void,
+    remote_site_id_len: c_int,
+) -> sqlite::int64 {
+    match merge_pk_only_insert(
+        db,
+        ext_data,
+        tbl_info,
+        pk_bind_list,
+        raw_pks,
+        pk_ident_list,
+        remote_col_vrsn,
+        remote_db_vsn,
+        remote_site_id,
+        remote_site_id_len,
+    ) {
+        Ok(rowid) => rowid,
+        Err(_) => -1,
+    }
+}
+
+unsafe fn merge_pk_only_insert(
+    db: *mut sqlite3,
+    ext_data: *mut crsql_ExtData,
+    tbl_info: *mut crsql_TableInfo,
+    pk_bind_list: *const c_char,
+    raw_pks: RawVec,
+    pk_ident_list: *const c_char,
+    remote_col_vrsn: sqlite::int64,
+    remote_db_vsn: sqlite::int64,
+    remote_site_id: *const c_void,
+    remote_site_id_len: c_int,
+) -> Result<sqlite::int64, ResultCode> {
+    let tbl_name_str = CStr::from_ptr((*tbl_info).tblName).to_str()?;
+    let pk_ident_list_str = CStr::from_ptr(pk_ident_list).to_str()?;
+    let pk_bind_list_str = CStr::from_ptr(pk_bind_list).to_str()?;
+
+    let stmt_key = crsql_getCacheKeyForStmtType(
+        CachedStmtType::MergePkOnlyInsert as i32,
+        (*tbl_info).tblName,
+        null(),
+    );
+    if stmt_key.is_null() {
+        return Err(ResultCode::ERROR);
+    }
+    let merge_stmt = get_cached_stmt_rt_wt(db, ext_data, stmt_key, || {
+        format!(
+            "INSERT OR IGNORE INTO \"{table_name}\" ({pk_idents}) VALUES ({pk_bindings})",
+            table_name = crate::util::escape_ident(tbl_name_str),
+            pk_idents = pk_ident_list_str,
+            pk_bindings = pk_bind_list_str
+        )
+    })?;
+
+    let rc = bind_unpacked_values(merge_stmt, &raw_pks);
+    if rc != ResultCode::OK as c_int {
+        return Err(ResultCode::ERROR);
+    }
+    let rc = (*ext_data)
+        .pSetSyncBitStmt
+        .step()
+        .and_then(|_| (*ext_data).pSetSyncBitStmt.reset())
+        .and_then(|_| merge_stmt.step());
+
+    if let Err(rc) = rc {
+        crsql_resetCachedStmt(merge_stmt);
+        return Err(rc);
+    }
+
+    let rc = (*ext_data)
+        .pClearSyncBitStmt
+        .step()
+        .and_then(|_| (*ext_data).pClearSyncBitStmt.reset());
+
+    if let Err(rc) = rc {
+        crsql_resetCachedStmt(merge_stmt);
+        return Err(rc);
+    }
+
+    set_winner_clock(
+        db,
+        ext_data,
+        tbl_info,
+        pk_ident_list,
+        pk_bind_list,
+        raw_pks,
+        crate::c::INSERT_SENTINEL_CSTR.as_ptr() as *const c_char,
+        remote_col_vrsn,
+        remote_db_vsn,
+        remote_site_id,
+        remote_site_id_len,
+    )
+}
+
+pub unsafe extern "C" fn crsql_merge_delete(sqlite3 *db, crsql_ExtData *pExtData, crsql_TableInfo *tblInfo,
+  const char *pkWhereList, RawVec unpackedPks, const char *pkBindList,
+  const char *pkIdentifiers, sqlite3_int64 remoteColVersion,
+  sqlite3_int64 remoteDbVersion, const void *remoteSiteId,
+  int remoteSiteIdLen) -> sqlite::int64 {
+
 }

@@ -236,6 +236,10 @@ pub extern "C" fn crsql_free_unpacked_values(values: RawVec) {
 */
 #[no_mangle]
 pub extern "C" fn crsql_bind_unpacked_values(stmt: *mut sqlite::stmt, columns: RawVec) -> c_int {
+    bind_unpacked_values(stmt, &columns)
+}
+
+pub fn bind_unpacked_values(stmt: *mut sqlite::stmt, columns: &RawVec) -> c_int {
     let unpacked = unsafe {
         Vec::from_raw_parts(
             columns.ptr as *mut ColumnValue,

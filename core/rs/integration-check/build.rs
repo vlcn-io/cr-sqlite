@@ -6,10 +6,10 @@ fn main() {
         match profile.as_str() {
             "debug" => "loadable_dbg",
             "release" => "loadable",
-            _ => "loadable",
+            _ => "loadable_dbg",
         }
     } else {
-        "loadable"
+        "loadable_dbg"
     };
 
     Command::new("make")

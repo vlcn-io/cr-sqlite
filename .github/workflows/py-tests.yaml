@@ -29,6 +29,7 @@ jobs:
         if: runner.os == 'Windows'
         run: |
           rm core/rs/bundle/rust-toolchain.toml
+          rustup toolchain install nightly-2023-06-17-x86_64-pc-windows-gnu
           rustup component add rust-src --toolchain nightly-2023-06-17-x86_64-pc-windows-gnu
           rustup default nightly-2023-06-17-x86_64-pc-windows-gnu
 

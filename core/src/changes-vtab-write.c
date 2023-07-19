@@ -31,68 +31,11 @@ sqlite3_int64 crsql_set_winner_clock(
     const char *insertColName, sqlite3_int64 insertColVrsn,
     sqlite3_int64 insertDbVrsn, const void *insertSiteId, int insertSiteIdLen);
 
-static sqlite3_int64 crsql_mergePkOnlyInsert(
+sqlite3_int64 crsql_merge_pk_only_insert(
     sqlite3 *db, crsql_ExtData *pExtData, crsql_TableInfo *tblInfo,
     const char *pkBindingsList, RawVec unpackedPks, const char *pkIdentifiers,
     sqlite3_int64 remoteColVersion, sqlite3_int64 remoteDbVersion,
-    const void *remoteSiteId, int remoteSiteIdLen) {
-  int rc = SQLITE_OK;
-  char *zStmtCacheKey = crsql_getCacheKeyForStmtType(
-      CACHED_STMT_MERGE_PK_ONLY_INSERT, tblInfo->tblName, 0);
-  if (zStmtCacheKey == 0) {
-    return -1;
-  }
-  sqlite3_stmt *pStmt;
-  pStmt = crsql_getCachedStmt(pExtData, zStmtCacheKey);
-  if (pStmt == 0) {
-    char *zSql =
-        sqlite3_mprintf("INSERT OR IGNORE INTO \"%s\" (%s) VALUES (%s)",
-                        tblInfo->tblName, pkIdentifiers, pkBindingsList);
-    rc = sqlite3_prepare_v3(db, zSql, -1, SQLITE_PREPARE_PERSISTENT, &pStmt, 0);
-    sqlite3_free(zSql);
-
-    if (rc != SQLITE_OK) {
-      sqlite3_free(zStmtCacheKey);
-      sqlite3_finalize(pStmt);
-      return rc;
-    }
-    crsql_setCachedStmt(pExtData, zStmtCacheKey, pStmt);
-  } else {
-    sqlite3_free(zStmtCacheKey);
-    zStmtCacheKey = 0;
-  }
-
-  rc = crsql_bind_unpacked_values(pStmt, unpackedPks);
-  if (rc == SQLITE_OK) {
-    rc = sqlite3_step(pExtData->pSetSyncBitStmt);
-    if (rc == SQLITE_ROW) {
-      rc = SQLITE_OK;
-    }
-    rc += sqlite3_reset(pExtData->pSetSyncBitStmt);
-    if (rc == SQLITE_OK) {
-      rc = sqlite3_step(pStmt);
-      if (rc == SQLITE_DONE) {
-        rc = SQLITE_OK;
-      }
-    }
-  }
-  crsql_resetCachedStmt(pStmt);
-
-  int syncrc = sqlite3_step(pExtData->pClearSyncBitStmt);
-  if (syncrc == SQLITE_ROW) {
-    syncrc = SQLITE_OK;
-  }
-  syncrc += sqlite3_reset(pExtData->pClearSyncBitStmt);
-  if (rc != SQLITE_OK || syncrc != SQLITE_OK) {
-    return -1;
-  }
-
-  // TODO: if insert was ignored, no reason to change clock
-  return crsql_set_winner_clock(db, pExtData, tblInfo, pkIdentifiers,
-                                pkBindingsList, unpackedPks,
-                                PKS_ONLY_CID_SENTINEL, remoteColVersion,
-                                remoteDbVersion, remoteSiteId, remoteSiteIdLen);
-}
+    const void *remoteSiteId, int remoteSiteIdLen);
 
 static sqlite3_int64 crsql_mergeDelete(
     sqlite3 *db, crsql_ExtData *pExtData, crsql_TableInfo *tblInfo,
@@ -196,7 +139,7 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
 
   // `splitQuoteConcat` will validate these -- even tho 1 val should do
   // splitquoteconcat for the validation
-  const sqlite3_value *insertVal = argv[2 + CHANGES_SINCE_VTAB_CVAL];
+  sqlite3_value *insertVal = argv[2 + CHANGES_SINCE_VTAB_CVAL];
   sqlite3_int64 insertColVrsn =
       sqlite3_value_int64(argv[2 + CHANGES_SINCE_VTAB_COL_VRSN]);
   sqlite3_int64 insertDbVrsn =
@@ -290,9 +233,9 @@ int crsql_mergeInsert(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
   if (isPkOnly ||
       !crsql_columnExists(insertColName, tblInfo->nonPks, tblInfo->nonPksLen)) {
     sqlite3_int64 rowid =
-        crsql_mergePkOnlyInsert(db, pTab->pExtData, tblInfo, pkBindingList,
-                                unpackedPks, pkIdentifierList, insertColVrsn,
-                                insertDbVrsn, insertSiteId, insertSiteIdLen);
+        crsql_merge_pk_only_insert(db, pTab->pExtData, tblInfo, pkBindingList,
+                                   unpackedPks, pkIdentifierList, insertColVrsn,
+                                   insertDbVrsn, insertSiteId, insertSiteIdLen);
     sqlite3_free(pkWhereList);
     crsql_free_unpacked_values(unpackedPks);
     sqlite3_free(pkBindingList);

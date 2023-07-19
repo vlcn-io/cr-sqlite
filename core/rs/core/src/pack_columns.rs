@@ -126,9 +126,9 @@ pub enum ColumnValue {
 
 #[repr(C)]
 pub struct RawVec {
-    ptr: *mut c_void,
-    len: c_int,
-    cap: c_int,
+    pub ptr: *mut c_void,
+    pub len: c_int,
+    pub cap: c_int,
 }
 
 /**

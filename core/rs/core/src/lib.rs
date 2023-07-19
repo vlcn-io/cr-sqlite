@@ -7,6 +7,7 @@ mod bootstrap;
 mod c;
 mod changes_vtab;
 mod changes_vtab_read;
+mod changes_vtab_write;
 mod compare_values;
 mod consts;
 mod is_crr;

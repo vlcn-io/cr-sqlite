@@ -121,10 +121,6 @@ static int changesClose(sqlite3_vtab_cursor *cur) {
   return SQLITE_OK;
 }
 
-// char **crsql_extractValList() {
-
-// }
-
 /**
  * Invoked to kick off the pulling of rows from the virtual table.
  * Provides the constraints with which the vtab can work with
@@ -132,68 +128,8 @@ static int changesClose(sqlite3_vtab_cursor *cur) {
  *
  * Provided constraints are filled in by the changesBestIndex method.
  */
-static int changesFilter(sqlite3_vtab_cursor *pVtabCursor, int idxNum,
-                         const char *idxStr, int argc, sqlite3_value **argv) {
-  int rc = SQLITE_OK;
-  crsql_Changes_cursor *pCrsr = (crsql_Changes_cursor *)pVtabCursor;
-  crsql_Changes_vtab *pTab = pCrsr->pTab;
-  sqlite3_vtab *pTabBase = (sqlite3_vtab *)pTab;
-  sqlite3 *db = pTab->db;
-
-  // This should never happen. pChangesStmt should be finalized
-  // before filter is ever invoked.
-  if (pCrsr->pChangesStmt) {
-    sqlite3_finalize(pCrsr->pChangesStmt);
-    pCrsr->pChangesStmt = 0;
-  }
-
-  // construct and prepare our union for fetching changes
-  rc = crsql_ensureTableInfosAreUpToDate(db, pTab->pExtData,
-                                         &(pTabBase->zErrMsg));
-  if (rc != SQLITE_OK) {
-    return rc;
-  }
-
-  // nothing to fetch, no crrs exist.
-  if (pTab->pExtData->tableInfosLen == 0) {
-    return SQLITE_OK;
-  }
-
-  char *zSql = crsql_changes_union_query(pTab->pExtData->zpTableInfos,
-                                         pTab->pExtData->tableInfosLen, idxStr);
-
-  if (zSql == 0) {
-    pTabBase->zErrMsg = sqlite3_mprintf(
-        "crsql internal error generating the query to extract changes.");
-    return SQLITE_ERROR;
-  }
-
-  sqlite3_stmt *pStmt = 0;
-  rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
-  sqlite3_free(zSql);
-  if (rc != SQLITE_OK) {
-    pTabBase->zErrMsg = sqlite3_mprintf(
-        "error preparing stmt to extract changes %s %s", sqlite3_errmsg(db));
-    sqlite3_finalize(pStmt);
-    return rc;
-  }
-
-  // now bind the params.
-  // for each arg, bind.
-  for (int i = 0; i < argc; ++i) {
-    rc = sqlite3_bind_value(pStmt, i + 1, argv[i]);
-    if (rc != SQLITE_OK) {
-      pTabBase->zErrMsg = sqlite3_mprintf(
-          "error binding params to the statement to extract "
-          "changes.");
-      sqlite3_finalize(pStmt);
-      return rc;
-    }
-  }
-
-  pCrsr->pChangesStmt = pStmt;
-  return crsql_changes_next((sqlite3_vtab_cursor *)pCrsr);
-}
+int crsql_changes_filter(sqlite3_vtab_cursor *pVtabCursor, int idxNum,
+                         const char *idxStr, int argc, sqlite3_value **argv);
 
 static const char *getOperatorString(unsigned char op) {
   // SQLITE_INDEX_CONSTRAINT_NE
@@ -412,7 +348,7 @@ sqlite3_module crsql_changesModule = {
     /* xDestroy    */ 0,
     /* xOpen       */ changesOpen,
     /* xClose      */ changesClose,
-    /* xFilter     */ changesFilter,
+    /* xFilter     */ crsql_changes_filter,
     /* xNext       */ crsql_changes_next,
     /* xEof        */ crsql_changes_eof,
     /* xColumn     */ crsql_changes_column,

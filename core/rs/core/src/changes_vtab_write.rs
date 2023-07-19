@@ -1,5 +1,6 @@
 use alloc::ffi::CString;
 use alloc::format;
+use alloc::string::String;
 use alloc::vec::Vec;
 use core::ffi::{c_char, c_int, c_void, CStr};
 use core::mem::forget;
@@ -13,9 +14,9 @@ use crate::c::{
     CachedStmtType,
 };
 use crate::compare_values::crsql_compare_sqlite_values;
-use crate::pack_columns::bind_package_to_stmt;
-use crate::ColumnValue;
+use crate::pack_columns::{bind_package_to_stmt, crsql_bind_unpacked_values};
 use crate::{c::crsql_ExtData, pack_columns::RawVec};
+use crate::{consts, ColumnValue};
 
 /**
  * We can make this more idiomatic once we have no more c callers of this method.
@@ -77,26 +78,13 @@ unsafe fn did_cid_win(
         *errmsg = err.into_raw();
         return Err(ResultCode::ERROR);
     }
-    let mut col_vrsn_stmt = crsql_getCachedStmt(ext_data, stmt_key);
-    if col_vrsn_stmt.is_null() {
-        let stmt = db.prepare_v3(
-          &format!(
-            "SELECT __crsql_col_version FROM \"{table_name}__crsql_clock\" WHERE {pk_where_list} AND ? = __crsql_col_name",
-            table_name = crate::util::escape_ident(insert_tbl_str),
-            pk_where_list = pk_where_list,
-          ),
-          sqlite::PREPARE_PERSISTENT
-        );
-        if let Ok(stmt) = stmt {
-            crsql_setCachedStmt(ext_data, stmt_key, stmt.stmt);
-            col_vrsn_stmt = stmt.stmt;
-            forget(stmt);
-        } else {
-            sqlite::free(stmt_key as *mut c_void);
-        }
-    } else {
-        sqlite::free(stmt_key as *mut c_void);
-    }
+    let mut col_vrsn_stmt = get_cached_stmt_rt_wt(db, ext_data, stmt_key, || {
+        format!(
+          "SELECT __crsql_col_version FROM \"{table_name}__crsql_clock\" WHERE {pk_where_list} AND ? = __crsql_col_name",
+          table_name = crate::util::escape_ident(insert_tbl_str),
+          pk_where_list = pk_where_list,
+        )
+    })?;
 
     let unpacked_pks = Vec::from_raw_parts(
         raw_pks.ptr as *mut ColumnValue,
@@ -155,27 +143,14 @@ unsafe fn did_cid_win(
         *errmsg = err.into_raw();
         return Err(ResultCode::ERROR);
     }
-    let mut col_val_stmt = crsql_getCachedStmt(ext_data, stmt_key);
-    if col_val_stmt.is_null() {
-        let stmt = db.prepare_v3(
-            &format!(
-                "SELECT \"{col_name}\" FROM \"{table_name}\" WHERE {pk_where_list}",
-                col_name = crate::util::escape_ident(col_name_str),
-                table_name = crate::util::escape_ident(insert_tbl_str),
-                pk_where_list = pk_where_list,
-            ),
-            sqlite::PREPARE_PERSISTENT,
-        );
-        if let Ok(stmt) = stmt {
-            crsql_setCachedStmt(ext_data, stmt_key, stmt.stmt);
-            col_val_stmt = stmt.stmt;
-            forget(stmt);
-        } else {
-            sqlite::free(stmt_key as *mut c_void);
-        }
-    } else {
-        sqlite::free(stmt_key as *mut c_void);
-    }
+    let mut col_val_stmt = get_cached_stmt_rt_wt(db, ext_data, stmt_key, || {
+        format!(
+            "SELECT \"{col_name}\" FROM \"{table_name}\" WHERE {pk_where_list}",
+            col_name = crate::util::escape_ident(col_name_str),
+            table_name = crate::util::escape_ident(insert_tbl_str),
+            pk_where_list = pk_where_list,
+        )
+    })?;
 
     let unpacked_pks = Vec::from_raw_parts(
         raw_pks.ptr as *mut ColumnValue,
@@ -213,4 +188,89 @@ unsafe fn did_cid_win(
     }
 }
 
-pub extern "C" fn crsql_check_for_local_delete() -> c_int {}
+#[no_mangle]
+pub unsafe extern "C" fn crsql_check_for_local_delete(
+    db: *mut sqlite::sqlite3,
+    ext_data: *mut crsql_ExtData,
+    tbl_name: *const c_char,
+    pk_where_list: *mut c_char,
+    raw_pks: RawVec,
+) -> c_int {
+    match check_for_local_delete(db, ext_data, tbl_name, pk_where_list, raw_pks) {
+        Ok(c_rc) => c_rc,
+        Err(rc) => rc as c_int,
+    }
+}
+
+unsafe fn check_for_local_delete(
+    db: *mut sqlite::sqlite3,
+    ext_data: *mut crsql_ExtData,
+    tbl_name: *const c_char,
+    pk_where_list: *mut c_char,
+    raw_pks: RawVec,
+) -> Result<c_int, ResultCode> {
+    let tbl_name_str = CStr::from_ptr(tbl_name).to_str()?;
+    let pk_where_list = CStr::from_ptr(pk_where_list).to_str()?;
+
+    let stmt_key = crsql_getCacheKeyForStmtType(
+        CachedStmtType::CheckForLocalDelete as i32,
+        tbl_name,
+        null_mut(),
+    );
+    if stmt_key.is_null() {
+        return Err(ResultCode::ERROR);
+    }
+
+    let check_del_stmt = get_cached_stmt_rt_wt(db, ext_data, stmt_key, || {
+        format!(
+          "SELECT 1 FROM \"{table_name}__crsql_clock\" WHERE {pk_where_list} AND __crsql_col_name = '{delete_sentinel}' LIMIT 1",
+          table_name = tbl_name_str,
+          pk_where_list = pk_where_list,
+          delete_sentinel = crate::c::DELETE_SENTINEL,
+        )
+    })?;
+
+    let c_rc = crsql_bind_unpacked_values(check_del_stmt, raw_pks);
+    if c_rc != ResultCode::OK as c_int {
+        crsql_resetCachedStmt(check_del_stmt);
+        return Err(ResultCode::ERROR);
+    }
+
+    let step_result = check_del_stmt.step();
+    crsql_resetCachedStmt(check_del_stmt);
+    match step_result {
+        Ok(ResultCode::ROW) => Ok(consts::DELETED_LOCALLY),
+        Ok(ResultCode::DONE) => Ok(ResultCode::OK as c_int),
+        Ok(rc) | Err(rc) => {
+            crsql_resetCachedStmt(check_del_stmt);
+            Err(rc)
+        }
+    }
+}
+
+unsafe fn get_cached_stmt_rt_wt<F>(
+    db: *mut sqlite::sqlite3,
+    ext_data: *mut crsql_ExtData,
+    key: *mut c_char,
+    query_builder: F,
+) -> Result<*mut sqlite::stmt, ResultCode>
+where
+    F: Fn() -> String,
+{
+    let mut ret = crsql_getCachedStmt(ext_data, key);
+    if ret.is_null() {
+        let sql = query_builder();
+        if let Ok(stmt) = db.prepare_v3(&sql, sqlite::PREPARE_PERSISTENT) {
+            crsql_setCachedStmt(ext_data, key, stmt.stmt);
+            ret = stmt.stmt;
+            forget(stmt);
+        } else {
+            sqlite::free(key as *mut c_void);
+            return Err(ResultCode::ERROR);
+        }
+    } else {
+        sqlite::free(key as *mut c_void);
+    }
+
+    Ok(ret)
+}

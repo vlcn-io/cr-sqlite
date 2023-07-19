@@ -212,3 +212,5 @@ unsafe fn did_cid_win(
         }
     }
 }
+
+pub extern "C" fn crsql_check_for_local_delete() -> c_int {}

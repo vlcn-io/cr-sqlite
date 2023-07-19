@@ -19,7 +19,6 @@ void crsqlTestSuite();
 void crsqlTriggersTestSuite();
 void crsqlChangesVtabReadTestSuite();
 void crsqlChangesVtabTestSuite();
-void crsqlChangesVtabWriteTestSuite();
 void crsqlChangesVtabCommonTestSuite();
 void crsqlExtDataTestSuite();
 void crsqlFractSuite();
@@ -40,7 +39,6 @@ int main(int argc, char *argv[]) {
   SUITE("triggers") crsqlTriggersTestSuite();
   SUITE("vtab") crsqlChangesVtabTestSuite();
   SUITE("vtabread") crsqlChangesVtabReadTestSuite();
-  SUITE("vtabwrite") crsqlChangesVtabWriteTestSuite();
   SUITE("vtabcommon") crsqlChangesVtabCommonTestSuite();
   SUITE("extdata") crsqlExtDataTestSuite();
   // integration tests should come at the end given fixing unit tests will

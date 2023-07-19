@@ -1,5 +1,6 @@
 extern crate alloc;
 use crate::alloc::string::ToString;
+use crate::changes_vtab_write::crsql_merge_insert;
 use alloc::format;
 use alloc::string::String;
 use core::ffi::{c_char, c_int, c_void, CStr};
@@ -16,8 +17,8 @@ use sqlite_nostd::ResultCode;
 
 use crate::c::{
     crsql_Changes_cursor, crsql_Changes_vtab, crsql_ensureTableInfosAreUpToDate,
-    crsql_getCacheKeyForStmtType, crsql_getCachedStmt, crsql_mergeInsert, crsql_resetCachedStmt,
-    crsql_setCachedStmt, ChangeRowType, ClockUnionColumn, CrsqlChangesColumn,
+    crsql_getCacheKeyForStmtType, crsql_getCachedStmt, crsql_resetCachedStmt, crsql_setCachedStmt,
+    ChangeRowType, ClockUnionColumn, CrsqlChangesColumn,
 };
 use crate::changes_vtab_read::{changes_union_query, row_patch_data_query};
 use crate::pack_columns::bind_package_to_stmt;
@@ -365,6 +366,7 @@ unsafe fn changes_next(
     let tbl_info_index = crate::c::crsql_indexofTableInfo(
         (*(*(*cursor).pTab).pExtData).zpTableInfos,
         (*(*(*cursor).pTab).pExtData).tableInfosLen,
+        // this should be safe since the underlying memory from column_text is null terminated at slice_len + 1.
         tbl.as_ptr() as *const c_char,
     );
 
@@ -553,7 +555,7 @@ pub extern "C" fn crsql_changes_update(
         // insert statement
         // argv[1] is the rowid.. but why would it ever be filled for us?
         let mut err_msg = null_mut();
-        let rc = unsafe { crsql_mergeInsert(vtab, argc, argv, row_id, &mut err_msg as *mut _) };
+        let rc = unsafe { crsql_merge_insert(vtab, argc, argv, row_id, &mut err_msg as *mut _) };
         if rc != ResultCode::OK as c_int {
             unsafe {
                 (*vtab).zErrMsg = err_msg;

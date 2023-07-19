@@ -1,4 +1,4 @@
-use sqlite::{Connection, ManagedConnection, ResultCode};
+use sqlite::{Connection, ResultCode};
 use sqlite_nostd as sqlite;
 
 #[test]

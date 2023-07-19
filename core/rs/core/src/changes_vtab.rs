@@ -1,5 +1,7 @@
 extern crate alloc;
+use crate::alloc::string::ToString;
 use alloc::format;
+use alloc::string::String;
 use core::ffi::{c_char, c_int, c_void, CStr};
 use core::mem::forget;
 use core::ptr::null_mut;
@@ -36,6 +38,199 @@ fn changes_crsr_finalize(crsr: *mut crsql_Changes_cursor) -> c_int {
         (*crsr).dbVersion = crate::consts::MIN_POSSIBLE_DB_VERSION;
 
         return rc;
+    }
+}
+
+// A very c-style port. We can get more idiomatic once we finish the rust port and have test and perf parity
+#[no_mangle]
+pub unsafe extern "C" fn crsql_changes_best_index(
+    vtab: *mut sqlite::vtab,
+    index_info: *mut sqlite::index_info,
+) -> c_int {
+    match changes_best_index(vtab, index_info) {
+        Ok(rc) => rc as c_int,
+        Err(rc) => rc as c_int,
+    }
+}
+
+fn changes_best_index(
+    vtab: *mut sqlite::vtab,
+    index_info: *mut sqlite::index_info,
+) -> Result<ResultCode, ResultCode> {
+    let mut idx_num: i32 = 0;
+    let vtab = vtab.cast::<crsql_Changes_vtab>();
+
+    let mut first_constraint = true;
+    let mut str = String::new();
+    let constraints = sqlite::args!((*index_info).nConstraint, (*index_info).aConstraint);
+    let constraint_usage =
+        sqlite::args_mut!((*index_info).nConstraint, (*index_info).aConstraintUsage);
+    let mut arg_v_index = 1;
+    for (i, constraint) in constraints.iter().enumerate() {
+        if !constraint_is_usable(constraint) {
+            continue;
+        }
+        let col = CrsqlChangesColumn::from_i32(constraint.iColumn);
+        if let Some(col_name) = get_clock_table_col_name(&col) {
+            if let Some(op_string) = get_operator_string(constraint.op) {
+                if first_constraint {
+                    str.push_str("WHERE ");
+                    first_constraint = false
+                } else {
+                    str.push_str(" AND ");
+                }
+
+                if constraint.op == sqlite::INDEX_CONSTRAINT_ISNOTNULL as u8
+                    || constraint.op == sqlite::INDEX_CONSTRAINT_ISNULL as u8
+                {
+                    str.push_str(&format!("{} {}", col_name, op_string));
+                    constraint_usage[i].argvIndex = 0;
+                    constraint_usage[i].omit = 1;
+                } else {
+                    str.push_str(&format!("{} {} ?", col_name, op_string));
+                    constraint_usage[i].argvIndex = arg_v_index;
+                    constraint_usage[i].omit = 1;
+                    arg_v_index += 1;
+                }
+            }
+        }
+
+        // idx bit mask
+        match col {
+            Some(CrsqlChangesColumn::DbVrsn) => idx_num |= 2,
+            Some(CrsqlChangesColumn::SiteId) => idx_num |= 4,
+            _ => {}
+        }
+    }
+
+    let mut desc = 0;
+    let order_bys = sqlite::args!((*index_info).nOrderBy, (*index_info).aOrderBy);
+    let mut order_by_consumed = true;
+    if order_bys.len() > 0 {
+        str.push_str(" ORDER BY ");
+    } else {
+        // The user didn't provide an ordering? Tack on a default one that will
+        // retrieve changes in-order
+        str.push_str(" ORDER BY db_vrsn, seq ASC");
+    }
+    first_constraint = true;
+    for order_by in order_bys {
+        desc = order_by.desc;
+        let col = CrsqlChangesColumn::from_i32(order_by.iColumn);
+        if let Some(col_name) = get_clock_table_col_name(&col) {
+            if first_constraint {
+                first_constraint = false;
+            } else {
+                str.push_str(", ");
+            }
+            str.push_str(&col_name);
+        } else {
+            // TODO: test we're consuming
+            order_by_consumed = false;
+        }
+    }
+
+    if order_bys.len() > 0 {
+        if desc != 0 {
+            str.push_str(" DESC");
+        } else {
+            str.push_str(" ASC");
+        }
+    }
+
+    // manual null-term since we'll pass to C
+    str.push('\0');
+
+    // TODO: update your order by py test to explain query plans to ensure correct indices are selected
+    // both constraints are present. Also to check that order by is consumed.
+    if idx_num & 6 == 6 {
+        unsafe {
+            (*index_info).estimatedCost = 1.0;
+            (*index_info).estimatedRows = 1;
+        }
+    }
+    // only the version constraint is present
+    else if idx_num & 2 == 2 {
+        unsafe {
+            (*index_info).estimatedCost = 10.0;
+            (*index_info).estimatedRows = 10;
+        }
+    }
+    // only the requestor constraint is present
+    else if idx_num & 4 == 4 {
+        unsafe {
+            (*index_info).estimatedCost = 2147483647.0;
+            (*index_info).estimatedRows = 2147483647;
+        }
+    }
+    // no constraints are present
+    else {
+        unsafe {
+            (*index_info).estimatedCost = 2147483647.0;
+            (*index_info).estimatedRows = 2147483647;
+        }
+    }
+
+    unsafe {
+        (*index_info).idxNum = idx_num;
+        (*index_info).orderByConsumed = if order_by_consumed { 1 } else { 0 };
+        // forget str
+        let (ptr, _, _) = str.into_raw_parts();
+        // pass to c. We've manually null terminated the string.
+        // sqlite will free it for us.
+        (*index_info).idxStr = ptr as *mut i8;
+        (*index_info).needToFreeIdxStr = 1;
+    }
+
+    Ok(ResultCode::OK)
+}
+
+fn constraint_is_usable(constraint: &sqlite::index_constraint) -> bool {
+    if constraint.usable == 0 {
+        return false;
+    }
+    if let Some(col) = CrsqlChangesColumn::from_i32(constraint.iColumn) {
+        match col {
+            CrsqlChangesColumn::Tbl | CrsqlChangesColumn::Pk | CrsqlChangesColumn::Cval => false,
+            _ => true,
+        }
+    } else {
+        false
+    }
+}
+
+fn get_clock_table_col_name(col: &Option<CrsqlChangesColumn>) -> Option<String> {
+    match col {
+        Some(CrsqlChangesColumn::Tbl) => Some("tbl".to_string()),
+        Some(CrsqlChangesColumn::Pk) => Some("pks".to_string()),
+        Some(CrsqlChangesColumn::Cid) => Some("cid".to_string()),
+        Some(CrsqlChangesColumn::Cval) => None,
+        Some(CrsqlChangesColumn::ColVrsn) => Some("col_vrsn".to_string()),
+        Some(CrsqlChangesColumn::DbVrsn) => Some("db_vrsn".to_string()),
+        Some(CrsqlChangesColumn::SiteId) => Some("site_id".to_string()),
+        Some(CrsqlChangesColumn::Seq) => Some("seq".to_string()),
+        None => None,
+    }
+}
+
+fn get_operator_string(op: u8) -> Option<String> {
+    // TODO: convert to proper enum
+    match op as u32 {
+        sqlite::INDEX_CONSTRAINT_EQ => Some("=".to_string()),
+        sqlite::INDEX_CONSTRAINT_GT => Some(">".to_string()),
+        sqlite::INDEX_CONSTRAINT_LE => Some("<=".to_string()),
+        sqlite::INDEX_CONSTRAINT_LT => Some("<".to_string()),
+        sqlite::INDEX_CONSTRAINT_GE => Some(">=".to_string()),
+        sqlite::INDEX_CONSTRAINT_MATCH => Some("MATCH".to_string()),
+        sqlite::INDEX_CONSTRAINT_LIKE => Some("LIKE".to_string()),
+        sqlite::INDEX_CONSTRAINT_GLOB => Some("GLOB".to_string()),
+        sqlite::INDEX_CONSTRAINT_REGEXP => Some("REGEXP".to_string()),
+        sqlite::INDEX_CONSTRAINT_NE => Some("!=".to_string()),
+        sqlite::INDEX_CONSTRAINT_ISNOT => Some("IS NOT".to_string()),
+        sqlite::INDEX_CONSTRAINT_ISNOTNULL => Some("IS NOT NULL".to_string()),
+        sqlite::INDEX_CONSTRAINT_ISNULL => Some("IS NULL".to_string()),
+        sqlite::INDEX_CONSTRAINT_IS => Some("IS".to_string()),
+        _ => None,
     }
 }
 

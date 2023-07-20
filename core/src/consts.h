@@ -8,9 +8,6 @@
 
 #define __CRSQL_CLOCK_LEN 13
 
-#define DELETE_CID_SENTINEL "__crsql_del"
-#define PKS_ONLY_CID_SENTINEL "__crsql_pko"
-
 #define CRR_SPACE 0
 #define USER_SPACE 1
 

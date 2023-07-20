@@ -12,17 +12,6 @@ pub static DELETE_SENTINEL: &str = "__crsql_del";
 // pub static INSERT_SENTINEL_CSTR: &str = "__crsql_pko\0";
 // pub static DELETE_SENTINEL_CSTR: &str = "__crsql_del\0";
 
-pub enum CachedStmtType {
-    SetWinnerClock = 0,
-    CheckForLocalDelete = 1,
-    GetColVersion = 2,
-    GetCurrValue = 3,
-    MergePkOnlyInsert = 4,
-    MergeDelete = 5,
-    MergeInsert = 6,
-    RowPatchData = 7,
-}
-
 #[derive(FromPrimitive, PartialEq, Debug)]
 pub enum CrsqlChangesColumn {
     Tbl = 0,
@@ -129,11 +118,6 @@ extern "C" {
         len: ::core::ffi::c_int,
         tblName: *const ::core::ffi::c_char,
     ) -> ::core::ffi::c_int;
-    pub fn crsql_getCacheKeyForStmtType(
-        stmt_type: c_int,
-        zTblName: *const c_char,
-        mzColName: *const c_char,
-    ) -> *mut c_char;
     pub fn crsql_getCachedStmt(
         pExtData: *mut crsql_ExtData,
         zKey: *const c_char,

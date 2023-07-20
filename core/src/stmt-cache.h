@@ -18,7 +18,5 @@ sqlite3_stmt *crsql_getCachedStmt(crsql_ExtData *pExtData, const char *zKey);
 void crsql_setCachedStmt(crsql_ExtData *pExtData, char *zKey,
                          sqlite3_stmt *pStmt);
 void crsql_clearStmtCache(crsql_ExtData *pExtData);
-char *crsql_getCacheKeyForStmtType(int stmtType, const char *zTblName,
-                                   const char *mzColName);
 int crsql_resetCachedStmt(sqlite3_stmt *pStmt);
 #endif

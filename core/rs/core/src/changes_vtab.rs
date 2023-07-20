@@ -1,9 +1,10 @@
 extern crate alloc;
 use crate::alloc::string::ToString;
 use crate::changes_vtab_write::crsql_merge_insert;
+use crate::stmt_cache::{get_cache_key, set_cached_stmt, CachedStmtType};
 use alloc::format;
 use alloc::string::String;
-use core::ffi::{c_char, c_int, c_void, CStr};
+use core::ffi::{c_char, c_int, CStr};
 use core::mem::forget;
 use core::ptr::null_mut;
 use core::slice;
@@ -17,8 +18,8 @@ use sqlite_nostd::ResultCode;
 
 use crate::c::{
     crsql_Changes_cursor, crsql_Changes_vtab, crsql_ensureTableInfosAreUpToDate,
-    crsql_getCacheKeyForStmtType, crsql_getCachedStmt, crsql_resetCachedStmt, crsql_setCachedStmt,
-    ChangeRowType, ClockUnionColumn, CrsqlChangesColumn,
+    crsql_getCachedStmt, crsql_resetCachedStmt, ChangeRowType, ClockUnionColumn,
+    CrsqlChangesColumn,
 };
 use crate::changes_vtab_read::{changes_union_query, row_patch_data_query};
 use crate::pack_columns::bind_package_to_stmt;
@@ -400,12 +401,8 @@ unsafe fn changes_next(
         (*cursor).rowType = ChangeRowType::Update as c_int;
     }
 
-    let stmt_key = crsql_getCacheKeyForStmtType(
-        crate::c::CachedStmtType::RowPatchData as i32,
-        (*tbl_info).tblName,
-        cid.as_ptr() as *const c_char,
-    );
-    let mut row_stmt = crsql_getCachedStmt((*(*cursor).pTab).pExtData, stmt_key);
+    let stmt_key = get_cache_key(CachedStmtType::RowPatchData, tbl, Some(cid))?;
+    let mut row_stmt = crsql_getCachedStmt((*(*cursor).pTab).pExtData, stmt_key.as_ptr());
     if row_stmt.is_null() {
         let sql = row_patch_data_query(tbl_info, cid);
         if let Some(sql) = sql {
@@ -413,7 +410,7 @@ unsafe fn changes_next(
                 .db
                 .prepare_v3(&sql, sqlite::PREPARE_PERSISTENT)?;
             // the cache takes ownership of stmt and stmt_key
-            crsql_setCachedStmt((*(*cursor).pTab).pExtData, stmt_key, stmt.stmt);
+            set_cached_stmt((*(*cursor).pTab).pExtData, stmt_key, stmt.stmt);
             row_stmt = stmt.stmt;
             forget(stmt);
         } else {
@@ -422,11 +419,8 @@ unsafe fn changes_next(
                 tbl
             ))?;
             (*vtab).zErrMsg = err.into_raw();
-            sqlite::free(stmt_key as *mut c_void);
             return Err(ResultCode::ERROR);
         }
-    } else {
-        sqlite::free(stmt_key as *mut c_void);
     }
 
     let packed_pks = pks.blob();

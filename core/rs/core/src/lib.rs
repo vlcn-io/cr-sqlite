@@ -12,6 +12,7 @@ mod compare_values;
 mod consts;
 mod is_crr;
 mod pack_columns;
+mod stmt_cache;
 mod teardown;
 mod triggers;
 mod unpack_columns_vtab;

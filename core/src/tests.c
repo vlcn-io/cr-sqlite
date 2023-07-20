@@ -25,7 +25,6 @@ void crsqlFractSuite();
 void crsqlIsCrrTestSuite();
 void rowsImpactedTestSuite();
 void crsqlChangesVtabRowidTestSuite();
-void crsqlStmtCacheTestSuite();
 void crsqlSandboxSuite();
 
 int main(int argc, char *argv[]) {
@@ -47,7 +46,6 @@ int main(int argc, char *argv[]) {
   SUITE("is_crr") crsqlIsCrrTestSuite();
   SUITE("rows_impacted") rowsImpactedTestSuite();
   SUITE("rowid") crsqlChangesVtabRowidTestSuite();
-  SUITE("stmt_cache") crsqlStmtCacheTestSuite();
   SUITE("sandbox") crsqlSandboxSuite();
 
   sqlite3_shutdown();

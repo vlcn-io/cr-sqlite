@@ -85,7 +85,7 @@ pub struct crsql_ExtData {
     pub seq: ::core::ffi::c_int,
     pub pSetSyncBitStmt: *mut sqlite::stmt,
     pub pClearSyncBitStmt: *mut sqlite::stmt,
-    pub hStmts: *mut ::core::ffi::c_void,
+    pub pStmtCache: *mut ::core::ffi::c_void,
 }
 
 #[repr(C)]
@@ -112,21 +112,11 @@ pub struct crsql_Changes_cursor {
 }
 
 extern "C" {
-    pub fn crsql_resetCachedStmt(stmt: *mut sqlite::stmt) -> ::core::ffi::c_int;
     pub fn crsql_indexofTableInfo(
         tblInfos: *mut *mut crsql_TableInfo,
         len: ::core::ffi::c_int,
         tblName: *const ::core::ffi::c_char,
     ) -> ::core::ffi::c_int;
-    pub fn crsql_getCachedStmt(
-        pExtData: *mut crsql_ExtData,
-        zKey: *const c_char,
-    ) -> *mut sqlite::stmt;
-    pub fn crsql_setCachedStmt(
-        pExtData: *mut crsql_ExtData,
-        zKey: *mut c_char,
-        pStmt: *mut sqlite::stmt,
-    );
     pub fn crsql_ensureTableInfosAreUpToDate(
         db: *mut sqlite::sqlite3,
         pExtData: *mut crsql_ExtData,

@@ -4,19 +4,22 @@ use alloc::string::String;
 use alloc::vec::Vec;
 use core::ffi::{c_char, c_int, CStr};
 use core::mem::forget;
+use core::ptr::null_mut;
 use core::slice;
 use sqlite::{Connection, Stmt};
 use sqlite_nostd as sqlite;
 use sqlite_nostd::{sqlite3, ResultCode, Value};
 
 use crate::c::{
-    crsql_Changes_vtab, crsql_TableInfo, crsql_ensureTableInfosAreUpToDate, crsql_getCachedStmt,
-    crsql_indexofTableInfo, crsql_resetCachedStmt, CrsqlChangesColumn,
+    crsql_Changes_vtab, crsql_TableInfo, crsql_ensureTableInfosAreUpToDate, crsql_indexofTableInfo,
+    CrsqlChangesColumn,
 };
 use crate::c::{crsql_ExtData, crsql_columnExists};
 use crate::compare_values::crsql_compare_sqlite_values;
 use crate::pack_columns::bind_package_to_stmt;
-use crate::stmt_cache::{get_cache_key, set_cached_stmt, CachedStmtType};
+use crate::stmt_cache::{
+    get_cache_key, get_cached_stmt, reset_cached_stmt, set_cached_stmt, CachedStmtType,
+};
 use crate::util::{self, slab_rowid};
 use crate::{unpack_columns, ColumnValue};
 
@@ -42,7 +45,7 @@ unsafe fn did_cid_win(
 
     let bind_result = bind_package_to_stmt(col_vrsn_stmt, &unpacked_pks);
     if let Err(rc) = bind_result {
-        crsql_resetCachedStmt(col_vrsn_stmt);
+        reset_cached_stmt(col_vrsn_stmt)?;
         return Err(rc);
     }
     if let Err(rc) = col_vrsn_stmt.bind_text(
@@ -50,14 +53,14 @@ unsafe fn did_cid_win(
         col_name,
         sqlite::Destructor::STATIC,
     ) {
-        crsql_resetCachedStmt(col_vrsn_stmt);
+        reset_cached_stmt(col_vrsn_stmt)?;
         return Err(rc);
     }
 
     match col_vrsn_stmt.step() {
         Ok(ResultCode::ROW) => {
             let local_version = col_vrsn_stmt.column_int64(0);
-            crsql_resetCachedStmt(col_vrsn_stmt);
+            reset_cached_stmt(col_vrsn_stmt)?;
             if col_version > local_version {
                 return Ok(true);
             } else if col_version < local_version {
@@ -65,13 +68,13 @@ unsafe fn did_cid_win(
             }
         }
         Ok(ResultCode::DONE) => {
-            crsql_resetCachedStmt(col_vrsn_stmt);
+            reset_cached_stmt(col_vrsn_stmt)?;
             // no rows returned
             // of course the incoming change wins if there's nothing there locally.
             return Ok(true);
         }
         Ok(rc) | Err(rc) => {
-            crsql_resetCachedStmt(col_vrsn_stmt);
+            reset_cached_stmt(col_vrsn_stmt)?;
             let err = CString::new("Bad return code when selecting local column version")?;
             *errmsg = err.into_raw();
             return Err(rc);
@@ -94,7 +97,7 @@ unsafe fn did_cid_win(
 
     let bind_result = bind_package_to_stmt(col_val_stmt, &unpacked_pks);
     if let Err(rc) = bind_result {
-        crsql_resetCachedStmt(col_val_stmt);
+        reset_cached_stmt(col_val_stmt)?;
         return Err(rc);
     }
 
@@ -103,13 +106,13 @@ unsafe fn did_cid_win(
         Ok(ResultCode::ROW) => {
             let local_value = col_val_stmt.column_value(0);
             let ret = crsql_compare_sqlite_values(insert_val, local_value);
-            crsql_resetCachedStmt(col_val_stmt);
+            reset_cached_stmt(col_val_stmt)?;
             return Ok(ret > 0);
         }
         _ => {
             // ResultCode::DONE would happen if clock values exist but actual values are missing.
             // should we just allow the insert anyway?
-            crsql_resetCachedStmt(col_val_stmt);
+            reset_cached_stmt(col_val_stmt)?;
             let err = CString::new(format!(
                 "could not find row to merge with for tbl {}",
                 insert_tbl
@@ -140,17 +143,17 @@ unsafe fn check_for_local_delete(
 
     let rc = bind_package_to_stmt(check_del_stmt, unpacked_pks);
     if let Err(rc) = rc {
-        crsql_resetCachedStmt(check_del_stmt);
+        reset_cached_stmt(check_del_stmt)?;
         return Err(rc);
     }
 
     let step_result = check_del_stmt.step();
-    crsql_resetCachedStmt(check_del_stmt);
+    reset_cached_stmt(check_del_stmt)?;
     match step_result {
         Ok(ResultCode::ROW) => Ok(true),
         Ok(ResultCode::DONE) => Ok(false),
         Ok(rc) | Err(rc) => {
-            crsql_resetCachedStmt(check_del_stmt);
+            reset_cached_stmt(check_del_stmt)?;
             Err(rc)
         }
     }
@@ -159,13 +162,17 @@ unsafe fn check_for_local_delete(
 unsafe fn get_cached_stmt_rt_wt<F>(
     db: *mut sqlite::sqlite3,
     ext_data: *mut crsql_ExtData,
-    key: CString,
+    key: String,
     query_builder: F,
 ) -> Result<*mut sqlite::stmt, ResultCode>
 where
     F: Fn() -> String,
 {
-    let mut ret = crsql_getCachedStmt(ext_data, key.as_ptr());
+    let mut ret = if let Some(stmt) = get_cached_stmt(ext_data, &key) {
+        stmt
+    } else {
+        null_mut()
+    };
     if ret.is_null() {
         let sql = query_builder();
         if let Ok(stmt) = db.prepare_v3(&sql, sqlite::PREPARE_PERSISTENT) {
@@ -216,7 +223,7 @@ unsafe fn set_winner_clock(
 
     let bind_result = bind_package_to_stmt(set_stmt, unpacked_pks);
     if let Err(rc) = bind_result {
-        crsql_resetCachedStmt(set_stmt);
+        reset_cached_stmt(set_stmt)?;
         return Err(rc);
     }
     let bind_result = set_stmt
@@ -240,18 +247,18 @@ unsafe fn set_winner_clock(
         });
 
     if let Err(rc) = bind_result {
-        crsql_resetCachedStmt(set_stmt);
+        reset_cached_stmt(set_stmt)?;
         return Err(rc);
     }
 
     match set_stmt.step() {
         Ok(ResultCode::ROW) => {
             let rowid = set_stmt.column_int64(0);
-            crsql_resetCachedStmt(set_stmt);
+            reset_cached_stmt(set_stmt)?;
             Ok(rowid)
         }
         _ => {
-            crsql_resetCachedStmt(set_stmt);
+            reset_cached_stmt(set_stmt)?;
             Err(ResultCode::ERROR)
         }
     }
@@ -282,7 +289,7 @@ unsafe fn merge_pk_only_insert(
 
     let rc = bind_package_to_stmt(merge_stmt, unpacked_pks);
     if let Err(rc) = rc {
-        crsql_resetCachedStmt(merge_stmt);
+        reset_cached_stmt(merge_stmt)?;
         return Err(rc);
     }
     let rc = (*ext_data)
@@ -291,7 +298,8 @@ unsafe fn merge_pk_only_insert(
         .and_then(|_| (*ext_data).pSetSyncBitStmt.reset())
         .and_then(|_| merge_stmt.step());
 
-    crsql_resetCachedStmt(merge_stmt);
+    // TODO: report err?
+    let _ = reset_cached_stmt(merge_stmt);
 
     let sync_rc = (*ext_data)
         .pClearSyncBitStmt
@@ -344,7 +352,7 @@ unsafe fn merge_delete(
     })?;
 
     if let Err(rc) = bind_package_to_stmt(delete_stmt, unpacked_pks) {
-        crsql_resetCachedStmt(delete_stmt);
+        reset_cached_stmt(delete_stmt)?;
         return Err(rc);
     }
     let rc = (*ext_data)
@@ -353,7 +361,7 @@ unsafe fn merge_delete(
         .and_then(|_| (*ext_data).pSetSyncBitStmt.reset())
         .and_then(|_| delete_stmt.step());
 
-    crsql_resetCachedStmt(delete_stmt);
+    reset_cached_stmt(delete_stmt)?;
 
     let sync_rc = (*ext_data)
         .pClearSyncBitStmt
@@ -580,7 +588,7 @@ unsafe fn merge_insert(
         .and_then(|_| merge_stmt.bind_value(unpacked_pks.len() as i32 + 1, insert_val))
         .and_then(|_| merge_stmt.bind_value(unpacked_pks.len() as i32 + 2, insert_val));
     if let Err(rc) = bind_result {
-        crsql_resetCachedStmt(merge_stmt);
+        reset_cached_stmt(merge_stmt)?;
         return Err(rc);
     }
 
@@ -590,7 +598,7 @@ unsafe fn merge_insert(
         .and_then(|_| (*(*tab).pExtData).pSetSyncBitStmt.reset())
         .and_then(|_| merge_stmt.step());
 
-    crsql_resetCachedStmt(merge_stmt);
+    reset_cached_stmt(merge_stmt)?;
 
     let sync_rc = (*(*tab).pExtData)
         .pClearSyncBitStmt

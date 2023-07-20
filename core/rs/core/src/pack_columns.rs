@@ -131,32 +131,6 @@ pub struct RawVec {
     pub cap: c_int,
 }
 
-/**
- * Interface for C to unpack the columns. Returns a raw pointer to the Vec<ColumnValue> which
- * holds the columns.
- *
- * C will own this memory once returned to C.
- */
-#[no_mangle]
-pub extern "C" fn crsql_unpack_columns(value: *mut sqlite::value) -> RawVec {
-    let packed_columns = value.blob();
-    match unpack_columns(packed_columns) {
-        Ok(unpacked) => {
-            let (ptr, len, cap) = unpacked.into_raw_parts();
-            RawVec {
-                ptr: ptr as *mut c_void,
-                len: len as c_int,
-                cap: cap as c_int,
-            }
-        }
-        Err(code) => RawVec {
-            ptr: core::ptr::null_mut(),
-            len: code as c_int,
-            cap: 0,
-        },
-    }
-}
-
 // TODO: make a table valued function that can be used to extract a row per packed column?
 pub fn unpack_columns(data: &[u8]) -> Result<Vec<ColumnValue>, ResultCode> {
     let mut ret = vec![];
@@ -216,46 +190,6 @@ pub fn unpack_columns(data: &[u8]) -> Result<Vec<ColumnValue>, ResultCode> {
     }
 
     Ok(ret)
-}
-
-#[no_mangle]
-pub extern "C" fn crsql_free_unpacked_values(values: RawVec) {
-    let unpacked = unsafe {
-        Vec::from_raw_parts(
-            values.ptr as *mut ColumnValue,
-            values.len as usize,
-            values.cap as usize,
-        )
-    };
-    drop(unpacked);
-}
-
-/**
-* Allows C to pass a reference to previously unpacked values.
-* C owns the memory of all unpacked values and must clean it up.
-*/
-#[no_mangle]
-pub extern "C" fn crsql_bind_unpacked_values(stmt: *mut sqlite::stmt, columns: RawVec) -> c_int {
-    bind_unpacked_values(stmt, &columns)
-}
-
-pub fn bind_unpacked_values(stmt: *mut sqlite::stmt, columns: &RawVec) -> c_int {
-    let unpacked = unsafe {
-        Vec::from_raw_parts(
-            columns.ptr as *mut ColumnValue,
-            columns.len as usize,
-            columns.cap as usize,
-        )
-    };
-    let bind_result = bind_package_to_stmt(stmt, &unpacked);
-    // forget our ownership of the vec. C owns it.
-    mem::forget(unpacked);
-
-    if let Ok(code) = bind_result {
-        return code as c_int;
-    }
-
-    return ResultCode::ERROR as c_int;
 }
 
 pub fn bind_package_to_stmt(

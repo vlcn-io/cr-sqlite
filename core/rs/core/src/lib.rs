@@ -1,6 +1,7 @@
 #![cfg_attr(not(test), no_std)]
 #![feature(vec_into_raw_parts)]
 
+mod alter;
 mod automigrate;
 mod backfill;
 mod bootstrap;

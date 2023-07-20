@@ -256,131 +256,8 @@ static void crsqlBeginAlterFunc(sqlite3_context *context, int argc,
   }
 }
 
-int crsql_compactPostAlter(sqlite3 *db, const char *tblName,
-                           crsql_ExtData *pExtData, char **errmsg) {
-  int rc = SQLITE_OK;
-  rc = crsql_getDbVersion(db, pExtData, errmsg);
-  if (rc != SQLITE_OK) {
-    return rc;
-  }
-  char *zSql = 0;
-  sqlite3_int64 currentDbVersion = pExtData->dbVersion;
-
-  // If primary key columns changes
-  // We need to drop, re-create and backfill
-  // the clock table.
-  // A change in pk columns means a change in all identities
-  // of all rows.
-  // We can determine this by comparing pks on clock table vs
-  // pks on source table
-  sqlite3_stmt *pStmt = 0;
-  zSql = sqlite3_mprintf(
-      "SELECT count(name) FROM (SELECT name FROM pragma_table_info('%q') "
-      "WHERE pk "
-      "> 0 AND name NOT IN "
-      "(SELECT name FROM pragma_table_info('%q__crsql_clock') WHERE pk > 0) "
-      "UNION "
-      "SELECT name FROM pragma_table_info('%q__crsql_clock') WHERE pk > 0 "
-      "AND "
-      "name NOT IN (SELECT name FROM pragma_table_info('%q') WHERE pk > 0) "
-      "AND "
-      "name != '__crsql_col_name');",
-      tblName, tblName, tblName, tblName);
-  rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
-  sqlite3_free(zSql);
-  if (rc != SQLITE_OK) {
-    return rc;
-  }
-  rc = sqlite3_step(pStmt);
-  if (rc != SQLITE_ROW) {
-    return rc;
-  }
-
-  int pkDiff = sqlite3_column_int(pStmt, 0);
-  sqlite3_finalize(pStmt);
-
-  if (pkDiff > 0) {
-    // drop the clock table so we can re-create it
-    zSql = sqlite3_mprintf("DROP TABLE \"%w__crsql_clock\"", tblName);
-    rc = sqlite3_exec(db, zSql, 0, 0, errmsg);
-    sqlite3_free(zSql);
-    if (rc != SQLITE_OK) {
-      return rc;
-    }
-  } else {
-    // clock table is still relevant but needs compacting
-    // in case columns were removed during the migration
-
-    // First delete entries that no longer have a column
-    zSql = sqlite3_mprintf(
-        "DELETE FROM \"%w__crsql_clock\" WHERE \"__crsql_col_name\" NOT IN "
-        "(SELECT name FROM pragma_table_info(%Q) UNION SELECT '%s' UNION "
-        "SELECT "
-        "'%s')",
-        tblName, tblName, DELETE_CID_SENTINEL, PKS_ONLY_CID_SENTINEL);
-    rc = sqlite3_exec(db, zSql, 0, 0, errmsg);
-    sqlite3_free(zSql);
-    if (rc != SQLITE_OK) {
-      return rc;
-    }
-
-    // Next delete entries that no longer have a row
-    sqlite3_str *pDynStr = sqlite3_str_new(db);
-    if (pDynStr == 0) {
-      return SQLITE_NOMEM;
-    }
-    sqlite3_str_appendf(
-        pDynStr,
-        "DELETE FROM \"%w__crsql_clock\" WHERE __crsql_col_name != "
-        "'__crsql_del' AND NOT EXISTS (SELECT 1 FROM "
-        "\"%w\" WHERE ",
-        tblName, tblName);
-    // get table info
-    rc = crsql_ensureTableInfosAreUpToDate(db, pExtData, errmsg);
-    if (rc != SQLITE_OK) {
-      zSql = sqlite3_str_finish(pDynStr);
-      sqlite3_free(zSql);
-      return rc;
-    }
-    crsql_TableInfo *tblInfo = crsql_findTableInfo(
-        pExtData->zpTableInfos, pExtData->tableInfosLen, (const char *)tblName);
-    if (tblInfo == 0) {
-      zSql = sqlite3_str_finish(pDynStr);
-      sqlite3_free(zSql);
-      return SQLITE_ERROR;
-    }
-    // for each pk col, append \"%w\".\"%w\" = \"%w__crsql_clock\".\"%w\"
-    // to the where clause then close the statement.
-    for (size_t i = 0; i < tblInfo->pksLen; i++) {
-      if (i > 0) {
-        sqlite3_str_appendall(pDynStr, " AND ");
-      }
-      sqlite3_str_appendf(pDynStr, "\"%w\".\"%w\" = \"%w__crsql_clock\".\"%w\"",
-                          tblName, tblInfo->pks[i].name, tblName,
-                          tblInfo->pks[i].name);
-    }
-    sqlite3_str_appendall(pDynStr, "LIMIT 1)");
-    zSql = sqlite3_str_finish(pDynStr);
-    rc = sqlite3_exec(db, zSql, 0, 0, errmsg);
-    sqlite3_free(zSql);
-    if (rc != SQLITE_OK) {
-      return rc;
-    }
-  }
-
-  rc = sqlite3_prepare_v2(db,
-                          "INSERT OR REPLACE INTO crsql_master (key, value) "
-                          "VALUES ('pre_compact_dbversion', ?)",
-                          -1, &pStmt, 0);
-  rc += sqlite3_bind_int64(pStmt, 1, currentDbVersion);
-  rc += sqlite3_step(pStmt);
-  if (rc != SQLITE_DONE) {
-    return rc;
-  }
-  rc = sqlite3_finalize(pStmt);
-
-  return rc;
-}
+int crsql_compact_post_alter(sqlite3 *db, const char *tblName,
+                             crsql_ExtData *pExtData, char **errmsg);
 
 static void crsqlCommitAlterFunc(sqlite3_context *context, int argc,
                                  sqlite3_value **argv) {
@@ -408,7 +285,7 @@ static void crsqlCommitAlterFunc(sqlite3_context *context, int argc,
   }
 
   crsql_ExtData *pExtData = (crsql_ExtData *)sqlite3_user_data(context);
-  rc = crsql_compactPostAlter(db, tblName, pExtData, &errmsg);
+  rc = crsql_compact_post_alter(db, tblName, pExtData, &errmsg);
   if (rc == SQLITE_OK) {
     rc = createCrr(context, db, schemaName, tblName, 1, &errmsg);
   }

@@ -117,6 +117,11 @@ extern "C" {
         len: ::core::ffi::c_int,
         tblName: *const ::core::ffi::c_char,
     ) -> ::core::ffi::c_int;
+    pub fn crsql_findTableInfo(
+        tblInfos: *mut *mut crsql_TableInfo,
+        len: c_int,
+        tblName: *const c_char,
+    ) -> *mut crsql_TableInfo;
     pub fn crsql_ensureTableInfosAreUpToDate(
         db: *mut sqlite::sqlite3,
         pExtData: *mut crsql_ExtData,
@@ -126,6 +131,11 @@ extern "C" {
         colName: *const c_char,
         colInfos: *mut crsql_ColumnInfo,
         colInfosLen: c_int,
+    ) -> c_int;
+    pub fn crsql_getDbVersion(
+        db: *mut sqlite::sqlite3,
+        ext_data: *mut crsql_ExtData,
+        err_msg: *mut *mut c_char,
     ) -> c_int;
 }
 

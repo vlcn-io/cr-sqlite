@@ -1,9 +1,11 @@
 extern crate alloc;
 
+use crate::alloc::string::ToString;
 use crate::c::crsql_ColumnInfo;
 use alloc::format;
 use alloc::string::String;
 use alloc::vec;
+use alloc::vec::Vec;
 use core::{ffi::CStr, str::Utf8Error};
 use sqlite::{sqlite3, ColumnType, Connection, ResultCode};
 use sqlite_nostd as sqlite;
@@ -71,6 +73,47 @@ pub fn pk_where_list(
         })
     }
     Ok(result.join(" AND "))
+}
+
+pub fn where_list(columns: &[crsql_ColumnInfo]) -> Result<String, Utf8Error> {
+    let mut result = vec![];
+    for c in columns {
+        let name = unsafe { CStr::from_ptr(c.name) };
+        result.push(format!(
+            "\"{col_name}\" = ?",
+            col_name = crate::util::escape_ident(name.to_str()?)
+        ));
+    }
+
+    Ok(result.join(" AND "))
+}
+
+pub fn binding_list(num_slots: usize) -> String {
+    core::iter::repeat('?')
+        .take(num_slots)
+        .map(|c| c.to_string())
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
+pub fn as_identifier_list(
+    columns: &[crsql_ColumnInfo],
+    prefix: Option<&str>,
+) -> Result<String, Utf8Error> {
+    let mut result = vec![];
+    for c in columns {
+        let name = unsafe { CStr::from_ptr(c.name) };
+        result.push(if let Some(prefix) = prefix {
+            format!(
+                "{}\"{}\"",
+                prefix,
+                crate::util::escape_ident(name.to_str()?)
+            )
+        } else {
+            format!("\"{}\"", crate::util::escape_ident(name.to_str()?))
+        })
+    }
+    Ok(result.join(","))
 }
 
 pub fn escape_ident(ident: &str) -> String {

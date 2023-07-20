@@ -10,38 +10,6 @@
 #include "get-table.h"
 #include "util.h"
 
-char *crsql_asIdentifierList(crsql_ColumnInfo *in, size_t inlen, char *prefix) {
-  if (inlen <= 0) {
-    return 0;
-  }
-
-  char **mapped = sqlite3_malloc(inlen * sizeof(char *));
-  int finalLen = 0;
-  char *ret = 0;
-
-  for (size_t i = 0; i < inlen; ++i) {
-    mapped[i] = sqlite3_mprintf("%s\"%w\"", prefix, in[i].name);
-    finalLen += strlen(mapped[i]);
-  }
-  // -1 for spearator not appended to last thing
-  finalLen += inlen - 1;
-
-  // + 1 for null terminator
-  ret = sqlite3_malloc(finalLen * sizeof(char) + 1);
-  ret[finalLen] = '\0';
-
-  crsql_joinWith(ret, mapped, inlen, ',');
-
-  // free everything we allocated, except ret.
-  // caller will free ret.
-  for (size_t i = 0; i < inlen; ++i) {
-    sqlite3_free(mapped[i]);
-  }
-  sqlite3_free(mapped);
-
-  return ret;
-}
-
 void crsql_freeColumnInfoContents(crsql_ColumnInfo *columnInfo) {
   sqlite3_free(columnInfo->name);
   sqlite3_free(columnInfo->type);

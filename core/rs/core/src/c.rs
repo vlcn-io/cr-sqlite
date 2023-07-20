@@ -1,11 +1,5 @@
 extern crate alloc;
-use crate::alloc::string::ToString;
-use alloc::format;
-use alloc::string::String;
-use alloc::vec;
-use alloc::vec::Vec;
-use core::ffi::{c_char, c_int, CStr};
-use core::str::Utf8Error;
+use core::ffi::{c_char, c_int};
 #[cfg(not(feature = "std"))]
 use num_derive::FromPrimitive;
 
@@ -103,49 +97,6 @@ pub struct crsql_ExtData {
     pub pSetSyncBitStmt: *mut sqlite::stmt,
     pub pClearSyncBitStmt: *mut sqlite::stmt,
     pub hStmts: *mut ::core::ffi::c_void,
-}
-
-// crsql_asIdentifierList
-pub fn as_identifier_list(
-    columns: &[crsql_ColumnInfo],
-    prefix: Option<&str>,
-) -> Result<String, Utf8Error> {
-    let mut result = vec![];
-    for c in columns {
-        let name = unsafe { CStr::from_ptr(c.name) };
-        result.push(if let Some(prefix) = prefix {
-            format!(
-                "{}\"{}\"",
-                prefix,
-                crate::util::escape_ident(name.to_str()?)
-            )
-        } else {
-            format!("\"{}\"", crate::util::escape_ident(name.to_str()?))
-        })
-    }
-    Ok(result.join(","))
-}
-
-// crsql_extractWhereList
-pub fn where_list(columns: &[crsql_ColumnInfo]) -> Result<String, Utf8Error> {
-    let mut result = vec![];
-    for c in columns {
-        let name = unsafe { CStr::from_ptr(c.name) };
-        result.push(format!(
-            "\"{col_name}\" = ?",
-            col_name = crate::util::escape_ident(name.to_str()?)
-        ));
-    }
-
-    Ok(result.join(" AND "))
-}
-
-pub fn binding_list(num_slots: usize) -> String {
-    core::iter::repeat('?')
-        .take(num_slots)
-        .map(|c| c.to_string())
-        .collect::<Vec<_>>()
-        .join(", ")
 }
 
 #[repr(C)]

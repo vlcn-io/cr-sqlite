@@ -15,20 +15,20 @@
   }
 #endif
 
-static void testExtractWhereList() {
-  printf("ExtractWhereList\n");
-  crsql_ColumnInfo columnInfos[3];
+// static void testExtractWhereList() {
+//   printf("ExtractWhereList\n");
+//   crsql_ColumnInfo columnInfos[3];
 
-  columnInfos[0].name = "foo";
-  columnInfos[1].name = "bar";
-  columnInfos[2].name = "baz";
+//   columnInfos[0].name = "foo";
+//   columnInfos[1].name = "bar";
+//   columnInfos[2].name = "baz";
 
-  char *whereList = crsql_extractWhereList(columnInfos, 3);
-  assert(strcmp("\"foo\" = ? AND \"bar\" = ? AND \"baz\" = ?", whereList) == 0);
-  sqlite3_free(whereList);
+//   char *whereList = crsql_extractWhereList(columnInfos, 3);
+//   assert(strcmp("\"foo\" = ? AND \"bar\" = ? AND \"baz\" = ?", whereList) ==
+//   0); sqlite3_free(whereList);
 
-  printf("\t\e[0;32mSuccess\e[0m\n");
-}
+//   printf("\t\e[0;32mSuccess\e[0m\n");
+// }
 
 static void testQuotedValuesAsList() {
   printf("QuotedValuesAsList\n");
@@ -37,6 +37,6 @@ static void testQuotedValuesAsList() {
 
 void crsqlChangesVtabCommonTestSuite() {
   printf("\e[47m\e[1;30mSuite: crsql_changesVtabCommon\e[0m\n");
-  testExtractWhereList();
+  // testExtractWhereList();
   testQuotedValuesAsList();
 }

@@ -24,7 +24,7 @@ fn crsql_changes_query_for_table(table_info: *mut crsql_TableInfo) -> Result<Str
     let table_name = unsafe { CStr::from_ptr((*table_info).tblName).to_str()? };
     let pk_columns =
         unsafe { slice::from_raw_parts((*table_info).pks, (*table_info).pksLen as usize) };
-    let pk_list = crate::c::as_identifier_list(pk_columns, None)?;
+    let pk_list = crate::util::as_identifier_list(pk_columns, None)?;
 
     Ok(format!(
         "SELECT
@@ -102,7 +102,7 @@ pub fn row_patch_data_query(table_info: *mut crsql_TableInfo, col_name: &str) ->
     let pk_columns =
         unsafe { slice::from_raw_parts((*table_info).pks, (*table_info).pksLen as usize) };
     if let Ok(table_name) = unsafe { CStr::from_ptr((*table_info).tblName).to_str() } {
-        if let Ok(where_list) = crate::c::where_list(pk_columns) {
+        if let Ok(where_list) = crate::util::where_list(pk_columns) {
             return Some(format!(
                 "SELECT \"{col_name}\" FROM \"{table_name}\" WHERE {where_list}\0",
                 col_name = crate::util::escape_ident(col_name),

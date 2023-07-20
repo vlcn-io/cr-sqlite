@@ -190,7 +190,7 @@ fn create_clock_table(
     _err: *mut *mut c_char,
 ) -> Result<ResultCode, ResultCode> {
     let columns = sqlite::args!((*table_info).pksLen, (*table_info).pks);
-    let pk_list = crate::c::as_identifier_list(columns, None)?;
+    let pk_list = crate::util::as_identifier_list(columns, None)?;
     let table_name = unsafe { CStr::from_ptr((*table_info).tblName).to_str() }?;
 
     db.exec_safe(&format!(

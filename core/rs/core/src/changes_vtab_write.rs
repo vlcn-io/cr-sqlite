@@ -23,7 +23,7 @@ use crate::stmt_cache::{
 use crate::util::{self, slab_rowid};
 use crate::{unpack_columns, ColumnValue};
 
-unsafe fn did_cid_win(
+fn did_cid_win(
     db: *mut sqlite3,
     ext_data: *mut crsql_ExtData,
     insert_tbl: &str,
@@ -76,7 +76,7 @@ unsafe fn did_cid_win(
         Ok(rc) | Err(rc) => {
             reset_cached_stmt(col_vrsn_stmt)?;
             let err = CString::new("Bad return code when selecting local column version")?;
-            *errmsg = err.into_raw();
+            unsafe { *errmsg = err.into_raw() };
             return Err(rc);
         }
     }
@@ -117,13 +117,13 @@ unsafe fn did_cid_win(
                 "could not find row to merge with for tbl {}",
                 insert_tbl
             ))?;
-            *errmsg = err.into_raw();
+            unsafe { *errmsg = err.into_raw() };
             return Err(ResultCode::ERROR);
         }
     }
 }
 
-unsafe fn check_for_local_delete(
+fn check_for_local_delete(
     db: *mut sqlite::sqlite3,
     ext_data: *mut crsql_ExtData,
     tbl_name: &str,
@@ -159,7 +159,7 @@ unsafe fn check_for_local_delete(
     }
 }
 
-unsafe fn get_cached_stmt_rt_wt<F>(
+fn get_cached_stmt_rt_wt<F>(
     db: *mut sqlite::sqlite3,
     ext_data: *mut crsql_ExtData,
     key: String,
@@ -187,7 +187,7 @@ where
     Ok(ret)
 }
 
-unsafe fn set_winner_clock(
+fn set_winner_clock(
     db: *mut sqlite3,
     ext_data: *mut crsql_ExtData,
     tbl_info: *mut crsql_TableInfo,
@@ -199,7 +199,7 @@ unsafe fn set_winner_clock(
     insert_db_vrsn: sqlite::int64,
     insert_site_id: &[u8],
 ) -> Result<sqlite::int64, ResultCode> {
-    let tbl_name_str = CStr::from_ptr((*tbl_info).tblName).to_str()?;
+    let tbl_name_str = unsafe { CStr::from_ptr((*tbl_info).tblName).to_str()? };
 
     let stmt_key = get_cache_key(CachedStmtType::SetWinnerClock, tbl_name_str, None)?;
 
@@ -264,7 +264,7 @@ unsafe fn set_winner_clock(
     }
 }
 
-unsafe fn merge_pk_only_insert(
+fn merge_pk_only_insert(
     db: *mut sqlite3,
     ext_data: *mut crsql_ExtData,
     tbl_info: *mut crsql_TableInfo,
@@ -275,7 +275,7 @@ unsafe fn merge_pk_only_insert(
     remote_db_vsn: sqlite::int64,
     remote_site_id: &[u8],
 ) -> Result<sqlite::int64, ResultCode> {
-    let tbl_name_str = CStr::from_ptr((*tbl_info).tblName).to_str()?;
+    let tbl_name_str = unsafe { CStr::from_ptr((*tbl_info).tblName).to_str()? };
 
     let stmt_key = get_cache_key(CachedStmtType::MergePkOnlyInsert, tbl_name_str, None)?;
     let merge_stmt = get_cached_stmt_rt_wt(db, ext_data, stmt_key, || {
@@ -292,19 +292,23 @@ unsafe fn merge_pk_only_insert(
         reset_cached_stmt(merge_stmt)?;
         return Err(rc);
     }
-    let rc = (*ext_data)
-        .pSetSyncBitStmt
-        .step()
-        .and_then(|_| (*ext_data).pSetSyncBitStmt.reset())
-        .and_then(|_| merge_stmt.step());
+    let rc = unsafe {
+        (*ext_data)
+            .pSetSyncBitStmt
+            .step()
+            .and_then(|_| (*ext_data).pSetSyncBitStmt.reset())
+            .and_then(|_| merge_stmt.step())
+    };
 
     // TODO: report err?
     let _ = reset_cached_stmt(merge_stmt);
 
-    let sync_rc = (*ext_data)
-        .pClearSyncBitStmt
-        .step()
-        .and_then(|_| (*ext_data).pClearSyncBitStmt.reset());
+    let sync_rc = unsafe {
+        (*ext_data)
+            .pClearSyncBitStmt
+            .step()
+            .and_then(|_| (*ext_data).pClearSyncBitStmt.reset())
+    };
 
     if let Err(sync_rc) = sync_rc {
         return Err(sync_rc);

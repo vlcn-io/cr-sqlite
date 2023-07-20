@@ -11,7 +11,7 @@ use core::{
     str::Utf8Error,
 };
 
-use crate::c::crsql_TableInfo;
+use crate::c::{crsql_ColumnInfo, crsql_TableInfo};
 use sqlite::{sqlite3, ResultCode};
 use sqlite_nostd as sqlite;
 
@@ -136,6 +136,8 @@ fn create_update_trigger(
         unsafe { slice::from_raw_parts((*table_info).pks, (*table_info).pksLen as usize) };
     let pk_list = crate::util::as_identifier_list(pk_columns, None)?;
     let pk_new_list = crate::util::as_identifier_list(pk_columns, Some("NEW."))?;
+    let pk_old_list = crate::util::as_identifier_list(pk_columns, Some("OLD."))?;
+    let pk_where_list = crate::util::pk_where_list(pk_columns, Some("OLD."))?;
     let mut any_pk_differs = vec![];
     for c in pk_columns {
         let name = unsafe { CStr::from_ptr(c.name).to_str()? };
@@ -146,13 +148,48 @@ fn create_update_trigger(
     }
     let any_pk_differs = any_pk_differs.join(" OR ");
 
+    // Changing a primary key to a new value is the same as deleting the row previously
+    // identified by that primary key. TODO: share this code with `create_delete_trigger`
+    for col in pk_columns {
+        let col_name = unsafe { CStr::from_ptr(col.name).to_str()? };
+        db.exec_safe(&format!(
+            "CREATE TRIGGER IF NOT EXISTS \"{tbl_name}_{col_name}_crsql_utrig\"
+          AFTER UPDATE OF \"{col_name}\" ON \"{tbl_name}\"
+          WHEN crsql_internal_sync_bit = 0 AND NEW.\"{col_name}\" IS NOT OLD.\"{col_name}\"
+          BEGIN
+            INSERT INTO \"{table_name}__crsql_clock\" (
+              {pk_list},
+              __crsql_col_name,
+              __crsql_col_version,
+              __crsql_db_version,
+              __crsql_seq,
+              __crsql_site_id
+            ) SELECT
+              {pk_old_list},
+              '{sentinel}',
+              1,
+              crsql_nextdbversion(),
+              crsql_increment_and_get_seq(),
+              NULL WHERE true
+            ON CONFLICT DO UPDATE SET
+              __crsql_col_version = __crsql_col_version + 1,
+              __crsql_db_version = crsql_nextdbversion(),
+              __crsql_seq = crsql_get_seq() - 1,
+              __crsql_site_id = NULL;
+            DELETE FROM \"{table_name}__crsql_clock\"
+              WHERE {pk_where_list} AND __crsql_col_name != '{sentinel}';
+          END;",
+            tbl_name = crate::util::escape_ident(table_name),
+            col_name = crate::util::escape_ident(col_name),
+            pk_list = pk_list,
+            pk_old_list = pk_old_list,
+            sentinel = crate::c::DELETE_SENTINEL,
+        ))?;
+    }
+
     let trigger_body =
         update_trigger_body(table_info, table_name, pk_list, pk_new_list, any_pk_differs)?;
-    // need update triggers for pk cols when pk value changes.
-    // this would treat it as an insert of a new row of that pk.
-    // insert or ignore since? or just 1 row level trigger that compares all pks
-    // for a change?
-    // if cl represents delete, bump it.
+
     let create_trigger_sql = format!(
         "CREATE TRIGGER IF NOT EXISTS \"{table_name}__crsql_utrig\"
       AFTER UPDATE ON \"{table_name}\" WHEN crsql_internal_sync_bit() = 0
@@ -173,17 +210,13 @@ fn update_trigger_body(
     pk_new_list: String,
     any_pk_differs: String,
 ) -> Result<String, Utf8Error> {
-    // this'll differ from insert_trigger_body once we need to start tracking
-    // modifications of primary keys on update.
-    // this'll be a row level trigger used to record a delete for the row
-    // identified by the old primary key set and create for the row
-    // identified by the new primary key set.
-    // this would only row if the insert:
-    // 1. changes pk columns
-    // 2. one or more of those pk columns attain a different value
     let non_pk_columns =
         unsafe { slice::from_raw_parts((*table_info).nonPks, (*table_info).nonPksLen as usize) };
     let mut trigger_components = vec![];
+
+    // If any PK is different, record a create for the row
+    // as setting a PK to a _new value_ is like insertion or creating a row.
+    // If we have CL and we conflict.. and pk is not _dead_, ignore?
     trigger_components.push(format!(
         "INSERT INTO \"{table_name}__crsql_clock\" (
           {pk_list},
@@ -211,11 +244,6 @@ fn update_trigger_body(
         sentinel = crate::c::INSERT_SENTINEL,
         any_pk_differs = any_pk_differs
     ));
-
-    // now you need col level triggers to deal with the case where a specific pk col changed and we must record a delete
-    // for the old row.
-    // col level trigger for each pk when old != new
-    // record delete for old.
 
     for col in non_pk_columns {
         let col_name = unsafe { CStr::from_ptr(col.name).to_str()? };

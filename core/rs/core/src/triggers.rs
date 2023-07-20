@@ -5,6 +5,7 @@ use alloc::vec;
 use sqlite::Connection;
 
 use core::{
+    any,
     ffi::{c_char, c_int, CStr},
     slice,
     str::Utf8Error,
@@ -135,8 +136,18 @@ fn create_update_trigger(
         unsafe { slice::from_raw_parts((*table_info).pks, (*table_info).pksLen as usize) };
     let pk_list = crate::util::as_identifier_list(pk_columns, None)?;
     let pk_new_list = crate::util::as_identifier_list(pk_columns, Some("NEW."))?;
+    let mut any_pk_differs = vec![];
+    for c in pk_columns {
+        let name = unsafe { CStr::from_ptr(c.name).to_str()? };
+        any_pk_differs.push(format!(
+            "NEW.\"{col_name}\" IS NOT OLD.\"{col_name}\"",
+            col_name = crate::util::escape_ident(name)
+        ));
+    }
+    let any_pk_differs = any_pk_differs.join(" OR ");
 
-    let trigger_body = update_trigger_body(table_info, table_name, pk_list, pk_new_list)?;
+    let trigger_body =
+        update_trigger_body(table_info, table_name, pk_list, pk_new_list, any_pk_differs)?;
     // need update triggers for pk cols when pk value changes.
     // this would treat it as an insert of a new row of that pk.
     // insert or ignore since? or just 1 row level trigger that compares all pks
@@ -160,6 +171,7 @@ fn update_trigger_body(
     table_name: &str,
     pk_list: String,
     pk_new_list: String,
+    any_pk_differs: String,
 ) -> Result<String, Utf8Error> {
     // this'll differ from insert_trigger_body once we need to start tracking
     // modifications of primary keys on update.
@@ -172,9 +184,8 @@ fn update_trigger_body(
     let non_pk_columns =
         unsafe { slice::from_raw_parts((*table_info).nonPks, (*table_info).nonPksLen as usize) };
     let mut trigger_components = vec![];
-    if non_pk_columns.len() == 0 {
-        trigger_components.push(format!(
-            "INSERT INTO \"{table_name}__crsql_clock\" (
+    trigger_components.push(format!(
+        "INSERT INTO \"{table_name}__crsql_clock\" (
           {pk_list},
           __crsql_col_name,
           __crsql_col_version,
@@ -188,17 +199,24 @@ fn update_trigger_body(
           crsql_nextdbversion(),
           crsql_increment_and_get_seq(),
           NULL
+        WHERE {any_pk_differs}
         ON CONFLICT DO UPDATE SET
           __crsql_col_version = __crsql_col_version + 1,
           __crsql_db_version = crsql_nextdbversion(),
           __crsql_seq = crsql_get_seq() - 1,
           __crsql_site_id = NULL;",
-            table_name = crate::util::escape_ident(table_name),
-            pk_list = pk_list,
-            pk_new_list = pk_new_list,
-            sentinel = crate::c::INSERT_SENTINEL,
-        ))
-    }
+        table_name = crate::util::escape_ident(table_name),
+        pk_list = pk_list,
+        pk_new_list = pk_new_list,
+        sentinel = crate::c::INSERT_SENTINEL,
+        any_pk_differs = any_pk_differs
+    ));
+
+    // now you need col level triggers to deal with the case where a specific pk col changed and we must record a delete
+    // for the old row.
+    // col level trigger for each pk when old != new
+    // record delete for old.
+
     for col in non_pk_columns {
         let col_name = unsafe { CStr::from_ptr(col.name).to_str()? };
         trigger_components.push(format!(

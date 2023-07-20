@@ -2,22 +2,21 @@ use alloc::ffi::CString;
 use alloc::format;
 use alloc::string::String;
 use alloc::vec::Vec;
-use core::ffi::{c_char, c_int, c_void, CStr};
+use core::ffi::{c_char, c_int, CStr};
 use core::mem::forget;
-use core::ptr::null;
 use core::slice;
 use sqlite::{Connection, Stmt};
 use sqlite_nostd as sqlite;
 use sqlite_nostd::{sqlite3, ResultCode, Value};
 
 use crate::c::{
-    crsql_Changes_vtab, crsql_TableInfo, crsql_ensureTableInfosAreUpToDate,
-    crsql_getCacheKeyForStmtType, crsql_getCachedStmt, crsql_indexofTableInfo,
-    crsql_resetCachedStmt, crsql_setCachedStmt, CachedStmtType, CrsqlChangesColumn,
+    crsql_Changes_vtab, crsql_TableInfo, crsql_ensureTableInfosAreUpToDate, crsql_getCachedStmt,
+    crsql_indexofTableInfo, crsql_resetCachedStmt, CrsqlChangesColumn,
 };
 use crate::c::{crsql_ExtData, crsql_columnExists};
 use crate::compare_values::crsql_compare_sqlite_values;
 use crate::pack_columns::bind_package_to_stmt;
+use crate::stmt_cache::{get_cache_key, set_cached_stmt, CachedStmtType};
 use crate::util::{self, slab_rowid};
 use crate::{unpack_columns, ColumnValue};
 
@@ -32,17 +31,7 @@ unsafe fn did_cid_win(
     col_version: sqlite::int64,
     errmsg: *mut *mut c_char,
 ) -> Result<bool, ResultCode> {
-    let stmt_key = crsql_getCacheKeyForStmtType(
-        CachedStmtType::GetColVersion as i32,
-        // TODO: this is only safe so long as these are c strings!
-        insert_tbl.as_ptr() as *const c_char,
-        null(),
-    );
-    if stmt_key.is_null() {
-        let err = CString::new("Failed creating cache key for CACHED_STMT_GET_COL_VERSION")?;
-        *errmsg = err.into_raw();
-        return Err(ResultCode::ERROR);
-    }
+    let stmt_key = get_cache_key(CachedStmtType::GetColVersion, insert_tbl, None)?;
     let col_vrsn_stmt = get_cached_stmt_rt_wt(db, ext_data, stmt_key, || {
         format!(
           "SELECT __crsql_col_version FROM \"{table_name}__crsql_clock\" WHERE {pk_where_list} AND ? = __crsql_col_name",
@@ -93,16 +82,7 @@ unsafe fn did_cid_win(
     // need to pull the current value and compare
     // we could compare on site_id if we can guarantee site_id is always provided.
     // would be slightly more performant..
-    let stmt_key = crsql_getCacheKeyForStmtType(
-        CachedStmtType::GetCurrValue as i32,
-        insert_tbl.as_ptr() as *const c_char,
-        col_name.as_ptr() as *const c_char,
-    );
-    if stmt_key.is_null() {
-        let err = CString::new("Failed creating cache key for CACHED_STMT_GET_CURR_VALUE")?;
-        *errmsg = err.into_raw();
-        return Err(ResultCode::ERROR);
-    }
+    let stmt_key = get_cache_key(CachedStmtType::GetCurrValue, insert_tbl, Some(col_name))?;
     let col_val_stmt = get_cached_stmt_rt_wt(db, ext_data, stmt_key, || {
         format!(
             "SELECT \"{col_name}\" FROM \"{table_name}\" WHERE {pk_where_list}",
@@ -147,14 +127,7 @@ unsafe fn check_for_local_delete(
     pk_where_list: &str,
     unpacked_pks: &Vec<ColumnValue>,
 ) -> Result<bool, ResultCode> {
-    let stmt_key = crsql_getCacheKeyForStmtType(
-        CachedStmtType::CheckForLocalDelete as i32,
-        tbl_name.as_ptr() as *const c_char,
-        null(),
-    );
-    if stmt_key.is_null() {
-        return Err(ResultCode::ERROR);
-    }
+    let stmt_key = get_cache_key(CachedStmtType::CheckForLocalDelete, tbl_name, None)?;
 
     let check_del_stmt = get_cached_stmt_rt_wt(db, ext_data, stmt_key, || {
         format!(
@@ -186,25 +159,22 @@ unsafe fn check_for_local_delete(
 unsafe fn get_cached_stmt_rt_wt<F>(
     db: *mut sqlite::sqlite3,
     ext_data: *mut crsql_ExtData,
-    key: *mut c_char,
+    key: CString,
     query_builder: F,
 ) -> Result<*mut sqlite::stmt, ResultCode>
 where
     F: Fn() -> String,
 {
-    let mut ret = crsql_getCachedStmt(ext_data, key);
+    let mut ret = crsql_getCachedStmt(ext_data, key.as_ptr());
     if ret.is_null() {
         let sql = query_builder();
         if let Ok(stmt) = db.prepare_v3(&sql, sqlite::PREPARE_PERSISTENT) {
-            crsql_setCachedStmt(ext_data, key, stmt.stmt);
+            set_cached_stmt(ext_data, key, stmt.stmt);
             ret = stmt.stmt;
             forget(stmt);
         } else {
-            sqlite::free(key as *mut c_void);
             return Err(ResultCode::ERROR);
         }
-    } else {
-        sqlite::free(key as *mut c_void);
     }
 
     Ok(ret)
@@ -224,14 +194,7 @@ unsafe fn set_winner_clock(
 ) -> Result<sqlite::int64, ResultCode> {
     let tbl_name_str = CStr::from_ptr((*tbl_info).tblName).to_str()?;
 
-    let stmt_key = crsql_getCacheKeyForStmtType(
-        CachedStmtType::SetWinnerClock as i32,
-        (*tbl_info).tblName,
-        null(),
-    );
-    if stmt_key.is_null() {
-        return Ok(-1);
-    }
+    let stmt_key = get_cache_key(CachedStmtType::SetWinnerClock, tbl_name_str, None)?;
 
     let set_stmt = get_cached_stmt_rt_wt(db, ext_data, stmt_key, || {
         format!(
@@ -307,14 +270,7 @@ unsafe fn merge_pk_only_insert(
 ) -> Result<sqlite::int64, ResultCode> {
     let tbl_name_str = CStr::from_ptr((*tbl_info).tblName).to_str()?;
 
-    let stmt_key = crsql_getCacheKeyForStmtType(
-        CachedStmtType::MergePkOnlyInsert as i32,
-        (*tbl_info).tblName,
-        null(),
-    );
-    if stmt_key.is_null() {
-        return Err(ResultCode::ERROR);
-    }
+    let stmt_key = get_cache_key(CachedStmtType::MergePkOnlyInsert, tbl_name_str, None)?;
     let merge_stmt = get_cached_stmt_rt_wt(db, ext_data, stmt_key, || {
         format!(
             "INSERT OR IGNORE INTO \"{table_name}\" ({pk_idents}) VALUES ({pk_bindings})",
@@ -378,14 +334,7 @@ unsafe fn merge_delete(
     remote_site_id: &[u8],
 ) -> Result<sqlite::int64, ResultCode> {
     let tbl_name_str = CStr::from_ptr((*tbl_info).tblName).to_str()?;
-    let stmt_key = crsql_getCacheKeyForStmtType(
-        CachedStmtType::MergeDelete as i32,
-        (*tbl_info).tblName,
-        null(),
-    );
-    if stmt_key.is_null() {
-        return Err(ResultCode::ERROR);
-    }
+    let stmt_key = get_cache_key(CachedStmtType::MergeDelete, tbl_name_str, None)?;
     let delete_stmt = get_cached_stmt_rt_wt(db, ext_data, stmt_key, || {
         format!(
             "DELETE FROM \"{table_name}\" WHERE {pk_where_list}",
@@ -608,17 +557,12 @@ unsafe fn merge_insert(
     }
 
     // TODO: this is all almost identical between all three merge cases!
-    let stmt_key = crsql_getCacheKeyForStmtType(
-        CachedStmtType::MergeInsert as i32,
+    let stmt_key = get_cache_key(
+        CachedStmtType::MergeInsert,
         // This is currently safe since these are c strings under the hood
-        insert_tbl.as_ptr() as *const c_char,
-        insert_col.as_ptr() as *const c_char,
-    );
-    if stmt_key.is_null() {
-        let err = CString::new("Failed creating cache key for CACHED_STMT_MERGE_INSERT")?;
-        *errmsg = err.into_raw();
-        return Err(ResultCode::ERROR);
-    }
+        insert_tbl,
+        Some(insert_col),
+    )?;
     let merge_stmt = get_cached_stmt_rt_wt(db, (*tab).pExtData, stmt_key, || {
         format!(
             "INSERT INTO \"{table_name}\" ({pk_list}, \"{col_name}\")

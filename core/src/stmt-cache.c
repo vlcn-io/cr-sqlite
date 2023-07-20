@@ -22,53 +22,6 @@ static void freeEntry(crsql_CachedStmt *pEntry) {
   sqlite3_free(pEntry);
 }
 
-char *crsql_getCacheKeyForStmtType(int stmtType, const char *zTblName,
-                                   const char *mzColName) {
-  char *zRet;
-  int len;
-  int tblNameLen;
-  int colNameLen;
-  switch (stmtType) {
-    case CACHED_STMT_SET_WINNER_CLOCK:
-    case CACHED_STMT_CHECK_FOR_LOCAL_DELETE:
-    case CACHED_STMT_GET_COL_VERSION:
-    case CACHED_STMT_MERGE_PK_ONLY_INSERT:
-    case CACHED_STMT_MERGE_DELETE:
-      if (mzColName != 0) {
-        return 0;
-      }
-      // type + _ + strlen(tbl) + nullterm
-      tblNameLen = strlen(zTblName);
-      len = 2 + tblNameLen + 1;
-      zRet = sqlite3_malloc(len * sizeof(char *));
-      zRet[len - 1] = '\0';
-      zRet[0] = 48 + stmtType;
-      zRet[1] = '_';
-      memcpy(zRet + 2, zTblName, tblNameLen);
-      return zRet;
-    case CACHED_STMT_GET_CURR_VALUE:
-    case CACHED_STMT_MERGE_INSERT:
-    case CACHED_STMT_ROW_PATCH_DATA:
-      if (mzColName == 0) {
-        return 0;
-      }
-      tblNameLen = strlen(zTblName);
-      colNameLen = strlen(mzColName);
-      // type + _ + tblNameLen + _ + colNameLen + nullterm
-      len = 2 + tblNameLen + 1 + colNameLen + 1;
-      zRet = sqlite3_malloc(len * sizeof(char *));
-      zRet[len - 1] = '\0';
-      zRet[0] = 48 + stmtType;
-      zRet[1] = '_';
-      memcpy(zRet + 2, zTblName, tblNameLen);
-      zRet[tblNameLen + 2] = '_';
-      memcpy(zRet + 2 + tblNameLen + 1, mzColName, colNameLen);
-      return zRet;
-  }
-
-  return 0;
-}
-
 int crsql_resetCachedStmt(sqlite3_stmt *pStmt) {
   if (pStmt == 0) {
     return SQLITE_OK;

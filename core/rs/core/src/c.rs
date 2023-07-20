@@ -584,7 +584,7 @@ fn bindgen_test_layout_crsql_ExtData() {
         )
     );
     assert_eq!(
-        unsafe { ::core::ptr::addr_of!((*ptr).hStmts) as usize - ptr as usize },
+        unsafe { ::core::ptr::addr_of!((*ptr).pStmtCache) as usize - ptr as usize },
         96usize,
         concat!(
             "Offset of field: ",

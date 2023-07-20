@@ -4,8 +4,6 @@ use alloc::string::String;
 use alloc::vec;
 use alloc::vec::Vec;
 use bytes::{Buf, BufMut};
-use core::ffi::{c_int, c_void};
-use core::mem;
 use core::slice;
 #[cfg(not(feature = "std"))]
 use num_traits::FromPrimitive;
@@ -122,13 +120,6 @@ pub enum ColumnValue {
     Integer(i64),
     Null,
     Text(String),
-}
-
-#[repr(C)]
-pub struct RawVec {
-    pub ptr: *mut c_void,
-    pub len: c_int,
-    pub cap: c_int,
 }
 
 // TODO: make a table valued function that can be used to extract a row per packed column?

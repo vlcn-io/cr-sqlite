@@ -8,7 +8,6 @@
 #include "crsqlite.h"
 #include "ext-data.h"
 #include "rust.h"
-#include "stmt-cache.h"
 #include "util.h"
 
 int crsql_changes_next(sqlite3_vtab_cursor *cur);
@@ -91,7 +90,10 @@ static int changesCrsrFinalize(crsql_Changes_cursor *crsr) {
   int rc = SQLITE_OK;
   rc += sqlite3_finalize(crsr->pChangesStmt);
   crsr->pChangesStmt = 0;
-  rc += crsql_resetCachedStmt(crsr->pRowStmt);
+  if (crsr->pRowStmt != 0) {
+    rc += sqlite3_clear_bindings(crsr->pRowStmt);
+    rc += sqlite3_reset(crsr->pRowStmt);
+  }
   crsr->pRowStmt = 0;
 
   crsr->dbVersion = MIN_POSSIBLE_DB_VERSION;

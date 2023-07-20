@@ -51,14 +51,12 @@ ext_files=src/crsqlite.c \
 	src/tableinfo.c \
 	src/changes-vtab.c \
 	src/ext-data.c \
-	src/get-table.c \
-	src/stmt-cache.c
+	src/get-table.c
 ext_headers=src/crsqlite.h \
 	src/util.h \
 	src/tableinfo.h \
 	src/changes-vtab.h \
-	src/ext-data.h \
-	src/stmt-cache.h
+	src/ext-data.h
 
 $(prefix):
 	mkdir -p $(prefix)

@@ -1,7 +1,9 @@
 extern crate alloc;
 use crate::alloc::string::ToString;
 use crate::changes_vtab_write::crsql_merge_insert;
-use crate::stmt_cache::{get_cache_key, set_cached_stmt, CachedStmtType};
+use crate::stmt_cache::{
+    get_cache_key, get_cached_stmt, reset_cached_stmt, set_cached_stmt, CachedStmtType,
+};
 use alloc::format;
 use alloc::string::String;
 use core::ffi::{c_char, c_int, CStr};
@@ -17,9 +19,8 @@ use sqlite_nostd as sqlite;
 use sqlite_nostd::ResultCode;
 
 use crate::c::{
-    crsql_Changes_cursor, crsql_Changes_vtab, crsql_ensureTableInfosAreUpToDate,
-    crsql_getCachedStmt, crsql_resetCachedStmt, ChangeRowType, ClockUnionColumn,
-    CrsqlChangesColumn,
+    crsql_Changes_cursor, crsql_Changes_vtab, crsql_ensureTableInfosAreUpToDate, ChangeRowType,
+    ClockUnionColumn, CrsqlChangesColumn,
 };
 use crate::changes_vtab_read::{changes_union_query, row_patch_data_query};
 use crate::pack_columns::bind_package_to_stmt;
@@ -35,7 +36,10 @@ fn changes_crsr_finalize(crsr: *mut crsql_Changes_cursor) -> c_int {
             Err(rc) => rc as c_int,
         };
         (*crsr).pChangesStmt = null_mut();
-        rc += crate::c::crsql_resetCachedStmt((*crsr).pRowStmt);
+        let reset_rc = reset_cached_stmt((*crsr).pRowStmt);
+        match reset_rc {
+            Ok(r) | Err(r) => rc += r as c_int,
+        }
         (*crsr).pRowStmt = null_mut();
         (*crsr).dbVersion = crate::consts::MIN_POSSIBLE_DB_VERSION;
 
@@ -329,10 +333,10 @@ unsafe fn changes_next(
     }
 
     if !(*cursor).pRowStmt.is_null() {
-        let rc = crate::c::crsql_resetCachedStmt((*cursor).pRowStmt);
+        let rc = reset_cached_stmt((*cursor).pRowStmt);
         (*cursor).pRowStmt = null_mut();
-        if rc != 0 {
-            return Err(ResultCode::ERROR);
+        if rc.is_err() {
+            return rc;
         }
     }
 
@@ -402,7 +406,12 @@ unsafe fn changes_next(
     }
 
     let stmt_key = get_cache_key(CachedStmtType::RowPatchData, tbl, Some(cid))?;
-    let mut row_stmt = crsql_getCachedStmt((*(*cursor).pTab).pExtData, stmt_key.as_ptr());
+    let mut row_stmt = if let Some(stmt) = get_cached_stmt((*(*cursor).pTab).pExtData, &stmt_key) {
+        stmt
+    } else {
+        null_mut()
+    };
+
     if row_stmt.is_null() {
         let sql = row_patch_data_query(tbl_info, cid);
         if let Some(sql) = sql {
@@ -429,11 +438,11 @@ unsafe fn changes_next(
 
     match row_stmt.step() {
         Ok(ResultCode::DONE) => {
-            crsql_resetCachedStmt(row_stmt);
+            reset_cached_stmt(row_stmt)?;
         }
         Ok(_) => {}
         Err(rc) => {
-            crsql_resetCachedStmt(row_stmt);
+            reset_cached_stmt(row_stmt)?;
             return Err(rc);
         }
     }

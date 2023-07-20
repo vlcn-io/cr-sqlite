@@ -2,8 +2,10 @@
 
 #include "consts.h"
 #include "get-table.h"
-#include "stmt-cache.h"
 #include "util.h"
+
+void crsql_init_stmt_cache(crsql_ExtData *pExtData);
+void crsql_clear_stmt_cache(crsql_ExtData *pExtData);
 
 crsql_ExtData *crsql_newExtData(sqlite3 *db) {
   crsql_ExtData *pExtData = sqlite3_malloc(sizeof *pExtData);
@@ -33,7 +35,8 @@ crsql_ExtData *crsql_newExtData(sqlite3 *db) {
   pExtData->zpTableInfos = 0;
   pExtData->tableInfosLen = 0;
   pExtData->rowsImpacted = 0;
-  pExtData->hStmts = 0;
+  pExtData->pStmtCache = 0;
+  crsql_init_stmt_cache(pExtData);
 
   int pv = crsql_fetchPragmaDataVersion(db, pExtData);
   if (pv == -1 || rc != SQLITE_OK) {
@@ -52,7 +55,7 @@ void crsql_freeExtData(crsql_ExtData *pExtData) {
   sqlite3_finalize(pExtData->pSetSyncBitStmt);
   sqlite3_finalize(pExtData->pClearSyncBitStmt);
   crsql_freeAllTableInfos(pExtData->zpTableInfos, pExtData->tableInfosLen);
-  crsql_clearStmtCache(pExtData);
+  crsql_clear_stmt_cache(pExtData);
   sqlite3_free(pExtData);
 }
 
@@ -67,7 +70,7 @@ void crsql_finalize(crsql_ExtData *pExtData) {
   sqlite3_finalize(pExtData->pPragmaDataVersionStmt);
   sqlite3_finalize(pExtData->pSetSyncBitStmt);
   sqlite3_finalize(pExtData->pClearSyncBitStmt);
-  crsql_clearStmtCache(pExtData);
+  crsql_clear_stmt_cache(pExtData);
   pExtData->pDbVersionStmt = 0;
   pExtData->pPragmaSchemaVersionStmt = 0;
   pExtData->pPragmaDataVersionStmt = 0;

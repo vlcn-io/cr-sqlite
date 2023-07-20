@@ -70,14 +70,15 @@ fn insert_trigger_body(
     let non_pk_columns =
         unsafe { slice::from_raw_parts((*table_info).nonPks, (*table_info).nonPksLen as usize) };
     let mut trigger_components = vec![];
-    if non_pk_columns.len() == 0 {
-        trigger_components.push(format_insert_trigger_component(
-            table_name,
-            &pk_list,
-            &pk_new_list,
-            crate::c::INSERT_SENTINEL,
-        ))
-    }
+
+    // Insert a record of it existing in all cases
+    trigger_components.push(format_insert_trigger_component(
+        table_name,
+        &pk_list,
+        &pk_new_list,
+        crate::c::INSERT_SENTINEL,
+    ));
+
     for col in non_pk_columns {
         let col_name = unsafe { CStr::from_ptr(col.name).to_str()? };
         trigger_components.push(format_insert_trigger_component(

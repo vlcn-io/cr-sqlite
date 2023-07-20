@@ -50,7 +50,6 @@ ext_files=src/crsqlite.c \
 	src/util.c \
 	src/tableinfo.c \
 	src/changes-vtab.c \
-	src/changes-vtab-common.c \
 	src/ext-data.c \
 	src/get-table.c \
 	src/stmt-cache.c

@@ -44,8 +44,8 @@ fn create_insert_trigger(
     let table_name = unsafe { CStr::from_ptr((*table_info).tblName).to_str()? };
     let pk_columns =
         unsafe { slice::from_raw_parts((*table_info).pks, (*table_info).pksLen as usize) };
-    let pk_list = crate::c::as_identifier_list(pk_columns, None)?;
-    let pk_new_list = crate::c::as_identifier_list(pk_columns, Some("NEW."))?;
+    let pk_list = crate::util::as_identifier_list(pk_columns, None)?;
+    let pk_new_list = crate::util::as_identifier_list(pk_columns, Some("NEW."))?;
     let trigger_body = insert_trigger_body(table_info, table_name, pk_list, pk_new_list)?;
 
     let create_trigger_sql = format!(
@@ -132,8 +132,8 @@ fn create_update_trigger(
     let table_name = unsafe { CStr::from_ptr((*table_info).tblName).to_str()? };
     let pk_columns =
         unsafe { slice::from_raw_parts((*table_info).pks, (*table_info).pksLen as usize) };
-    let pk_list = crate::c::as_identifier_list(pk_columns, None)?;
-    let pk_new_list = crate::c::as_identifier_list(pk_columns, Some("NEW."))?;
+    let pk_list = crate::util::as_identifier_list(pk_columns, None)?;
+    let pk_new_list = crate::util::as_identifier_list(pk_columns, Some("NEW."))?;
 
     let trigger_body = update_trigger_body(table_info, table_name, pk_list, pk_new_list)?;
     // need update triggers for pk cols when pk value changes.
@@ -240,8 +240,8 @@ fn create_delete_trigger(
     let table_name = unsafe { CStr::from_ptr((*table_info).tblName).to_str()? };
     let pk_columns =
         unsafe { slice::from_raw_parts((*table_info).pks, (*table_info).pksLen as usize) };
-    let pk_list = crate::c::as_identifier_list(pk_columns, None)?;
-    let pk_old_list = crate::c::as_identifier_list(pk_columns, Some("OLD."))?;
+    let pk_list = crate::util::as_identifier_list(pk_columns, None)?;
+    let pk_old_list = crate::util::as_identifier_list(pk_columns, Some("OLD."))?;
     let pk_where_list = crate::util::pk_where_list(pk_columns, Some("OLD."))?;
 
     let create_trigger_sql = format!(

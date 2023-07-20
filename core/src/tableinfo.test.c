@@ -76,34 +76,34 @@ static void testGetTableInfo() {
   crsql_close(db);
 }
 
-static void testAsIdentifierList() {
-  printf("AsIdentifierList\n");
+// static void testAsIdentifierList() {
+//   printf("AsIdentifierList\n");
 
-  crsql_ColumnInfo tc1[3];
-  tc1[0].name = "one";
-  tc1[1].name = "two";
-  tc1[2].name = "three";
+//   crsql_ColumnInfo tc1[3];
+//   tc1[0].name = "one";
+//   tc1[1].name = "two";
+//   tc1[2].name = "three";
 
-  crsql_ColumnInfo tc2[0];
+//   crsql_ColumnInfo tc2[0];
 
-  crsql_ColumnInfo tc3[1];
-  tc3[0].name = "one";
-  char *result;
+//   crsql_ColumnInfo tc3[1];
+//   tc3[0].name = "one";
+//   char *result;
 
-  result = crsql_asIdentifierList(tc1, 3, 0);
-  assert(strcmp(result, "\"one\",\"two\",\"three\"") == 0);
-  sqlite3_free(result);
+//   result = crsql_asIdentifierList(tc1, 3, 0);
+//   assert(strcmp(result, "\"one\",\"two\",\"three\"") == 0);
+//   sqlite3_free(result);
 
-  result = crsql_asIdentifierList(tc2, 0, 0);
-  assert(result == 0);
-  sqlite3_free(result);
+//   result = crsql_asIdentifierList(tc2, 0, 0);
+//   assert(result == 0);
+//   sqlite3_free(result);
 
-  result = crsql_asIdentifierList(tc3, 1, 0);
-  assert(strcmp(result, "\"one\"") == 0);
-  sqlite3_free(result);
+//   result = crsql_asIdentifierList(tc3, 1, 0);
+//   assert(strcmp(result, "\"one\"") == 0);
+//   sqlite3_free(result);
 
-  printf("\t\e[0;32mSuccess\e[0m\n");
-}
+//   printf("\t\e[0;32mSuccess\e[0m\n");
+// }
 
 static void testFindTableInfo() {
   printf("FindTableInfo\n");
@@ -286,7 +286,7 @@ static void testSlabRowid() {
 void crsqlTableInfoTestSuite() {
   printf("\e[47m\e[1;30mSuite: crsql_tableInfo\e[0m\n");
 
-  testAsIdentifierList();
+  // testAsIdentifierList();
   testGetTableInfo();
   testFindTableInfo();
   testIsTableCompatible();

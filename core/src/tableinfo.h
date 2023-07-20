@@ -44,8 +44,6 @@ void crsql_freeTableInfo(crsql_TableInfo *tableInfo);
 int crsql_getTableInfo(sqlite3 *db, const char *tblName,
                        crsql_TableInfo **pTableInfo, char **pErrMsg);
 
-char *crsql_asIdentifierList(crsql_ColumnInfo *in, size_t inlen, char *prefix);
-
 void crsql_freeAllTableInfos(crsql_TableInfo **tableInfos, int len);
 crsql_TableInfo *crsql_findTableInfo(crsql_TableInfo **tblInfos, int len,
                                      const char *tblName);

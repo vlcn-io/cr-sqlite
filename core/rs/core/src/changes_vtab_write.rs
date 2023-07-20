@@ -13,12 +13,12 @@ use sqlite_nostd::{sqlite3, ResultCode, Value};
 use crate::c::{
     crsql_Changes_vtab, crsql_TableInfo, crsql_ensureTableInfosAreUpToDate,
     crsql_getCacheKeyForStmtType, crsql_getCachedStmt, crsql_indexofTableInfo,
-    crsql_resetCachedStmt, crsql_setCachedStmt, where_list, CachedStmtType, CrsqlChangesColumn,
+    crsql_resetCachedStmt, crsql_setCachedStmt, CachedStmtType, CrsqlChangesColumn,
 };
 use crate::c::{crsql_ExtData, crsql_columnExists};
 use crate::compare_values::crsql_compare_sqlite_values;
 use crate::pack_columns::bind_package_to_stmt;
-use crate::util::slab_rowid;
+use crate::util::{self, slab_rowid};
 use crate::{unpack_columns, ColumnValue};
 
 unsafe fn did_cid_win(
@@ -517,7 +517,7 @@ unsafe fn merge_insert(
     let is_pk_only = crate::c::INSERT_SENTINEL == insert_col;
 
     let pk_cols = sqlite::args!((*tbl_info).pksLen, (*tbl_info).pks);
-    let pk_where_list = where_list(pk_cols)?;
+    let pk_where_list = util::where_list(pk_cols)?;
     let unpacked_pks = unpack_columns(insert_pks.blob())?;
 
     if check_for_local_delete(
@@ -531,8 +531,8 @@ unsafe fn merge_insert(
         return Ok(ResultCode::OK);
     }
 
-    let pk_bind_list = crate::c::binding_list(pk_cols.len());
-    let pk_ident_list = crate::c::as_identifier_list(pk_cols, None)?;
+    let pk_bind_list = crate::util::binding_list(pk_cols.len());
+    let pk_ident_list = crate::util::as_identifier_list(pk_cols, None)?;
     if is_delete {
         let merge_result = merge_delete(
             db,

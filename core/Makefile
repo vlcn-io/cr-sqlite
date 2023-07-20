@@ -57,7 +57,6 @@ ext_headers=src/crsqlite.h \
 	src/util.h \
 	src/tableinfo.h \
 	src/changes-vtab.h \
-	src/changes-vtab-common.h \
 	src/ext-data.h \
 	src/stmt-cache.h
 

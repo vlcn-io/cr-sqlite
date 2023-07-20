@@ -5,7 +5,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "changes-vtab-common.h"
 #include "consts.h"
 #include "rust.h"
 #include "tableinfo.h"
@@ -17,6 +16,15 @@
     goto fail;           \
   }
 #endif
+
+#define CHANGES_SINCE_VTAB_TBL 0
+#define CHANGES_SINCE_VTAB_PK 1
+#define CHANGES_SINCE_VTAB_CID 2
+#define CHANGES_SINCE_VTAB_CVAL 3
+#define CHANGES_SINCE_VTAB_COL_VRSN 4
+#define CHANGES_SINCE_VTAB_DB_VRSN 5
+#define CHANGES_SINCE_VTAB_SITE_ID 6
+#define CHANGES_SINCE_VTAB_SEQ 7
 
 int crsql_close(sqlite3 *db);
 

@@ -39,7 +39,6 @@ int main(int argc, char *argv[]) {
   SUITE("triggers") crsqlTriggersTestSuite();
   SUITE("vtab") crsqlChangesVtabTestSuite();
   SUITE("vtabread") crsqlChangesVtabReadTestSuite();
-  SUITE("vtabcommon") crsqlChangesVtabCommonTestSuite();
   SUITE("extdata") crsqlExtDataTestSuite();
   // integration tests should come at the end given fixing unit tests will
   // likely fix integration tests

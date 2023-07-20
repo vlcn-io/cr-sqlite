@@ -115,6 +115,7 @@ ifdef CI_MAYBE_TARGET
 	rs_lib_dbg_static = ./rs/bundle/target/$(CI_MAYBE_TARGET)/debug/libcrsql_bundle.a
 	rs_lib_loadable = ./rs/bundle/target/$(CI_MAYBE_TARGET)/release/libcrsql_bundle.a
 	rs_lib_dbg_loadable = ./rs/bundle/target/$(CI_MAYBE_TARGET)/debug/libcrsql_bundle.a
+	rs_lib_static = ./rs/bundle/target/$(CI_MAYBE_TARGET)/release/libcrsql_bundle.a
 	RS_TARGET = --target=$(CI_MAYBE_TARGET)
 	ifndef CI_GCC
 		C_TARGET = -target $(CI_MAYBE_TARGET)

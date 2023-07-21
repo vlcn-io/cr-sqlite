@@ -125,23 +125,26 @@ def test_backfill_col_add():
     # Given we only migrate against compatible schema versions there's no need to create
     # a record of a default value. The other node will have the same default or, if they wrote a value,
     # a value which takes precedence.
-    assert (changes == [('todo', b'\x01\x09\x01', 'name', "cook"),
-                        ('todo', b'\x01\x09\x01', 'complete', 0),
-                        ('todo', b'\x01\x09\x01', 'list', "home")])
+    assert (changes == [('todo', b'\x01\t\x01', '__crsql_pko', None),
+                        ('todo', b'\x01\t\x01', 'name', 'cook'),
+                        ('todo', b'\x01\t\x01', 'complete', 0),
+                        ('todo', b'\x01\t\x01', 'list', 'home')])
 
     # we should be able to add entries
     c.execute(
         "INSERT INTO todo (id, name, complete, list, assignee) VALUES (2, 'clean', 0, 'home', 'me');")
     c.commit()
     changes = c.execute(changes_query).fetchall()
-    assert (changes == [('todo', b'\x01\x09\x01', 'name', "cook"),
-                        ('todo', b'\x01\x09\x01', 'complete', 0),
-                        ('todo', b'\x01\x09\x01', 'list', "home"),
-                        ('todo', b'\x01\x09\x02', 'name', "clean"),
-                        ('todo', b'\x01\x09\x02', 'complete', 0),
-                        ('todo', b'\x01\x09\x02', 'list', "home"),
-                        ('todo', b'\x01\x09\x02', 'assignee', "me"),
-                        ('todo', b'\x01\x09\x02', 'due_date', "2018-01-01")])
+    assert (changes == [('todo', b'\x01\t\x01', '__crsql_pko', None),
+                        ('todo', b'\x01\t\x01', 'name', 'cook'),
+                        ('todo', b'\x01\t\x01', 'complete', 0),
+                        ('todo', b'\x01\t\x01', 'list', 'home'),
+                        ('todo', b'\x01\t\x02', '__crsql_pko', None),
+                        ('todo', b'\x01\t\x02', 'name', 'clean'),
+                        ('todo', b'\x01\t\x02', 'complete', 0),
+                        ('todo', b'\x01\t\x02', 'list', 'home'),
+                        ('todo', b'\x01\t\x02', 'assignee', 'me'),
+                        ('todo', b'\x01\t\x02', 'due_date', '2018-01-01')])
 
 
 def test_merging_columns_with_no_metadata():
@@ -167,13 +170,14 @@ def test_backfill_clocks_on_rename():
     c.execute("SELECT crsql_commit_alter('todo');")
     c.commit()
     changes = c.execute(changes_with_versions_query).fetchall()
-
-    assert (changes == [('todo', b'\x01\x09\x01', 'complete', 0, 1, 1),
-                        ('todo', b'\x01\x09\x01', 'list', "home", 1, 1),
-                        ('todo', b'\x01\x09\x01', 'task', "cook", 2, 1),
-                        ('todo', b'\x01\x09\x02', 'complete', 0, 2, 1),
-                        ('todo', b'\x01\x09\x02', 'task', "clean", 2, 1),
-                        ('todo', b'\x01\x09\x02', 'list', "home", 2, 1)])
+    assert (changes == [('todo', b'\x01\t\x01', '__crsql_pko', None, 1, 1),
+                        ('todo', b'\x01\t\x01', 'complete', 0, 1, 1),
+                        ('todo', b'\x01\t\x01', 'list', 'home', 1, 1),
+                        ('todo', b'\x01\t\x02', '__crsql_pko', None, 2, 1),
+                        ('todo', b'\x01\t\x01', 'task', 'cook', 2, 1),
+                        ('todo', b'\x01\t\x02', 'complete', 0, 2, 1),
+                        ('todo', b'\x01\t\x02', 'list', 'home', 2, 1),
+                        ('todo', b'\x01\t\x02', 'task', 'clean', 2, 1)])
 
 
 def test_delete_sentinels_not_lost():
@@ -235,10 +239,12 @@ def test_backfill_existing_data():
     c.commit()
 
     changes = c.execute(changes_query).fetchall()
-
-    assert (changes == [('foo', b'\x01\x09\x01', 'name', "bar"),
-                        ('foo', b'\x01\x09\x02', 'name', "baz"),
-                        ('foo', b'\x01\x09\x03', 'name', None)])
+    assert (changes == [('foo', b'\x01\t\x01', '__crsql_pko', None),
+                        ('foo', b'\x01\t\x01', 'name', 'bar'),
+                        ('foo', b'\x01\t\x02', '__crsql_pko', None),
+                        ('foo', b'\x01\t\x02', 'name', 'baz'),
+                        ('foo', b'\x01\t\x03', '__crsql_pko', None),
+                        ('foo', b'\x01\t\x03', 'name', None)])
 
 
 # This creates table which have existing data.
@@ -265,11 +271,16 @@ def test_backfill_moves_dbversion():
     c.commit()
 
     changes = c.execute(changes_with_versions_query).fetchall()
-    assert (changes == [('foo', b'\x01\x09\x01', 'name', "bar", 1, 1),  # first 2 are db_version 1
-                        ('foo', b'\x01\x09\x02', 'name', "baz", 1, 1),
-                        # next 2 are db_version 2
-                        ('bar', b'\x01\x09\x01', 'name', "bar", 2, 1),
-                        ('bar', b'\x01\x09\x03', 'name', None, 2, 1)])
+    assert (changes == [('foo', b'\x01\t\x01', '__crsql_pko', None, 1, 1),
+                        ('foo', b'\x01\t\x01', 'name', 'bar', 1, 1),
+                        ('foo', b'\x01\t\x02', '__crsql_pko', None, 1, 1),
+                        ('foo', b'\x01\t\x02', 'name',
+                         'baz', 1, 1),  # db version 1
+                        ('bar', b'\x01\t\x01', '__crsql_pko',
+                         None, 2, 1),  # db version 2
+                        ('bar', b'\x01\t\x01', 'name', 'bar', 2, 1),
+                        ('bar', b'\x01\t\x03', '__crsql_pko', None, 2, 1),
+                        ('bar', b'\x01\t\x03', 'name', None, 2, 1)])
 
 
 # Similar to the above test but checks that `crsql_alter` does the right thing.
@@ -304,11 +315,13 @@ def test_backfill_for_alter_does_not_move_dbversion():
     changes = c.execute(full_changes_query).fetchall()
     assert (changes ==
             # Existing rows have their existing db_version (1).
-            [('foo', b'\x01\x09\x01', 'name', "bar", 1, 1, None),
+            [('foo', b'\x01\t\x01', '__crsql_pko', None, 1, 1, None),
              # New rows get the current db version given
              # migrations on other will create convergence.
-             ('foo', b'\x01\x09\x02', 'name', "baz", 1, 1, None),
-             ('foo', b'\x01\x09\x02', 'age', 33, 1, 1, None)])
+             ('foo', b'\x01\t\x02', '__crsql_pko', None, 1, 1, None),
+                ('foo', b'\x01\t\x01', 'name', 'bar', 1, 1, None),
+                ('foo', b'\x01\t\x02', 'name', 'baz', 1, 1, None),
+                ('foo', b'\x01\t\x02', 'age', 33, 1, 1, None)])
 
 
 def test_add_col_with_default():
@@ -325,7 +338,9 @@ def test_add_col_with_default():
     changes = c.execute(full_changes_query).fetchall()
     # No change given we only added a column with a default value and we need
     # not backfill default values
-    assert (changes == [('foo', b'\x01\x09\x01', 'name', "bar", 1, 1, None)])
+    assert (changes == [('foo', b'\x01\t\x01', '__crsql_pko', None, 1, 1, None),
+                        ('foo', b'\x01\t\x01', 'name', 'bar', 1, 1, None)])
+
     None
 
 
@@ -341,7 +356,8 @@ def test_add_col_nullable():
     c.execute("SELECT crsql_commit_alter('foo');")
 
     changes = c.execute(full_changes_query).fetchall()
-    assert (changes == [('foo', b'\x01\x09\x01', 'name', "bar", 1, 1, None)])
+    assert (changes == [('foo', b'\x01\t\x01', '__crsql_pko', None, 1, 1, None),
+                        ('foo', b'\x01\t\x01', 'name', 'bar', 1, 1, None)])
 
 
 def test_add_col_implicit_nullable():
@@ -356,7 +372,8 @@ def test_add_col_implicit_nullable():
     c.execute("SELECT crsql_commit_alter('foo');")
 
     changes = c.execute(full_changes_query).fetchall()
-    assert (changes == [('foo', b'\x01\x09\x01', 'name', "bar", 1, 1, None)])
+    assert (changes == [('foo', b'\x01\t\x01', '__crsql_pko', None, 1, 1, None),
+                        ('foo', b'\x01\t\x01', 'name', 'bar', 1, 1, None)])
 
 
 def test_add_col_through_12step():
@@ -379,13 +396,12 @@ def test_add_col_through_12step():
     c.execute("SELECT crsql_commit_alter('foo');")
 
     changes = c.execute(full_changes_query).fetchall()
-    assert (changes == [('foo', b'\x01\x09\x03', 'name', None, 1, 1, None),
-                        # New row (22) appropriately gets same db version
-                        # see create_clock_rows_from_stmt
-                        ('foo', b'\x01\x09\x16', 'name', "baz", 1, 1, None),
-                        ('foo', b'\x01\x09\x16', 'age', 33, 1, 1, None),
-                        # age was updated to a new value during migration so db_version appropriately incremented
-                        ('foo', b'\x01\x09\x03', 'age', 44, 1, 1, None)])
+    assert (changes == [('foo', b'\x01\t\x03', '__crsql_pko', None, 1, 1, None),
+                        ('foo', b'\x01\t\x16', '__crsql_pko', None, 1, 1, None),
+                        ('foo', b'\x01\t\x03', 'name', None, 1, 1, None),
+                        ('foo', b'\x01\t\x16', 'name', 'baz', 1, 1, None),
+                        ('foo', b'\x01\t\x16', 'age', 33, 1, 1, None),
+                        ('foo', b'\x01\t\x03', 'age', 44, 1, 1, None)])
 
 
 def test_pk_only_table_backfill():
@@ -418,8 +434,10 @@ def test_pk_and_default_backfill():
 
     changes = c.execute(full_changes_query).fetchall()
     # Rows should be backfilled
-    assert (changes == [('foo', b'\x01\x09\x01', 'b', None, 1, 1,
-            None), ('foo', b'\x01\x09\x02', 'b', None, 1, 1, None)])
+    assert (changes == [('foo', b'\x01\t\x01', '__crsql_pko', None, 1, 1, None),
+                        ('foo', b'\x01\t\x01', 'b', None, 1, 1, None),
+                        ('foo', b'\x01\t\x02', '__crsql_pko', None, 1, 1, None),
+                        ('foo', b'\x01\t\x02', 'b', None, 1, 1, None)])
 
 
 def test_pk_and_default_backfill_post12step_with_new_rows():
@@ -450,8 +468,10 @@ def test_pk_and_default_backfill_post12step_with_new_rows():
     # 1. do schema alterations in begin/commit alter
     # 2. do data alterations after commit alter
     # data alterations will then get new db versions.
-    assert (changes == [('foo', b'\x01\x09\x01', 'b', None, 0, 1,
-            None), ('foo', b'\x01\x09\x02', 'b', None, 0, 1, None)])
+    assert (changes == [('foo', b'\x01\t\x01', '__crsql_pko', None, 0, 1, None),
+                        ('foo', b'\x01\t\x01', 'b', None, 0, 1, None),
+                        ('foo', b'\x01\t\x02', '__crsql_pko', None, 0, 1, None),
+                        ('foo', b'\x01\t\x02', 'b', None, 0, 1, None)])
 
 
 def test_add_column_and_set_column():
@@ -542,10 +562,12 @@ def test_remove_col_from_pk():
     c.commit()
 
     changes = c.execute(full_changes_query).fetchall()
-    assert (changes == [('foo', b'\x01\x09\x01', 'b', 2, 1, 1, None),
-                        ('foo', b'\x01\x09\x01', 'c', 3, 1, 1, None),
-                        ('foo', b'\x01\x09\x04', 'b', 5, 1, 1, None),
-                        ('foo', b'\x01\x09\x04', 'c', 6, 1, 1, None)])
+    assert (changes == [('foo', b'\x01\t\x01', '__crsql_pko', None, 1, 1, None),
+                        ('foo', b'\x01\t\x01', 'b', 2, 1, 1, None),
+                        ('foo', b'\x01\t\x01', 'c', 3, 1, 1, None),
+                        ('foo', b'\x01\t\x04', '__crsql_pko', None, 1, 1, None),
+                        ('foo', b'\x01\t\x04', 'b', 5, 1, 1, None),
+                        ('foo', b'\x01\t\x04', 'c', 6, 1, 1, None)])
 
     None
 
@@ -571,8 +593,10 @@ def test_remove_pk_column():
     c.execute("SELECT crsql_commit_alter('foo');")
 
     changes = c.execute(full_changes_query).fetchall()
-    assert (changes == [('foo', b'\x01\x09\x02', 'c', 3, 1, 1, None),
-            ('foo', b'\x01\x09\x05', 'c', 6, 1, 1, None)])
+    assert (changes == [('foo', b'\x01\t\x02', '__crsql_pko', None, 1, 1, None),
+                        ('foo', b'\x01\t\x02', 'c', 3, 1, 1, None),
+                        ('foo', b'\x01\t\x05', '__crsql_pko', None, 1, 1, None),
+                        ('foo', b'\x01\t\x05', 'c', 6, 1, 1, None)])
 
 
 def test_add_existing_col_to_pk():
@@ -594,8 +618,11 @@ def test_add_existing_col_to_pk():
     c.execute("SELECT crsql_commit_alter('foo');")
 
     changes = c.execute(full_changes_query).fetchall()
-    assert (changes == [('foo', b'\x02\x09\x01\x09\x02', 'c', 3, 1, 1, None),
-            ('foo', b'\x02\x09\x04\x09\x05', 'c', 6, 1, 1, None)])
+    assert (changes == [('foo', b'\x02\t\x01\t\x02', '__crsql_pko', None, 1, 1, None),
+                        ('foo', b'\x02\t\x01\t\x02', 'c', 3, 1, 1, None),
+                        ('foo', b'\x02\t\x04\t\x05',
+                         '__crsql_pko', None, 1, 1, None),
+                        ('foo', b'\x02\t\x04\t\x05', 'c', 6, 1, 1, None)])
 
 
 def test_add_new_col_to_pk():
@@ -617,9 +644,11 @@ def test_add_new_col_to_pk():
     c.execute("SELECT crsql_commit_alter('foo');")
 
     changes = c.execute(full_changes_query).fetchall()
-
-    assert (changes == [('foo', b'\x02\x09\x01\x09\x03', 'b', 2, 1, 1, None),
-            ('foo', b'\x02\x09\x04\x09\x06', 'b', 5, 1, 1, None)])
+    assert (changes == [('foo', b'\x02\t\x01\t\x03', '__crsql_pko', None, 1, 1, None),
+                        ('foo', b'\x02\t\x01\t\x03', 'b', 2, 1, 1, None),
+                        ('foo', b'\x02\t\x04\t\x06',
+                         '__crsql_pko', None, 1, 1, None),
+                        ('foo', b'\x02\t\x04\t\x06', 'b', 5, 1, 1, None)])
 
 
 # DB version isn't bumped but this is fine...
@@ -649,8 +678,10 @@ def test_rename_pk_column():
 
     changes = c.execute(full_changes_query).fetchall()
 
-    assert (changes == [('foo', b'\x01\x09\x01', 'b', 2, 1, 1, None),
-            ('foo', b'\x01\x09\x04', 'b', 5, 1, 1, None)])
+    assert (changes == [('foo', b'\x01\t\x01', '__crsql_pko', None, 1, 1, None),
+                        ('foo', b'\x01\t\x01', 'b', 2, 1, 1, None),
+                        ('foo', b'\x01\t\x04', '__crsql_pko', None, 1, 1, None),
+                        ('foo', b'\x01\t\x04', 'b', 5, 1, 1, None)])
 
 
 def test_pk_only_table_pk_membership():
@@ -673,8 +704,13 @@ def test_changing_values_in_primary_key_columns():
     c.commit()
 
     changes = c.execute(full_changes_query).fetchall()
-    assert (changes == [('foo', b'\x01\x09\x02', 'b', 2, 1, 1, None),
-            ('foo', b'\x01\x09\x04', 'b', 5, 1, 1, None)])
+    # TODO: should we not be recording a delete fro `a = 1` given the row was last
+    # as a result of the migration? Hmm.. under the current rules of "no sync while schema mismatch"
+    # this shouldn't be required.
+    assert (changes == [('foo', b'\x01\t\x02', '__crsql_pko', None, 1, 1, None),
+                        ('foo', b'\x01\t\x02', 'b', 2, 1, 1, None),
+                        ('foo', b'\x01\t\x04', '__crsql_pko', None, 1, 1, None),
+                        ('foo', b'\x01\t\x04', 'b', 5, 1, 1, None)])
 
 
 def test_12step_backfill_retains_siteid():

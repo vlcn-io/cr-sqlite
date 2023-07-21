@@ -61,7 +61,7 @@ pub fn pk_where_list(
         let name = unsafe { CStr::from_ptr(c.name) };
         result.push(if let Some(prefix) = rhs_prefix {
             format!(
-                "\"{col_name}\" = {prefix}\"{col_name}\"",
+                "\"{col_name}\" IS {prefix}\"{col_name}\"",
                 prefix = prefix,
                 col_name = crate::util::escape_ident(name.to_str()?)
             )
@@ -80,7 +80,7 @@ pub fn where_list(columns: &[crsql_ColumnInfo]) -> Result<String, Utf8Error> {
     for c in columns {
         let name = unsafe { CStr::from_ptr(c.name) };
         result.push(format!(
-            "\"{col_name}\" = ?",
+            "\"{col_name}\" IS ?",
             col_name = crate::util::escape_ident(name.to_str()?)
         ));
     }

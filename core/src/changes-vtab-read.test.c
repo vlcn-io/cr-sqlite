@@ -106,7 +106,7 @@ static void testRowPatchDataQuery() {
   const char *cid = "b";
   char *pks = "1";
   char *q = crsql_row_patch_data_query(tblInfo, cid);
-  assert(strcmp(q, "SELECT \"b\" FROM \"foo\" WHERE \"a\" = ?") == 0);
+  assert(strcmp(q, "SELECT \"b\" FROM \"foo\" WHERE \"a\" IS ?") == 0);
   sqlite3_free(q);
 
   printf("\t\e[0;32mSuccess\e[0m\n");

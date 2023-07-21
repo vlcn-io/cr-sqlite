@@ -74,19 +74,17 @@ def setup_alter_test():
 def test_drop_clock_on_col_remove():
     c = setup_alter_test()
     changes = c.execute(changes_query).fetchall()
-    expected = [
-        ('todo', b'\x01\x09\x01', 'name', "cook"),
-        ('todo', b'\x01\x09\x01', 'complete', 0),
-        ('todo', b'\x01\x09\x01', 'list', "home"),
-    ]
+    expected = [('todo', b'\x01\t\x01', '__crsql_pko', None),
+                ('todo', b'\x01\t\x01', 'name', 'cook'),
+                ('todo', b'\x01\t\x01', 'complete', 0),
+                ('todo', b'\x01\t\x01', 'list', 'home')]
     assert (changes == expected)
 
     clock_entries = c.execute(clock_query).fetchall()
-    assert (clock_entries == [
-        (1, 1, 1, 'name', None),
-        (2, 1, 1, 'complete', None),
-        (3, 1, 1, 'list', None),
-    ])
+    assert (clock_entries == [(1, 1, 1, '__crsql_pko', None),
+                              (2, 1, 1, 'name', None),
+                              (3, 1, 1, 'complete', None),
+                              (4, 1, 1, 'list', None)])
 
     c.execute("SELECT crsql_begin_alter('todo');")
     # Dropping a column should remove its entries from our replication logs.
@@ -96,6 +94,7 @@ def test_drop_clock_on_col_remove():
 
     changes = c.execute(changes_query).fetchall()
     expected = [
+        ('todo', b'\x01\t\x01', '__crsql_pko', None),
         ('todo', b'\x01\x09\x01', 'name', "cook"),
         ('todo', b'\x01\x09\x01', 'complete', 0),
     ]
@@ -103,7 +102,8 @@ def test_drop_clock_on_col_remove():
 
     clock_entries = c.execute(clock_query).fetchall()
     assert (
-        clock_entries == [(1, 1, 1, 'name', None), (2, 1, 1, 'complete', None)]
+        clock_entries == [(1, 1, 1, '__crsql_pko', None),
+                          (2, 1, 1, 'name', None), (3, 1, 1, 'complete', None)]
     )
 
 

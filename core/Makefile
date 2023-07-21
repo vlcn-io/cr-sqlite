@@ -30,8 +30,12 @@ endif
 ifdef IOS_TARGET
 CI_MAYBE_TARGET=$(IOS_TARGET)
 rs_build_flags = -Zbuild-std
-sysroot_option = -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk
-# sysroot_option = -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator.sdk
+	ifeq ($(or $(findstring sim,$(CI_MAYBE_TARGET)),$(findstring x86_64,$(CI_MAYBE_TARGET))),)
+			# todo: run the xcode command to find this
+			sysroot_option = -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk
+		else
+			sysroot_option = -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator.sdk
+		endif
 endif
 
 prefix=./dist
@@ -80,7 +84,7 @@ loadable: $(TARGET_LOADABLE)
 loadable_dbg: $(TARGET_DBG_LOADABLE)
 sqlite3: $(TARGET_SQLITE3)
 vanilla: $(TARGET_SQLITE3_VANILLA)
-sqlite3_lib: $(TARGET_LIB)
+static_lib: $(TARGET_LIB)
 test: $(TARGET_TEST)
 	$(prefix)/test
 # ASAN_OPTIONS=detect_leaks=1
@@ -119,7 +123,12 @@ ifdef CI_MAYBE_TARGET
 	rs_lib_static = ./rs/bundle/target/$(CI_MAYBE_TARGET)/release/libcrsql_bundle.a
 	RS_TARGET = --target=$(CI_MAYBE_TARGET)
 	ifndef CI_GCC
-		C_TARGET = -target $(CI_MAYBE_TARGET)
+# clang has a different target triple than Rust for ios simuators
+		ifeq ($(findstring sim,$(CI_MAYBE_TARGET)),)
+			C_TARGET = -target $(CI_MAYBE_TARGET)
+		else
+			C_TARGET = -target $(CI_MAYBE_TARGET)ulator
+		endif
 	endif
 endif
 
@@ -176,11 +185,11 @@ $(TARGET_LIB): $(prefix) $(TARGET_SQLITE3_EXTRA_C) $(rs_lib_static_cpy) $(ext_fi
 	$(LIB_CFLAGS) \
 	$(C_TARGET) \
 	$(sysroot_option) \
-	$(TARGET_SQLITE3_EXTRA_C) $(ext_files)
+	$(ext_files)
 	mkdir -p $(prefix)/temp
 	rm -f $(prefix)/temp/*
 	mv *.o $(prefix)/temp
-	cd $(prefix)/temp && ar -x ../libcrsql_bundle-static.a && ar -rc libsqlite3.a *.o && mv libsqlite3.a ../libsqlite3-$(CI_MAYBE_TARGET).a
+	cd $(prefix)/temp && ar -x ../libcrsql_bundle-static.a && ar -rc crsqlite.a *.o && mv crsqlite.a ../crsqlite-$(CI_MAYBE_TARGET).a
 
 # Build a normal SQLite CLI that does not include cr-sqlite.
 # cr-sqlite can be laoded in via the `.load` pragma.
@@ -233,6 +242,6 @@ $(TARGET_FUZZ): $(prefix) $(TARGET_SQLITE3_EXTRA_C) src/fuzzer.cc $(ext_files)
 	sqlite3 \
 	correctness \
 	valgrind \
-	ubsan analyzer fuzz asan sqlite3_lib
+	ubsan analyzer fuzz asan static_lib
 
 FORCE: ;

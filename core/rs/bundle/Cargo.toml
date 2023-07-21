@@ -22,7 +22,6 @@ panic = "abort"
 
 [profile.release]
 panic = "abort"
-lto = true
 
 [features]
 loadable_extension = [

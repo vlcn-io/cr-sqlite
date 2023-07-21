@@ -351,9 +351,10 @@ static void testSelectChangesAfterChangingColumnName() {
   // clock records should now be for column `c` with a `null` value.
   // nit: test if a default value is set for the column
   while ((rc = sqlite3_step(pStmt)) == SQLITE_ROW) {
-    ++numRows;
-    assert(strcmp((const char *)sqlite3_column_text(pStmt, 0), "c") == 0);
+    assert(strcmp((const char *)sqlite3_column_text(pStmt, 0), "__crsql_pko") ==
+           0);
     assert(sqlite3_column_type(pStmt, 1) == SQLITE_NULL);
+    ++numRows;
   }
   sqlite3_finalize(pStmt);
   // we should still have a change given we never dropped the row
@@ -368,26 +369,36 @@ static void testSelectChangesAfterChangingColumnName() {
   numRows = 0;
   // Columns that no long exist post-alter should not
   // be retained for replication
-  int first = 1;
   while ((rc = sqlite3_step(pStmt)) == SQLITE_ROW) {
-    if (first == 1) {
-      first = 0;
-      continue;
-    }
     assert(strcmp("foo", (const char *)sqlite3_column_text(
                              pStmt, CHANGES_SINCE_VTAB_TBL)) == 0);
     const unsigned char *pkBlob = (const unsigned char *)sqlite3_column_blob(
         pStmt, CHANGES_SINCE_VTAB_PK);
-    assert(pkBlob[0] == 0x01);
-    assert(pkBlob[1] == 0x09);
-    assert(pkBlob[2] == 0x02);
-    assert(strcmp("c", (const char *)sqlite3_column_text(
-                           pStmt, CHANGES_SINCE_VTAB_CID)) == 0);
-    assert(3 == sqlite3_column_int(pStmt, CHANGES_SINCE_VTAB_CVAL));
+
+    if (numRows == 0) {
+      assert(pkBlob[0] == 0x01);
+      assert(pkBlob[1] == 0x09);
+      assert(pkBlob[2] == 0x01);
+    } else {
+      assert(pkBlob[0] == 0x01);
+      assert(pkBlob[1] == 0x09);
+      assert(pkBlob[2] == 0x02);
+    }
+
+    if (numRows == 1 || numRows == 0) {
+      assert(strcmp("__crsql_pko", (const char *)sqlite3_column_text(
+                                       pStmt, CHANGES_SINCE_VTAB_CID)) == 0);
+    }
+    if (numRows == 2) {
+      assert(strcmp("c", (const char *)sqlite3_column_text(
+                             pStmt, CHANGES_SINCE_VTAB_CID)) == 0);
+      assert(3 == sqlite3_column_int(pStmt, CHANGES_SINCE_VTAB_CVAL));
+    }
+
     ++numRows;
   }
   sqlite3_finalize(pStmt);
-  assert(numRows == 1);
+  assert(numRows == 3);
   assert(rc == SQLITE_DONE);
 
   crsql_close(db);

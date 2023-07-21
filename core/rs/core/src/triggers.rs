@@ -153,7 +153,7 @@ fn create_update_trigger(
     for col in pk_columns {
         let col_name = unsafe { CStr::from_ptr(col.name).to_str()? };
         db.exec_safe(&format!(
-            "CREATE TRIGGER IF NOT EXISTS \"{tbl_name}_{col_name}_crsql_utrig\"
+            "CREATE TRIGGER IF NOT EXISTS \"{tbl_name}_{col_name}__crsql_utrig\"
           AFTER UPDATE OF \"{col_name}\" ON \"{tbl_name}\"
           WHEN crsql_internal_sync_bit = 0 AND NEW.\"{col_name}\" IS NOT OLD.\"{col_name}\"
           BEGIN

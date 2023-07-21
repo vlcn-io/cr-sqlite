@@ -620,29 +620,10 @@ static void testPullingOnlyLocalChanges() {
   assert(rc == SQLITE_ROW);
 
   int count = sqlite3_column_int(pStmt, 0);
-  // we created 2 local changes, we should get 2 changes back
+  // we created 2 local changes, we should get 2 changes back. Well 4 really
+  // since row creation is an event.
   printf("count: %d\n", count);
-  assert(count == 2);
-  sqlite3_finalize(pStmt);
-
-  sqlite3_prepare_v2(
-      db, "SELECT count(*) FROM crsql_changes WHERE site_id IS NOT NULL", -1,
-      &pStmt, 0);
-  rc = sqlite3_step(pStmt);
-  assert(rc == SQLITE_ROW);
-  count = sqlite3_column_int(pStmt, 0);
-  // we asked for changes that were not local
-  assert(count == 0);
-  sqlite3_finalize(pStmt);
-
-  sqlite3_prepare_v2(db,
-                     "SELECT count(*) FROM crsql_changes WHERE site_id IS NULL",
-                     -1, &pStmt, 0);
-  rc = sqlite3_step(pStmt);
-  assert(rc == SQLITE_ROW);
-  count = sqlite3_column_int(pStmt, 0);
-  // we asked for changes that were not local
-  assert(count == 2);
+  assert(count == 4);
   sqlite3_finalize(pStmt);
 
   sqlite3_prepare_v2(

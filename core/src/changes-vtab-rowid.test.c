@@ -68,6 +68,10 @@ static void testRowidsForReads() {
   assert(sqlite3_column_int64(pStmt, 0) == 1);
   assert(sqlite3_step(pStmt) == SQLITE_ROW);
   assert(sqlite3_column_int64(pStmt, 0) == 2);
+  assert(sqlite3_step(pStmt) == SQLITE_ROW);
+  assert(sqlite3_column_int64(pStmt, 0) == 3);
+  assert(sqlite3_step(pStmt) == SQLITE_ROW);
+  assert(sqlite3_column_int64(pStmt, 0) == 4);
   sqlite3_finalize(pStmt);
 
   rc = sqlite3_exec(db, "CREATE TABLE bar (a primary key, b)", 0, 0, 0);
@@ -88,13 +92,25 @@ static void testRowidsForReads() {
   sqlite3_step(pStmt);
   assert(sqlite3_column_int64(pStmt, 0) == 2);
   sqlite3_step(pStmt);
+  assert(sqlite3_column_int64(pStmt, 0) == 3);
+  sqlite3_step(pStmt);
+  assert(sqlite3_column_int64(pStmt, 0) == 4);
+  sqlite3_step(pStmt);
   assert(sqlite3_column_int64(pStmt, 0) == 1 * ROWID_SLAB_SIZE + 1);
   sqlite3_step(pStmt);
   assert(sqlite3_column_int64(pStmt, 0) == 1 * ROWID_SLAB_SIZE + 2);
   sqlite3_step(pStmt);
+  assert(sqlite3_column_int64(pStmt, 0) == 1 * ROWID_SLAB_SIZE + 3);
+  sqlite3_step(pStmt);
+  assert(sqlite3_column_int64(pStmt, 0) == 1 * ROWID_SLAB_SIZE + 4);
+  sqlite3_step(pStmt);
   assert(sqlite3_column_int64(pStmt, 0) == 2 * ROWID_SLAB_SIZE + 1);
   sqlite3_step(pStmt);
   assert(sqlite3_column_int64(pStmt, 0) == 2 * ROWID_SLAB_SIZE + 2);
+  sqlite3_step(pStmt);
+  assert(sqlite3_column_int64(pStmt, 0) == 2 * ROWID_SLAB_SIZE + 3);
+  sqlite3_step(pStmt);
+  assert(sqlite3_column_int64(pStmt, 0) == 2 * ROWID_SLAB_SIZE + 4);
   sqlite3_finalize(pStmt);
 
   crsql_close(db);

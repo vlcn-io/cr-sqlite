@@ -1,5 +1,11 @@
 # ios
 
+```
+lipo crsqlite-aarch64-darwin.a crsqlite-aarch64-apple-ios.a crsqlite-armv7-apple-ios.a crsqlite-armv7s-apple-ios.a crsqlite-x86_64-apple-ios.a -create -output crsqlite-universal.a
+```
+
+^- one simulator slice one real slice
+
 proper sysroot and clang options:
 https://developer.apple.com/forums/thread/100545
 https://stackoverflow.com/questions/41007556/g-with-ios-sysroot-and-xcode-8-1

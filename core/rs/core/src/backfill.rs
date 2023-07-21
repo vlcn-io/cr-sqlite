@@ -30,9 +30,8 @@ pub fn backfill_table(
         pk_where_conditions = pk_cols
             .iter()
             .map(|f| format!(
-                "t1.\"{}\" IS t2.\"{}\"",
-                crate::util::escape_ident(f),
-                crate::util::escape_ident(f)
+                "t1.\"{col_name}\" IS t2.\"{col_name}\"",
+                col_name = crate::util::escape_ident(f),
             ))
             .collect::<Vec<_>>()
             .join(" AND "),
@@ -76,8 +75,10 @@ fn create_clock_rows_from_stmt(
     // in the future so if they have already seen this node up
     // to the current db version then the migration will place them into the correct
     // state. No need to re-sync post migration.
+    // or-ignore since we do not drop sentinel values during compaction as they act as our metadata
+    // to determine if rows should resurrect on a future insertion event provided by a peer.
     let sql = format!(
-        "INSERT INTO \"{table}__crsql_clock\"
+        "INSERT OR IGNORE INTO \"{table}__crsql_clock\"
           ({pk_cols}, __crsql_col_name, __crsql_col_version, __crsql_db_version, __crsql_seq) VALUES
           ({pk_values}, ?, 1, {dbversion_getter}, crsql_increment_and_get_seq())",
         table = crate::util::escape_ident(table),
@@ -102,17 +103,20 @@ fn create_clock_rows_from_stmt(
             write_stmt.bind_value(i as i32 + 1, value)?;
         }
 
-        // TODO: handle the case here where the _are no_ non_pk_cols!!!
-        // just insert the pk only sentinel.
+        // Insert the creation sentinel. The creation sentinel may already
+        // exist so we'll insert or ignore on it.
+        write_stmt.bind_text(
+            pk_cols.len() as i32 + 1,
+            crate::c::INSERT_SENTINEL,
+            Destructor::STATIC,
+        )?;
+        write_stmt.step()?;
+        write_stmt.reset()?;
+
         for col in non_pk_cols.iter() {
             // We even backfill default values since we can't differentiate between an explicit
-            // reset to a default vs an implicit set to default on create.
+            // reset to a default vs an implicit set to default on create. Do we? I don't think we do set defaults.
             write_stmt.bind_text(pk_cols.len() as i32 + 1, col, Destructor::STATIC)?;
-            write_stmt.step()?;
-            write_stmt.reset()?;
-        }
-        if non_pk_cols.len() == 0 {
-            write_stmt.bind_text(pk_cols.len() as i32 + 1, "__crsql_pko", Destructor::STATIC)?;
             write_stmt.step()?;
             write_stmt.reset()?;
         }

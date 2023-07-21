@@ -42,7 +42,7 @@ unsafe fn compact_post_alter(
     }
     let current_db_version = (*ext_data).dbVersion;
 
-    // If primary key columns change
+    // If primary key columns change (in the schema)
     // We need to drop, re-create and backfill
     // the clock table.
     // A change in pk columns means a change in all identities

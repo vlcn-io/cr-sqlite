@@ -16,24 +16,34 @@ def test_sync():
     db1 = connect(":memory:")
     db2 = connect(":memory:")
 
-    db1.execute("CREATE TABLE foo (a primary key, b)")
-    db1.execute("SELECT crsql_as_crr('foo')")
-    db1.commit()
+    def setup(db):
+        db.execute("CREATE TABLE hoot (a, b primary key, c)")
+        db.execute("SELECT crsql_as_crr('hoot')")
+        db.commit()
 
-    db2.execute("CREATE TABLE foo (a primary key, b)")
-    db2.execute("SELECT crsql_as_crr('foo')")
-    db2.commit()
+        db.execute("INSERT INTO hoot VALUES (1, 1, 1)")
+        db.commit()
+        db.execute("UPDATE hoot SET a = 1 WHERE b = 1")
+        db.commit()
+        db.execute("UPDATE hoot SET a = 2 WHERE b = 1")
+        db.commit()
+        db.execute("UPDATE hoot SET a = 3 WHERE b = 1")
+        db.commit()
 
-    db1.execute("INSERT INTO foo VALUES (1, 2.0e2)")
-    db1.commit()
-    db2.execute("INSERT INTO foo VALUES (2, X'1232')")
-    db2.commit()
+    setup(db1)
+    setup(db2)
+
+    db1_v = db1.execute("SELECT crsql_dbversion()").fetchone()
+    db2_v = db2.execute("SELECT crsql_dbversion()").fetchone()
+
+    pprint(db1_v)
+    pprint(db2_v)
 
     sync_left_to_right(db1, db2)
 
-    # pprint(db1.execute("SELECT * FROM foo").fetchall())
-    # pprint(db1.execute("SELECT * FROM foo__crsql_clock").fetchall())
-    # pprint(db1.execute("SELECT * FROM crsql_changes").fetchall())
-    pprint(db2.execute("SELECT * FROM foo").fetchall())
-    pprint(db2.execute("SELECT * FROM foo__crsql_clock").fetchall())
+    db1_v = db1.execute("SELECT crsql_dbversion()").fetchone()
+    db2_v = db2.execute("SELECT crsql_dbversion()").fetchone()
+    pprint(db1_v)
+    pprint(db2_v)
+
     pprint(db2.execute("SELECT * FROM crsql_changes").fetchall())

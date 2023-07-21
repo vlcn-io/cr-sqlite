@@ -280,7 +280,7 @@ fn merge_pk_only_insert(
     let stmt_key = get_cache_key(CachedStmtType::MergePkOnlyInsert, tbl_name_str, None)?;
     let merge_stmt = get_cached_stmt_rt_wt(db, ext_data, stmt_key, || {
         format!(
-            "INSERT OR IGNORE INTO \"{table_name}\" ({pk_idents}) VALUES ({pk_bindings})",
+            "INSERT OR IGNORE INTO \"{table_name}\" ({pk_idents}) VALUES ({pk_bindings}) RETURNING 1",
             table_name = crate::util::escape_ident(tbl_name_str),
             pk_idents = pk_ident_list,
             pk_bindings = pk_bind_list
@@ -317,18 +317,26 @@ fn merge_pk_only_insert(
         return Err(rc);
     }
 
-    set_winner_clock(
-        db,
-        ext_data,
-        tbl_info,
-        pk_ident_list,
-        pk_bind_list,
-        unpacked_pks,
-        crate::c::INSERT_SENTINEL,
-        remote_col_vrsn,
-        remote_db_vsn,
-        remote_site_id,
-    )
+    if let Ok(rc) = rc {
+        // We only set the winner clock if the insert was not ignored.
+        // INSERT OR IGNORE ... RETURNING will result in `SQLITE_DONE` if the insert was ignored and a row otherwise.
+        if rc == ResultCode::ROW {
+            return set_winner_clock(
+                db,
+                ext_data,
+                tbl_info,
+                pk_ident_list,
+                pk_bind_list,
+                unpacked_pks,
+                crate::c::INSERT_SENTINEL,
+                remote_col_vrsn,
+                remote_db_vsn,
+                remote_site_id,
+            );
+        }
+    }
+
+    Ok(-1)
 }
 
 // TODO: we can commonize this with `merge_pkonly_insert` -- basically the same logic.
@@ -543,9 +551,14 @@ unsafe fn merge_insert(
                 return Err(rc);
             }
             Ok(inner_rowid) => {
-                (*(*tab).pExtData).rowsImpacted += 1;
-                *rowid = slab_rowid(tbl_info_index, inner_rowid);
-                return Ok(ResultCode::OK);
+                // a success & rowid of -1 means the merge was a no-op
+                if inner_rowid != -1 {
+                    (*(*tab).pExtData).rowsImpacted += 1;
+                    *rowid = slab_rowid(tbl_info_index, inner_rowid);
+                    return Ok(ResultCode::OK);
+                } else {
+                    return Ok(ResultCode::OK);
+                }
             }
         }
     }

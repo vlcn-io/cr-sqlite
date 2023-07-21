@@ -5,13 +5,12 @@ use alloc::vec;
 use sqlite::Connection;
 
 use core::{
-    any,
     ffi::{c_char, c_int, CStr},
     slice,
     str::Utf8Error,
 };
 
-use crate::c::{crsql_ColumnInfo, crsql_TableInfo};
+use crate::c::crsql_TableInfo;
 use sqlite::{sqlite3, ResultCode};
 use sqlite_nostd as sqlite;
 

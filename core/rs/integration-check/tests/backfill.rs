@@ -55,34 +55,52 @@ fn new_nonempty_table_impl(apply_twice: bool) -> Result<(), ResultCode> {
 
     let mut cnt = 0;
     while stmt.step()? == ResultCode::ROW {
+        if cnt % 2 == 0 {
+            assert_eq!(
+                stmt.column_int64(0)?,
+                ((cnt + 1) as f64 / 2.0).ceil() as i64
+            ); // pk
+            assert_eq!(stmt.column_text(1)?, "__crsql_pko"); // col name
+            assert_eq!(stmt.column_int64(2)?, 1); // col version
+            assert_eq!(stmt.column_int64(3)?, 1); // db version
+        } else {
+            assert_eq!(stmt.column_int64(0)?, (cnt + 1) / 2); // pk
+            assert_eq!(stmt.column_text(1)?, "name"); // col name
+            assert_eq!(stmt.column_int64(2)?, 1); // col version
+            assert_eq!(stmt.column_int64(3)?, 1); // db version
+        }
         cnt = cnt + 1;
-        assert_eq!(stmt.column_int64(0)?, cnt); // pk
-        assert_eq!(stmt.column_text(1)?, "name"); // col name
-        assert_eq!(stmt.column_int64(2)?, 1); // col version
-        assert_eq!(stmt.column_int64(3)?, 1); // db version
     }
-    assert_eq!(cnt, 2);
+    assert_eq!(cnt, 4);
 
     // select from crsql_changes too
     let stmt = db.db.prepare_v2(
         "SELECT [table], [pk], [cid], [val], [col_version], [db_version] FROM crsql_changes;",
     )?;
     let mut cnt = 0;
-    while stmt.step()? == ResultCode::ROW {
-        cnt = cnt + 1;
-        if cnt == 1 {
+    while stmt.step().unwrap() == ResultCode::ROW {
+        if cnt < 2 {
             assert_eq!(stmt.column_blob(1)?, [1, 9, 1]); // pk
-            assert_eq!(stmt.column_text(3)?, "one"); // col value
+            if cnt == 1 {
+                assert_eq!(stmt.column_text(3)?, "one"); // col value
+            }
         } else {
             assert_eq!(stmt.column_blob(1)?, [1, 9, 2]); // pk
-            assert_eq!(stmt.column_text(3)?, "two"); // col value
+            if cnt == 3 {
+                assert_eq!(stmt.column_text(3)?, "two"); // col value
+            }
         }
         assert_eq!(stmt.column_text(0)?, "foo"); // table name
-        assert_eq!(stmt.column_text(2)?, "name"); // col name
+        if cnt % 2 == 0 {
+            assert_eq!(stmt.column_text(2)?, "__crsql_pko"); // col name
+        } else {
+            assert_eq!(stmt.column_text(2)?, "name"); // col name
+        }
         assert_eq!(stmt.column_int64(4)?, 1); // col version
         assert_eq!(stmt.column_int64(5)?, 1); // db version
+        cnt = cnt + 1;
     }
-    assert_eq!(cnt, 2);
+    assert_eq!(cnt, 4);
     Ok(())
 }
 

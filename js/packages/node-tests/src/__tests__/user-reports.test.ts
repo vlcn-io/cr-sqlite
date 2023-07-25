@@ -52,6 +52,24 @@ test("failed to increment?", () => {
   `);
   expect(database.prepare(`SELECT * FROM crsql_changes`).all()).toEqual([
     {
+      cid: "__crsql_pko",
+      col_version: 1,
+      db_version: 1,
+      pk: Buffer.from(Uint8Array.from([1, 1])),
+      site_id: null,
+      table: "b",
+      val: null,
+    },
+    {
+      cid: "__crsql_pko",
+      col_version: 1,
+      db_version: 2,
+      pk: Buffer.from(Uint8Array.from([1, 9, 10])),
+      site_id: null,
+      table: "a",
+      val: null,
+    },
+    {
       table: "a",
       pk: Buffer.from(Uint8Array.from([1, 9, 10])),
       cid: "data",

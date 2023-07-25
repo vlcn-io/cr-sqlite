@@ -154,7 +154,7 @@ fn create_update_trigger(
         db.exec_safe(&format!(
             "CREATE TRIGGER IF NOT EXISTS \"{tbl_name}_{col_name}__crsql_utrig\"
           AFTER UPDATE OF \"{col_name}\" ON \"{tbl_name}\"
-          WHEN crsql_internal_sync_bit = 0 AND NEW.\"{col_name}\" IS NOT OLD.\"{col_name}\"
+          WHEN crsql_internal_sync_bit() = 0 AND NEW.\"{col_name}\" IS NOT OLD.\"{col_name}\"
           BEGIN
             INSERT INTO \"{table_name}__crsql_clock\" (
               {pk_list},

@@ -72,11 +72,30 @@ fn insert_trigger_body(
     let mut trigger_components = vec![];
 
     // Insert a record of it existing in all cases
-    trigger_components.push(format_insert_trigger_component(
-        table_name,
-        &pk_list,
-        &pk_new_list,
-        crate::c::INSERT_SENTINEL,
+    trigger_components.push(format!(
+        "INSERT INTO \"{table_name}__crsql_clock\" (
+          {pk_list},
+          __crsql_col_name,
+          __crsql_col_version,
+          __crsql_db_version,
+          __crsql_seq,
+          __crsql_site_id
+          ) SELECT
+          {pk_new_list},
+          '{col_name}',
+          1,
+          crsql_nextdbversion(),
+          crsql_increment_and_get_seq(),
+          NULL
+        ON CONFLICT DO UPDATE SET
+          __crsql_col_version = 1,
+          __crsql_db_version = crsql_nextdbversion(),
+          __crsql_seq = crsql_get_seq() - 1,
+          __crsql_site_id = NULL;",
+        table_name = crate::util::escape_ident(table_name),
+        pk_list = pk_list,
+        pk_new_list = pk_new_list,
+        col_name = crate::c::INSERT_SENTINEL
     ));
 
     for col in non_pk_columns {
@@ -100,24 +119,24 @@ fn format_insert_trigger_component(
 ) -> String {
     format!(
         "INSERT INTO \"{table_name}__crsql_clock\" (
-  {pk_list},
-  __crsql_col_name,
-  __crsql_col_version,
-  __crsql_db_version,
-  __crsql_seq,
-  __crsql_site_id
-) SELECT
-  {pk_new_list},
-  '{col_name}',
-  1,
-  crsql_nextdbversion(),
-  crsql_increment_and_get_seq(),
-  NULL
-ON CONFLICT DO UPDATE SET
-  __crsql_col_version = __crsql_col_version + 1,
-  __crsql_db_version = crsql_nextdbversion(),
-  __crsql_seq = crsql_get_seq() - 1,
-  __crsql_site_id = NULL;",
+          {pk_list},
+          __crsql_col_name,
+          __crsql_col_version,
+          __crsql_db_version,
+          __crsql_seq,
+          __crsql_site_id
+        ) SELECT
+          {pk_new_list},
+          '{col_name}',
+          1,
+          crsql_nextdbversion(),
+          crsql_increment_and_get_seq(),
+          NULL
+        ON CONFLICT DO UPDATE SET
+          __crsql_col_version = __crsql_col_version + 1,
+          __crsql_db_version = crsql_nextdbversion(),
+          __crsql_seq = crsql_get_seq() - 1,
+          __crsql_site_id = NULL;",
         table_name = crate::util::escape_ident(table_name),
         pk_list = pk_list,
         pk_new_list = pk_new_list,
@@ -166,12 +185,12 @@ fn create_update_trigger(
             ) SELECT
               {pk_old_list},
               '{sentinel}',
-              1,
+              2,
               crsql_nextdbversion(),
               crsql_increment_and_get_seq(),
               NULL WHERE true
             ON CONFLICT DO UPDATE SET
-              __crsql_col_version = __crsql_col_version + 1,
+              __crsql_col_version = 2,
               __crsql_db_version = crsql_nextdbversion(),
               __crsql_seq = crsql_get_seq() - 1,
               __crsql_site_id = NULL;
@@ -233,7 +252,7 @@ fn update_trigger_body(
           NULL
         WHERE {any_pk_differs}
         ON CONFLICT DO UPDATE SET
-          __crsql_col_version = __crsql_col_version + 1,
+          __crsql_col_version = 1,
           __crsql_db_version = crsql_nextdbversion(),
           __crsql_seq = crsql_get_seq() - 1,
           __crsql_site_id = NULL;",
@@ -304,12 +323,12 @@ fn create_delete_trigger(
       ) SELECT
         {pk_old_list},
         '{sentinel}',
-        1,
+        2,
         crsql_nextdbversion(),
         crsql_increment_and_get_seq(),
         NULL WHERE true
       ON CONFLICT DO UPDATE SET
-        __crsql_col_version = __crsql_col_version + 1,
+        __crsql_col_version = 2,
         __crsql_db_version = crsql_nextdbversion(),
         __crsql_seq = crsql_get_seq() - 1,
         __crsql_site_id = NULL;

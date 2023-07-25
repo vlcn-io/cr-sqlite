@@ -60,7 +60,7 @@ fn new_nonempty_table_impl(apply_twice: bool) -> Result<(), ResultCode> {
                 stmt.column_int64(0)?,
                 ((cnt + 1) as f64 / 2.0).ceil() as i64
             ); // pk
-            assert_eq!(stmt.column_text(1)?, "__crsql_pko"); // col name
+            assert_eq!(stmt.column_text(1)?, "-1"); // col name
             assert_eq!(stmt.column_int64(2)?, 1); // col version
             assert_eq!(stmt.column_int64(3)?, 1); // db version
         } else {
@@ -92,7 +92,7 @@ fn new_nonempty_table_impl(apply_twice: bool) -> Result<(), ResultCode> {
         }
         assert_eq!(stmt.column_text(0)?, "foo"); // table name
         if cnt % 2 == 0 {
-            assert_eq!(stmt.column_text(2)?, "__crsql_pko"); // col name
+            assert_eq!(stmt.column_text(2)?, "-1"); // col name
         } else {
             assert_eq!(stmt.column_text(2)?, "name"); // col name
         }

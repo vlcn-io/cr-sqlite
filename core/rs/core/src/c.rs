@@ -7,10 +7,8 @@ use num_derive::FromPrimitive;
 // As well as functions re-defined in Rust but not yet deleted from C
 use sqlite_nostd as sqlite;
 
-pub static INSERT_SENTINEL: &str = "__crsql_pko";
-pub static DELETE_SENTINEL: &str = "__crsql_del";
-// pub static INSERT_SENTINEL_CSTR: &str = "__crsql_pko\0";
-// pub static DELETE_SENTINEL_CSTR: &str = "__crsql_del\0";
+pub static INSERT_SENTINEL: &str = "-1";
+pub static DELETE_SENTINEL: &str = "-1";
 
 #[derive(FromPrimitive, PartialEq, Debug)]
 pub enum CrsqlChangesColumn {

@@ -90,7 +90,7 @@ unsafe fn compact_post_alter(
         // Next delete entries that no longer have a row
         let mut sql = String::from(
             format!(
-              "DELETE FROM \"{tbl_name}__crsql_clock\" WHERE __crsql_col_name != '__crsql_del' AND NOT EXISTS (SELECT 1 FROM \"{tbl_name}\" WHERE ",
+              "DELETE FROM \"{tbl_name}__crsql_clock\" WHERE __crsql_col_name != '-1' AND NOT EXISTS (SELECT 1 FROM \"{tbl_name}\" WHERE ",
               tbl_name = crate::util::escape_ident(tbl_name_str),
             ),
         );

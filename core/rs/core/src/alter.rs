@@ -78,19 +78,18 @@ unsafe fn compact_post_alter(
         // First delete entries that no longer have a column
         let sql = format!(
             "DELETE FROM \"{tbl_name_ident}__crsql_clock\" WHERE \"__crsql_col_name\" NOT IN (
-              SELECT name FROM pragma_table_info('{tbl_name_val}') UNION SELECT '{del_sentinel}' UNION SELECT '{pk_sentinel}'
+              SELECT name FROM pragma_table_info('{tbl_name_val}') UNION SELECT '{cl_sentinel}'
             )",
             tbl_name_ident = crate::util::escape_ident(tbl_name_str),
             tbl_name_val = crate::util::escape_ident_as_value(tbl_name_str),
-            del_sentinel = crate::c::DELETE_SENTINEL,
-            pk_sentinel = crate::c::INSERT_SENTINEL
+            cl_sentinel = crate::c::DELETE_SENTINEL,
         );
         db.exec_safe(&sql)?;
 
         // Next delete entries that no longer have a row
         let mut sql = String::from(
             format!(
-              "DELETE FROM \"{tbl_name}__crsql_clock\" WHERE __crsql_col_name != '-1' AND NOT EXISTS (SELECT 1 FROM \"{tbl_name}\" WHERE ",
+              "DELETE FROM \"{tbl_name}__crsql_clock\" WHERE (__crsql_col_name != '-1' OR (__crsql_col_name = '-1' AND __crsql_col_version % 2 != 0)) AND NOT EXISTS (SELECT 1 FROM \"{tbl_name}\" WHERE ",
               tbl_name = crate::util::escape_ident(tbl_name_str),
             ),
         );

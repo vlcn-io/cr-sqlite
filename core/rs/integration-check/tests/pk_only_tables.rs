@@ -263,7 +263,7 @@ fn discord_report_1_impl() -> Result<(), ResultCode> {
     let pk_val = stmt.column_blob(1)?;
     assert_eq!(pk_val, [0x01, 0x09, 0x2A]);
     let cid = stmt.column_text(2)?;
-    assert_eq!(cid, "__crsql_pko");
+    assert_eq!(cid, "-1");
     let val_type = stmt.column_type(3)?;
     assert_eq!(val_type, ColumnType::Null);
     let col_version = stmt.column_int64(4)?;

@@ -351,8 +351,7 @@ static void testSelectChangesAfterChangingColumnName() {
   // clock records should now be for column `c` with a `null` value.
   // nit: test if a default value is set for the column
   while ((rc = sqlite3_step(pStmt)) == SQLITE_ROW) {
-    assert(strcmp((const char *)sqlite3_column_text(pStmt, 0), "__crsql_pko") ==
-           0);
+    assert(strcmp((const char *)sqlite3_column_text(pStmt, 0), "-1") == 0);
     assert(sqlite3_column_type(pStmt, 1) == SQLITE_NULL);
     ++numRows;
   }
@@ -386,8 +385,8 @@ static void testSelectChangesAfterChangingColumnName() {
     }
 
     if (numRows == 1 || numRows == 0) {
-      assert(strcmp("__crsql_pko", (const char *)sqlite3_column_text(
-                                       pStmt, CHANGES_SINCE_VTAB_CID)) == 0);
+      assert(strcmp("-1", (const char *)sqlite3_column_text(
+                              pStmt, CHANGES_SINCE_VTAB_CID)) == 0);
     }
     if (numRows == 2) {
       assert(strcmp("c", (const char *)sqlite3_column_text(

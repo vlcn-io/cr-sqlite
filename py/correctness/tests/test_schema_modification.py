@@ -74,14 +74,14 @@ def setup_alter_test():
 def test_drop_clock_on_col_remove():
     c = setup_alter_test()
     changes = c.execute(changes_query).fetchall()
-    expected = [('todo', b'\x01\t\x01', '__crsql_pko', None),
+    expected = [('todo', b'\x01\t\x01', '-1', None),
                 ('todo', b'\x01\t\x01', 'name', 'cook'),
                 ('todo', b'\x01\t\x01', 'complete', 0),
                 ('todo', b'\x01\t\x01', 'list', 'home')]
     assert (changes == expected)
 
     clock_entries = c.execute(clock_query).fetchall()
-    assert (clock_entries == [(1, 1, 1, '__crsql_pko', None),
+    assert (clock_entries == [(1, 1, 1, '-1', None),
                               (2, 1, 1, 'name', None),
                               (3, 1, 1, 'complete', None),
                               (4, 1, 1, 'list', None)])
@@ -94,7 +94,7 @@ def test_drop_clock_on_col_remove():
 
     changes = c.execute(changes_query).fetchall()
     expected = [
-        ('todo', b'\x01\t\x01', '__crsql_pko', None),
+        ('todo', b'\x01\t\x01', '-1', None),
         ('todo', b'\x01\x09\x01', 'name', "cook"),
         ('todo', b'\x01\x09\x01', 'complete', 0),
     ]
@@ -102,7 +102,7 @@ def test_drop_clock_on_col_remove():
 
     clock_entries = c.execute(clock_query).fetchall()
     assert (
-        clock_entries == [(1, 1, 1, '__crsql_pko', None),
+        clock_entries == [(1, 1, 1, '-1', None),
                           (2, 1, 1, 'name', None), (3, 1, 1, 'complete', None)]
     )
 
@@ -125,7 +125,7 @@ def test_backfill_col_add():
     # Given we only migrate against compatible schema versions there's no need to create
     # a record of a default value. The other node will have the same default or, if they wrote a value,
     # a value which takes precedence.
-    assert (changes == [('todo', b'\x01\t\x01', '__crsql_pko', None),
+    assert (changes == [('todo', b'\x01\t\x01', '-1', None),
                         ('todo', b'\x01\t\x01', 'name', 'cook'),
                         ('todo', b'\x01\t\x01', 'complete', 0),
                         ('todo', b'\x01\t\x01', 'list', 'home')])
@@ -135,11 +135,11 @@ def test_backfill_col_add():
         "INSERT INTO todo (id, name, complete, list, assignee) VALUES (2, 'clean', 0, 'home', 'me');")
     c.commit()
     changes = c.execute(changes_query).fetchall()
-    assert (changes == [('todo', b'\x01\t\x01', '__crsql_pko', None),
+    assert (changes == [('todo', b'\x01\t\x01', '-1', None),
                         ('todo', b'\x01\t\x01', 'name', 'cook'),
                         ('todo', b'\x01\t\x01', 'complete', 0),
                         ('todo', b'\x01\t\x01', 'list', 'home'),
-                        ('todo', b'\x01\t\x02', '__crsql_pko', None),
+                        ('todo', b'\x01\t\x02', '-1', None),
                         ('todo', b'\x01\t\x02', 'name', 'clean'),
                         ('todo', b'\x01\t\x02', 'complete', 0),
                         ('todo', b'\x01\t\x02', 'list', 'home'),
@@ -170,10 +170,10 @@ def test_backfill_clocks_on_rename():
     c.execute("SELECT crsql_commit_alter('todo');")
     c.commit()
     changes = c.execute(changes_with_versions_query).fetchall()
-    assert (changes == [('todo', b'\x01\t\x01', '__crsql_pko', None, 1, 1),
+    assert (changes == [('todo', b'\x01\t\x01', '-1', None, 1, 1),
                         ('todo', b'\x01\t\x01', 'complete', 0, 1, 1),
                         ('todo', b'\x01\t\x01', 'list', 'home', 1, 1),
-                        ('todo', b'\x01\t\x02', '__crsql_pko', None, 2, 1),
+                        ('todo', b'\x01\t\x02', '-1', None, 2, 1),
                         ('todo', b'\x01\t\x01', 'task', 'cook', 2, 1),
                         ('todo', b'\x01\t\x02', 'complete', 0, 2, 1),
                         ('todo', b'\x01\t\x02', 'list', 'home', 2, 1),
@@ -207,7 +207,7 @@ def test_pk_only_sentinels():
 
     changes = c.execute(changes_query).fetchall()
     assert (
-        changes == [('assoc', b'\x02\x09\x01\x09\x02', '__crsql_pko', None)])
+        changes == [('assoc', b'\x02\x09\x01\x09\x02', '-1', None)])
 
     c.execute("SELECT crsql_begin_alter('assoc');")
     c.execute("ALTER TABLE assoc ADD COLUMN data;")

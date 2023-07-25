@@ -80,30 +80,30 @@ def test_changes_since():
     rows = get_changes_since(dbs[0], 0, "FF")
     # siteid = dbs[0].execute("select crsql_siteid()").fetchone()[0]
     siteid = None
-    expected = [('user', b'\x01\t\x01', '__crsql_pko', None, 1, 1, None),
+    expected = [('user', b'\x01\t\x01', '-1', None, 1, 1, None),
                 ('user', b'\x01\t\x01', 'name', 'Javi', 1, 1, None),
-                ('deck', b'\x01\t\x01', '__crsql_pko', None, 1, 1, None),
+                ('deck', b'\x01\t\x01', '-1', None, 1, 1, None),
                 ('deck', b'\x01\t\x01', 'owner_id', 1, 1, 1, None),
                 ('deck', b'\x01\t\x01', 'title', 'Preso', 1, 1, None),
-                ('slide', b'\x01\t\x01', '__crsql_pko', None, 1, 1, None),
+                ('slide', b'\x01\t\x01', '-1', None, 1, 1, None),
                 ('slide', b'\x01\t\x01', 'deck_id', 1, 1, 1, None),
                 ('slide', b'\x01\t\x01', 'order', 0, 1, 1, None),
-                ('component', b'\x01\t\x01', '__crsql_pko', None, 1, 1, None),
+                ('component', b'\x01\t\x01', '-1', None, 1, 1, None),
                 ('component', b'\x01\t\x01', 'type', 'text', 1, 1, None),
                 ('component', b'\x01\t\x01', 'slide_id', 1, 1, 1, None),
                 ('component', b'\x01\t\x01', 'content', 'wootwoot', 1, 1, None),
-                ('component', b'\x01\t\x02', '__crsql_pko', None, 1, 1, None),
+                ('component', b'\x01\t\x02', '-1', None, 1, 1, None),
                 ('component', b'\x01\t\x02', 'type', 'text', 1, 1, None),
                 ('component', b'\x01\t\x02', 'slide_id', 1, 1, 1, None),
                 ('component', b'\x01\t\x02', 'content', 'toottoot', 1, 1, None),
-                ('component', b'\x01\t\x03', '__crsql_pko', None, 1, 1, None),
+                ('component', b'\x01\t\x03', '-1', None, 1, 1, None),
                 ('component', b'\x01\t\x03', 'type', 'text', 1, 1, None),
                 ('component', b'\x01\t\x03', 'slide_id', 1, 1, 1, None),
                 ('component', b'\x01\t\x03', 'content', 'footfoot', 1, 1, None),
-                ('slide', b'\x01\t\x02', '__crsql_pko', None, 1, 1, None),
+                ('slide', b'\x01\t\x02', '-1', None, 1, 1, None),
                 ('slide', b'\x01\t\x02', 'deck_id', 1, 1, 1, None),
                 ('slide', b'\x01\t\x02', 'order', 1, 1, 1, None),
-                ('slide', b'\x01\t\x03', '__crsql_pko', None, 1, 1, None),
+                ('slide', b'\x01\t\x03', '-1', None, 1, 1, None),
                 ('slide', b'\x01\t\x03', 'deck_id', 1, 1, 1, None),
                 ('slide', b'\x01\t\x03', 'order', 2, 1, 1, None)]
 
@@ -128,7 +128,7 @@ def test_delete():
     siteid = None
     # Deletes are marked with a sentinel id
     assert (rows == [('component', b'\x01\x09\x01',
-            '__crsql_del', None, 1, 2, siteid)])
+            '-1', None, 2, 2, siteid)])
 
     db.execute("DELETE FROM component")
     db.execute("DELETE FROM deck")
@@ -137,15 +137,15 @@ def test_delete():
 
     rows = get_changes_since(db, 0, 'FF')
     # TODO: should deletes not get a proper version? Would be better for ordering and chunking replications
-    assert (rows == [('user', b'\x01\t\x01', '__crsql_pko', None, 1, 1, None),
+    assert (rows == [('user', b'\x01\t\x01', '-1', None, 1, 1, None),
                      ('user', b'\x01\t\x01', 'name', 'Javi', 1, 1, None),
-                     ('component', b'\x01\t\x01', '__crsql_del', None, 1, 2, None),
-                     ('component', b'\x01\t\x02', '__crsql_del', None, 1, 3, None),
-                     ('component', b'\x01\t\x03', '__crsql_del', None, 1, 3, None),
-                     ('deck', b'\x01\t\x01', '__crsql_del', None, 1, 3, None),
-                     ('slide', b'\x01\t\x01', '__crsql_del', None, 1, 3, None),
-                     ('slide', b'\x01\t\x02', '__crsql_del', None, 1, 3, None),
-                     ('slide', b'\x01\t\x03', '__crsql_del', None, 1, 3, None)])
+                     ('component', b'\x01\t\x01', '-1', None, 2, 2, None),
+                     ('component', b'\x01\t\x02', '-1', None, 2, 3, None),
+                     ('component', b'\x01\t\x03', '-1', None, 2, 3, None),
+                     ('deck', b'\x01\t\x01', '-1', None, 2, 3, None),
+                     ('slide', b'\x01\t\x01', '-1', None, 2, 3, None),
+                     ('slide', b'\x01\t\x02', '-1', None, 2, 3, None),
+                     ('slide', b'\x01\t\x03', '-1', None, 2, 3, None)])
 
     # test insert
 
@@ -185,7 +185,7 @@ def test_merging_on_defaults():
     # db2 set b to 2 this should be the winner
     changes = db1.execute("SELECT * FROM crsql_changes").fetchall()
     # w a db version change since a write happened
-    assert (changes == [('foo', b'\x01\t\x01', '__crsql_pko', None, 1, 1, None),
+    assert (changes == [('foo', b'\x01\t\x01', '-1', None, 1, 1, None),
                         ('foo', b'\x01\t\x01', 'b', 2, 1, 2, None)])
 
     close(db1)
@@ -199,7 +199,7 @@ def test_merging_on_defaults():
     changes = db2.execute("SELECT * FROM crsql_changes").fetchall()
     # db1 into db2
     # db2 should still win w. no db version change since no write happened
-    assert (changes == [('foo', b'\x01\t\x01', '__crsql_pko', None, 1, 1, None),
+    assert (changes == [('foo', b'\x01\t\x01', '-1', None, 1, 1, None),
                         ('foo', b'\x01\t\x01', 'b', 2, 1, 1, None)])
 
     # test merging from thing without records (db1) to thing with records (db2)
@@ -241,7 +241,7 @@ def test_merging_larger_backfilled_default():
     changes = db2.execute("SELECT * FROM crsql_changes").fetchall()
     # db version is pushed since 4 wins the col_version tie
     # col version stays since 1 is the max of winner and loser.
-    assert (changes == [('foo', b'\x01\t\x01', '__crsql_pko', None, 1, 1, None),
+    assert (changes == [('foo', b'\x01\t\x01', '-1', None, 1, 1, None),
                         ('foo', b'\x01\t\x01', 'b', 4, 1, 2, None)])
 
 
@@ -274,15 +274,15 @@ def test_db_version_moves_as_expected_post_alter():
     db.commit()
 
     changes = db.execute("SELECT * FROM crsql_changes").fetchall()
-    assert (changes == [('foo', b'\x01\t\x01', '__crsql_pko', None, 1, 1, None),
+    assert (changes == [('foo', b'\x01\t\x01', '-1', None, 1, 1, None),
                         ('foo', b'\x01\t\x01', 'b', 2, 1, 1, None),
-                        ('foo', b'\x01\t\x02', '__crsql_pko', None, 1, 2, None),
+                        ('foo', b'\x01\t\x02', '-1', None, 1, 2, None),
                         ('foo', b'\x01\t\x02', 'b', 3, 1, 2, None),
                         ('foo', b'\x01\t\x02', 'c', 4, 1, 2, None),
-                        ('foo', b'\x01\t\x03', '__crsql_pko', None, 1, 3, None),
+                        ('foo', b'\x01\t\x03', '-1', None, 1, 3, None),
                         ('foo', b'\x01\t\x03', 'b', 4, 1, 3, None),
                         ('foo', b'\x01\t\x03', 'c', 5, 1, 3, None),
-                        ('foo', b'\x01\t\x04', '__crsql_pko', None, 1, 4, None),
+                        ('foo', b'\x01\t\x04', '-1', None, 1, 4, None),
                         ('foo', b'\x01\t\x04', 'b', 4, 1, 4, None),
                         ('foo', b'\x01\t\x04', 'c', 5, 1, 4, None)])
 
@@ -330,7 +330,7 @@ def test_merging_on_defaults2():
     sync_left_to_right(db2, db1, 0)
 
     changes = db1.execute("SELECT * FROM crsql_changes").fetchall()
-    assert (changes == [('foo', b'\x01\t\x01', '__crsql_pko', None, 1, 1, None),
+    assert (changes == [('foo', b'\x01\t\x01', '-1', None, 1, 1, None),
                         ('foo', b'\x01\t\x01', 'b', 4, 1, 1, None),
                         ('foo', b'\x01\t\x01', 'c', 3, 1, 2, None)])
 
@@ -343,7 +343,7 @@ def test_merging_on_defaults2():
     sync_left_to_right(db1, db2, 0)
 
     changes = db2.execute("SELECT * FROM crsql_changes").fetchall()
-    assert (changes == [('foo', b'\x01\t\x01', '__crsql_pko', None, 1, 1, None),
+    assert (changes == [('foo', b'\x01\t\x01', '-1', None, 1, 1, None),
                         # db2 c 3 wins given columns with no value after an alter
                         # do no merging
                         ('foo', b'\x01\t\x01', 'c', 3, 1, 1, None),
@@ -376,14 +376,14 @@ def test_merge_same():
     sync_left_to_right(db1, db2, 0)
     changes = db2.execute("SELECT * FROM crsql_changes").fetchall()
     # all at base version
-    assert (changes == [('foo', b'\x01\t\x01', '__crsql_pko', None, 1, 1, None),
+    assert (changes == [('foo', b'\x01\t\x01', '-1', None, 1, 1, None),
                         ('foo', b'\x01\t\x01', 'b', 2, 1, 1, None)])
 
     (db1, db2) = make_dbs()
     sync_left_to_right(db2, db1, 0)
     changes = db2.execute("SELECT * FROM crsql_changes").fetchall()
     # all at base version
-    assert (changes == [('foo', b'\x01\t\x01', '__crsql_pko', None, 1, 1, None),
+    assert (changes == [('foo', b'\x01\t\x01', '-1', None, 1, 1, None),
                         ('foo', b'\x01\t\x01', 'b', 2, 1, 1, None)])
 
 
@@ -403,14 +403,14 @@ def test_merge_matching_clocks_lesser_value():
     sync_left_to_right(db1, db2, 0)
     changes = db2.execute("SELECT * FROM crsql_changes").fetchall()
     # no change since incoming is lesser
-    assert (changes == [('foo', b'\x01\t\x01', '__crsql_pko', None, 1, 1, None),
+    assert (changes == [('foo', b'\x01\t\x01', '-1', None, 1, 1, None),
                         ('foo', b'\x01\t\x01', 'b', 2, 1, 1, None)])
 
     (db1, db2) = make_dbs()
     sync_left_to_right(db2, db1, 0)
     changes = db1.execute("SELECT * FROM crsql_changes").fetchall()
     # change since incoming is greater
-    assert (changes == [('foo', b'\x01\t\x01', '__crsql_pko', None, 1, 1, None),
+    assert (changes == [('foo', b'\x01\t\x01', '-1', None, 1, 1, None),
                         ('foo', b'\x01\t\x01', 'b', 2, 1, 2, None)])
 
 
@@ -431,13 +431,13 @@ def test_merge_larger_clock_larger_value():
     (db1, db2) = make_dbs()
     sync_left_to_right(db1, db2, 0)
     changes = db2.execute("SELECT * FROM crsql_changes").fetchall()
-    assert (changes == [('foo', b'\x01\t\x01', '__crsql_pko', None, 1, 1, None),
+    assert (changes == [('foo', b'\x01\t\x01', '-1', None, 1, 1, None),
                         ('foo', b'\x01\t\x01', 'b', 3, 2, 2, None)])
 
     (db1, db2) = make_dbs()
     sync_left_to_right(db2, db1, 0)
     changes = db1.execute("SELECT * FROM crsql_changes").fetchall()
-    assert (changes == [('foo', b'\x01\t\x01', '__crsql_pko', None, 1, 1, None),
+    assert (changes == [('foo', b'\x01\t\x01', '-1', None, 1, 1, None),
                         ('foo', b'\x01\t\x01', 'b', 3, 2, 2, None)])
 
 
@@ -458,13 +458,13 @@ def test_merge_larger_clock_smaller_value():
     (db1, db2) = make_dbs()
     sync_left_to_right(db1, db2, 0)
     changes = db2.execute("SELECT * FROM crsql_changes").fetchall()
-    assert (changes == [('foo', b'\x01\t\x01', '__crsql_pko', None, 1, 1, None),
+    assert (changes == [('foo', b'\x01\t\x01', '-1', None, 1, 1, None),
                         ('foo', b'\x01\t\x01', 'b', 0, 2, 2, None)])
 
     (db1, db2) = make_dbs()
     sync_left_to_right(db2, db1, 0)
     changes = db1.execute("SELECT * FROM crsql_changes").fetchall()
-    assert (changes == [('foo', b'\x01\t\x01', '__crsql_pko', None, 1, 1, None),
+    assert (changes == [('foo', b'\x01\t\x01', '-1', None, 1, 1, None),
                         ('foo', b'\x01\t\x01', 'b', 0, 2, 2, None)])
 
 
@@ -485,13 +485,13 @@ def test_merge_larger_clock_same_value():
     (db1, db2) = make_dbs()
     sync_left_to_right(db1, db2, 0)
     changes = db2.execute("SELECT * FROM crsql_changes").fetchall()
-    assert (changes == [('foo', b'\x01\t\x01', '__crsql_pko', None, 1, 1, None),
+    assert (changes == [('foo', b'\x01\t\x01', '-1', None, 1, 1, None),
                         ('foo', b'\x01\t\x01', 'b', 2, 2, 2, None)])
 
     (db1, db2) = make_dbs()
     sync_left_to_right(db2, db1, 0)
     changes = db1.execute("SELECT * FROM crsql_changes").fetchall()
-    assert (changes == [('foo', b'\x01\t\x01', '__crsql_pko', None, 1, 1, None),
+    assert (changes == [('foo', b'\x01\t\x01', '-1', None, 1, 1, None),
                         ('foo', b'\x01\t\x01', 'b', 2, 2, 2, None)])
 
 # Row exists but col added thus no defaults backfilled

@@ -134,7 +134,7 @@ fn check_for_local_delete(
 
     let check_del_stmt = get_cached_stmt_rt_wt(db, ext_data, stmt_key, || {
         format!(
-          "SELECT 1 FROM \"{table_name}__crsql_clock\" WHERE {pk_where_list} AND __crsql_col_name = '{delete_sentinel}' LIMIT 1",
+          "SELECT 1 FROM \"{table_name}__crsql_clock\" WHERE {pk_where_list} AND __crsql_col_name = '{delete_sentinel}' AND __crsql_col_version % 2 = 0 LIMIT 1",
           table_name = crate::util::escape_ident(tbl_name),
           pk_where_list = pk_where_list,
           delete_sentinel = crate::c::DELETE_SENTINEL,
@@ -482,8 +482,8 @@ unsafe fn merge_insert(
 
     let tbl_info = tbl_infos[tbl_info_index as usize];
 
-    let is_delete = crate::c::DELETE_SENTINEL == insert_col;
-    let is_pk_only = crate::c::INSERT_SENTINEL == insert_col;
+    let is_delete = crate::c::DELETE_SENTINEL == insert_col && insert_col_vrsn % 2 == 0;
+    let is_pk_only = crate::c::INSERT_SENTINEL == insert_col && insert_col_vrsn % 2 == 1;
 
     let pk_cols = sqlite::args!((*tbl_info).pksLen, (*tbl_info).pks);
     let pk_where_list = util::where_list(pk_cols)?;

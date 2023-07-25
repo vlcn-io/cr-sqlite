@@ -13,7 +13,7 @@ def test_c1_c2_c3_c4_c6_c7_crr_values():
 
     rows = c.execute(
         "select id, __crsql_col_name, __crsql_col_version, __crsql_db_version, __crsql_site_id from foo__crsql_clock").fetchall()
-    assert [(1, '__crsql_pko', 1, init_version + 1, None),
+    assert [(1, '-1', 1, init_version + 1, None),
             (1, 'a', 1, init_version + 1, None)] == rows
     new_version = c.execute("SELECT crsql_dbversion()").fetchone()[0]
 

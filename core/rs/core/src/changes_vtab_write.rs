@@ -39,14 +39,22 @@ fn did_cid_win(
     col_name: &str,
     insert_val: *mut sqlite::value,
     col_version: sqlite::int64,
+    causal_length: sqlite::int64,
     errmsg: *mut *mut c_char,
 ) -> Result<bool, ResultCode> {
     let stmt_key = get_cache_key(CachedStmtType::GetColVersion, insert_tbl, None)?;
     let col_vrsn_stmt = get_cached_stmt_rt_wt(db, ext_data, stmt_key, || {
+        // TODO: where_list with t1 prefix
+        // TODO: self join t1 t2 stuff
         Ok(format!(
-          "SELECT __crsql_col_version FROM \"{table_name}__crsql_clock\" WHERE {pk_where_list} AND ? = __crsql_col_name",
-          table_name = crate::util::escape_ident(insert_tbl),
-          pk_where_list = pk_where_list_from_tbl_info(tbl_info)?,
+            "SELECT
+            t1.__crsql_col_version,
+            t2.__crsql_col_version
+          FROM \"{table_name}__crsql_clock\" AS t1 JOIN \"{table_name}__crsql_clock\" as t2
+          ON {self_join} AND t2.__crsql_col_name = '{sentinel}'
+          WHERE {pk_where_list} AND ? = t1.__crsql_col_name",
+            table_name = crate::util::escape_ident(insert_tbl),
+            pk_where_list = pk_where_list_from_tbl_info(tbl_info)?,
         ))
     })?;
 
@@ -451,6 +459,7 @@ unsafe fn merge_insert(
     let insert_col_vrsn = args[2 + CrsqlChangesColumn::ColVrsn as usize].int64();
     let insert_db_vrsn = args[2 + CrsqlChangesColumn::DbVrsn as usize].int64();
     let insert_site_id = args[2 + CrsqlChangesColumn::SiteId as usize];
+    let insert_cl = args[2 + CrsqlChangesColumn::Cl as usize].int64();
 
     if insert_site_id.bytes() > crate::consts::SITE_ID_LEN {
         let err = CString::new("crsql - site id exceeded max length")?;
@@ -555,6 +564,7 @@ unsafe fn merge_insert(
         insert_col,
         insert_val,
         insert_col_vrsn,
+        insert_cl,
         errmsg,
     )?;
 

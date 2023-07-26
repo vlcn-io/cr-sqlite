@@ -145,7 +145,8 @@ def test_incr_by_one():
     c.execute("UPDATE baz SET a = 11 WHERE a = 1")
     c.execute("UPDATE baz SET a = 22 WHERE a = 2")
     c.commit()
-    rows = c.execute("SELECT __crsql_seq FROM baz__crsql_clock").fetchall()
+    rows = c.execute(
+        "SELECT __crsql_seq FROM baz__crsql_clock ORDER BY __crsql_db_version, __crsql_seq ASC").fetchall()
     assert (rows == [(0,), (1,), (2,), (3,)])
 
     # c.execute("DELETE FROM baz")

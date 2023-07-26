@@ -19,7 +19,8 @@ pub enum CrsqlChangesColumn {
     ColVrsn = 4,
     DbVrsn = 5,
     SiteId = 6,
-    Seq = 7,
+    Cl = 7,
+    Seq = 8,
 }
 
 #[derive(FromPrimitive, PartialEq, Debug)]
@@ -32,6 +33,7 @@ pub enum ClockUnionColumn {
     SiteId = 5,
     RowId = 6,
     Seq = 7,
+    Cl = 8,
 }
 
 #[derive(FromPrimitive, PartialEq, Debug)]

@@ -116,6 +116,19 @@ pub fn as_identifier_list(
     Ok(result.join(","))
 }
 
+pub fn map_columns<F>(columns: &[crsql_ColumnInfo], map: F) -> Result<Vec<String>, Utf8Error>
+where
+    F: Fn(&str) -> String,
+{
+    let mut result = vec![];
+    for c in columns {
+        let name = unsafe { CStr::from_ptr(c.name) };
+        result.push(map(name.to_str()?))
+    }
+
+    return Ok(result);
+}
+
 pub fn escape_ident(ident: &str) -> String {
     return ident.replace("\"", "\"\"");
 }

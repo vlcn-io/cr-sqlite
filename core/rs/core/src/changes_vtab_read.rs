@@ -1,5 +1,5 @@
 extern crate alloc;
-use crate::c::crsql_TableInfo;
+use crate::{c::crsql_TableInfo, util};
 use alloc::format;
 use alloc::string::String;
 use alloc::vec;
@@ -24,22 +24,30 @@ fn crsql_changes_query_for_table(table_info: *mut crsql_TableInfo) -> Result<Str
     let table_name = unsafe { CStr::from_ptr((*table_info).tblName).to_str()? };
     let pk_columns =
         unsafe { slice::from_raw_parts((*table_info).pks, (*table_info).pksLen as usize) };
-    let pk_list = crate::util::as_identifier_list(pk_columns, None)?;
+    let pk_list = crate::util::as_identifier_list(pk_columns, Some("t1."))?;
+    let self_join = util::map_columns(pk_columns, |c| {
+        format!("t1.\"{c}\" = t2.\"{c}\"", c = crate::util::escape_ident(c))
+    })?
+    .join(" AND ");
 
     Ok(format!(
         "SELECT
           '{table_name_val}' as tbl,
           crsql_pack_columns({pk_list}) as pks,
-          __crsql_col_name as cid,
-          __crsql_col_version as col_vrsn,
-          __crsql_db_version as db_vrsn,
-          __crsql_site_id as site_id,
-          _rowid_,
-          __crsql_seq as seq
-      FROM \"{table_name_ident}__crsql_clock\"",
+          t1.__crsql_col_name as cid,
+          t1.__crsql_col_version as col_vrsn,
+          t1.__crsql_db_version as db_vrsn,
+          t1.__crsql_site_id as site_id,
+          t1._rowid_,
+          t1.__crsql_seq as seq,
+          t2.__crsql_col_version as cl
+      FROM \"{table_name_ident}__crsql_clock\" AS t1 JOIN \"{table_name_ident}__crsql_clock\" AS t2 ON
+      {self_join} AND t2.__crsql_col_name = '{sentinel}'",
         table_name_val = crate::util::escape_ident_as_value(table_name),
         pk_list = pk_list,
-        table_name_ident = crate::util::escape_ident(table_name)
+        table_name_ident = crate::util::escape_ident(table_name),
+        sentinel = crate::c::INSERT_SENTINEL,
+        self_join = self_join
     ))
 }
 
@@ -76,7 +84,7 @@ pub fn changes_union_query(
     // Manually null-terminate the string so we don't have to copy it to create a CString.
     // We can just extract the raw bytes of the Rust string.
     return Ok(format!(
-      "SELECT tbl, pks, cid, col_vrsn, db_vrsn, site_id, _rowid_, seq FROM ({unions}) {idx_str}\0",
+      "SELECT tbl, pks, cid, col_vrsn, db_vrsn, site_id, _rowid_, seq, cl FROM ({unions}) {idx_str}\0",
       unions = sub_queries.join(" UNION ALL "),
       idx_str = idx_str,
     ));

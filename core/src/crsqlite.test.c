@@ -59,7 +59,7 @@ int syncLeftToRight(sqlite3 *db1, sqlite3 *db2, sqlite3_int64 since) {
   rc += sqlite3_bind_value(pStmtRead, 1, sqlite3_column_value(pStmt, 0));
   assert(rc == SQLITE_OK);
   rc += sqlite3_prepare_v2(
-      db2, "INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?, ?)", -1,
+      db2, "INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?, ?, ?)", -1,
       &pStmtWrite, 0);
   assert(rc == SQLITE_OK);
   // printf("err: %s\n", err);
@@ -428,7 +428,7 @@ static void testInsertChangesWithUnkownColumnNames() {
   rc +=
       sqlite3_prepare_v2(db1, "SELECT * FROM crsql_changes", -1, &pStmtRead, 0);
   rc += sqlite3_prepare_v2(
-      db2, "INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?, ?)", -1,
+      db2, "INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?, ?, ?)", -1,
       &pStmtWrite, 0);
   assert(rc == SQLITE_OK);
 

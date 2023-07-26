@@ -83,7 +83,7 @@ test("failing example", () => {
   const siteid = db1.execA(`SELECT crsql_siteid()`)[0][0];
   db2.transaction(() => {
     for (const cs of changesets) {
-      db2.exec(`INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?, ?)`, cs);
+      db2.exec(`INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, cs);
     }
   });
 

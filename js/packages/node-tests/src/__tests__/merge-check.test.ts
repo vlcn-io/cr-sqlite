@@ -40,7 +40,7 @@ const sync = (left: DB, right: DB) => {
   // apply changes to right
   right.transaction(() => {
     const stmt = right.prepare(
-      "INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?, ?)"
+      "INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
     );
     try {
       for (const cs of changesets) {

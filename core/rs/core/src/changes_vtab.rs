@@ -204,6 +204,7 @@ fn constraint_is_usable(constraint: &sqlite::index_constraint) -> bool {
     }
 }
 
+// Note: this is really the col name post-select from the clock table.
 fn get_clock_table_col_name(col: &Option<CrsqlChangesColumn>) -> Option<String> {
     match col {
         Some(CrsqlChangesColumn::Tbl) => Some("tbl".to_string()),
@@ -214,6 +215,7 @@ fn get_clock_table_col_name(col: &Option<CrsqlChangesColumn>) -> Option<String> 
         Some(CrsqlChangesColumn::DbVrsn) => Some("db_vrsn".to_string()),
         Some(CrsqlChangesColumn::SiteId) => Some("site_id".to_string()),
         Some(CrsqlChangesColumn::Seq) => Some("seq".to_string()),
+        Some(CrsqlChangesColumn::Cl) => Some("cl".to_string()),
         None => None,
     }
 }
@@ -523,6 +525,9 @@ fn column_impl(
         }
         Some(CrsqlChangesColumn::Seq) => {
             ctx.result_value(changes_stmt.column_value(ClockUnionColumn::Seq as i32));
+        }
+        Some(CrsqlChangesColumn::Cl) => {
+            ctx.result_value(changes_stmt.column_value(ClockUnionColumn::Cl as i32))
         }
         None => return Err(ResultCode::MISUSE),
     }

@@ -227,7 +227,8 @@ def sync_left_to_right(l, r, since, since_is_rowid):
             change = tuple(temp)
         else:
             ret = change[5]
-        r.execute("INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?, ?)", change)
+        r.execute(
+            "INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?, ?, ?)", change)
 
     r.commit()
     return ret

@@ -9,8 +9,9 @@ def test_can_load_v0_12_0():
     shutil.copyfile(prefix + ".prior-db", prefix + ".db")
     c = connect(prefix + ".db")
     rows = c.execute("SELECT *, seq FROM crsql_changes").fetchall()
-    assert (rows == [('foo', b'\x01\x0b\x03one', 'b', 2, 1, 1, None, 0),
-                     ('bar', b'\x01\x09\x01', 'b', 2, 1, 2, None, 0)])
+    pprint(rows)
+    assert (rows == [('foo', b'\x01\x0b\x03one', 'b', 2, 1, 1, None, 1, 0),
+                     ('bar', b'\x01\x09\x01', 'b', 2, 1, 2, None, 1, 0)])
 
     version = c.execute(
         "SELECT value FROM crsql_master WHERE key ='crsqlite_version'").fetchone()
@@ -24,11 +25,11 @@ def test_can_load_v0_13_0():
     shutil.copyfile(prefix + ".prior-db", prefix + ".db")
     c = connect(prefix + ".db")
     rows = c.execute("SELECT *, seq FROM crsql_changes").fetchall()
-    assert (rows == [('foo', b'\x01\x09\x01', 'b', 2, 1, 1, None, 0),
-                     ('foo', b'\x01\x09\x03', 'b', 4, 1, 2, None, 0),
-                     ('foo', b'\x01\x09\x05', 'b', 6, 1, 2, None, 1),
-                     ('foo', b'\x01\x09\x06', 'b', 7, 1, 2, None, 2),
-                     ('foo', b'\x01\x09\x08', 'b', 9, 1, 3, None, 0)])
+    assert (rows == [('foo', b'\x01\x09\x01', 'b', 2, 1, 1, None, 1, 0),
+                     ('foo', b'\x01\x09\x03', 'b', 4, 1, 2, None, 1, 0),
+                     ('foo', b'\x01\x09\x05', 'b', 6, 1, 2, None, 1, 1),
+                     ('foo', b'\x01\x09\x06', 'b', 7, 1, 2, None, 1, 2),
+                     ('foo', b'\x01\x09\x08', 'b', 9, 1, 3, None, 1, 0)])
 
     version = c.execute(
         "SELECT value FROM crsql_master WHERE key ='crsqlite_version'").fetchone()

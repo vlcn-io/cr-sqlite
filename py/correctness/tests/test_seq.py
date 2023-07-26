@@ -5,7 +5,8 @@ from pprint import pprint
 def sync_left_to_right(l, r):
     changes = l.execute("SELECT * FROM crsql_changes")
     for change in changes:
-        r.execute("INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?, ?)", change)
+        r.execute(
+            "INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?, ?, ?)", change)
     r.commit()
 
 

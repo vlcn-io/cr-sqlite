@@ -25,9 +25,10 @@ use crate::{unpack_columns, ColumnValue};
 
 fn pk_where_list_from_tbl_info(
     tbl_info: *mut crsql_TableInfo,
+    prefix: Option<&str>,
 ) -> Result<String, core::str::Utf8Error> {
     let pk_cols = sqlite::args!((*tbl_info).pksLen, (*tbl_info).pks);
-    util::where_list(pk_cols)
+    util::where_list(pk_cols, prefix)
 }
 
 fn did_cid_win(
@@ -54,7 +55,7 @@ fn did_cid_win(
           ON {self_join} AND t2.__crsql_col_name = '{sentinel}'
           WHERE {pk_where_list} AND ? = t1.__crsql_col_name",
             table_name = crate::util::escape_ident(insert_tbl),
-            pk_where_list = pk_where_list_from_tbl_info(tbl_info)?,
+            pk_where_list = pk_where_list_from_tbl_info(tbl_info, Some("t1."))?,
         ))
     })?;
 
@@ -106,7 +107,7 @@ fn did_cid_win(
             "SELECT \"{col_name}\" FROM \"{table_name}\" WHERE {pk_where_list}",
             col_name = crate::util::escape_ident(col_name),
             table_name = crate::util::escape_ident(insert_tbl),
-            pk_where_list = pk_where_list_from_tbl_info(tbl_info)?,
+            pk_where_list = pk_where_list_from_tbl_info(tbl_info, None)?,
         ))
     })?;
 
@@ -151,7 +152,7 @@ fn check_for_local_delete(
         Ok(format!(
           "SELECT 1 FROM \"{table_name}__crsql_clock\" WHERE {pk_where_list} AND __crsql_col_name = '{delete_sentinel}' AND __crsql_col_version % 2 = 0 LIMIT 1",
           table_name = crate::util::escape_ident(tbl_name),
-          pk_where_list = pk_where_list_from_tbl_info(tbl_info)?,
+          pk_where_list = pk_where_list_from_tbl_info(tbl_info, None)?,
           delete_sentinel = crate::c::DELETE_SENTINEL,
         ))
     })?;
@@ -367,7 +368,7 @@ unsafe fn merge_delete(
         Ok(format!(
             "DELETE FROM \"{table_name}\" WHERE {pk_where_list}",
             table_name = crate::util::escape_ident(tbl_name_str),
-            pk_where_list = pk_where_list_from_tbl_info(tbl_info)?
+            pk_where_list = pk_where_list_from_tbl_info(tbl_info, None)?
         ))
     })?;
 

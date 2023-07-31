@@ -110,7 +110,7 @@ pub fn row_patch_data_query(table_info: *mut crsql_TableInfo, col_name: &str) ->
     let pk_columns =
         unsafe { slice::from_raw_parts((*table_info).pks, (*table_info).pksLen as usize) };
     if let Ok(table_name) = unsafe { CStr::from_ptr((*table_info).tblName).to_str() } {
-        if let Ok(where_list) = crate::util::where_list(pk_columns) {
+        if let Ok(where_list) = crate::util::where_list(pk_columns, None) {
             return Some(format!(
                 "SELECT \"{col_name}\" FROM \"{table_name}\" WHERE {where_list}\0",
                 col_name = crate::util::escape_ident(col_name),

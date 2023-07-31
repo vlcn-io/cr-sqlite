@@ -45,17 +45,22 @@ fn did_cid_win(
 ) -> Result<bool, ResultCode> {
     let stmt_key = get_cache_key(CachedStmtType::GetColVersion, insert_tbl, None)?;
     let col_vrsn_stmt = get_cached_stmt_rt_wt(db, ext_data, stmt_key, || {
-        // TODO: where_list with t1 prefix
-        // TODO: self join t1 t2 stuff
+        let pk_cols = sqlite::args!((*tbl_info).pksLen, (*tbl_info).pks);
+        // Select out the version for the specific cell along with the causal length for the row
+        // it belongs to.
+        // TODO: we could potentially speed all this up drastically by doing in-batch in a 2-phase commit
+        // although it'd greately increase memory usage.
         Ok(format!(
             "SELECT
-            t1.__crsql_col_version,
-            t2.__crsql_col_version
+            t1.__crsql_col_version as col_version,
+            t2.__crsql_col_version as row_cl
           FROM \"{table_name}__crsql_clock\" AS t1 JOIN \"{table_name}__crsql_clock\" as t2
           ON {self_join} AND t2.__crsql_col_name = '{sentinel}'
           WHERE {pk_where_list} AND ? = t1.__crsql_col_name",
-            table_name = crate::util::escape_ident(insert_tbl),
-            pk_where_list = pk_where_list_from_tbl_info(tbl_info, Some("t1."))?,
+            table_name = util::escape_ident(insert_tbl),
+            pk_where_list = util::where_list(pk_cols, Some("t1."))?,
+            self_join = util::self_join(pk_cols)?,
+            sentinel = crate::c::INSERT_SENTINEL
         ))
     })?;
 

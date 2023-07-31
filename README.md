@@ -36,10 +36,10 @@ Discussions of these problems in the application space:
 # Sponsors
 
 Companies:
-<a href="https://turso.tech"><img src="https://images.ctfassets.net/8fv5t5my8687/01j7yaLj77zqmYK62Y49g7/aee841e7bd176864aa5388448db0f8ef/iku-turquoise.svg" width="64" /></a> <a href="https://fly.io"><img src="https://fly.io/static/images/brand/brandmark.svg" height="64" /></a> <a href="https://reflect.app/"><img src="https://reflect.app/_next/image?url=%2Fsite%2Ficons%2F1024x1024.png&w=64&q=100" /></a>
+<a href="https://turso.tech"><img src="https://images.ctfassets.net/8fv5t5my8687/01j7yaLj77zqmYK62Y49g7/aee841e7bd176864aa5388448db0f8ef/iku-turquoise.svg" width="64" /></a> <a href="https://fly.io"><img src="https://fly.io/static/images/brand/brandmark.svg" height="64" /></a> <a href="https://reflect.app/"><img src="https://reflect.app/_next/image?url=%2Fsite%2Ficons%2F1024x1024.png&w=64&q=100" /></a><a href="https://expo.dev"><img src="https://avatars.githubusercontent.com/u/12504344?s=200&v=4" width="64" /></a>
 
 Individuals:
-[robinvasan](https://github.com/robinvasan) | [iansinnott](https://github.com/iansinnott) | [davefowler](https://github.com/davefowler)
+[robinvasan](https://github.com/robinvasan) | [iansinnott](https://github.com/iansinnott) | [davefowler](https://github.com/davefowler) | [barbalex](https://github.com/barbalex)
 
 # Contributors & Collaborators
 

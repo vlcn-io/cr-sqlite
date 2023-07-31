@@ -75,14 +75,22 @@ pub fn pk_where_list(
     Ok(result.join(" AND "))
 }
 
-pub fn where_list(columns: &[crsql_ColumnInfo]) -> Result<String, Utf8Error> {
+pub fn where_list(columns: &[crsql_ColumnInfo], prefix: Option<&str>) -> Result<String, Utf8Error> {
     let mut result = vec![];
     for c in columns {
         let name = unsafe { CStr::from_ptr(c.name) };
-        result.push(format!(
-            "\"{col_name}\" IS ?",
-            col_name = crate::util::escape_ident(name.to_str()?)
-        ));
+        if let Some(prefix) = prefix {
+            result.push(format!(
+                "{prefix}\"{col_name}\" IS ?",
+                prefix = prefix,
+                col_name = crate::util::escape_ident(name.to_str()?)
+            ));
+        } else {
+            result.push(format!(
+                "\"{col_name}\" IS ?",
+                col_name = crate::util::escape_ident(name.to_str()?)
+            ));
+        }
     }
 
     Ok(result.join(" AND "))

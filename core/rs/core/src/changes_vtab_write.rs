@@ -20,14 +20,14 @@ use crate::pack_columns::bind_package_to_stmt;
 use crate::stmt_cache::{
     get_cache_key, get_cached_stmt, reset_cached_stmt, set_cached_stmt, CachedStmtType,
 };
-use crate::util::{self, pk_where_list, slab_rowid};
+use crate::util::{self, slab_rowid};
 use crate::{unpack_columns, ColumnValue};
 
 fn pk_where_list_from_tbl_info(
     tbl_info: *mut crsql_TableInfo,
 ) -> Result<String, core::str::Utf8Error> {
     let pk_cols = sqlite::args!((*tbl_info).pksLen, (*tbl_info).pks);
-    pk_where_list(pk_cols, None)
+    util::where_list(pk_cols)
 }
 
 fn did_cid_win(

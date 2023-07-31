@@ -20,14 +20,21 @@ use crate::pack_columns::bind_package_to_stmt;
 use crate::stmt_cache::{
     get_cache_key, get_cached_stmt, reset_cached_stmt, set_cached_stmt, CachedStmtType,
 };
-use crate::util::{self, slab_rowid};
+use crate::util::{self, pk_where_list, slab_rowid};
 use crate::{unpack_columns, ColumnValue};
+
+fn pk_where_list_from_tbl_info(
+    tbl_info: *mut crsql_TableInfo,
+) -> Result<String, core::str::Utf8Error> {
+    let pk_cols = sqlite::args!((*tbl_info).pksLen, (*tbl_info).pks);
+    pk_where_list(pk_cols, None)
+}
 
 fn did_cid_win(
     db: *mut sqlite3,
     ext_data: *mut crsql_ExtData,
     insert_tbl: &str,
-    pk_where_list: &str,
+    tbl_info: *mut crsql_TableInfo,
     unpacked_pks: &Vec<ColumnValue>,
     col_name: &str,
     insert_val: *mut sqlite::value,
@@ -36,11 +43,11 @@ fn did_cid_win(
 ) -> Result<bool, ResultCode> {
     let stmt_key = get_cache_key(CachedStmtType::GetColVersion, insert_tbl, None)?;
     let col_vrsn_stmt = get_cached_stmt_rt_wt(db, ext_data, stmt_key, || {
-        format!(
+        Ok(format!(
           "SELECT __crsql_col_version FROM \"{table_name}__crsql_clock\" WHERE {pk_where_list} AND ? = __crsql_col_name",
           table_name = crate::util::escape_ident(insert_tbl),
-          pk_where_list = pk_where_list,
-        )
+          pk_where_list = pk_where_list_from_tbl_info(tbl_info)?,
+        ))
     })?;
 
     let bind_result = bind_package_to_stmt(col_vrsn_stmt, &unpacked_pks);
@@ -87,12 +94,12 @@ fn did_cid_win(
     // would be slightly more performant..
     let stmt_key = get_cache_key(CachedStmtType::GetCurrValue, insert_tbl, Some(col_name))?;
     let col_val_stmt = get_cached_stmt_rt_wt(db, ext_data, stmt_key, || {
-        format!(
+        Ok(format!(
             "SELECT \"{col_name}\" FROM \"{table_name}\" WHERE {pk_where_list}",
             col_name = crate::util::escape_ident(col_name),
             table_name = crate::util::escape_ident(insert_tbl),
-            pk_where_list = pk_where_list,
-        )
+            pk_where_list = pk_where_list_from_tbl_info(tbl_info)?,
+        ))
     })?;
 
     let bind_result = bind_package_to_stmt(col_val_stmt, &unpacked_pks);
@@ -127,18 +134,18 @@ fn check_for_local_delete(
     db: *mut sqlite::sqlite3,
     ext_data: *mut crsql_ExtData,
     tbl_name: &str,
-    pk_where_list: &str,
+    tbl_info: *mut crsql_TableInfo,
     unpacked_pks: &Vec<ColumnValue>,
 ) -> Result<bool, ResultCode> {
     let stmt_key = get_cache_key(CachedStmtType::CheckForLocalDelete, tbl_name, None)?;
 
     let check_del_stmt = get_cached_stmt_rt_wt(db, ext_data, stmt_key, || {
-        format!(
+        Ok(format!(
           "SELECT 1 FROM \"{table_name}__crsql_clock\" WHERE {pk_where_list} AND __crsql_col_name = '{delete_sentinel}' AND __crsql_col_version % 2 = 0 LIMIT 1",
           table_name = crate::util::escape_ident(tbl_name),
-          pk_where_list = pk_where_list,
+          pk_where_list = pk_where_list_from_tbl_info(tbl_info)?,
           delete_sentinel = crate::c::DELETE_SENTINEL,
-        )
+        ))
     })?;
 
     let rc = bind_package_to_stmt(check_del_stmt, unpacked_pks);
@@ -166,7 +173,7 @@ fn get_cached_stmt_rt_wt<F>(
     query_builder: F,
 ) -> Result<*mut sqlite::stmt, ResultCode>
 where
-    F: Fn() -> String,
+    F: Fn() -> Result<String, core::str::Utf8Error>,
 {
     let mut ret = if let Some(stmt) = get_cached_stmt(ext_data, &key) {
         stmt
@@ -174,7 +181,7 @@ where
         null_mut()
     };
     if ret.is_null() {
-        let sql = query_builder();
+        let sql = query_builder()?;
         if let Ok(stmt) = db.prepare_v3(&sql, sqlite::PREPARE_PERSISTENT) {
             set_cached_stmt(ext_data, key, stmt.stmt);
             ret = stmt.stmt;
@@ -191,8 +198,6 @@ fn set_winner_clock(
     db: *mut sqlite3,
     ext_data: *mut crsql_ExtData,
     tbl_info: *mut crsql_TableInfo,
-    pk_ident_list: &str,
-    pk_bind_list: &str,
     unpacked_pks: &Vec<ColumnValue>,
     insert_col_name: &str,
     insert_col_vrsn: sqlite::int64,
@@ -204,7 +209,8 @@ fn set_winner_clock(
     let stmt_key = get_cache_key(CachedStmtType::SetWinnerClock, tbl_name_str, None)?;
 
     let set_stmt = get_cached_stmt_rt_wt(db, ext_data, stmt_key, || {
-        format!(
+        let pk_cols = sqlite::args!((*tbl_info).pksLen, (*tbl_info).pks);
+        Ok(format!(
           "INSERT OR REPLACE INTO \"{table_name}__crsql_clock\"
             ({pk_ident_list}, __crsql_col_name, __crsql_col_version, __crsql_db_version, __crsql_seq, __crsql_site_id)
             VALUES (
@@ -216,9 +222,9 @@ fn set_winner_clock(
               ?
             ) RETURNING _rowid_",
           table_name = crate::util::escape_ident(tbl_name_str),
-          pk_ident_list = pk_ident_list,
-          pk_bind_list = pk_bind_list,
-        )
+          pk_ident_list = crate::util::as_identifier_list(pk_cols, None)?,
+          pk_bind_list = crate::util::binding_list(pk_cols.len()),
+        ))
     })?;
 
     let bind_result = bind_package_to_stmt(set_stmt, unpacked_pks);
@@ -268,9 +274,7 @@ fn merge_pk_only_insert(
     db: *mut sqlite3,
     ext_data: *mut crsql_ExtData,
     tbl_info: *mut crsql_TableInfo,
-    pk_bind_list: &str,
     unpacked_pks: &Vec<ColumnValue>,
-    pk_ident_list: &str,
     remote_col_vrsn: sqlite::int64,
     remote_db_vsn: sqlite::int64,
     remote_site_id: &[u8],
@@ -279,12 +283,13 @@ fn merge_pk_only_insert(
 
     let stmt_key = get_cache_key(CachedStmtType::MergePkOnlyInsert, tbl_name_str, None)?;
     let merge_stmt = get_cached_stmt_rt_wt(db, ext_data, stmt_key, || {
-        format!(
+        let pk_cols = sqlite::args!((*tbl_info).pksLen, (*tbl_info).pks);
+        Ok(format!(
             "INSERT OR IGNORE INTO \"{table_name}\" ({pk_idents}) VALUES ({pk_bindings}) RETURNING 1",
             table_name = crate::util::escape_ident(tbl_name_str),
-            pk_idents = pk_ident_list,
-            pk_bindings = pk_bind_list
-        )
+            pk_idents = crate::util::as_identifier_list(pk_cols, None)?,
+            pk_bindings = crate::util::binding_list(pk_cols.len()),
+        ))
     })?;
 
     let rc = bind_package_to_stmt(merge_stmt, unpacked_pks);
@@ -325,8 +330,6 @@ fn merge_pk_only_insert(
                 db,
                 ext_data,
                 tbl_info,
-                pk_ident_list,
-                pk_bind_list,
                 unpacked_pks,
                 crate::c::INSERT_SENTINEL,
                 remote_col_vrsn,
@@ -345,10 +348,7 @@ unsafe fn merge_delete(
     db: *mut sqlite3,
     ext_data: *mut crsql_ExtData,
     tbl_info: *mut crsql_TableInfo,
-    pk_where_list: &str,
     unpacked_pks: &Vec<ColumnValue>,
-    pk_bind_list: &str,
-    pk_ident_list: &str,
     remote_col_vrsn: sqlite::int64,
     remote_db_vrsn: sqlite::int64,
     remote_site_id: &[u8],
@@ -356,11 +356,11 @@ unsafe fn merge_delete(
     let tbl_name_str = CStr::from_ptr((*tbl_info).tblName).to_str()?;
     let stmt_key = get_cache_key(CachedStmtType::MergeDelete, tbl_name_str, None)?;
     let delete_stmt = get_cached_stmt_rt_wt(db, ext_data, stmt_key, || {
-        format!(
+        Ok(format!(
             "DELETE FROM \"{table_name}\" WHERE {pk_where_list}",
             table_name = crate::util::escape_ident(tbl_name_str),
-            pk_where_list = pk_where_list
-        )
+            pk_where_list = pk_where_list_from_tbl_info(tbl_info)?
+        ))
     })?;
 
     if let Err(rc) = bind_package_to_stmt(delete_stmt, unpacked_pks) {
@@ -391,8 +391,6 @@ unsafe fn merge_delete(
         db,
         ext_data,
         tbl_info,
-        pk_ident_list,
-        pk_bind_list,
         unpacked_pks,
         crate::c::DELETE_SENTINEL,
         remote_col_vrsn,
@@ -485,32 +483,19 @@ unsafe fn merge_insert(
     let is_delete = crate::c::DELETE_SENTINEL == insert_col && insert_col_vrsn % 2 == 0;
     let is_pk_only = crate::c::INSERT_SENTINEL == insert_col && insert_col_vrsn % 2 == 1;
 
-    let pk_cols = sqlite::args!((*tbl_info).pksLen, (*tbl_info).pks);
-    let pk_where_list = util::where_list(pk_cols)?;
     let unpacked_pks = unpack_columns(insert_pks.blob())?;
 
-    if check_for_local_delete(
-        db,
-        (*tab).pExtData,
-        insert_tbl,
-        &pk_where_list,
-        &unpacked_pks,
-    )? {
+    if check_for_local_delete(db, (*tab).pExtData, insert_tbl, tbl_info, &unpacked_pks)? {
         // Delete wins. Our work is done.
         return Ok(ResultCode::OK);
     }
 
-    let pk_bind_list = crate::util::binding_list(pk_cols.len());
-    let pk_ident_list = crate::util::as_identifier_list(pk_cols, None)?;
     if is_delete {
         let merge_result = merge_delete(
             db,
             (*tab).pExtData,
             tbl_info,
-            &pk_where_list,
             &unpacked_pks,
-            &pk_bind_list,
-            &pk_ident_list,
             insert_col_vrsn,
             insert_db_vrsn,
             insert_site_id,
@@ -539,9 +524,7 @@ unsafe fn merge_insert(
             db,
             (*tab).pExtData,
             tbl_info,
-            &pk_bind_list,
             &unpacked_pks,
-            &pk_ident_list,
             insert_col_vrsn,
             insert_db_vrsn,
             insert_site_id,
@@ -567,7 +550,7 @@ unsafe fn merge_insert(
         db,
         (*tab).pExtData,
         insert_tbl,
-        &pk_where_list,
+        tbl_info,
         &unpacked_pks,
         insert_col,
         insert_val,
@@ -589,16 +572,17 @@ unsafe fn merge_insert(
         Some(insert_col),
     )?;
     let merge_stmt = get_cached_stmt_rt_wt(db, (*tab).pExtData, stmt_key, || {
-        format!(
+        let pk_cols = sqlite::args!((*tbl_info).pksLen, (*tbl_info).pks);
+        Ok(format!(
             "INSERT INTO \"{table_name}\" ({pk_list}, \"{col_name}\")
             VALUES ({pk_bind_list}, ?)
             ON CONFLICT DO UPDATE
             SET \"{col_name}\" = ?",
             table_name = crate::util::escape_ident(insert_tbl),
-            pk_list = pk_ident_list,
+            pk_list = crate::util::as_identifier_list(pk_cols, None)?,
             col_name = crate::util::escape_ident(insert_col),
-            pk_bind_list = pk_bind_list,
-        )
+            pk_bind_list = crate::util::binding_list(pk_cols.len()),
+        ))
     })?;
 
     let bind_result = bind_package_to_stmt(merge_stmt, &unpacked_pks)
@@ -633,8 +617,6 @@ unsafe fn merge_insert(
         db,
         (*tab).pExtData,
         tbl_info,
-        &pk_ident_list,
-        &pk_bind_list,
         &unpacked_pks,
         insert_col,
         insert_col_vrsn,

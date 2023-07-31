@@ -59,6 +59,7 @@ test("failed to increment?", () => {
       site_id: null,
       table: "b",
       val: null,
+      cl: 1,
     },
     {
       cid: "-1",
@@ -68,6 +69,7 @@ test("failed to increment?", () => {
       site_id: null,
       table: "a",
       val: null,
+      cl: 1,
     },
     {
       table: "a",
@@ -77,6 +79,7 @@ test("failed to increment?", () => {
       col_version: 1,
       db_version: 2,
       site_id: null,
+      cl: 1,
     },
     {
       table: "b",
@@ -86,6 +89,7 @@ test("failed to increment?", () => {
       col_version: 2,
       db_version: 3,
       site_id: null,
+      cl: 1,
     },
   ]);
 });

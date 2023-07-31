@@ -88,7 +88,7 @@ fn insert_trigger_body(
           crsql_increment_and_get_seq(),
           NULL
         ON CONFLICT DO UPDATE SET
-          __crsql_col_version = 1,
+          __crsql_col_version = __crsql_col_version + 1,
           __crsql_db_version = crsql_nextdbversion(),
           __crsql_seq = crsql_get_seq() - 1,
           __crsql_site_id = NULL;",
@@ -190,7 +190,7 @@ fn create_update_trigger(
               crsql_increment_and_get_seq(),
               NULL WHERE true
             ON CONFLICT DO UPDATE SET
-              __crsql_col_version = 2,
+              __crsql_col_version = 1 + __crsql_col_version,
               __crsql_db_version = crsql_nextdbversion(),
               __crsql_seq = crsql_get_seq() - 1,
               __crsql_site_id = NULL;
@@ -252,7 +252,7 @@ fn update_trigger_body(
           NULL
         WHERE {any_pk_differs}
         ON CONFLICT DO UPDATE SET
-          __crsql_col_version = 1,
+          __crsql_col_version = 1 + __crsql_col_version,
           __crsql_db_version = crsql_nextdbversion(),
           __crsql_seq = crsql_get_seq() - 1,
           __crsql_site_id = NULL;",
@@ -328,7 +328,7 @@ fn create_delete_trigger(
         crsql_increment_and_get_seq(),
         NULL WHERE true
       ON CONFLICT DO UPDATE SET
-        __crsql_col_version = 2,
+        __crsql_col_version = 1 + __crsql_col_version,
         __crsql_db_version = crsql_nextdbversion(),
         __crsql_seq = crsql_get_seq() - 1,
         __crsql_site_id = NULL;

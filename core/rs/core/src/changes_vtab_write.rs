@@ -81,11 +81,20 @@ fn did_cid_win(
     match col_vrsn_stmt.step() {
         Ok(ResultCode::ROW) => {
             let local_version = col_vrsn_stmt.column_int64(0);
+            let local_cl = col_vrsn_stmt.column_int64(1);
             reset_cached_stmt(col_vrsn_stmt)?;
-            if col_version > local_version {
+            if causal_length > local_cl {
+                // higher causal length beats all things in the row itself
                 return Ok(true);
-            } else if col_version < local_version {
+            } else if causal_length < local_cl {
                 return Ok(false);
+            } else {
+                // causal lengths are the same. Fall back to original algorithm.
+                if col_version > local_version {
+                    return Ok(true);
+                } else if col_version < local_version {
+                    return Ok(false);
+                }
             }
         }
         Ok(ResultCode::DONE) => {

@@ -19,7 +19,7 @@ use crate::c::crsql_ExtData;
 // - remove uthash and just use rust btreemap
 pub enum CachedStmtType {
     SetWinnerClock = 0,
-    CheckForLocalDelete = 1,
+    GetLocalCl = 1,
     GetColVersion = 2,
     GetCurrValue = 3,
     MergePkOnlyInsert = 4,
@@ -59,7 +59,7 @@ pub fn get_cache_key(
 ) -> Result<String, ResultCode> {
     match stmt_type {
         CachedStmtType::SetWinnerClock
-        | CachedStmtType::CheckForLocalDelete
+        | CachedStmtType::GetLocalCl
         | CachedStmtType::GetColVersion
         | CachedStmtType::MergePkOnlyInsert
         | CachedStmtType::MergeDelete => {

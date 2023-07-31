@@ -10,11 +10,11 @@ use sqlite::{Connection, Stmt};
 use sqlite_nostd as sqlite;
 use sqlite_nostd::{sqlite3, ResultCode, Value};
 
+use crate::c::crsql_ExtData;
 use crate::c::{
     crsql_Changes_vtab, crsql_TableInfo, crsql_ensureTableInfosAreUpToDate, crsql_indexofTableInfo,
     CrsqlChangesColumn,
 };
-use crate::c::{crsql_ExtData, crsql_columnExists};
 use crate::compare_values::crsql_compare_sqlite_values;
 use crate::pack_columns::bind_package_to_stmt;
 use crate::stmt_cache::{
@@ -38,6 +38,7 @@ fn did_cid_win(
     tbl_info: *mut crsql_TableInfo,
     unpacked_pks: &Vec<ColumnValue>,
     col_name: &str,
+    local_cl: sqlite::int64,
     insert_val: *mut sqlite::value,
     col_version: sqlite::int64,
     causal_length: sqlite::int64,
@@ -45,23 +46,11 @@ fn did_cid_win(
 ) -> Result<bool, ResultCode> {
     let stmt_key = get_cache_key(CachedStmtType::GetColVersion, insert_tbl, None)?;
     let col_vrsn_stmt = get_cached_stmt_rt_wt(db, ext_data, stmt_key, || {
-        let pk_cols = sqlite::args!((*tbl_info).pksLen, (*tbl_info).pks);
-        // Select out the version for the specific cell along with the causal length for the row
-        // it belongs to.
-        // TODO: we could potentially speed all this up drastically by doing in-batch in a 2-phase commit
-        // although it'd greately increase memory usage.
         Ok(format!(
-            "SELECT
-            t1.__crsql_col_version as col_version,
-            t2.__crsql_col_version as row_cl
-          FROM \"{table_name}__crsql_clock\" AS t1 JOIN \"{table_name}__crsql_clock\" as t2
-          ON {self_join} AND t2.__crsql_col_name = '{sentinel}'
-          WHERE {pk_where_list} AND ? = t1.__crsql_col_name",
-            table_name = util::escape_ident(insert_tbl),
-            pk_where_list = util::where_list(pk_cols, Some("t1."))?,
-            self_join = util::self_join(pk_cols)?,
-            sentinel = crate::c::INSERT_SENTINEL
-        ))
+        "SELECT __crsql_col_version FROM \"{table_name}__crsql_clock\" WHERE {pk_where_list} AND ? = __crsql_col_name",
+        table_name = crate::util::escape_ident(insert_tbl),
+        pk_where_list = pk_where_list_from_tbl_info(tbl_info, None)?,
+      ))
     })?;
 
     let bind_result = bind_package_to_stmt(col_vrsn_stmt, &unpacked_pks);
@@ -81,7 +70,6 @@ fn did_cid_win(
     match col_vrsn_stmt.step() {
         Ok(ResultCode::ROW) => {
             let local_version = col_vrsn_stmt.column_int64(0);
-            let local_cl = col_vrsn_stmt.column_int64(1);
             reset_cached_stmt(col_vrsn_stmt)?;
             if causal_length > local_cl {
                 // higher causal length beats all things in the row itself
@@ -149,42 +137,6 @@ fn did_cid_win(
             ))?;
             unsafe { *errmsg = err.into_raw() };
             return Err(ResultCode::ERROR);
-        }
-    }
-}
-
-fn check_for_local_delete(
-    db: *mut sqlite::sqlite3,
-    ext_data: *mut crsql_ExtData,
-    tbl_name: &str,
-    tbl_info: *mut crsql_TableInfo,
-    unpacked_pks: &Vec<ColumnValue>,
-) -> Result<bool, ResultCode> {
-    let stmt_key = get_cache_key(CachedStmtType::CheckForLocalDelete, tbl_name, None)?;
-
-    let check_del_stmt = get_cached_stmt_rt_wt(db, ext_data, stmt_key, || {
-        Ok(format!(
-          "SELECT 1 FROM \"{table_name}__crsql_clock\" WHERE {pk_where_list} AND __crsql_col_name = '{delete_sentinel}' AND __crsql_col_version % 2 = 0 LIMIT 1",
-          table_name = crate::util::escape_ident(tbl_name),
-          pk_where_list = pk_where_list_from_tbl_info(tbl_info, None)?,
-          delete_sentinel = crate::c::DELETE_SENTINEL,
-        ))
-    })?;
-
-    let rc = bind_package_to_stmt(check_del_stmt, unpacked_pks);
-    if let Err(rc) = rc {
-        reset_cached_stmt(check_del_stmt)?;
-        return Err(rc);
-    }
-
-    let step_result = check_del_stmt.step();
-    reset_cached_stmt(check_del_stmt)?;
-    match step_result {
-        Ok(ResultCode::ROW) => Ok(true),
-        Ok(ResultCode::DONE) => Ok(false),
-        Ok(rc) | Err(rc) => {
-            reset_cached_stmt(check_del_stmt)?;
-            Err(rc)
         }
     }
 }
@@ -293,7 +245,7 @@ fn set_winner_clock(
     }
 }
 
-fn merge_pk_only_insert(
+fn merge_sentinel_only_insert(
     db: *mut sqlite3,
     ext_data: *mut crsql_ExtData,
     tbl_info: *mut crsql_TableInfo,
@@ -308,7 +260,7 @@ fn merge_pk_only_insert(
     let merge_stmt = get_cached_stmt_rt_wt(db, ext_data, stmt_key, || {
         let pk_cols = sqlite::args!((*tbl_info).pksLen, (*tbl_info).pks);
         Ok(format!(
-            "INSERT OR IGNORE INTO \"{table_name}\" ({pk_idents}) VALUES ({pk_bindings}) RETURNING 1",
+            "INSERT OR IGNORE INTO \"{table_name}\" ({pk_idents}) VALUES ({pk_bindings})",
             table_name = crate::util::escape_ident(tbl_name_str),
             pk_idents = crate::util::as_identifier_list(pk_cols, None)?,
             pk_bindings = crate::util::binding_list(pk_cols.len()),
@@ -346,27 +298,21 @@ fn merge_pk_only_insert(
     }
 
     if let Ok(rc) = rc {
-        // We only set the winner clock if the insert was not ignored.
-        // INSERT OR IGNORE ... RETURNING will result in `SQLITE_DONE` if the insert was ignored and a row otherwise.
-        if rc == ResultCode::ROW {
-            return set_winner_clock(
-                db,
-                ext_data,
-                tbl_info,
-                unpacked_pks,
-                crate::c::INSERT_SENTINEL,
-                remote_col_vrsn,
-                remote_db_vsn,
-                remote_site_id,
-            );
-        }
+        return set_winner_clock(
+            db,
+            ext_data,
+            tbl_info,
+            unpacked_pks,
+            crate::c::INSERT_SENTINEL,
+            remote_col_vrsn,
+            remote_db_vsn,
+            remote_site_id,
+        );
     }
 
     Ok(-1)
 }
 
-// TODO: we can commonize this with `merge_pkonly_insert` -- basically the same logic.
-// although with CL they may diverge.
 unsafe fn merge_delete(
     db: *mut sqlite3,
     ext_data: *mut crsql_ExtData,
@@ -435,6 +381,46 @@ pub unsafe extern "C" fn crsql_merge_insert(
     }
 }
 
+fn get_local_cl(
+    db: *mut sqlite::sqlite3,
+    ext_data: *mut crsql_ExtData,
+    tbl_name: &str,
+    tbl_info: *mut crsql_TableInfo,
+    unpacked_pks: &Vec<ColumnValue>,
+) -> Result<sqlite::int64, ResultCode> {
+    let stmt_key = get_cache_key(CachedStmtType::GetLocalCl, tbl_name, None)?;
+
+    let local_cl_stmt = get_cached_stmt_rt_wt(db, ext_data, stmt_key, || {
+        Ok(format!(
+        "SELECT __crsql_col_version FROM \"{table_name}__crsql_clock\" WHERE {pk_where_list} AND __crsql_col_name = '{delete_sentinel}'",
+        table_name = crate::util::escape_ident(tbl_name),
+        pk_where_list = pk_where_list_from_tbl_info(tbl_info, None)?,
+        delete_sentinel = crate::c::DELETE_SENTINEL,
+      ))
+    })?;
+
+    let rc = bind_package_to_stmt(local_cl_stmt, unpacked_pks);
+    if let Err(rc) = rc {
+        reset_cached_stmt(local_cl_stmt)?;
+        return Err(rc);
+    }
+
+    let step_result = local_cl_stmt.step();
+    match step_result {
+        Ok(ResultCode::ROW) => {
+            reset_cached_stmt(local_cl_stmt)?;
+            Ok(local_cl_stmt.column_int64(0))
+        }
+        Ok(ResultCode::DONE) => {
+            reset_cached_stmt(local_cl_stmt)?;
+            Ok(0)
+        }
+        Ok(rc) | Err(rc) => {
+            reset_cached_stmt(local_cl_stmt)?;
+            Err(rc)
+        }
+    }
+}
 unsafe fn merge_insert(
     vtab: *mut sqlite::vtab,
     argc: c_int,
@@ -503,18 +489,26 @@ unsafe fn merge_insert(
     }
 
     let tbl_info = tbl_infos[tbl_info_index as usize];
-
-    let is_delete = crate::c::DELETE_SENTINEL == insert_col && insert_col_vrsn % 2 == 0;
-    let is_pk_only = crate::c::INSERT_SENTINEL == insert_col && insert_col_vrsn % 2 == 1;
-
     let unpacked_pks = unpack_columns(insert_pks.blob())?;
+    let local_cl = get_local_cl(db, (*tab).pExtData, insert_tbl, tbl_info, &unpacked_pks)?;
 
-    if check_for_local_delete(db, (*tab).pExtData, insert_tbl, tbl_info, &unpacked_pks)? {
-        // Delete wins. Our work is done.
+    // We can ignore all updates from older causal lengths.
+    // They won't win at anything.
+    if insert_cl < local_cl {
         return Ok(ResultCode::OK);
     }
 
+    let is_delete = insert_cl % 2 == 0;
+    let needs_resurrect = insert_cl > local_cl && insert_col_vrsn % 2 == 1;
+    let is_sentinel_only = crate::c::INSERT_SENTINEL == insert_col;
+
     if is_delete {
+        // We got a delete event but we've already processed a delete at that version.
+        // Just bail.
+        if insert_cl == local_cl {
+            return Ok(ResultCode::OK);
+        }
+        // else, it is a delete and the cl is > than ours. Drop the row.
         let merge_result = merge_delete(
             db,
             (*tab).pExtData,
@@ -536,15 +530,21 @@ unsafe fn merge_insert(
         }
     }
 
-    if is_pk_only
-        || crsql_columnExists(
+    /*
+    || crsql_columnExists(
             // TODO: only safe because we _know_ this is actually a cstr
             insert_col.as_ptr() as *const c_char,
             (*tbl_info).nonPks,
             (*tbl_info).nonPksLen,
         ) == 0
-    {
-        let merge_result = merge_pk_only_insert(
+     */
+    if is_sentinel_only {
+        // If it is a sentinel but the local_cl already matches, nothing to do
+        // as the local sentinel already has the same data!
+        if insert_cl == local_cl {
+            return Ok(ResultCode::OK);
+        }
+        let merge_result = merge_sentinel_only_insert(
             db,
             (*tab).pExtData,
             tbl_info,
@@ -570,6 +570,23 @@ unsafe fn merge_insert(
         }
     }
 
+    // we got a causal length which would resurrect the row.
+    // In an in-order delivery situation then `sentinel_only` would have already resurrected the row
+    // In out-of-order delivery, we need to resurrect the row as soon as we get a value
+    // which should resurrect the row. I.e., don't wait on the sentinel value to resurrect the row!
+    if needs_resurrect {
+        // this should work -- same as `merge_sentinel_only_insert` except we're not done once we do it
+        merge_sentinel_only_insert(
+            db,
+            (*tab).pExtData,
+            tbl_info,
+            &unpacked_pks,
+            insert_col_vrsn,
+            insert_db_vrsn,
+            insert_site_id,
+        )?;
+    }
+
     let does_cid_win = did_cid_win(
         db,
         (*tab).pExtData,
@@ -577,6 +594,7 @@ unsafe fn merge_insert(
         tbl_info,
         &unpacked_pks,
         insert_col,
+        local_cl,
         insert_val,
         insert_col_vrsn,
         insert_cl,

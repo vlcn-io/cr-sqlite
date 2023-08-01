@@ -21,11 +21,25 @@ pub enum CachedStmtType {
     SetWinnerClock = 0,
     GetLocalCl = 1,
     GetColVersion = 2,
+    // can we one day delete this and use site id for ties?
+    // if we do, how does that impact the backup and restore story?
+    // e.g., restoring a database snapshot on a new machine with a new siteid but
+    // bootstrapped from a backup?
+    // If we track that "we've seen this restored node since the backup point with the old site_id"
+    // then site_id comparisons could change merge results after restore for nodes that
+    // have different "seen since" records for the old site_id.
     GetCurrValue = 3,
     MergePkOnlyInsert = 4,
     MergeDelete = 5,
     MergeInsert = 6,
     RowPatchData = 7,
+    // We zero clocks, rather than going to 1, because
+    // the current values should be totally ignored at all sites.
+    // This is because the current values would not exist had the current node
+    // processed the intervening delete.
+    // This also means that col_version is not always >= 1. A resurrected column,
+    // which missed a delete event, will have a 0 version.
+    ZeroClocksOnResurrect = 8,
 }
 
 #[no_mangle]
@@ -62,7 +76,8 @@ pub fn get_cache_key(
         | CachedStmtType::GetLocalCl
         | CachedStmtType::GetColVersion
         | CachedStmtType::MergePkOnlyInsert
-        | CachedStmtType::MergeDelete => {
+        | CachedStmtType::MergeDelete
+        | CachedStmtType::ZeroClocksOnResurrect => {
             if col_name.is_some() {
                 // col name should not be specified for these cases
                 return Err(ResultCode::MISUSE);

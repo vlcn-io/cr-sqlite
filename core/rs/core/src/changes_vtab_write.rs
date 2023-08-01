@@ -297,6 +297,7 @@ fn merge_sentinel_only_insert(
     }
 
     if let Ok(rc) = rc {
+        zero_clocks_on_resurrect(db, ext_data, tbl_name_str, tbl_info, unpacked_pks)?;
         return set_winner_clock(
             db,
             ext_data,
@@ -310,6 +311,36 @@ fn merge_sentinel_only_insert(
     }
 
     Ok(-1)
+}
+
+fn zero_clocks_on_resurrect(
+    db: *mut sqlite3,
+    ext_data: *mut crsql_ExtData,
+    table_name: &str,
+    tbl_info: *mut crsql_TableInfo,
+    unpacked_pks: &Vec<ColumnValue>,
+) -> Result<ResultCode, ResultCode> {
+    let stmt_key = get_cache_key(CachedStmtType::ZeroClocksOnResurrect, table_name, None)?;
+    let zero_stmt = get_cached_stmt_rt_wt(db, ext_data, stmt_key, || {
+        Ok(format!(
+            "UPDATE \"{table_name}__crsql_clock\" SET __crsql_col_version = 0 WHERE {pk_where_list} AND __crsql_col_name != '{sentinel}'",
+            table_name = crate::util::escape_ident(table_name),
+            pk_where_list = pk_where_list_from_tbl_info(tbl_info, None)?,
+            sentinel = crate::c::INSERT_SENTINEL
+        ))
+    })?;
+
+    if let Err(rc) = bind_package_to_stmt(zero_stmt, unpacked_pks) {
+        reset_cached_stmt(zero_stmt)?;
+        return Err(rc);
+    }
+
+    if let Err(rc) = zero_stmt.step() {
+        reset_cached_stmt(zero_stmt)?;
+        return Err(rc);
+    }
+
+    reset_cached_stmt(zero_stmt)
 }
 
 unsafe fn merge_delete(
@@ -499,7 +530,10 @@ unsafe fn merge_insert(
     }
 
     let is_delete = insert_cl % 2 == 0;
-    // resurrect or update to latest cl
+    // Resurrect or update to latest cl.
+    // The current node might have missed the delete preceeding this causal length
+    // in out-of-order delivery setups but we still call it a resurrect as special
+    // handling needs to happen in the "alive -> missed_delete -> alive" case.
     let needs_resurrect = insert_cl > local_cl && insert_col_vrsn % 2 == 1;
     let is_sentinel_only = crate::c::INSERT_SENTINEL == insert_col;
 
@@ -577,12 +611,13 @@ unsafe fn merge_insert(
     // which should resurrect the row. I.e., don't wait on the sentinel value to resurrect the row!
     if needs_resurrect {
         // this should work -- same as `merge_sentinel_only_insert` except we're not done once we do it
+        // and the version to set to is the cl not col_vrsn of current insert
         merge_sentinel_only_insert(
             db,
             (*tab).pExtData,
             tbl_info,
             &unpacked_pks,
-            insert_col_vrsn,
+            insert_cl,
             insert_db_vrsn,
             insert_site_id,
         )?;

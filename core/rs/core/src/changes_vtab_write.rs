@@ -408,8 +408,9 @@ fn get_local_cl(
     let step_result = local_cl_stmt.step();
     match step_result {
         Ok(ResultCode::ROW) => {
+            let ret = local_cl_stmt.column_int64(0);
             reset_cached_stmt(local_cl_stmt)?;
-            Ok(local_cl_stmt.column_int64(0))
+            Ok(ret)
         }
         Ok(ResultCode::DONE) => {
             reset_cached_stmt(local_cl_stmt)?;
@@ -499,6 +500,7 @@ unsafe fn merge_insert(
     }
 
     let is_delete = insert_cl % 2 == 0;
+    // resurrect or update to latest cl
     let needs_resurrect = insert_cl > local_cl && insert_col_vrsn % 2 == 1;
     let is_sentinel_only = crate::c::INSERT_SENTINEL == insert_col;
 

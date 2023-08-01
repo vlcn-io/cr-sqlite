@@ -323,7 +323,7 @@ fn zero_clocks_on_resurrect(
     let stmt_key = get_cache_key(CachedStmtType::ZeroClocksOnResurrect, table_name, None)?;
     let zero_stmt = get_cached_stmt_rt_wt(db, ext_data, stmt_key, || {
         Ok(format!(
-            "UPDATE \"{table_name}__crsql_clock\" SET __crsql_col_version = 0 WHERE {pk_where_list} AND __crsql_col_name != '{sentinel}'",
+            "UPDATE \"{table_name}__crsql_clock\" SET __crsql_col_version = 0 WHERE {pk_where_list} AND __crsql_col_name IS NOT '{sentinel}'",
             table_name = crate::util::escape_ident(table_name),
             pk_where_list = pk_where_list_from_tbl_info(tbl_info, None)?,
             sentinel = crate::c::INSERT_SENTINEL
@@ -385,6 +385,28 @@ unsafe fn merge_delete(
     if let Err(rc) = rc {
         return Err(rc);
     }
+
+    let stmt_key = get_cache_key(CachedStmtType::MergeDeleteDropClocks, tbl_name_str, None)?;
+    let drop_clocks_stmt = get_cached_stmt_rt_wt(db, ext_data, stmt_key, || {
+        Ok(format!(
+            "DELETE FROM \"{table_name}__crsql_clock\" WHERE {pk_where_list} AND __crsql_col_name IS NOT '${sentinel}'",
+            table_name = crate::util::escape_ident(tbl_name_str),
+            pk_where_list = pk_where_list_from_tbl_info(tbl_info, None)?,
+            sentinel = crate::c::INSERT_SENTINEL
+        ))
+    })?;
+
+    if let Err(rc) = bind_package_to_stmt(drop_clocks_stmt, unpacked_pks) {
+        reset_cached_stmt(drop_clocks_stmt)?;
+        return Err(rc);
+    }
+
+    if let Err(rc) = drop_clocks_stmt.step() {
+        reset_cached_stmt(drop_clocks_stmt)?;
+        return Err(rc);
+    }
+
+    reset_cached_stmt(drop_clocks_stmt)?;
 
     set_winner_clock(
         db,

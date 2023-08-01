@@ -326,7 +326,7 @@ def test_sync_with_siteid():
     close(c2)
 
 
-def test_resurrection_via_sentinel():
+def test_resurrection_of_live_thing_via_sentinel():
     # col clocks get zeroed
     c1 = make_simple_schema()
     c2 = make_simple_schema()
@@ -344,21 +344,48 @@ def test_resurrection_via_sentinel():
         "SELECT * FROM crsql_changes WHERE cid = '-1'").fetchone()
     c2.execute(
         "INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?, ?, ?)", sentinel_resurrect)
+    c2.commit()
 
     changes = c2.execute("SELECT * FROM crsql_changes").fetchall()
 
-    # we move the column version back but don't bump the db version up
-    # we want to essentially act as if the column were deleted on a "resurrect that skips a delete event"
-    # and this zeroing of the column clock, while holding db version steady, accomplishes that.
-    # Hmm. Well this would cause these changes to start
-    # winning on other nodes where they previously lost.
-    # but other nodes won't get them since db version is held steady.
-    # I think db version needs to move forward so other nodes can receive these changes.
-    # This is a somewhat weird state where there would be a resurrect at old values..
-    # Hmm...
-    # Maybe we should create a synthetic delete when we have the case of a missed delete...
-    #
-    # What if new nodes get them?
+    # 'b' should be zeroed column version but latest db version.
+    assert (changes == [('foo', b'\x01\t\x01', '-1', None, 3, 2, None, 3),
+                        ('foo', b'\x01\t\x01', 'b', 1, 0, 2, None, 3)])
+    # now lets finish getting changes from the other node
+    changes = c1.execute(
+        "SELECT * FROM crsql_changes WHERE cid != '-1'").fetchone()
+    c2.execute(
+        "INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?, ?, ?)", changes)
+    c2.commit()
+
+    changes = c2.execute("SELECT * FROM crsql_changes").fetchall()
+    assert (changes == [('foo', b'\x01\t\x01', '-1', None, 3, 2, None, 3),
+                        # col version bump to 1 since the other guy won on col version.
+                        # db version bumped as well since the col version changed.
+                        # holding the db version stable would prevent nodes that proxy other nodes
+                        # from forwarding their changes to those other nodes.
+                        # E.g.,
+                        # A -> B -> C
+                        # B could send data to C and lose there.
+                        # Then B receives changes from A which move B's clock forward w/o changing B's value
+                        # C then merges to B and loses there
+                        # If B db version didn't change then C would never get the changes that B is proxying from A
+                        ('foo', b'\x01\t\x01', 'b', 1, 1, 3, None, 3)])
+
+
+def test_resurrection_of_live_thing_via_non_sentinel():
+    None
+
+
+def test_resurrection_of_dead_thing_via_sentinel():
+    None
+
+
+def test_resurrection_of_dead_thing_via_non_sentinel():
+    None
+
+
+def test_advance_db_version_on_clock_zero_scenario():
     # Not moving DB version can create a divergence in this scenario:
     # Four Peers: A, B, C, D
     # - C and D merge together and have same state
@@ -374,14 +401,6 @@ def test_resurrection_via_sentinel():
     # To remedy, the db_version must be moved forward on the rows that we zero the clocks.
     # This way D will receive the updated clocks from B when asking B for the latest changes
     # and D & C will converge after seeing all events from B.
-    assert (changes == [('foo', b'\x01\t\x01', 'b', 1, 0, 1, None, 3),
-                        ('foo', b'\x01\t\x01', '-1', None, 3, 2, None, 3)])
-
-    None
-
-
-def test_resurrection_via_non_sentinel():
-    # col clocks get zeroed
     None
 
 

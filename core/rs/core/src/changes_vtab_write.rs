@@ -59,7 +59,7 @@ fn did_cid_win(
       ))
     })?;
 
-    let bind_result = bind_package_to_stmt(col_vrsn_stmt, &unpacked_pks);
+    let bind_result = bind_package_to_stmt(col_vrsn_stmt, &unpacked_pks, 0);
     if let Err(rc) = bind_result {
         reset_cached_stmt(col_vrsn_stmt)?;
         return Err(rc);
@@ -112,7 +112,7 @@ fn did_cid_win(
         ))
     })?;
 
-    let bind_result = bind_package_to_stmt(col_val_stmt, &unpacked_pks);
+    let bind_result = bind_package_to_stmt(col_val_stmt, &unpacked_pks, 0);
     if let Err(rc) = bind_result {
         reset_cached_stmt(col_val_stmt)?;
         return Err(rc);
@@ -201,7 +201,7 @@ fn set_winner_clock(
         ))
     })?;
 
-    let bind_result = bind_package_to_stmt(set_stmt, unpacked_pks);
+    let bind_result = bind_package_to_stmt(set_stmt, unpacked_pks, 0);
     if let Err(rc) = bind_result {
         reset_cached_stmt(set_stmt)?;
         return Err(rc);
@@ -266,7 +266,7 @@ fn merge_sentinel_only_insert(
         ))
     })?;
 
-    let rc = bind_package_to_stmt(merge_stmt, unpacked_pks);
+    let rc = bind_package_to_stmt(merge_stmt, unpacked_pks, 0);
     if let Err(rc) = rc {
         reset_cached_stmt(merge_stmt)?;
         return Err(rc);
@@ -297,7 +297,14 @@ fn merge_sentinel_only_insert(
     }
 
     if let Ok(rc) = rc {
-        zero_clocks_on_resurrect(db, ext_data, tbl_name_str, tbl_info, unpacked_pks)?;
+        zero_clocks_on_resurrect(
+            db,
+            ext_data,
+            tbl_name_str,
+            tbl_info,
+            unpacked_pks,
+            remote_db_vsn,
+        )?;
         return set_winner_clock(
             db,
             ext_data,
@@ -319,18 +326,24 @@ fn zero_clocks_on_resurrect(
     table_name: &str,
     tbl_info: *mut crsql_TableInfo,
     unpacked_pks: &Vec<ColumnValue>,
+    insert_db_vrsn: sqlite::int64,
 ) -> Result<ResultCode, ResultCode> {
     let stmt_key = get_cache_key(CachedStmtType::ZeroClocksOnResurrect, table_name, None)?;
     let zero_stmt = get_cached_stmt_rt_wt(db, ext_data, stmt_key, || {
         Ok(format!(
-            "UPDATE \"{table_name}__crsql_clock\" SET __crsql_col_version = 0 WHERE {pk_where_list} AND __crsql_col_name IS NOT '{sentinel}'",
+            "UPDATE \"{table_name}__crsql_clock\" SET __crsql_col_version = 0, __crsql_db_version = MAX(crsql_nextdbversion(), ?) WHERE {pk_where_list} AND __crsql_col_name IS NOT '{sentinel}'",
             table_name = crate::util::escape_ident(table_name),
             pk_where_list = pk_where_list_from_tbl_info(tbl_info, None)?,
             sentinel = crate::c::INSERT_SENTINEL
         ))
     })?;
 
-    if let Err(rc) = bind_package_to_stmt(zero_stmt, unpacked_pks) {
+    if let Err(rc) = zero_stmt.bind_int64(1, insert_db_vrsn) {
+        reset_cached_stmt(zero_stmt)?;
+        return Err(rc);
+    }
+
+    if let Err(rc) = bind_package_to_stmt(zero_stmt, unpacked_pks, 1) {
         reset_cached_stmt(zero_stmt)?;
         return Err(rc);
     }
@@ -362,7 +375,7 @@ unsafe fn merge_delete(
         ))
     })?;
 
-    if let Err(rc) = bind_package_to_stmt(delete_stmt, unpacked_pks) {
+    if let Err(rc) = bind_package_to_stmt(delete_stmt, unpacked_pks, 0) {
         reset_cached_stmt(delete_stmt)?;
         return Err(rc);
     }
@@ -409,7 +422,7 @@ unsafe fn merge_delete(
         ))
     })?;
 
-    if let Err(rc) = bind_package_to_stmt(drop_clocks_stmt, unpacked_pks) {
+    if let Err(rc) = bind_package_to_stmt(drop_clocks_stmt, unpacked_pks, 0) {
         reset_cached_stmt(drop_clocks_stmt)?;
         return Err(rc);
     }
@@ -455,7 +468,7 @@ fn get_local_cl(
       ))
     })?;
 
-    let rc = bind_package_to_stmt(local_cl_stmt, unpacked_pks);
+    let rc = bind_package_to_stmt(local_cl_stmt, unpacked_pks, 0);
     if let Err(rc) = rc {
         reset_cached_stmt(local_cl_stmt)?;
         return Err(rc);
@@ -692,7 +705,7 @@ unsafe fn merge_insert(
         ))
     })?;
 
-    let bind_result = bind_package_to_stmt(merge_stmt, &unpacked_pks)
+    let bind_result = bind_package_to_stmt(merge_stmt, &unpacked_pks, 0)
         .and_then(|_| merge_stmt.bind_value(unpacked_pks.len() as i32 + 1, insert_val))
         .and_then(|_| merge_stmt.bind_value(unpacked_pks.len() as i32 + 2, insert_val));
     if let Err(rc) = bind_result {

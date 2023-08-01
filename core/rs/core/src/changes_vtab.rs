@@ -436,7 +436,7 @@ unsafe fn changes_next(
 
     let packed_pks = pks.blob();
     let unpacked_pks = unpack_columns(packed_pks)?;
-    bind_package_to_stmt(row_stmt, &unpacked_pks)?;
+    bind_package_to_stmt(row_stmt, &unpacked_pks, 0)?;
 
     match row_stmt.step() {
         Ok(ResultCode::DONE) => {

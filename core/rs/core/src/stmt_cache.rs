@@ -40,6 +40,7 @@ pub enum CachedStmtType {
     // This also means that col_version is not always >= 1. A resurrected column,
     // which missed a delete event, will have a 0 version.
     ZeroClocksOnResurrect = 8,
+    MergeDeleteDropClocks = 9,
 }
 
 #[no_mangle]
@@ -77,7 +78,8 @@ pub fn get_cache_key(
         | CachedStmtType::GetColVersion
         | CachedStmtType::MergePkOnlyInsert
         | CachedStmtType::MergeDelete
-        | CachedStmtType::ZeroClocksOnResurrect => {
+        | CachedStmtType::ZeroClocksOnResurrect
+        | CachedStmtType::MergeDeleteDropClocks => {
             if col_name.is_some() {
                 // col name should not be specified for these cases
                 return Err(ResultCode::MISUSE);

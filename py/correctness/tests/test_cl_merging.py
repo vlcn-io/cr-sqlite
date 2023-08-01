@@ -71,18 +71,51 @@ def test_larger_cl_wins_all():
     # values in c2 are as expected -- the values from c1 since c1 has a later causal length
     assert (values == [(1, 1)])
 
+
+def test_larger_cl_delete_deletes_all():
+    c1 = make_simple_schema()
+    c2 = make_simple_schema()
+
+    c1.execute("INSERT INTO foo VALUES (1, 1)")
+    c1.execute("DELETE FROM foo")
+    c1.commit()
+
+    c2.execute("INSERT INTO foo VALUES (1, 1)")
+    c2.execute("UPDATE foo SET b = 3 WHERE a = 1")
+    c2.execute("UPDATE foo SET b = 4 WHERE a = 1")
+    c2.commit()
+
+    sync_left_to_right(c1, c2, 0)
+
+    rows = c2.execute("SELECT * FROM foo").fetchall()
+    changes = c2.execute("SELECT * FROM crsql_changes").fetchall()
+    c1_changes = c1.execute("SELECT * FROM crsql_changes").fetchall()
+
+    # We should have deleted the entry via sync of greater delete causal length from c1 to c2
+    assert (rows == [])
+    # this is wrong.. should not the `b` records be missing? Given delete should remove those metadata rows...
+    # assert (changes == [('foo', b'\x01\t\x01', 'b', None, 3, 1, None, 2),
+    #                     ('foo', b'\x01\t\x01', '-1', None, 2, 2, None, 2)])
+
+    pprint(c1_changes)
+
+
+def test_smaller_delete_does_not_delete():
     None
 
 
-def test_larger_cl_delete_delets_all():
+def test_pr_299_scenario():
+    # https://github.com/vlcn-io/cr-sqlite/pull/299#issuecomment-1660570099
     None
 
 
 def test_resurrection_via_sentinel():
+    # col clocks get zeroed
     None
 
 
 def test_resurrection_via_non_sentinel():
+    # col clocks get zeroed
     None
 
 
@@ -125,3 +158,12 @@ def test_pko_resurrect():
 
 def test_cl_does_not_move_forward_when_equal():
     None
+
+
+# create a bunch of changes and merge them in random orders as driven by hypothesis.
+# end results should always be the same.
+def test_out_of_order_merge():
+    None
+
+
+# can we check merge of delete with equal CL is a no-op?

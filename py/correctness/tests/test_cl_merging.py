@@ -371,18 +371,99 @@ def test_resurrection_of_live_thing_via_sentinel():
                         # C then merges to B and loses there
                         # If B db version didn't change then C would never get the changes that B is proxying from A
                         ('foo', b'\x01\t\x01', 'b', 1, 1, 3, None, 3)])
+    close(c1)
+    close(c2)
 
 
 def test_resurrection_of_live_thing_via_non_sentinel():
-    None
+    c1 = make_simple_schema()
+    c2 = make_simple_schema()
+
+    c1.execute("INSERT INTO foo VALUES (1, 1)")
+    c1.execute("DELETE FROM foo")
+    c1.execute("INSERT INTO foo VALUES (1, 1)")
+    c1.commit()
+
+    c2.execute("INSERT INTO foo VALUES (1, 1)")
+    c2.commit()
+
+    non_sentinel_resurrect = c1.execute(
+        "SELECT * FROM crsql_changes WHERE cid != '-1'").fetchone()
+    c2.execute(
+        "INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?, ?, ?)", non_sentinel_resurrect)
+    c2.commit()
+
+    changes = c2.execute("SELECT * FROM crsql_changes").fetchall()
+    # we get the new values as expected
+    # db version pushed
+    # col version is at 1 given we rolled the causal length forward for the resurrection
+    assert (changes == [('foo', b'\x01\t\x01', '-1', None, 3, 2, None, 3),
+                        ('foo', b'\x01\t\x01', 'b', 1, 1, 2, None, 3)])
+
+    # sync all other entries should be a no-op
+    sync_left_to_right(c1, c2, 0)
+    post_changes = c2.execute("SELECT * FROM crsql_changes").fetchall()
+    assert (changes == post_changes)
+    close(c1)
+    close(c2)
 
 
 def test_resurrection_of_dead_thing_via_sentinel():
-    None
+    c1 = make_simple_schema()
+    c2 = make_simple_schema()
+
+    c1.execute("INSERT INTO foo VALUES (1, 1)")
+    c1.execute("DELETE FROM foo")
+    c1.execute("INSERT INTO foo VALUES (1, 1)")
+    c1.commit()
+
+    c2.execute("INSERT INTO foo VALUES (1, 1)")
+    c2.execute("DELETE FROM foo")
+    c2.commit()
+
+    sentinel_resurrect = c1.execute(
+        "SELECT * FROM crsql_changes WHERE cid = '-1'").fetchone()
+    c2.execute(
+        "INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?, ?, ?)", sentinel_resurrect)
+    c2.commit()
+
+    changes = c2.execute("SELECT * FROM crsql_changes").fetchall()
+    # row comes back
+    # cl = 3 given resurrected from dead (2)
+    # db_version = 2 given it was a change
+    assert (changes == [('foo', b'\x01\t\x01', '-1', None, 3, 2, None, 3)])
+    close(c1)
+    close(c2)
 
 
 def test_resurrection_of_dead_thing_via_non_sentinel():
-    None
+    c1 = make_simple_schema()
+    c2 = make_simple_schema()
+
+    c1.execute("INSERT INTO foo VALUES (1, 1)")
+    c1.execute("DELETE FROM foo")
+    c1.execute("INSERT INTO foo VALUES (1, 1)")
+    c1.commit()
+
+    c2.execute("INSERT INTO foo VALUES (1, 1)")
+    c2.execute("DELETE FROM foo")
+    c2.commit()
+
+    sentinel_resurrect = c1.execute(
+        "SELECT * FROM crsql_changes WHERE cid != '-1'").fetchone()
+    c2.execute(
+        "INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?, ?, ?)", sentinel_resurrect)
+    c2.commit()
+
+    changes = c2.execute("SELECT * FROM crsql_changes").fetchall()
+    # row comes back
+    # cl = 3 given resurrected from dead (2)
+    # db_version = 2 given it was a change
+    # col version rolled back given cl moved forward
+    assert (changes == [('foo', b'\x01\t\x01', '-1', None, 3, 2, None, 3),
+                        ('foo', b'\x01\t\x01', 'b', 1, 1, 2, None, 3)])
+    close(c1)
+    close(c2)
 
 
 def test_advance_db_version_on_clock_zero_scenario():

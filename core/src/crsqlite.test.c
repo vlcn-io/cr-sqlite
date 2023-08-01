@@ -406,67 +406,71 @@ static void testSelectChangesAfterChangingColumnName() {
   printf("\t\e[0;32mSuccess\e[0m\n");
 }
 
-static void testInsertChangesWithUnkownColumnNames() {
-  printf("InsertChangesWithUnknownColumnName\n");
+// We no longer support this given we fixup metadata on migration.
+// Maybe we should support it though?
+// static void testInsertChangesWithUnkownColumnNames() {
+//   printf("InsertChangesWithUnknownColumnName\n");
 
-  int rc = SQLITE_OK;
-  sqlite3 *db1;
-  sqlite3 *db2;
-  rc = sqlite3_open(":memory:", &db1);
-  rc += sqlite3_open(":memory:", &db2);
+//   int rc = SQLITE_OK;
+//   sqlite3 *db1;
+//   sqlite3 *db2;
+//   rc = sqlite3_open(":memory:", &db1);
+//   rc += sqlite3_open(":memory:", &db2);
 
-  rc += sqlite3_exec(db1, "CREATE TABLE foo(a primary key, b);", 0, 0, 0);
-  rc += sqlite3_exec(db1, "SELECT crsql_as_crr('foo')", 0, 0, 0);
-  rc += sqlite3_exec(db2, "CREATE TABLE foo(a primary key, c);", 0, 0, 0);
-  rc += sqlite3_exec(db2, "SELECT crsql_as_crr('foo')", 0, 0, 0);
-  assert(rc == SQLITE_OK);
+//   rc += sqlite3_exec(db1, "CREATE TABLE foo(a primary key, b);", 0, 0, 0);
+//   rc += sqlite3_exec(db1, "SELECT crsql_as_crr('foo')", 0, 0, 0);
+//   rc += sqlite3_exec(db2, "CREATE TABLE foo(a primary key, c);", 0, 0, 0);
+//   rc += sqlite3_exec(db2, "SELECT crsql_as_crr('foo')", 0, 0, 0);
+//   assert(rc == SQLITE_OK);
 
-  rc += sqlite3_exec(db1, "INSERT INTO foo VALUES (1, 2);", 0, 0, 0);
-  rc += sqlite3_exec(db2, "INSERT INTO foo VALUES (2, 3);", 0, 0, 0);
-  assert(rc == SQLITE_OK);
+//   rc += sqlite3_exec(db1, "INSERT INTO foo VALUES (1, 2);", 0, 0, 0);
+//   rc += sqlite3_exec(db2, "INSERT INTO foo VALUES (2, 3);", 0, 0, 0);
+//   assert(rc == SQLITE_OK);
 
-  sqlite3_stmt *pStmtRead = 0;
-  sqlite3_stmt *pStmtWrite = 0;
-  rc +=
-      sqlite3_prepare_v2(db1, "SELECT * FROM crsql_changes", -1, &pStmtRead, 0);
-  rc += sqlite3_prepare_v2(
-      db2, "INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?, ?, ?)", -1,
-      &pStmtWrite, 0);
-  assert(rc == SQLITE_OK);
+//   sqlite3_stmt *pStmtRead = 0;
+//   sqlite3_stmt *pStmtWrite = 0;
+//   rc +=
+//       sqlite3_prepare_v2(db1, "SELECT * FROM crsql_changes", -1, &pStmtRead,
+//       0);
+//   rc += sqlite3_prepare_v2(
+//       db2, "INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?, ?, ?)", -1,
+//       &pStmtWrite, 0);
+//   assert(rc == SQLITE_OK);
 
-  while (sqlite3_step(pStmtRead) == SQLITE_ROW) {
-    for (int i = 0; i < 7; ++i) {
-      sqlite3_bind_value(pStmtWrite, i + 1, sqlite3_column_value(pStmtRead, i));
-    }
+//   while (sqlite3_step(pStmtRead) == SQLITE_ROW) {
+//     for (int i = 0; i < 7; ++i) {
+//       sqlite3_bind_value(pStmtWrite, i + 1, sqlite3_column_value(pStmtRead,
+//       i));
+//     }
 
-    sqlite3_step(pStmtWrite);
-    sqlite3_reset(pStmtWrite);
-  }
-  sqlite3_finalize(pStmtWrite);
-  sqlite3_finalize(pStmtRead);
+//     sqlite3_step(pStmtWrite);
+//     sqlite3_reset(pStmtWrite);
+//   }
+//   sqlite3_finalize(pStmtWrite);
+//   sqlite3_finalize(pStmtRead);
 
-  // select all from db2.
-  // it should have a row for pk 1.
-  sqlite3_prepare_v2(db2, "SELECT * FROM foo ORDER BY a ASC", -1, &pStmtRead,
-                     0);
-  int comparisons = 0;
-  while (sqlite3_step(pStmtRead) == SQLITE_ROW) {
-    if (comparisons == 0) {
-      assert(sqlite3_column_int(pStmtRead, 0) == 1);
-      assert(sqlite3_column_type(pStmtRead, 1) == SQLITE_NULL);
-    } else {
-      assert(sqlite3_column_int(pStmtRead, 0) == 2);
-      assert(sqlite3_column_int(pStmtRead, 1) == 3);
-    }
-    comparisons += 1;
-  }
-  sqlite3_finalize(pStmtRead);
+//   // select all from db2.
+//   // it should have a row for pk 1.
+//   sqlite3_prepare_v2(db2, "SELECT * FROM foo ORDER BY a ASC", -1, &pStmtRead,
+//                      0);
+//   int comparisons = 0;
+//   while (sqlite3_step(pStmtRead) == SQLITE_ROW) {
+//     if (comparisons == 0) {
+//       assert(sqlite3_column_int(pStmtRead, 0) == 1);
+//       assert(sqlite3_column_type(pStmtRead, 1) == SQLITE_NULL);
+//     } else {
+//       assert(sqlite3_column_int(pStmtRead, 0) == 2);
+//       assert(sqlite3_column_int(pStmtRead, 1) == 3);
+//     }
+//     comparisons += 1;
+//   }
+//   sqlite3_finalize(pStmtRead);
 
-  assert(comparisons == 2);
-  crsql_close(db1);
-  crsql_close(db2);
-  printf("\t\e[0;32mSuccess\e[0m\n");
-}
+//   assert(comparisons == 2);
+//   crsql_close(db1);
+//   crsql_close(db2);
+//   printf("\t\e[0;32mSuccess\e[0m\n");
+// }
 
 static sqlite3_int64 getDbVersion(sqlite3 *db) {
   sqlite3_stmt *pStmt = 0;
@@ -656,7 +660,7 @@ void crsqlTestSuite() {
   testCreateClockTable();
   teste2e();
   testSelectChangesAfterChangingColumnName();
-  testInsertChangesWithUnkownColumnNames();
+  // testInsertChangesWithUnkownColumnNames();
   testLamportCondition();
   noopsDoNotMoveClocks();
   testPullingOnlyLocalChanges();

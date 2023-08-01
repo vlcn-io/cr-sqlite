@@ -274,7 +274,7 @@ static void testDelete() {
   rc += sqlite3_exec(db, "BEGIN", 0, 0, 0);
   rc += sqlite3_exec(db,
                      "INSERT INTO crsql_changes VALUES ('foo', X'010901', "
-                     "'-1', NULL, 2, 2, NULL, 1)",  //__crsql_del
+                     "'-1', NULL, 2, 2, NULL, 2)",  //__crsql_del
                      0, 0, &err);
   sqlite3_prepare_v2(db, "SELECT crsql_rows_impacted()", -1, &pStmt, 0);
   sqlite3_step(pStmt);

@@ -31,6 +31,14 @@ fn pk_where_list_from_tbl_info(
     util::where_list(pk_cols, prefix)
 }
 
+/**
+ * did_cid_win does not take into account the causal length.
+ * The expectation is that all cuasal length concerns have already been handle
+ * via:
+ * - early return because insert_cl < local_cl
+ * - automatic win because insert_cl > local_cl
+ * - come here to did_cid_win iff insert_cl = local_cl
+ */
 fn did_cid_win(
     db: *mut sqlite3,
     ext_data: *mut crsql_ExtData,
@@ -38,10 +46,8 @@ fn did_cid_win(
     tbl_info: *mut crsql_TableInfo,
     unpacked_pks: &Vec<ColumnValue>,
     col_name: &str,
-    local_cl: sqlite::int64,
     insert_val: *mut sqlite::value,
     col_version: sqlite::int64,
-    causal_length: sqlite::int64,
     errmsg: *mut *mut c_char,
 ) -> Result<bool, ResultCode> {
     let stmt_key = get_cache_key(CachedStmtType::GetColVersion, insert_tbl, None)?;
@@ -71,18 +77,11 @@ fn did_cid_win(
         Ok(ResultCode::ROW) => {
             let local_version = col_vrsn_stmt.column_int64(0);
             reset_cached_stmt(col_vrsn_stmt)?;
-            if causal_length > local_cl {
-                // higher causal length beats all things in the row itself
+            // causal lengths are the same. Fall back to original algorithm.
+            if col_version > local_version {
                 return Ok(true);
-            } else if causal_length < local_cl {
+            } else if col_version < local_version {
                 return Ok(false);
-            } else {
-                // causal lengths are the same. Fall back to original algorithm.
-                if col_version > local_version {
-                    return Ok(true);
-                } else if col_version < local_version {
-                    return Ok(false);
-                }
             }
         }
         Ok(ResultCode::DONE) => {
@@ -587,21 +586,23 @@ unsafe fn merge_insert(
             insert_db_vrsn,
             insert_site_id,
         )?;
+        // (*(*tab).pExtData).rowsImpacted += 1;
     }
 
-    let does_cid_win = did_cid_win(
-        db,
-        (*tab).pExtData,
-        insert_tbl,
-        tbl_info,
-        &unpacked_pks,
-        insert_col,
-        local_cl,
-        insert_val,
-        insert_col_vrsn,
-        insert_cl,
-        errmsg,
-    )?;
+    // we can short-circuit via needs_resurrect
+    // given the greater cl automatically means a win.
+    let does_cid_win = needs_resurrect
+        || did_cid_win(
+            db,
+            (*tab).pExtData,
+            insert_tbl,
+            tbl_info,
+            &unpacked_pks,
+            insert_col,
+            insert_val,
+            insert_col_vrsn,
+            errmsg,
+        )?;
 
     if does_cid_win == false {
         // doesCidWin == 0? compared against our clocks, nothing wins. OK and

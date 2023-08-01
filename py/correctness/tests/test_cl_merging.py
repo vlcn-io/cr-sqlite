@@ -328,6 +328,55 @@ def test_sync_with_siteid():
 
 def test_resurrection_via_sentinel():
     # col clocks get zeroed
+    c1 = make_simple_schema()
+    c2 = make_simple_schema()
+
+    c1.execute("INSERT INTO foo VALUES (1, 1)")
+    c1.execute("DELETE FROM foo")
+    c1.execute("INSERT INTO foo VALUES (1, 1)")
+    c1.commit()
+
+    c2.execute("INSERT INTO foo VALUES (1, 1)")
+    c2.commit()
+
+    # a resurrection of an already live row
+    sentinel_resurrect = c1.execute(
+        "SELECT * FROM crsql_changes WHERE cid = '-1'").fetchone()
+    c2.execute(
+        "INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?, ?, ?)", sentinel_resurrect)
+
+    changes = c2.execute("SELECT * FROM crsql_changes").fetchall()
+
+    # we move the column version back but don't bump the db version up
+    # we want to essentially act as if the column were deleted on a "resurrect that skips a delete event"
+    # and this zeroing of the column clock, while holding db version steady, accomplishes that.
+    # Hmm. Well this would cause these changes to start
+    # winning on other nodes where they previously lost.
+    # but other nodes won't get them since db version is held steady.
+    # I think db version needs to move forward so other nodes can receive these changes.
+    # This is a somewhat weird state where there would be a resurrect at old values..
+    # Hmm...
+    # Maybe we should create a synthetic delete when we have the case of a missed delete...
+    #
+    # What if new nodes get them?
+    # Not moving DB version can create a divergence in this scenario:
+    # Four Peers: A, B, C, D
+    # - C and D merge together and have same state
+    # - D merges in B where B's values lose
+    # - B receives a DELETE from A and zeros its clocks without moving db_version on those items
+    # - C merges in B up to the same db_version that D did
+    # - Remember C's state matched D's
+    # - B's changes win on C (whereas they lost on D which was identical to C) because the causal length went forward
+    # - C and D are diverged even though they believe themselves to have seen exactly the same events
+    # - C and D get latest changes from B (the resurrect) and are still diverged even after seeing all events
+    #   in the system.
+    #
+    # To remedy, the db_version must be moved forward on the rows that we zero the clocks.
+    # This way D will receive the updated clocks from B when asking B for the latest changes
+    # and D & C will converge after seeing all events from B.
+    assert (changes == [('foo', b'\x01\t\x01', 'b', 1, 0, 1, None, 3),
+                        ('foo', b'\x01\t\x01', '-1', None, 3, 2, None, 3)])
+
     None
 
 

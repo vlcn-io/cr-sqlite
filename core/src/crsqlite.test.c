@@ -65,10 +65,12 @@ int syncLeftToRight(sqlite3 *db1, sqlite3 *db2, sqlite3_int64 since) {
   // printf("err: %s\n", err);
 
   while (sqlite3_step(pStmtRead) == SQLITE_ROW) {
-    for (int i = 0; i < 7; ++i) {
-      sqlite3_bind_value(pStmtWrite, i + 1, sqlite3_column_value(pStmtRead, i));
+    for (int i = 0; i < 8; ++i) {
+      assert(sqlite3_bind_value(pStmtWrite, i + 1,
+                                sqlite3_column_value(pStmtRead, i)) ==
+             SQLITE_OK);
     }
-    sqlite3_step(pStmtWrite);
+    assert(sqlite3_step(pStmtWrite) == SQLITE_DONE);
     sqlite3_reset(pStmtWrite);
   }
 
@@ -249,7 +251,7 @@ static void teste2e() {
   db3siteid = getQuotedSiteId(db3);
 
   rc += sqlite3_exec(db1, "insert into foo values (1, 2.0e2);", 0, 0, &err);
-  rc += sqlite3_exec(db2, "insert into foo values (2, X'1232');", 0, 0, &err);
+  rc += sqlite3_exec(db1, "insert into foo values (2, X'1232');", 0, 0, &err);
   assert(rc == SQLITE_OK);
 
   syncLeftToRight(db1, db2, 0);

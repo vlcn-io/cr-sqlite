@@ -18,33 +18,22 @@ def test_sync():
     db2 = connect(":memory:")
 
     def setup(db):
-        db.execute("CREATE TABLE hoot (a, b primary key, c)")
-        db.execute("SELECT crsql_as_crr('hoot')")
-        db.commit()
-
-        db.execute("INSERT INTO hoot VALUES (1, 1, 1)")
-        db.commit()
-        db.execute("UPDATE hoot SET a = 1 WHERE b = 1")
-        db.commit()
-        db.execute("UPDATE hoot SET a = 2 WHERE b = 1")
-        db.commit()
-        db.execute("UPDATE hoot SET a = 3 WHERE b = 1")
+        db.execute("create table foo (a primary key, b)")
+        db.execute("select crsql_as_crr('foo')")
         db.commit()
 
     setup(db1)
     setup(db2)
 
-    db1_v = db1.execute("SELECT crsql_dbversion()").fetchone()
-    db2_v = db2.execute("SELECT crsql_dbversion()").fetchone()
-
-    pprint(db1_v)
-    pprint(db2_v)
+    db1.execute("insert into foo values (1, 2.0e2)")
+    db1.commit()
+    db2.execute("insert into foo values (2, X'1232')")
+    db2.commit()
 
     sync_left_to_right(db1, db2)
 
-    db1_v = db1.execute("SELECT crsql_dbversion()").fetchone()
-    db2_v = db2.execute("SELECT crsql_dbversion()").fetchone()
-    pprint(db1_v)
-    pprint(db2_v)
+    foo1 = db1.execute("SELECT * FROM foo ORDER BY a ASC").fetchall()
+    foo2 = db2.execute("SELECT * FROM foo ORDER BY a ASC").fetchall()
 
-    pprint(db2.execute("SELECT * FROM crsql_changes").fetchall())
+    pprint(foo1)
+    pprint(foo2)

@@ -470,14 +470,3 @@ int crsql_isTableCompatible(sqlite3 *db, const char *tblName, char **errmsg) {
 
   return 1;
 }
-
-int crsql_columnExists(const char *colName, crsql_ColumnInfo *colInfos,
-                       int colInfosLen) {
-  for (int i = 0; i < colInfosLen; ++i) {
-    if (strcmp(colInfos[i].name, colName) == 0) {
-      return 1;
-    }
-  }
-
-  return 0;
-}

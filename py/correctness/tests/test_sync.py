@@ -181,7 +181,6 @@ def test_merging_on_defaults():
     db2 = create_db2()
 
     sync_left_to_right(db2, db1, 0)
-
     # db1 has changes from db2
     # db2 set b to 2 this should be the winner
     changes = db1.execute("SELECT * FROM crsql_changes").fetchall()

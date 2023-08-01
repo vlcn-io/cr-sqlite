@@ -127,11 +127,6 @@ extern "C" {
         pExtData: *mut crsql_ExtData,
         errmsg: *mut *mut c_char,
     ) -> c_int;
-    pub fn crsql_columnExists(
-        colName: *const c_char,
-        colInfos: *mut crsql_ColumnInfo,
-        colInfosLen: c_int,
-    ) -> c_int;
     pub fn crsql_getDbVersion(
         db: *mut sqlite::sqlite3,
         ext_data: *mut crsql_ExtData,

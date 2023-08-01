@@ -186,9 +186,10 @@ pub fn unpack_columns(data: &[u8]) -> Result<Vec<ColumnValue>, ResultCode> {
 pub fn bind_package_to_stmt(
     stmt: *mut sqlite::stmt,
     values: &Vec<crate::ColumnValue>,
+    offset: usize,
 ) -> Result<ResultCode, ResultCode> {
     for (i, val) in values.iter().enumerate() {
-        bind_slot(i + 1, val, stmt)?;
+        bind_slot(i + 1 + offset, val, stmt)?;
     }
     Ok(ResultCode::OK)
 }

@@ -386,13 +386,26 @@ unsafe fn merge_delete(
         return Err(rc);
     }
 
+    let ret = set_winner_clock(
+        db,
+        ext_data,
+        tbl_info,
+        unpacked_pks,
+        crate::c::DELETE_SENTINEL,
+        remote_col_vrsn,
+        remote_db_vrsn,
+        remote_site_id,
+    )?;
+
+    // Drop clocks _after_ setting the winner clock so we don't lose track of the max db_version!!
+    // This must never come before `set_winner_clock`
     let stmt_key = get_cache_key(CachedStmtType::MergeDeleteDropClocks, tbl_name_str, None)?;
     let drop_clocks_stmt = get_cached_stmt_rt_wt(db, ext_data, stmt_key, || {
         Ok(format!(
-            "DELETE FROM \"{table_name}__crsql_clock\" WHERE {pk_where_list} AND __crsql_col_name IS NOT '${sentinel}'",
+            "DELETE FROM \"{table_name}__crsql_clock\" WHERE {pk_where_list} AND __crsql_col_name IS NOT '{sentinel}'",
             table_name = crate::util::escape_ident(tbl_name_str),
             pk_where_list = pk_where_list_from_tbl_info(tbl_info, None)?,
-            sentinel = crate::c::INSERT_SENTINEL
+            sentinel = crate::c::DELETE_SENTINEL
         ))
     })?;
 
@@ -408,16 +421,7 @@ unsafe fn merge_delete(
 
     reset_cached_stmt(drop_clocks_stmt)?;
 
-    set_winner_clock(
-        db,
-        ext_data,
-        tbl_info,
-        unpacked_pks,
-        crate::c::DELETE_SENTINEL,
-        remote_col_vrsn,
-        remote_db_vrsn,
-        remote_site_id,
-    )
+    return Ok(ret);
 }
 
 #[no_mangle]

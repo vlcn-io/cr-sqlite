@@ -88,19 +88,23 @@ def test_larger_cl_delete_deletes_all():
     sync_left_to_right(c1, c2, 0)
 
     rows = c2.execute("SELECT * FROM foo").fetchall()
-    changes = c2.execute("SELECT * FROM crsql_changes").fetchall()
+    c2_changes = c2.execute("SELECT * FROM crsql_changes").fetchall()
     c1_changes = c1.execute("SELECT * FROM crsql_changes").fetchall()
 
     # We should have deleted the entry via sync of greater delete causal length from c1 to c2
     assert (rows == [])
-    # this is wrong.. should not the `b` records be missing? Given delete should remove those metadata rows...
-    # assert (changes == [('foo', b'\x01\t\x01', 'b', None, 3, 1, None, 2),
-    #                     ('foo', b'\x01\t\x01', '-1', None, 2, 2, None, 2)])
 
-    pprint(c1_changes)
+    # c1 shouldn't have column metadata but only a delete record of the dropped item whose causal length should be 2.
+    assert (c1_changes == [('foo', b'\x01\t\x01', '-1', None, 2, 1, None, 2)])
+    # c2 merged in the delete thus bumping causal length to 2 and bumping db version since there was a change.
+    assert (c2_changes == [('foo', b'\x01\t\x01', '-1', None, 2, 2, None, 2)])
 
 
-def test_smaller_delete_does_not_delete():
+def test_smaller_delete_does_not_delete_larger_cl():
+    None
+
+
+def test_smaller_cl_loses_all():
     None
 
 

@@ -32,6 +32,15 @@ def sync_left_to_right(l, r, since):
     r.commit()
 
 
+def sync_left_to_right_include_siteid(l, r, since):
+    changes = l.execute(
+        "SELECT [table], pk, cid, val, col_version, db_version, coalesce(site_id, crsql_siteid()), cl FROM crsql_changes WHERE db_version > ?", (since,))
+    for change in changes:
+        r.execute(
+            "INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?, ?, ?)", change)
+    r.commit()
+
+
 def test_larger_cl_wins_all():
     c1 = make_simple_schema()
     c2 = make_simple_schema()
@@ -70,6 +79,8 @@ def test_larger_cl_wins_all():
     values = c2.execute("SELECT * FROM foo").fetchall()
     # values in c2 are as expected -- the values from c1 since c1 has a later causal length
     assert (values == [(1, 1)])
+    close(c1)
+    close(c2)
 
 
 def test_larger_cl_delete_deletes_all():
@@ -98,6 +109,8 @@ def test_larger_cl_delete_deletes_all():
     assert (c1_changes == [('foo', b'\x01\t\x01', '-1', None, 2, 1, None, 2)])
     # c2 merged in the delete thus bumping causal length to 2 and bumping db version since there was a change.
     assert (c2_changes == [('foo', b'\x01\t\x01', '-1', None, 2, 2, None, 2)])
+    close(c1)
+    close(c2)
 
 
 def test_smaller_delete_does_not_delete_larger_cl():
@@ -127,6 +140,8 @@ def test_smaller_delete_does_not_delete_larger_cl():
     # the merge should be a no-op since c1 can't impact c2 due to having a lesser causal length
     # this the changesets should not change
     assert (c2_changes_pre_merge == c2_changes_post_merge)
+    close(c1)
+    close(c2)
 
 
 def test_equivalent_delete_cls_is_noop():
@@ -150,6 +165,8 @@ def test_equivalent_delete_cls_is_noop():
     sync_left_to_right(c1, c2, 0)
     post_changes = c2.execute("SELECT * FROM crsql_changes").fetchall()
     assert (pre_changes == post_changes)
+    close(c1)
+    close(c2)
 
 
 def test_smaller_cl_loses_all():
@@ -171,6 +188,8 @@ def test_smaller_cl_loses_all():
 
     # the merge should be a no-op since c1 has a lower causal length.
     assert (pre_changes == post_changes)
+    close(c1)
+    close(c2)
 
 
 def test_pr_299_scenario():
@@ -203,7 +222,7 @@ def test_pr_299_scenario():
 
     # c2 should have accepted all the changes given the higher causal length
     # a = 1, b = 1, cl = 3
-    # note: why is site_id missing??? sync left to right should have picked it up and inserted it...
+    # note: why is site_id missing??? Ah, it is missing since we don't coalesce to get it. This is expected.
     assert (changes == [('foo', b'\x01\t\x01', '-1', None, 3, 3, None, 3),
                         ('foo', b'\x01\t\x01', 'b', 1, 1, 3, None, 3)])
     # c2 and c1 should match in terms of data
@@ -213,8 +232,98 @@ def test_pr_299_scenario():
     sync_left_to_right(c1, c2, 0)
     post_changes = c2.execute("SELECT * FROM crsql_changes").fetchall()
     assert (changes == post_changes)
+    close(c1)
+    close(c2)
 
-    None
+
+def test_sync_with_siteid():
+    # Delete
+    # Resurrect
+    # Create
+    # Update
+    # all these cases should carry over the siteid as expected
+    c1 = make_simple_schema()
+    c2 = make_simple_schema()
+
+    c1.execute("INSERT INTO foo VALUES (1, 1)")
+    c1.commit()
+
+    sync_left_to_right_include_siteid(c1, c2, 0)
+    changes = c2.execute("SELECT * FROM crsql_changes").fetchall()
+    c1_site_id = c1.execute("SELECT crsql_siteid()").fetchone()[0]
+    assert (changes == [('foo',
+                        b'\x01\t\x01',
+                         '-1',
+                         None,
+                         1,
+                         1,
+                         c1_site_id,
+                         1),
+                        ('foo',
+                        b'\x01\t\x01',
+                         'b',
+                         1,
+                         1,
+                         1,
+                         c1_site_id,
+                         1)])
+
+    c1.execute("UPDATE foo SET b = 2 WHERE a = 1")
+    c1.commit()
+    sync_left_to_right_include_siteid(c1, c2, 1)
+    changes = c2.execute("SELECT * FROM crsql_changes").fetchall()
+    assert (changes == [('foo',
+                         b'\x01\t\x01',
+                         '-1',
+                         None,
+                         1,
+                         1,
+                         c1_site_id,
+                         1),
+                        ('foo',
+                         b'\x01\t\x01',
+                         'b',
+                         2,
+                         2,
+                         2,
+                         c1_site_id,
+                         1)])
+
+    c1.execute("DELETE FROM foo WHERE a = 1")
+    c1.commit()
+    sync_left_to_right_include_siteid(c1, c2, 2)
+    changes = c2.execute("SELECT * FROM crsql_changes").fetchall()
+    assert (changes == [('foo',
+                        b'\x01\t\x01',
+                         '-1',
+                         None,
+                         2,
+                         3,
+                         c1_site_id,
+                         2)])
+
+    c1.execute("INSERT INTO foo VALUES (1, 5)")
+    c1.commit()
+    sync_left_to_right_include_siteid(c1, c2, 3)
+    changes = c2.execute("SELECT * FROM crsql_changes").fetchall()
+    assert (changes == [('foo',
+                        b'\x01\t\x01',
+                         '-1',
+                         None,
+                         3,
+                         4,
+                         c1_site_id,
+                         3),
+                        ('foo',
+                        b'\x01\t\x01',
+                         'b',
+                         5,
+                         1,
+                         4,
+                         c1_site_id,
+                         3)])
+    close(c1)
+    close(c2)
 
 
 def test_resurrection_via_sentinel():

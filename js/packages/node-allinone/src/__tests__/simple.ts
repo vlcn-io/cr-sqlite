@@ -26,9 +26,10 @@ const change = [
   "todos",
   "'123'",
   1,
+  1,
 ];
 
 db.exec(
-  `INSERT INTO crsql_changes ("cid", "pk", "site_id", "table", "val", "version") VALUES (?,?,?,?,?,?)`,
+  `INSERT INTO crsql_changes ("cid", "pk", "site_id", "table", "val", "version", "cl") VALUES (?,?,?,?,?,?,?)`,
   change
 );

@@ -27,6 +27,7 @@ test("encoded, decode pairing ApplyChangesMsg", () => {
             fc.uint8Array()
           ),
           fc.bigIntN(64),
+          fc.bigIntN(64),
           fc.bigIntN(64)
         )
       ),
@@ -54,7 +55,7 @@ test("null", () => {
     _tag: tags.streamingChanges,
     seqStart: [0n, 0],
     seqEnd: [0n, 0],
-    changes: [["", Uint8Array.from([0]), "", null, 0n, 0n]],
+    changes: [["", Uint8Array.from([0]), "", null, 0n, 0n, 1n]],
   } as const;
   const s = new JsonSerializer();
 
@@ -144,6 +145,7 @@ test("StreamingChangesMsg", () => {
             }),
             fc.uint8Array()
           ),
+          fc.bigIntN(64),
           fc.bigIntN(64),
           fc.bigIntN(64)
         )

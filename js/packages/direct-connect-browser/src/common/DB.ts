@@ -70,6 +70,7 @@ export class DB {
     for (const cs of changes) {
       // have to run serially given wasm build
       // isn't actually multithreaded
+      // TODO: why is the error not thrown when run fails?!
       await this.applyChangesetStmt.run(
         tx,
         cs[0],
@@ -78,7 +79,8 @@ export class DB {
         cs[3],
         cs[4],
         cs[5],
-        this.remoteDbidBytes
+        this.remoteDbidBytes,
+        cs[6]
       );
     }
   }

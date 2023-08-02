@@ -1,11 +1,12 @@
 import SQLiteDB from "better-sqlite3";
 import type { Database } from "better-sqlite3";
 import { Config } from "../Types.js";
-import { Change } from "@vlcn.io/direct-connect-common";
+import { Change, bytesToHex } from "@vlcn.io/direct-connect-common";
 import { extensionPath } from "@vlcn.io/crsqlite";
 import util from "./util.js";
 import touchHack from "./touchHack.js";
 import { SchemaRow } from "./ServiceDB.js";
+import logger from "../logger.js";
 
 /**
  * Wraps a normal better-sqlite3 connection to provide
@@ -174,6 +175,7 @@ export default class DB {
   }
 
   getChanges(requestor: Uint8Array, since: bigint): Change[] {
+    // logger.info("getting changes. requestor: " + bytesToHex(requestor) + " since: " + since);
     return this.#pullChangesetStmt.all(since, requestor) as Change[];
   }
 

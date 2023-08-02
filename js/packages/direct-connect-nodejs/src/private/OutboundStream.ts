@@ -9,7 +9,7 @@ import {
 import DB from "./DB.js";
 import FSNotify from "./FSNotify.js";
 import ServiceDB from "./ServiceDB.js";
-import util from "./util.js";
+import logger from "../logger.js";
 
 /**
  * We could use this in our p2p setup too.
@@ -54,8 +54,10 @@ export default class OutboundStream {
   }
 
   #dbChanged = (db: DB) => {
+    logger.info("db changed");
     const changes = db.getChanges(this.remoteDbid, this.since[0]);
     if (changes.length == 0) {
+      logger.info("change length is 0");
       return;
     }
 
@@ -65,6 +67,7 @@ export default class OutboundStream {
       seqEnd: [changes[changes.length - 1][5], 0],
       changes,
     };
+    logger.info("sending changes to listeners");
     for (const l of this.listeners) {
       try {
         l(msg);

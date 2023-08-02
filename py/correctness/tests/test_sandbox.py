@@ -26,5 +26,4 @@ def test_sync():
     setup(db2)
 
     db1.execute("INSERT INTO foo VALUES (1)")
-    sync_left_to_right(db1, db2, 0)
-    
+    sync_left_to_right(db1, db2)

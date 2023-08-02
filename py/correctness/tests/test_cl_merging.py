@@ -28,6 +28,14 @@ def make_simple_schema():
     return c
 
 
+def make_pko_schema():
+    c = connect(":memory:")
+    c.execute("CREATE TABLE foo (a INTEGER PRIMARY KEY) STRICT;")
+    c.execute("SELECT crsql_as_crr('foo')")
+    c.commit()
+    return c
+
+
 def sync_left_to_right(l, r, since):
     changes = l.execute(
         "SELECT * FROM crsql_changes WHERE db_version > ?", (since,))
@@ -558,11 +566,6 @@ def test_delete_via_sentinel():
 # def test_strut_edits_in_order_merge():
 #     None
 
-def test_proxy_changes():
-
-    None
-
-
 INSERT = 0
 UPDATE = 1
 DELETE = 2
@@ -737,6 +740,9 @@ def test_out_of_order_merge_bidi(c1_script, c2_script, seed):
 
     assert (c1_content == c2_content)
 
+    close(c1)
+    close(c2)
+
 
 # This is the case where a node stands between two other nodes
 # and proxies all changes through.
@@ -790,32 +796,111 @@ def test_ordered_delta_merge_proxy(a_script, c_script):
     assert (a_content == c_content)
     assert (c_content == b_content)
 
-    None
+    close(a)
+    close(b)
+    close(c)
 
 # TODO: repeat above hypothesis tests with:
 # 1. more tables
-# 2. differing schemas
+# 2. differing schemas (e.g., pk only tables, junction tables)
 
 
 def test_larger_col_version_same_cl():
-    None
+    c1 = make_simple_schema()
+    c2 = make_simple_schema()
+
+    c1.execute("INSERT INTO foo VALUES (1, 1)")
+    c1.commit()
+    c2.execute("INSERT INTO foo VALUES (1, 1)")
+    c2.commit()
+
+    c1.execute("UPDATE foo SET b = 0 WHERE a = 1")
+    c1.commit()
+
+    sync_left_to_right(c1, c2, 0)
+
+    assert (c1.execute("SELECT * FROM foo").fetchall() ==
+            c2.execute("SELECT * FROM foo").fetchall())
+
+    close(c1)
+    close(c2)
 
 
-# TODO: should we instead merge w/ site_id so we don't need a value lookup?
 def test_larger_col_value_same_cl_and_col_version():
-    None
+    c1 = make_simple_schema()
+    c2 = make_simple_schema()
+
+    c1.execute("INSERT INTO foo VALUES (1, 4)")
+    c1.commit()
+    c2.execute("INSERT INTO foo VALUES (1, 1)")
+    c2.commit()
+
+    sync_left_to_right(c1, c2, 0)
+
+    assert (c1.execute("SELECT * FROM foo").fetchall() ==
+            c2.execute("SELECT * FROM foo").fetchall())
+
+    close(c1)
+    close(c2)
 
 
 def test_pko_create():
-    None
+    c1 = make_pko_schema()
+    c2 = make_pko_schema()
+    c1.execute("INSERT INTO foo VALUES (1)")
+    c1.commit()
+
+    sync_left_to_right(c1, c2, 0)
+
+    assert (c1.execute("SELECT * FROM foo").fetchall() ==
+            c2.execute("SELECT * FROM foo").fetchall())
+
+    close(c1)
+    close(c2)
 
 
 def test_pko_delete():
-    None
+    c1 = make_pko_schema()
+    c2 = make_pko_schema()
+    c1.execute("INSERT INTO foo VALUES (1)")
+    c1.commit()
+    c2.execute("INSERT INTO foo VALUES (1)")
+    c2.commit()
+    c1.execute("DELETE FROM foo")
+    c1.commit()
+
+    sync_left_to_right(c1, c2, 0)
+
+    assert (c1.execute("SELECT * FROM foo").fetchall() ==
+            c2.execute("SELECT * FROM foo").fetchall())
+
+    close(c1)
+    close(c2)
 
 
 def test_pko_resurrect():
-    None
+    c1 = make_pko_schema()
+    c2 = make_pko_schema()
+    c1.execute("INSERT INTO foo VALUES (1)")
+    c1.commit()
+    c2.execute("INSERT INTO foo VALUES (1)")
+    c2.commit()
+    c1.execute("DELETE FROM foo")
+    c1.commit()
+    c1.execute("INSERT INTO foo VALUES (1)")
+    c1.commit()
+    c2.execute("DELETE FROM foo")
+
+    sync_left_to_right(c1, c2, 0)
+
+    assert (c1.execute("SELECT * FROM foo").fetchall() ==
+            c2.execute("SELECT * FROM foo").fetchall())
+
+    changes = c2.execute("SELECT * FROM crsql_changes").fetchall()
+    assert (changes == [('foo', b'\x01\t\x01', '-1', None, 3, 3, None, 3)])
+
+    close(c1)
+    close(c2)
 
 
 def test_cl_does_not_move_forward_when_equal():

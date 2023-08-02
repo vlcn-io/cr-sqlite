@@ -1,7 +1,8 @@
 from crsql_correctness import connect, close, min_db_v
 from pprint import pprint
+import random
 import pytest
-from hypothesis import given, settings, example
+from hypothesis import given, settings, example, HealthCheck
 from hypothesis.strategies import integers, data, booleans, integers, text, floats, uuids, characters, composite
 from functools import reduce
 import uuid
@@ -39,6 +40,15 @@ def sync_left_to_right(l, r, since):
 def sync_left_to_right_include_siteid(l, r, since):
     changes = l.execute(
         "SELECT [table], pk, cid, val, col_version, db_version, coalesce(site_id, crsql_siteid()), cl FROM crsql_changes WHERE db_version > ?", (since,))
+    for change in changes:
+        r.execute(
+            "INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?, ?, ?)", change)
+    r.commit()
+
+
+def sync_left_to_right_single_vrsn(l, r, vrsn):
+    changes = l.execute(
+        "SELECT * FROM crsql_changes WHERE db_version = ?", (vrsn,))
     for change in changes:
         r.execute(
             "INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?, ?, ?)", change)
@@ -587,15 +597,14 @@ def random_rows(draw):
         return (op,)
 
     def make_script():
-        length = draw(integers(50, 100))
+        length = draw(integers(0, 250))
         return list(map(gen_script_step, range(length)))
 
-    return make_script()
+    return (make_script(), draw(integers()))
 
 
-def run_step(db, step):
+def run_step(conn, step):
     op = step[0]
-    conn = db[1]
 
     def get_column_names_values(column_data):
         column_values = [x for x in column_data if x is not None]
@@ -638,7 +647,13 @@ def run_step(db, step):
         conn.commit()
 
 
-def test_out_of_order_merge():
+# Merge order should not matter. Once all events in the system
+# have been seen, all nodes will converge.
+# The test below syncs events from node A to node B in a random order.
+@settings(deadline=None)
+@given(random_rows())
+def test_out_of_order_merge(script):
+    (steps, seed) = script
     c1 = connect(":memory:")
     c2 = connect(":memory:")
 
@@ -649,13 +664,25 @@ def test_out_of_order_merge():
         "CREATE TABLE item (id PRIMARY KEY, width INTEGER, height INTEGER, name TEXT, description TEXT, weight INTEGER)")
     c2.execute("SELECT crsql_as_crr('item')")
 
-    # create script for c1
-    # run it to seed the data
-    # then merge in random orders.
-    # merge order should be provided by script as well.
-    # each step will be a commit and a db version.
+    for step in steps:
+        run_step(c1, step)
 
-    None
+    num_transactions = c1.execute(
+        "SELECT max(db_version) from crsql_changes").fetchone()[0]
+    if num_transactions is not None:
+        # transactions are 1 indexed. 1 transaction should be range [1, 2)
+        merge_order = list(range(1, num_transactions + 1))
+        random.seed(seed)
+        random.shuffle(merge_order)
+
+        for vrsn in merge_order:
+            sync_left_to_right_single_vrsn(c1, c2, vrsn)
+
+    # Now compare the two base tables to ensure they have identical content
+    c1_content = c1.execute("SELECT * FROM item ORDER BY id ASC").fetchall()
+    c2_content = c2.execute("SELECT * FROM item ORDER BY id ASC").fetchall()
+
+    assert (c1_content == c2_content)
 
 
 def test_out_of_order_proxy():
@@ -684,12 +711,6 @@ def test_pko_resurrect():
 
 
 def test_cl_does_not_move_forward_when_equal():
-    None
-
-
-# create a bunch of changes and merge them in random orders (one item at a time) as driven by hypothesis.
-# end results should always be the same.
-def test_out_of_order_merge():
     None
 
 

@@ -46,9 +46,28 @@ def sync_left_to_right_include_siteid(l, r, since):
     r.commit()
 
 
-def sync_left_to_right_single_vrsn(l, r, vrsn):
+# How a sync should be implemented in a situation with:
+# - in order deliver
+# - delta state sync
+def sync_left_to_right_normal_delta_state(l, r, since):
+    r_siteid = r.execute("SELECT crsql_siteid()").fetchone()[0]
     changes = l.execute(
-        "SELECT * FROM crsql_changes WHERE db_version = ?", (vrsn,))
+        "SELECT [table], pk, cid, val, col_version, db_version, coalesce(site_id, crsql_siteid()), cl FROM crsql_changes WHERE db_version > ? AND site_id IS NOT ?",
+        (since, r_siteid))
+    largest_version = 0
+    for change in changes:
+        max(largest_version, change[5])
+        r.execute(
+            "INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?, ?, ?)", change)
+    r.commit()
+    return largest_version
+
+
+def sync_left_to_right_single_vrsn(l, r, vrsn):
+    r_siteid = r.execute("SELECT crsql_siteid()").fetchone()[0]
+    changes = l.execute(
+        "SELECT [table], pk, cid, val, col_version, db_version, coalesce(site_id, crsql_siteid()), cl FROM crsql_changes WHERE db_version = ? AND site_id IS NOT ?",
+        (vrsn, r_siteid))
     for change in changes:
         r.execute(
             "INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?, ?, ?)", change)
@@ -600,7 +619,7 @@ def random_rows(draw):
         length = draw(integers(0, 250))
         return list(map(gen_script_step, range(length)))
 
-    return (make_script(), draw(integers()))
+    return make_script()
 
 
 def run_step(conn, step):
@@ -647,36 +666,28 @@ def run_step(conn, step):
         conn.commit()
 
 
+def create_hypothesis_schema(c):
+    c.execute(
+        "CREATE TABLE item (id PRIMARY KEY, width INTEGER, height INTEGER, name TEXT, description TEXT, weight INTEGER)")
+    c.execute("SELECT crsql_as_crr('item')")
+
+
 # Merge order should not matter. Once all events in the system
 # have been seen, all nodes will converge.
 # The test below syncs events from node A to node B in a random order.
 @settings(deadline=None)
-@given(random_rows())
-def test_out_of_order_merge(script):
-    (steps, seed) = script
+@given(random_rows(), integers())
+def test_out_of_order_merge(script, seed):
+    steps = script
     c1 = connect(":memory:")
     c2 = connect(":memory:")
-
-    c1.execute(
-        "CREATE TABLE item (id PRIMARY KEY, width INTEGER, height INTEGER, name TEXT, description TEXT, weight INTEGER)")
-    c1.execute("SELECT crsql_as_crr('item')")
-    c2.execute(
-        "CREATE TABLE item (id PRIMARY KEY, width INTEGER, height INTEGER, name TEXT, description TEXT, weight INTEGER)")
-    c2.execute("SELECT crsql_as_crr('item')")
+    create_hypothesis_schema(c1)
+    create_hypothesis_schema(c2)
 
     for step in steps:
         run_step(c1, step)
 
-    num_transactions = c1.execute(
-        "SELECT max(db_version) from crsql_changes").fetchone()[0]
-    if num_transactions is not None:
-        # transactions are 1 indexed. 1 transaction should be range [1, 2)
-        merge_order = list(range(1, num_transactions + 1))
-        random.seed(seed)
-        random.shuffle(merge_order)
-
-        for vrsn in merge_order:
-            sync_left_to_right_single_vrsn(c1, c2, vrsn)
+    sync_randomly(c1, c2, seed)
 
     # Now compare the two base tables to ensure they have identical content
     c1_content = c1.execute("SELECT * FROM item ORDER BY id ASC").fetchall()
@@ -685,8 +696,105 @@ def test_out_of_order_merge(script):
     assert (c1_content == c2_content)
 
 
-def test_out_of_order_proxy():
+def sync_randomly(l, r, seed):
+    num_transactions = l.execute(
+        "SELECT max(db_version) from crsql_changes").fetchone()[0]
+    if num_transactions is not None:
+        # transactions are 1 indexed. 1 transaction should be range [1, 2)
+        merge_order = list(range(1, num_transactions + 1))
+        random.seed(seed)
+        random.shuffle(merge_order)
+
+        for vrsn in merge_order:
+            sync_left_to_right_single_vrsn(l, r, vrsn)
+
+# Create rows on both c1 and c2
+# Merge both nodes together in a random order
+# Check state at the end
+
+
+@settings(deadline=None)
+@given(random_rows(), random_rows(), integers())
+def test_out_of_order_merge_bidi(c1_script, c2_script, seed):
+    c1 = connect(":memory:")
+    c2 = connect(":memory:")
+    create_hypothesis_schema(c1)
+    create_hypothesis_schema(c2)
+
+    for step in c1_script:
+        run_step(c1, step)
+    for step in c2_script:
+        run_step(c2, step)
+
+    # c1 into c2
+    sync_randomly(c1, c2, seed)
+    # c2 into c1
+    sync_randomly(c2, c1, seed)
+
+    # now all the things should match
+    c1_content = c1.execute("SELECT * FROM item ORDER BY id ASC").fetchall()
+    c2_content = c2.execute("SELECT * FROM item ORDER BY id ASC").fetchall()
+
+    assert (c1_content == c2_content)
+
+
+# This is the case where a node stands between two other nodes
+# and proxies all changes through.
+# We should do `changes_since` style merging for this.
+# A -> B -> C
+# Merge
+@settings(deadline=None)
+@given(random_rows(), random_rows())
+def test_ordered_delta_merge_proxy(a_script, c_script):
+    # There are many edge cases that, if not handled properly, can lead to changes
+    # not getting passed through the proxy when doing delta-state syncing.
+    a = connect(":memory:")
+    b = connect(":memory:")
+    c = connect(":memory:")
+    create_hypothesis_schema(a)
+    create_hypothesis_schema(b)
+    create_hypothesis_schema(c)
+
+    b_last_saw_a = 0
+    c_last_saw_b = 0
+    b_last_saw_c = 0
+    a_last_saw_b = 0
+    longest_script = max(len(a_script), len(c_script))
+    for i in range(0, longest_script):
+        if i < len(a_script):
+            step = a_script[i]
+            run_step(a, step)
+            # sync the step to b
+            b_last_saw_a = sync_left_to_right_normal_delta_state(
+                a, b, b_last_saw_a)
+            # sync the step from b to c
+            c_last_saw_b = sync_left_to_right_normal_delta_state(
+                b, c, c_last_saw_b)
+
+        if i < len(c_script):
+            step = c_script[i]
+            run_step(c, step)
+            # sync the step to b
+            b_last_saw_c = sync_left_to_right_normal_delta_state(
+                c, b, b_last_saw_c)
+            # sync the step from b to a
+            a_last_saw_b = sync_left_to_right_normal_delta_state(
+                b, a, a_last_saw_b)
+    #
+
+    # now all the things should match
+    a_content = a.execute("SELECT * FROM item ORDER BY id ASC").fetchall()
+    b_content = b.execute("SELECT * FROM item ORDER BY id ASC").fetchall()
+    c_content = c.execute("SELECT * FROM item ORDER BY id ASC").fetchall()
+
+    assert (a_content == c_content)
+    assert (c_content == b_content)
+
     None
+
+# TODO: repeat above hypothesis tests with:
+# 1. more tables
+# 2. differing schemas
 
 
 def test_larger_col_version_same_cl():

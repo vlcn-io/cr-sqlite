@@ -1,5 +1,7 @@
 /**
  * Decode a binary message
+ *
+ * TODO: use varints for everything rather than bigint64. We often are using small numbers that never reach anything close to their limit which is i64
  */
 
 import * as decoding from "lib0/decoding";
@@ -142,6 +144,7 @@ function readChanges(decoder: decoding.Decoder) {
       }
       throw new Error(`Unknown type ${type}`);
     })(),
+    decoding.readBigInt64(decoder),
     decoding.readBigInt64(decoder),
     decoding.readBigInt64(decoder),
   ]) as Change[];

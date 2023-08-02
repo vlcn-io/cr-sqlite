@@ -9,7 +9,7 @@ test("sandbox", () => {
     seqStart: [0n, 0],
     seqEnd: [0n, 0],
     changes: [
-      ["", Uint8Array.from([0]), "", Uint8Array.from([1, 1, 1]), 0n, 0n],
+      ["", Uint8Array.from([0]), "", Uint8Array.from([1, 1, 1]), 0n, 0n, 1n],
     ],
   } as const;
   const s = new JsonSerializer();

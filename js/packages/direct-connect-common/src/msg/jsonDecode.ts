@@ -111,6 +111,7 @@ function decodeChanges(changes: any[]): Change[] {
       decodeValue(c[3]),
       BigInt(c[4]),
       BigInt(c[5]),
+      BigInt(c[6]),
     ];
   });
 }

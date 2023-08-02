@@ -40,6 +40,7 @@ test("encoded, decode pairing ApplyChangesMsg", () => {
             fc.uint8Array()
           ),
           fc.bigIntN(64),
+          fc.bigIntN(64),
           fc.bigIntN(64)
         )
       ),
@@ -143,6 +144,7 @@ test("StreamingChangesMsg", () => {
             }),
             fc.uint8Array()
           ),
+          fc.bigIntN(64),
           fc.bigIntN(64),
           fc.bigIntN(64)
         )

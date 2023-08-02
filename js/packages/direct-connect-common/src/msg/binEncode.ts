@@ -127,5 +127,6 @@ function writeChanges(encoder: encoding.Encoder, changes: readonly Change[]) {
     }
     encoding.writeBigInt64(encoder, change[4]);
     encoding.writeBigInt64(encoder, change[5]);
+    encoding.writeBigInt64(encoder, change[6]);
   }
 }

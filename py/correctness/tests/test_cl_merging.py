@@ -1,6 +1,10 @@
 from crsql_correctness import connect, close, min_db_v
 from pprint import pprint
 import pytest
+from hypothesis import given, settings, example
+from hypothesis.strategies import integers, data, booleans, integers, text, floats, uuids, characters, composite
+from functools import reduce
+import uuid
 
 # - larger cl wins
 # - delete is deleted
@@ -486,18 +490,175 @@ def test_advance_db_version_on_clock_zero_scenario():
 
 
 def test_delete_via_sentinel():
+    c1 = make_simple_schema()
+    c2 = make_simple_schema()
+
+    c1.execute("INSERT INTO foo VALUES (1, 1)")
+    c1.commit()
+    c1.execute("DELETE FROM foo")
+    c1.commit()
+
+    c2.execute("INSERT INTO foo VALUES (1, 1)")
+    c2.commit()
+
+    sentinel_delete = c1.execute(
+        "SELECT * FROM crsql_changes WHERE cid = '-1'").fetchone()
+    c2.execute(
+        "INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?, ?, ?)", sentinel_delete)
+    c2.commit()
+
+    changes = c2.execute("SELECT * FROM crsql_changes").fetchall()
+    assert (changes == [('foo', b'\x01\t\x01', '-1', None, 2, 2, None, 2)])
+    close(c1)
+    close(c2)
+
+
+# this case doesn't exist. Delete drops all metadata but the sentinel
+# def test_delete_via_non_sentinel():
+
+
+# def test_strut_edits_out_of_order_merge():
+#     c1 = make_simple_schema()
+#     c2 = make_simple_schema()
+
+
+#     close(c1)
+#     close(c2)
+
+
+# def test_strut_edits_in_order_merge():
+#     None
+
+def test_proxy_changes():
+
     None
 
 
-def test_delete_via_non_sentinel():
+INSERT = 0
+UPDATE = 1
+DELETE = 2
+MAX_SIGNED_32BIT = 2147483647
+MIN_SIGNED_32BIT = -2147483648
+
+# CREATE TABLE item (id, width, height, name, description, weight)
+COLUMN_TYPES = (
+    integers(MIN_SIGNED_32BIT, MAX_SIGNED_32BIT),
+    integers(MIN_SIGNED_32BIT, MAX_SIGNED_32BIT),
+    text(characters(min_codepoint=0x0020, max_codepoint=0x27BF)),
+    text(characters(min_codepoint=0x0020, max_codepoint=0x27BF)),
+    # floats seem to be able to lose precision in sync. We need to dig into this!
+    integers(MIN_SIGNED_32BIT, MAX_SIGNED_32BIT)
+    # -1.1754943508222875e-38 vs
+    # -1.1754943508222872e-38 was the failure seen.
+    # floats
+)
+
+COLUMN_NAMES = (
+    "width",
+    "height",
+    "name",
+    "description",
+    "weight"
+)
+
+
+@composite
+def random_rows(draw):
+    def create_column_data(which_columns):
+        return tuple(None if c == False else draw(COLUMN_TYPES[i]) for i, c in enumerate(which_columns))
+
+    def gen_script_step(x):
+        op = draw(integers(0, 2))
+        which_columns = (draw(booleans()), draw(booleans()), draw(
+            booleans()), draw(booleans()), draw(booleans()))
+
+        if op == INSERT:
+            return (op, str(uuid.uuid4()), create_column_data(which_columns))
+
+        if op == UPDATE:
+            # force at least one column to true
+            if not any(which_columns):
+                temp = list(which_columns)
+                temp[0] = True
+                which_columns = tuple(temp)
+            return (op, create_column_data(which_columns))
+
+        # DELETE
+        return (op,)
+
+    def make_script():
+        length = draw(integers(50, 100))
+        return list(map(gen_script_step, range(length)))
+
+    return make_script()
+
+
+def run_step(db, step):
+    op = step[0]
+    conn = db[1]
+
+    def get_column_names_values(column_data):
+        column_values = [x for x in column_data if x is not None]
+        column_names = [x for x in list(
+            None if column_data[i] is None else name for i, name in enumerate(COLUMN_NAMES)) if x is not None]
+        return (column_names, column_values)
+
+    if op == INSERT:
+        id = step[1]
+        column_data = step[2]
+
+        (column_names, column_values) = get_column_names_values(column_data)
+        column_placeholders = ["?" for x in column_values]
+
+        sql = "INSERT INTO item ({}) VALUES ({})".format(
+            ", ".join(["id"] + column_names), ", ".join(["?"] + column_placeholders))
+        conn.execute(sql, tuple([str(id)] + column_values))
+        conn.commit()
+    elif op == UPDATE:
+        row = conn.execute(
+            "SELECT id FROM item ORDER BY id LIMIT 1;").fetchone()
+        if row is None:
+            return
+
+        column_data = step[1]
+
+        (column_names, column_values) = get_column_names_values(column_data)
+        set_statements = ["{} = ?".format(x) for x in column_names]
+
+        conn.execute("UPDATE item SET {} WHERE id = ?".format(
+            ", ".join(set_statements)), tuple([row[0]] + column_values))
+        conn.commit()
+    elif op == DELETE:
+        row = conn.execute(
+            "SELECT id FROM item ORDER BY id LIMIT 1;").fetchone()
+        if row is None:
+            return
+
+        conn.execute("DELETE FROM item WHERE id = ?", row)
+        conn.commit()
+
+
+def test_out_of_order_merge():
+    c1 = connect(":memory:")
+    c2 = connect(":memory:")
+
+    c1.execute(
+        "CREATE TABLE item (id PRIMARY KEY, width INTEGER, height INTEGER, name TEXT, description TEXT, weight INTEGER)")
+    c1.execute("SELECT crsql_as_crr('item')")
+    c2.execute(
+        "CREATE TABLE item (id PRIMARY KEY, width INTEGER, height INTEGER, name TEXT, description TEXT, weight INTEGER)")
+    c2.execute("SELECT crsql_as_crr('item')")
+
+    # create script for c1
+    # run it to seed the data
+    # then merge in random orders.
+    # merge order should be provided by script as well.
+    # each step will be a commit and a db version.
+
     None
 
 
-def test_strut_edits_out_of_order_merge():
-    None
-
-
-def test_strut_edits_in_order_merge():
+def test_out_of_order_proxy():
     None
 
 

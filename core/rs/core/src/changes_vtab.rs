@@ -183,7 +183,7 @@ fn changes_best_index(
         let (ptr, _, _) = str.into_raw_parts();
         // pass to c. We've manually null terminated the string.
         // sqlite will free it for us.
-        (*index_info).idxStr = ptr as *mut i8;
+        (*index_info).idxStr = ptr as *mut c_char;
         (*index_info).needToFreeIdxStr = 1;
     }
 

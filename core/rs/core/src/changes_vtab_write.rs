@@ -660,7 +660,7 @@ unsafe fn merge_insert(
             insert_db_vrsn,
             insert_site_id,
         )?;
-        // (*(*tab).pExtData).rowsImpacted += 1;
+        (*(*tab).pExtData).rowsImpacted += 1;
     }
 
     // we can short-circuit via needs_resurrect

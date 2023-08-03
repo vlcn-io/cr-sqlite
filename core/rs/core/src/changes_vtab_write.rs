@@ -483,6 +483,10 @@ fn get_local_cl(
         }
         Ok(ResultCode::DONE) => {
             reset_cached_stmt(local_cl_stmt)?;
+            // will need to return 1 in this case since absence could mean
+            // it is there. This'll impact our short-circuiting
+            // for fresh inserts. We'll then go do cell version lookups.
+            // could also include an exists query in that causal length lookup...
             Ok(0)
         }
         Ok(rc) | Err(rc) => {

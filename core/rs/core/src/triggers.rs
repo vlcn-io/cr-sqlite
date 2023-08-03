@@ -72,6 +72,11 @@ fn insert_trigger_body(
     let mut trigger_components = vec![];
 
     // Insert a record of it existing in all cases
+    // for "null until delete" we can make this
+    // a "update"
+    // but for pko tables this must exist.
+    // so if pko table, do this insert
+    // else, make this an update
     trigger_components.push(format!(
         "INSERT INTO \"{table_name}__crsql_clock\" (
           {pk_list},

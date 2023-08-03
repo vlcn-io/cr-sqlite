@@ -29,12 +29,13 @@ pub extern "C" fn crsql_init_site_id(db: *mut sqlite3, ret: *mut u8) -> c_int {
 
 fn create_site_id_and_site_id_table(db: *mut sqlite3) -> Result<[u8; 16], ResultCode> {
     db.exec_safe(&format!(
-        "CREATE TABLE \"{tbl}\" (site_id)",
+        "CREATE TABLE \"{tbl}\" (site_id BLOB PRIMARY KEY NOT NULL, ordinal INT NOT NULL);
+        CREATE UNIQUE INDEX {tbl}_ordinal ON \"{tbl}\" (ordinal);",
         tbl = consts::TBL_SITE_ID
     ))?;
 
     let stmt = db.prepare_v2(&format!(
-        "INSERT INTO \"{tbl}\" (site_id) VALUES (?)",
+        "INSERT INTO \"{tbl}\" (site_id, ordinal) VALUES (?, 0)",
         tbl = consts::TBL_SITE_ID
     ))?;
 
@@ -67,7 +68,10 @@ fn init_site_id(db: *mut sqlite3) -> Result<[u8; 16], ResultCode> {
         return create_site_id_and_site_id_table(db);
     }
 
-    let stmt = db.prepare_v2(&format!("SELECT site_id FROM \"{}\"", consts::TBL_SITE_ID))?;
+    let stmt = db.prepare_v2(&format!(
+        "SELECT site_id FROM \"{}\" WHERE ordinal = 0",
+        consts::TBL_SITE_ID
+    ))?;
     let result_code = stmt.step()?;
 
     if result_code == ResultCode::DONE {
@@ -161,6 +165,7 @@ fn update_to_0_15_0(db: *mut sqlite3) -> Result<ResultCode, ResultCode> {
             tbl = crate::util::escape_ident(tbl_name),
             pk_list = pk_names.join(", ")
         ))?;
+        // db.exec_safe(&format!())?;
     }
 
     Ok(ResultCode::OK)
@@ -192,6 +197,7 @@ fn maybe_update_db_inner(db: *mut sqlite3) -> Result<ResultCode, ResultCode> {
     if step_result == ResultCode::ROW {
         recorded_version = stmt.column_int(0)?;
     } else if step_result == ResultCode::DONE {
+        // TODO: If there are no clock tables we're a fresh DB and need not do any upgrades.
         update_to_0_13_0(db)?;
     }
 

@@ -258,7 +258,7 @@ export class WholeDbReplicator {
           await stmt.run(
             tx,
             cs[0],
-            cs[1],
+            new Uint8Array(cs[1]),
             cs[2],
             cs[3],
             BigInt(cs[4]),

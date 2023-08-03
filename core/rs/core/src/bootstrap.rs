@@ -54,17 +54,21 @@ pub extern "C" fn crsql_init_peer_tracking_table(db: *mut sqlite3) -> c_int {
     }
 }
 
+fn has_site_id_table(db: *mut sqlite3) -> Result<bool, ResultCode> {
+    let stmt =
+        db.prepare_v2("SELECT 1 FROM sqlite_master WHERE type = 'table' AND tbl_name = ?")?;
+    stmt.bind_text(1, consts::TBL_SITE_ID, Destructor::STATIC)?;
+    let tbl_exists_result = stmt.step()?;
+    Ok(tbl_exists_result == ResultCode::ROW)
+}
+
 /**
  * Loads the siteId into memory. If a site id
  * cannot be found for the given database one is created
  * and saved to the site id table.
  */
 fn init_site_id(db: *mut sqlite3) -> Result<[u8; 16], ResultCode> {
-    let stmt =
-        db.prepare_v2("SELECT 1 FROM sqlite_master WHERE type = 'table' AND tbl_name = ?")?;
-    stmt.bind_text(1, consts::TBL_SITE_ID, Destructor::STATIC)?;
-    let tbl_exists_result = stmt.step()?;
-    if tbl_exists_result != ResultCode::ROW {
+    if !has_site_id_table(db)? {
         return create_site_id_and_site_id_table(db);
     }
 
@@ -106,13 +110,15 @@ pub extern "C" fn crsql_create_schema_table_if_not_exists(db: *mut sqlite3) -> c
     }
 }
 
-fn update_to_0_13_0(db: *mut sqlite3) -> Result<ResultCode, ResultCode> {
+fn update_to_0_13_0(db: *mut sqlite3) -> Result<bool, ResultCode> {
     // get all clock tables
     // alter all to add column
     // __crsql_seq
     let stmt = db.prepare_v2(consts::CLOCK_TABLES_SELECT)?;
+    let mut had_clock_tables = false;
 
     while stmt.step()? == ResultCode::ROW {
+        had_clock_tables = true;
         let tbl_name = stmt.column_text(0)?;
         db.exec_safe(&format!(
             "ALTER TABLE \"{}\" ADD COLUMN \"__crsql_seq\" NOT NULL DEFAULT 0",
@@ -120,7 +126,7 @@ fn update_to_0_13_0(db: *mut sqlite3) -> Result<ResultCode, ResultCode> {
         ))?;
     }
 
-    Ok(ResultCode::OK)
+    Ok(had_clock_tables)
 }
 
 fn update_to_0_15_0(db: *mut sqlite3) -> Result<ResultCode, ResultCode> {
@@ -187,17 +193,25 @@ pub extern "C" fn crsql_maybe_update_db(db: *mut sqlite3) -> c_int {
 }
 
 fn maybe_update_db_inner(db: *mut sqlite3) -> Result<ResultCode, ResultCode> {
-    let stmt = db.prepare_v2("SELECT value FROM crsql_master WHERE key = 'crsqlite_version'")?;
-
-    let step_result = stmt.step()?;
     let mut recorded_version: i32 = 0;
-    // read the schema version for master
-    // if none, v0.12.0 or earlier
-    // if matches current version, we're good.
-    if step_result == ResultCode::ROW {
-        recorded_version = stmt.column_int(0)?;
-    } else if step_result == ResultCode::DONE {
-        // TODO: If there are no clock tables we're a fresh DB and need not do any upgrades.
+    // No site id table? First time this DB has been opened with this extension.
+    let is_blank_slate = has_site_id_table(db)? == false;
+
+    // Completely new DBs need no migrations.
+    // We can set them to the current version.
+    if is_blank_slate {
+        recorded_version = consts::CRSQLITE_VERSION;
+    } else {
+        let stmt =
+            db.prepare_v2("SELECT value FROM crsql_master WHERE key = 'crsqlite_version'")?;
+
+        let step_result = stmt.step()?;
+        if step_result == ResultCode::ROW {
+            recorded_version = stmt.column_int(0)?;
+        }
+    }
+
+    if recorded_version < consts::CRSQLITE_VERSION_0_13_0 {
         update_to_0_13_0(db)?;
     }
 
@@ -205,7 +219,8 @@ fn maybe_update_db_inner(db: *mut sqlite3) -> Result<ResultCode, ResultCode> {
         update_to_0_15_0(db)?;
     }
 
-    if recorded_version < consts::CRSQLITE_VERSION {
+    // write the db version if we migrated to a new one or we are a blank slate db
+    if recorded_version < consts::CRSQLITE_VERSION || is_blank_slate {
         let stmt =
             db.prepare_v2("INSERT OR REPLACE INTO crsql_master VALUES ('crsqlite_version', ?)")?;
         stmt.bind_int(1, consts::CRSQLITE_VERSION)?;

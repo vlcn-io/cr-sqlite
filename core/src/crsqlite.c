@@ -379,13 +379,14 @@ __declspec(dllexport)
   }
 
   if (rc == SQLITE_OK) {
-    rc = crsql_init_site_id(db, pExtData->siteId);
-    rc += crsql_create_schema_table_if_not_exists(db);
+    rc = crsql_create_schema_table_if_not_exists(db);
+    rc += crsql_maybe_update_db(db);
   }
 
   if (rc == SQLITE_OK) {
-    rc = crsql_maybe_update_db(db);
+    rc = crsql_init_site_id(db, pExtData->siteId);
   }
+
   if (rc == SQLITE_OK) {
     rc = sqlite3_create_function(
         db, "crsql_siteid", 0,

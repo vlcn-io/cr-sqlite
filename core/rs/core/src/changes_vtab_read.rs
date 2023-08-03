@@ -30,6 +30,12 @@ fn crsql_changes_query_for_table(table_info: *mut crsql_TableInfo) -> Result<Str
     })?
     .join(" AND ");
 
+    // This'll need to be a left join so we can still return a row
+    // even if the cl entry is missing
+    // coalesce(t2.__crsql_col_version, 1) as cl
+    // since missing means 1.
+    // also change db migration script to not retroactively create these rows.
+    // schema modification tests... and backfill??
     Ok(format!(
         "SELECT
           '{table_name_val}' as tbl,

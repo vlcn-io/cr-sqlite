@@ -479,6 +479,11 @@ fn get_local_cl(
         reset_cached_stmt(local_cl_stmt)?;
         return Err(rc);
     }
+    let rc = bind_package_to_stmt(local_cl_stmt, unpacked_pks, unpacked_pks.len());
+    if let Err(rc) = rc {
+        reset_cached_stmt(local_cl_stmt)?;
+        return Err(rc);
+    }
 
     let step_result = local_cl_stmt.step();
     match step_result {

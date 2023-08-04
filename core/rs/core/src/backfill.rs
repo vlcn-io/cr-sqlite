@@ -103,20 +103,19 @@ fn create_clock_rows_from_stmt(
             write_stmt.bind_value(i as i32 + 1, value)?;
         }
 
-        // Insert the creation sentinel. The creation sentinel may already
-        // exist so we'll insert or ignore on it.
-        write_stmt.bind_text(
-            pk_cols.len() as i32 + 1,
-            crate::c::INSERT_SENTINEL,
-            Destructor::STATIC,
-        )?;
-        write_stmt.step()?;
-        write_stmt.reset()?;
-
         for col in non_pk_cols.iter() {
             // We even backfill default values since we can't differentiate between an explicit
             // reset to a default vs an implicit set to default on create. Do we? I don't think we do set defaults.
             write_stmt.bind_text(pk_cols.len() as i32 + 1, col, Destructor::STATIC)?;
+            write_stmt.step()?;
+            write_stmt.reset()?;
+        }
+        if non_pk_cols.len() == 0 {
+            write_stmt.bind_text(
+                pk_cols.len() as i32 + 1,
+                crate::c::INSERT_SENTINEL,
+                Destructor::STATIC,
+            )?;
             write_stmt.step()?;
             write_stmt.reset()?;
         }

@@ -293,15 +293,7 @@ def test_sync_with_siteid():
     changes = c2.execute("SELECT * FROM crsql_changes").fetchall()
     c1_site_id = c1.execute("SELECT crsql_siteid()").fetchone()[0]
     assert (changes == [('foo',
-                        b'\x01\t\x01',
-                         '-1',
-                         None,
-                         1,
-                         1,
-                         c1_site_id,
-                         1),
-                        ('foo',
-                        b'\x01\t\x01',
+                         b'\x01\t\x01',
                          'b',
                          1,
                          1,
@@ -314,14 +306,6 @@ def test_sync_with_siteid():
     sync_left_to_right_include_siteid(c1, c2, 1)
     changes = c2.execute("SELECT * FROM crsql_changes").fetchall()
     assert (changes == [('foo',
-                         b'\x01\t\x01',
-                         '-1',
-                         None,
-                         1,
-                         1,
-                         c1_site_id,
-                         1),
-                        ('foo',
                          b'\x01\t\x01',
                          'b',
                          2,

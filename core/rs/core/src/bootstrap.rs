@@ -270,11 +270,11 @@ fn create_clock_table(
     db.exec_safe(&format!(
         "CREATE TABLE IF NOT EXISTS \"{table_name}__crsql_clock\" (
       {pk_list},
-      __crsql_col_name NOT NULL,
-      __crsql_col_version NOT NULL,
-      __crsql_db_version NOT NULL,
-      __crsql_site_id,
-      __crsql_seq NOT NULL,
+      __crsql_col_name TEXT NOT NULL,
+      __crsql_col_version INT NOT NULL,
+      __crsql_db_version INT NOT NULL,
+      __crsql_site_id INT,
+      __crsql_seq INT NOT NULL,
       PRIMARY KEY ({pk_list}, __crsql_col_name)
     )",
         pk_list = pk_list,

@@ -26,6 +26,7 @@ int crsql_create_clock_table(sqlite3 *db, crsql_TableInfo *tableInfo,
 int crsql_init_site_id(sqlite3 *db, unsigned char *ret);
 int crsql_init_peer_tracking_table(sqlite3 *db);
 int crsql_create_schema_table_if_not_exists(sqlite3 *db);
+int crsql_create_dbversions_if_not_exists(sqlite3 *db);
 int crsql_maybe_update_db(sqlite3 *db);
 
 #endif

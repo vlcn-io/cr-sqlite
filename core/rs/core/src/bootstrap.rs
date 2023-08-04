@@ -102,6 +102,28 @@ pub extern "C" fn crsql_create_schema_table_if_not_exists(db: *mut sqlite3) -> c
     }
 }
 
+#[no_mangle]
+pub extern "C" fn crsql_create_dbversions_if_not_exists(db: *mut sqlite3) -> c_int {
+    let r = db.exec_safe("SAVEPOINT crsql_create_dbversions_table;");
+    if let Err(code) = r {
+        return code as c_int;
+    }
+
+    if let Ok(_) = db.exec_safe(&format!(
+        "CREATE TABLE IF NOT EXISTS \"{}\" (\"db_version\" INTEGER PRIMARY KEY, \"count\" INTEGER NOT NULL DEFAULT 0);",
+        consts::TBL_DB_VERSIONS
+    )) {
+        let result = db.exec_safe("RELEASE crsql_create_dbversions_table;");
+        match result {
+            Ok(_) => return ResultCode::OK as c_int,
+            Err(code) => return code as c_int,
+        }
+    } else {
+        let _ = db.exec_safe("ROLLBACK");
+        return ResultCode::ERROR as c_int;
+    }
+}
+
 fn update_to_0_13_0(db: *mut sqlite3) -> Result<ResultCode, ResultCode> {
     // get all clock tables
     // alter all to add column

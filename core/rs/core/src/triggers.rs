@@ -11,6 +11,7 @@ use core::{
 };
 
 use crate::c::crsql_TableInfo;
+use crate::consts::TBL_DB_VERSIONS;
 use sqlite::{sqlite3, ResultCode};
 use sqlite_nostd as sqlite;
 
@@ -58,7 +59,17 @@ fn create_insert_trigger(
         trigger_body = trigger_body
     );
 
-    db.exec_safe(&create_trigger_sql)
+    db.exec_safe(&create_trigger_sql)?;
+
+    db.exec_safe(&format!(
+        "CREATE TRIGGER IF NOT EXISTS \"{table_name}__crsql_itrig_count\"
+      AFTER INSERT ON \"{table_name}__crsql_clock\"
+      BEGIN
+        INSERT INTO {TBL_DB_VERSIONS} (db_version, count) VALUES (new.__crsql_db_version, 1)
+        ON CONFLICT(db_version) DO UPDATE SET count = count + 1;
+      END;",
+        table_name = crate::util::escape_ident(table_name),
+    ))
 }
 
 fn insert_trigger_body(
@@ -218,7 +229,22 @@ fn create_update_trigger(
         trigger_body = trigger_body
     );
 
-    db.exec_safe(&create_trigger_sql)
+    db.exec_safe(&create_trigger_sql)?;
+
+    db.exec_safe(&format!(
+        "CREATE TRIGGER IF NOT EXISTS \"{table_name}__crsql_utrig_count\"
+    AFTER UPDATE ON \"{table_name}__crsql_clock\" WHEN new.__crsql_db_version != old.__crsql_db_version
+    BEGIN
+      -- increment the counter for the new db version
+      INSERT INTO {TBL_DB_VERSIONS} (db_version, count) VALUES (new.__crsql_db_version, 1)
+        ON CONFLICT(db_version) DO UPDATE SET count = count + 1;
+
+      -- decrement the counter for the old db version
+      UPDATE {TBL_DB_VERSIONS} SET count = count - 1 WHERE db_version = old.__crsql_db_version;
+      DELETE FROM {TBL_DB_VERSIONS} WHERE db_version = old.__crsql_db_version AND count = 0;
+    END;",
+        table_name = crate::util::escape_ident(table_name),
+    ))
 }
 
 fn update_trigger_body(
@@ -341,5 +367,16 @@ fn create_delete_trigger(
         pk_old_list = pk_old_list
     );
 
-    db.exec_safe(&create_trigger_sql)
+    db.exec_safe(&create_trigger_sql)?;
+
+    db.exec_safe(&format!(
+        "CREATE TRIGGER IF NOT EXISTS \"{table_name}__crsql_dtrig_count\"
+    AFTER DELETE ON \"{table_name}__crsql_clock\"
+    BEGIN
+      -- decrement the counter for the old db version
+      UPDATE {TBL_DB_VERSIONS} SET count = count - 1 WHERE db_version = old.__crsql_db_version;
+      DELETE FROM {TBL_DB_VERSIONS} WHERE db_version = old.__crsql_db_version AND count = 0;
+    END;",
+        table_name = crate::util::escape_ident(table_name),
+    ))
 }

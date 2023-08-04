@@ -381,6 +381,7 @@ __declspec(dllexport)
   if (rc == SQLITE_OK) {
     rc = crsql_init_site_id(db, pExtData->siteId);
     rc += crsql_create_schema_table_if_not_exists(db);
+    rc += crsql_create_dbversions_if_not_exists(db);
   }
 
   if (rc == SQLITE_OK) {

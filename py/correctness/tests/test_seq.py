@@ -21,7 +21,7 @@ def test_increments_by_one_in_tx():
     c.commit()
 
     rows = c.execute("SELECT __crsql_seq FROM foo__crsql_clock").fetchall()
-    assert (rows == [(0,), (1,), (2,), (3,)])
+    assert (rows == [(0,), (1,)])
 
 
 def test_resets_on_every_tx():
@@ -35,14 +35,14 @@ def test_resets_on_every_tx():
     c.commit()
 
     rows = c.execute("SELECT __crsql_seq FROM foo__crsql_clock").fetchall()
-    assert (rows == [(0,), (1,), (2,), (3,)])
+    assert (rows == [(0,), (1,)])
 
     c.execute("INSERT INTO foo VALUES (3, 4)")
     c.execute("INSERT INTO foo VALUES (5, 6)")
     c.commit()
 
     rows = c.execute("SELECT __crsql_seq FROM foo__crsql_clock").fetchall()
-    assert (rows == [(0,), (1,), (2,), (3,), (0,), (1,), (2,), (3,)])
+    assert (rows == [(0,), (1,), (0,), (1,)])
 
 
 def test_preserved_on_merge():
@@ -89,8 +89,7 @@ def test_incr_by_one():
     rows = c.execute(
         "SELECT seq FROM crsql_changes WHERE db_version = 1").fetchall()
 
-    assert (rows == [(0,), (1,), (2,), (3,), (4,),
-            (5,), (6,), (7,), (8,), (9,), (10,), (11,)])
+    assert (rows == [(0,), (1,), (2,), (3,), (4,), (5,), (6,), (7,), (8,)])
 
     c.execute("UPDATE foo SET c = 'c', d = 'd' WHERE a = 1")
     c.execute("UPDATE foo SET c = 'c', d = 'd' WHERE a = 2")
@@ -129,7 +128,7 @@ def test_incr_by_one():
 
     rows = c.execute(
         "SELECT __crsql_db_version, __crsql_seq FROM bar__crsql_clock ORDER BY __crsql_db_version ASC").fetchall()
-    assert (rows == [(5, 0), (5, 2), (6, 0), (6, 1)])
+    assert (rows == [(6, 0), (6, 1)])
 
     # test update of pk vals with col vals
 

@@ -353,7 +353,7 @@ static void testSelectChangesAfterChangingColumnName() {
   // clock records should now be for column `c` with a `null` value.
   // nit: test if a default value is set for the column
   while ((rc = sqlite3_step(pStmt)) == SQLITE_ROW) {
-    assert(strcmp((const char *)sqlite3_column_text(pStmt, 0), "-1") == 0);
+    assert(strcmp((const char *)sqlite3_column_text(pStmt, 0), "c") == 0);
     assert(sqlite3_column_type(pStmt, 1) == SQLITE_NULL);
     ++numRows;
   }
@@ -386,11 +386,11 @@ static void testSelectChangesAfterChangingColumnName() {
       assert(pkBlob[2] == 0x02);
     }
 
-    if (numRows == 1 || numRows == 0) {
-      assert(strcmp("-1", (const char *)sqlite3_column_text(
-                              pStmt, CHANGES_SINCE_VTAB_CID)) == 0);
+    if (numRows == 0) {
+      assert(strcmp("c", (const char *)sqlite3_column_text(
+                             pStmt, CHANGES_SINCE_VTAB_CID)) == 0);
     }
-    if (numRows == 2) {
+    if (numRows == 1) {
       assert(strcmp("c", (const char *)sqlite3_column_text(
                              pStmt, CHANGES_SINCE_VTAB_CID)) == 0);
       assert(3 == sqlite3_column_int(pStmt, CHANGES_SINCE_VTAB_CVAL));
@@ -399,7 +399,7 @@ static void testSelectChangesAfterChangingColumnName() {
     ++numRows;
   }
   sqlite3_finalize(pStmt);
-  assert(numRows == 3);
+  assert(numRows == 2);
   assert(rc == SQLITE_DONE);
 
   crsql_close(db);
@@ -628,7 +628,7 @@ static void testPullingOnlyLocalChanges() {
   // we created 2 local changes, we should get 2 changes back. Well 4 really
   // since row creation is an event.
   printf("count: %d\n", count);
-  assert(count == 4);
+  assert(count == 2);
   sqlite3_finalize(pStmt);
 
   sqlite3_prepare_v2(

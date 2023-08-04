@@ -18,12 +18,31 @@ def test_sync():
     db2 = connect(":memory:")
 
     def setup(db):
-        db.execute("create table foo (id INTEGER PRIMARY KEY)")
-        db.execute("select crsql_as_crr('foo')")
+        db.execute("create table hoot (a, b primary key, c)")
+        db.execute("select crsql_as_crr('hoot')")
+        db.commit()
+
+        db.execute("INSERT INTO hoot VALUES (1, 1, 1)")
+        db.commit()
+        db.execute("UPDATE hoot SET a = 1 WHERE b = 1")
+        db.commit()
+        db.execute("UPDATE hoot SET a = 2 WHERE b = 1")
+        db.commit()
+        db.execute("UPDATE hoot SET a = 3 WHERE b = 1")
         db.commit()
 
     setup(db1)
     setup(db2)
 
-    db1.execute("INSERT INTO foo VALUES (1)")
-    sync_left_to_right(db1, db2)
+    db1vpre = db1.execute("SELECT crsql_dbversion()").fetchone()[0]
+    db2vpre = db2.execute("SELECT crsql_dbversion()").fetchone()[0]
+
+    # sync_left_to_right(db1, db2)
+
+    dbv2post = db2.execute("SELECT crsql_dbversion()").fetchone()[0]
+
+    pprint(db2vpre)
+    pprint(dbv2post)
+
+    pprint(db2.execute("SELECT * FROM crsql_changes").fetchall())
+    pprint(db1.execute("SELECT * FROM crsql_changes").fetchall())

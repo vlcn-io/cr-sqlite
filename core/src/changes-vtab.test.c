@@ -73,7 +73,7 @@ static void testFilters() {
 
   printf("no filters\n");
   // 6 - 1 for each row creation, 1 for each b
-  assertCount(db, "SELECT count(*) FROM crsql_changes", 6);
+  assertCount(db, "SELECT count(*) FROM crsql_changes", 3);
 
   // now test:
   // 1. site_id comparison
@@ -81,7 +81,7 @@ static void testFilters() {
 
   printf("is null\n");
   assertCount(db, "SELECT count(*) FROM crsql_changes WHERE site_id IS NULL",
-              6);
+              3);
 
   printf("is not null\n");
   assertCount(
@@ -107,7 +107,7 @@ static void testFilters() {
   assertCount(
       db,
       "SELECT count(*) FROM crsql_changes WHERE site_id IS NOT crsql_siteid()",
-      6);
+      3);
 
   // compare on db_version _and_ site_id
 
@@ -116,13 +116,13 @@ static void testFilters() {
   assertCount(db,
               "SELECT count(*) FROM crsql_changes WHERE db_version >= 1 AND "
               "db_version < 2",
-              2);
+              1);
 
   printf("OR condition\n");
   assertCount(db,
               "SELECT count(*) FROM crsql_changes WHERE db_version > 2 OR "
               "site_id IS NULL",
-              6);
+              3);
 
   // compare on pks, table name, other not perfectly supported columns
 

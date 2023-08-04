@@ -373,18 +373,19 @@ __declspec(dllexport)
     return rc;
   }
 
-  crsql_ExtData *pExtData = crsql_newExtData(db);
-  if (pExtData == 0) {
-    return SQLITE_ERROR;
-  }
-
   if (rc == SQLITE_OK) {
     rc = crsql_create_schema_table_if_not_exists(db);
     rc += crsql_maybe_update_db(db);
   }
 
+  unsigned char *siteIdBuffer = sqlite3_malloc(SITE_ID_LEN * sizeof(char *));
   if (rc == SQLITE_OK) {
-    rc = crsql_init_site_id(db, pExtData->siteId);
+    rc = crsql_init_site_id(db, siteIdBuffer);
+  }
+
+  crsql_ExtData *pExtData = crsql_newExtData(db, siteIdBuffer);
+  if (pExtData == 0) {
+    return SQLITE_ERROR;
   }
 
   if (rc == SQLITE_OK) {

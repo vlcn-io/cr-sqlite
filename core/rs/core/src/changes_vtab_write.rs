@@ -180,6 +180,12 @@ fn set_winner_clock(
 ) -> Result<sqlite::int64, ResultCode> {
     let tbl_name_str = unsafe { CStr::from_ptr((*tbl_info).tblName).to_str()? };
 
+    // set the site_id ordinal
+    // get the returned ordinal
+    // use that in place of insert_site_id in the metadata table(s)
+
+    // on changes read, join to gather the proper site id.
+
     let stmt_key = get_cache_key(CachedStmtType::SetWinnerClock, tbl_name_str, None)?;
 
     let set_stmt = get_cached_stmt_rt_wt(db, ext_data, stmt_key, || {

@@ -52,26 +52,6 @@ test("failed to increment?", () => {
   `);
   expect(database.prepare(`SELECT * FROM crsql_changes`).all()).toEqual([
     {
-      cid: "-1",
-      col_version: 1,
-      db_version: 1,
-      pk: Buffer.from(Uint8Array.from([1, 1])),
-      site_id: null,
-      table: "b",
-      val: null,
-      cl: 1,
-    },
-    {
-      cid: "-1",
-      col_version: 1,
-      db_version: 2,
-      pk: Buffer.from(Uint8Array.from([1, 9, 10])),
-      site_id: null,
-      table: "a",
-      val: null,
-      cl: 1,
-    },
-    {
       table: "a",
       pk: Buffer.from(Uint8Array.from([1, 9, 10])),
       cid: "data",

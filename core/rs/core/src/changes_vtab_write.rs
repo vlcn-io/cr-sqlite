@@ -585,6 +585,7 @@ unsafe fn merge_insert(
     // in out-of-order delivery setups but we still call it a resurrect as special
     // handling needs to happen in the "alive -> missed_delete -> alive" case.
     let needs_resurrect = insert_cl > local_cl && insert_col_vrsn % 2 == 1;
+    let row_exists_locally = local_cl != 0;
     let is_sentinel_only = crate::c::INSERT_SENTINEL == insert_col;
 
     if is_delete {
@@ -659,7 +660,7 @@ unsafe fn merge_insert(
     // In an in-order delivery situation then `sentinel_only` would have already resurrected the row
     // In out-of-order delivery, we need to resurrect the row as soon as we get a value
     // which should resurrect the row. I.e., don't wait on the sentinel value to resurrect the row!
-    if needs_resurrect {
+    if needs_resurrect && row_exists_locally {
         // this should work -- same as `merge_sentinel_only_insert` except we're not done once we do it
         // and the version to set to is the cl not col_vrsn of current insert
         merge_sentinel_only_insert(
@@ -676,7 +677,9 @@ unsafe fn merge_insert(
 
     // we can short-circuit via needs_resurrect
     // given the greater cl automatically means a win.
+    // or if we realize that the row does not exist locally at all.
     let does_cid_win = needs_resurrect
+        || !row_exists_locally
         || did_cid_win(
             db,
             (*tab).pExtData,

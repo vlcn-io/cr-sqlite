@@ -110,73 +110,6 @@ pub extern "C" fn crsql_create_schema_table_if_not_exists(db: *mut sqlite3) -> c
     }
 }
 
-fn update_to_0_13_0(db: *mut sqlite3) -> Result<bool, ResultCode> {
-    // get all clock tables
-    // alter all to add column
-    // __crsql_seq
-    let stmt = db.prepare_v2(consts::CLOCK_TABLES_SELECT)?;
-    let mut had_clock_tables = false;
-
-    while stmt.step()? == ResultCode::ROW {
-        had_clock_tables = true;
-        let tbl_name = stmt.column_text(0)?;
-        db.exec_safe(&format!(
-            "ALTER TABLE \"{}\" ADD COLUMN \"__crsql_seq\" NOT NULL DEFAULT 0",
-            crate::util::escape_ident(tbl_name)
-        ))?;
-    }
-
-    Ok(had_clock_tables)
-}
-
-fn update_to_0_15_0(db: *mut sqlite3) -> Result<ResultCode, ResultCode> {
-    // collapse pko and del
-    // add pko for creates
-    // no pko -> pko
-    // pko -> -1
-    // del -> -1 & 2
-    let stmt = db.prepare_v2(consts::CLOCK_TABLES_SELECT)?;
-
-    let pk_stmt = db.prepare_v2("SELECT name FROM pragma_table_info(?) WHERE pk > 0")?;
-    while stmt.step()? == ResultCode::ROW {
-        let tbl_name = stmt.column_text(0)?;
-        pk_stmt.bind_text(1, tbl_name, Destructor::STATIC)?;
-        let mut pk_names = vec![];
-        while pk_stmt.step()? == ResultCode::ROW {
-            let pk_name = pk_stmt.column_text(0)?.to_string();
-            if pk_name == "__crsql_col_name" {
-                continue;
-            }
-            pk_names.push(crate::util::escape_ident(&pk_name));
-        }
-        pk_stmt.reset()?;
-        pk_stmt.clear_bindings()?;
-
-        // now with the pk_names
-        // 1. rm `pko`
-        // 2. rename `del` to `-1` and fix `version`
-        // 3. insert `-1` where not exists and set version to 1
-        db.exec_safe(&format!(
-            "UPDATE \"{}\" SET __crsql_col_name = '{}', __crsql_col_version = 2 WHERE __crsql_col_name = '__crsql_del'",
-            crate::util::escape_ident(tbl_name),
-            crate::c::INSERT_SENTINEL
-        ))?;
-        db.exec_safe(&format!(
-            "DELETE FROM \"{}\" WHERE __crsql_col_name = '__crsql_pko'",
-            crate::util::escape_ident(tbl_name)
-        ))?;
-        db.exec_safe(&format!(
-            "INSERT OR IGNORE INTO \"{tbl}\" SELECT DISTINCT {pk_list}, '{sent}', 1, 0, NULL, 0 FROM \"{tbl}\"",
-            sent = crate::c::INSERT_SENTINEL,
-            tbl = crate::util::escape_ident(tbl_name),
-            pk_list = pk_names.join(", ")
-        ))?;
-        // db.exec_safe(&format!())?;
-    }
-
-    Ok(ResultCode::OK)
-}
-
 #[no_mangle]
 pub extern "C" fn crsql_maybe_update_db(db: *mut sqlite3) -> c_int {
     let r = db.exec_safe("SAVEPOINT crsql_maybe_update_db;");
@@ -211,13 +144,18 @@ fn maybe_update_db_inner(db: *mut sqlite3) -> Result<ResultCode, ResultCode> {
         }
     }
 
-    if recorded_version < consts::CRSQLITE_VERSION_0_13_0 {
-        update_to_0_13_0(db)?;
+    if recorded_version < consts::CRSQLITE_VERSION && !is_blank_slate {
+        // todo: return an error message to the user that their version is
+        // not supported
     }
 
-    if recorded_version < consts::CRSQLITE_VERSION_0_15_0 {
-        update_to_0_15_0(db)?;
-    }
+    // if recorded_version < consts::CRSQLITE_VERSION_0_13_0 {
+    //     update_to_0_13_0(db)?;
+    // }
+
+    // if recorded_version < consts::CRSQLITE_VERSION_0_15_0 {
+    //     update_to_0_15_0(db)?;
+    // }
 
     // write the db version if we migrated to a new one or we are a blank slate db
     if recorded_version < consts::CRSQLITE_VERSION || is_blank_slate {

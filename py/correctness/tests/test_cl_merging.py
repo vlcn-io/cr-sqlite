@@ -390,8 +390,8 @@ def test_resurrection_of_live_thing_via_sentinel():
     changes = c2.execute("SELECT * FROM crsql_changes").fetchall()
 
     # 'b' should be zeroed column version but latest db version.
-    assert (changes == [('foo', b'\x01\t\x01', '-1', None, 3, 2, None, 3),
-                        ('foo', b'\x01\t\x01', 'b', 1, 0, 2, None, 3)])
+    assert (changes == [('foo', b'\x01\t\x01', 'b', 1, 0, 2, None, 3),
+                        ('foo', b'\x01\t\x01', '-1', None, 3, 2, None, 3)])
     # now lets finish getting changes from the other node
     changes = c1.execute(
         "SELECT * FROM crsql_changes WHERE cid != '-1'").fetchone()

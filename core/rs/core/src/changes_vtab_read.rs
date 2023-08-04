@@ -30,6 +30,11 @@ fn crsql_changes_query_for_table(table_info: *mut crsql_TableInfo) -> Result<Str
     })?
     .join(" AND ");
 
+    // We LEFT JOIN and COALESCE the causal length
+    // since we incorporated an optimization to not store causal length records
+    // until they're required. I.e., do not store them until a delete
+    // is actually issued. This cuts data weight quite a bit for
+    // rows that never get removed.
     Ok(format!(
         "SELECT
           '{table_name_val}' as tbl,
@@ -40,8 +45,8 @@ fn crsql_changes_query_for_table(table_info: *mut crsql_TableInfo) -> Result<Str
           t1.__crsql_site_id as site_id,
           t1._rowid_,
           t1.__crsql_seq as seq,
-          t2.__crsql_col_version as cl
-      FROM \"{table_name_ident}__crsql_clock\" AS t1 JOIN \"{table_name_ident}__crsql_clock\" AS t2 ON
+          COALESCE(t2.__crsql_col_version, 1) as cl
+      FROM \"{table_name_ident}__crsql_clock\" AS t1 LEFT JOIN \"{table_name_ident}__crsql_clock\" AS t2 ON
       {self_join} AND t2.__crsql_col_name = '{sentinel}'",
         table_name_val = crate::util::escape_ident_as_value(table_name),
         pk_list = pk_list,

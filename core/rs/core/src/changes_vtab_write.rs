@@ -460,8 +460,14 @@ fn get_local_cl(
     let stmt_key = get_cache_key(CachedStmtType::GetLocalCl, tbl_name, None)?;
 
     let local_cl_stmt = get_cached_stmt_rt_wt(db, ext_data, stmt_key, || {
+        // We do an optimization to not store unnecessary create records.
+        // If a create record for the rows does not exist, see if any record does
+        // if a record does, the causal length is implicitly 1
         Ok(format!(
-        "SELECT __crsql_col_version FROM \"{table_name}__crsql_clock\" WHERE {pk_where_list} AND __crsql_col_name = '{delete_sentinel}'",
+        "SELECT COALESCE(
+          (SELECT __crsql_col_version FROM \"{table_name}__crsql_clock\" WHERE {pk_where_list} AND __crsql_col_name = '{delete_sentinel}'),
+          (SELECT 1 FROM \"{table_name}__crsql_clock\" WHERE {pk_where_list})
+        )",
         table_name = crate::util::escape_ident(tbl_name),
         pk_where_list = pk_where_list_from_tbl_info(tbl_info, None)?,
         delete_sentinel = crate::c::DELETE_SENTINEL,
@@ -469,6 +475,11 @@ fn get_local_cl(
     })?;
 
     let rc = bind_package_to_stmt(local_cl_stmt, unpacked_pks, 0);
+    if let Err(rc) = rc {
+        reset_cached_stmt(local_cl_stmt)?;
+        return Err(rc);
+    }
+    let rc = bind_package_to_stmt(local_cl_stmt, unpacked_pks, unpacked_pks.len());
     if let Err(rc) = rc {
         reset_cached_stmt(local_cl_stmt)?;
         return Err(rc);

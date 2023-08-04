@@ -48,6 +48,11 @@ def test_can_load_as_readonly():
     prefix = "./prior-dbs/v0.15.0"
     # copy the file given connecting might migrate it!
     shutil.copyfile(prefix + ".prior-db", prefix + ".db")
+    # open it once r/w to create all the tables
+    c = connect('file:' + prefix + ".db", uri=True)
+    close(c)
+
     c = connect('file:' + prefix + ".db?mode=ro", uri=True)
     # just expecting not to throw.
     close(c)
+    

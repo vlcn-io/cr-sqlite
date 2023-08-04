@@ -32,7 +32,7 @@ static void testSingleInsertSingleTx() {
   sqlite3_prepare_v2(db, "SELECT crsql_rows_impacted()", -1, &pStmt, 0);
   sqlite3_step(pStmt);
   // creation + setting of column
-  assert(sqlite3_column_int(pStmt, 0) == 2);
+  assert(sqlite3_column_int(pStmt, 0) == 1);
   sqlite3_finalize(pStmt);
   rc += sqlite3_exec(db, "COMMIT", 0, 0, 0);
   assert(rc == SQLITE_OK);
@@ -70,7 +70,7 @@ static void testManyInsertsInATx() {
                      0, 0, &err);
   sqlite3_prepare_v2(db, "SELECT crsql_rows_impacted()", -1, &pStmt, 0);
   sqlite3_step(pStmt);
-  assert(sqlite3_column_int(pStmt, 0) == 6);
+  assert(sqlite3_column_int(pStmt, 0) == 3);
   sqlite3_finalize(pStmt);
   rc += sqlite3_exec(db, "COMMIT", 0, 0, 0);
   assert(rc == SQLITE_OK);
@@ -101,7 +101,7 @@ static void testMultipartInsertInTx() {
                      0, 0, &err);
   sqlite3_prepare_v2(db, "SELECT crsql_rows_impacted()", -1, &pStmt, 0);
   sqlite3_step(pStmt);
-  assert(sqlite3_column_int(pStmt, 0) == 6);
+  assert(sqlite3_column_int(pStmt, 0) == 3);
   sqlite3_finalize(pStmt);
   rc += sqlite3_exec(db, "COMMIT", 0, 0, 0);
   assert(rc == SQLITE_OK);
@@ -131,7 +131,7 @@ static void testManyTxns() {
                      0, 0, &err);
   sqlite3_prepare_v2(db, "SELECT crsql_rows_impacted()", -1, &pStmt, 0);
   sqlite3_step(pStmt);
-  assert(sqlite3_column_int(pStmt, 0) == 2);
+  assert(sqlite3_column_int(pStmt, 0) == 1);
   sqlite3_finalize(pStmt);
   rc += sqlite3_exec(db, "COMMIT", 0, 0, 0);
   assert(rc == SQLITE_OK);
@@ -148,7 +148,7 @@ static void testManyTxns() {
   sqlite3_prepare_v2(db, "SELECT crsql_rows_impacted()", -1, &pStmt, 0);
   sqlite3_step(pStmt);
   int impacted = sqlite3_column_int(pStmt, 0);
-  assert(impacted == 4);
+  assert(impacted == 2);
   sqlite3_finalize(pStmt);
   rc += sqlite3_exec(db, "COMMIT", 0, 0, 0);
   assert(rc == SQLITE_OK);

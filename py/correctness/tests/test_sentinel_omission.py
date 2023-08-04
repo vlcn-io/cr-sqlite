@@ -10,17 +10,6 @@ def sync_left_to_right(l, r, since):
             "INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?, ?, ?)", change)
     r.commit()
 
-# Sentinel is omitted on initial
-# INSERT
-
-# Sentinel is created on delete
-
-# Sentinel is omitted on re-insertion of already existing thing either update replace or insert replace
-
-# Sentinel, if exists, is not bumped on insert replace?? to keep behavior of the case when it doesn't exist?
-
-# Sentinel not created by merge unless a sentinel is present in the merge data
-
 
 def make_simple_schema():
     c = connect(":memory:")
@@ -101,4 +90,50 @@ def test_not_created_on_merge():
 
 
 def test_not_created_on_noop_merge():
-    None
+    a = make_simple_schema()
+    b = make_simple_schema()
+    make_data(a)
+    make_data(b)
+
+    # dbs have the same state, nothing should happen
+    sync_left_to_right(a, b, 0)
+
+    assert (a.execute(
+        "SELECT count(*) FROM crsql_changes WHERE cid = '-1'").fetchone()[0] == 0)
+    assert (b.execute(
+        "SELECT count(*) FROM crsql_changes WHERE cid = '-1'").fetchone()[0] == 0)
+    assert (a.execute("SELECT crsql_dbversion()").fetchall()
+            == b.execute("SELECT crsql_dbversion()").fetchall())
+
+
+def test_not_created_on_update_merge():
+    a = make_simple_schema()
+    b = make_simple_schema()
+    make_data(a)
+    make_data(b)
+
+    for n in range(0, 200):
+        a.execute("UPDATE test SET text = 'goodbye {}' WHERE id = {}".format(n, n))
+        a.execute(
+            "UPDATE test SET text = 'goodbye {}' WHERE id = {}".format(n, n + 10000))
+
+    a.commit()
+    sync_left_to_right(a, b, 0)
+    assert (b.execute(
+        "SELECT count(*) FROM crsql_changes WHERE cid = '-1'").fetchone()[0] == 0)
+
+
+def test_sentinel_propagated_when_present():
+    a = make_simple_schema()
+    b = make_simple_schema()
+
+    make_data(a)
+
+    a.execute("DELETE FROM test")
+    a.execute("DELETE FROM test2")
+    a.commit()
+
+    sync_left_to_right(a, b, 0)
+
+    assert (b.execute(
+        "SELECT count(*) FROM crsql_changes WHERE cid = '-1'").fetchone()[0] == 800)

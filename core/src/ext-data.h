@@ -5,6 +5,8 @@
 SQLITE_EXTENSION_INIT3
 #include "tableinfo.h"
 
+// NOTE: any changes here must be updated in `c.rs` until we've finished porting
+// to rust.
 typedef struct crsql_ExtData crsql_ExtData;
 struct crsql_ExtData {
   // perma statement -- used to check db schema version
@@ -35,10 +37,11 @@ struct crsql_ExtData {
 
   sqlite3_stmt *pSetSyncBitStmt;
   sqlite3_stmt *pClearSyncBitStmt;
+  sqlite3_stmt *pSetSiteIdOrdinalStmt;
   void *pStmtCache;
 };
 
-crsql_ExtData *crsql_newExtData(sqlite3 *db);
+crsql_ExtData *crsql_newExtData(sqlite3 *db, unsigned char *siteIdBuffer);
 void crsql_freeExtData(crsql_ExtData *pExtData);
 int crsql_fetchPragmaSchemaVersion(sqlite3 *db, crsql_ExtData *pExtData,
                                    int which);

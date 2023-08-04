@@ -85,6 +85,7 @@ pub struct crsql_ExtData {
     pub seq: ::core::ffi::c_int,
     pub pSetSyncBitStmt: *mut sqlite::stmt,
     pub pClearSyncBitStmt: *mut sqlite::stmt,
+    pub pSetSiteIdOrdinalStmt: *mut sqlite::stmt,
     pub pStmtCache: *mut ::core::ffi::c_void,
 }
 

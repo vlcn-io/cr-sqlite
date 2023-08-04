@@ -29,8 +29,8 @@ pub extern "C" fn crsql_init_site_id(db: *mut sqlite3, ret: *mut u8) -> c_int {
 
 fn create_site_id_and_site_id_table(db: *mut sqlite3) -> Result<[u8; 16], ResultCode> {
     db.exec_safe(&format!(
-        "CREATE TABLE \"{tbl}\" (site_id BLOB PRIMARY KEY NOT NULL, ordinal INT NOT NULL);
-        CREATE UNIQUE INDEX {tbl}_ordinal ON \"{tbl}\" (ordinal);",
+        "CREATE TABLE \"{tbl}\" (site_id BLOB NOT NULL, ordinal INTEGER PRIMARY KEY AUTOINCREMENT);
+        CREATE UNIQUE INDEX {tbl}_site_id ON \"{tbl}\" (site_id);",
         tbl = consts::TBL_SITE_ID
     ))?;
 

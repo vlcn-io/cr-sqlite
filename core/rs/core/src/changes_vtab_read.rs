@@ -42,12 +42,12 @@ fn crsql_changes_query_for_table(table_info: *mut crsql_TableInfo) -> Result<Str
           t1.__crsql_col_name as cid,
           t1.__crsql_col_version as col_vrsn,
           t1.__crsql_db_version as db_vrsn,
-          t1.__crsql_site_id as site_id,
+          t3.site_id as site_id,
           t1._rowid_,
           t1.__crsql_seq as seq,
           COALESCE(t2.__crsql_col_version, 1) as cl
       FROM \"{table_name_ident}__crsql_clock\" AS t1 LEFT JOIN \"{table_name_ident}__crsql_clock\" AS t2 ON
-      {self_join} AND t2.__crsql_col_name = '{sentinel}'",
+      {self_join} AND t2.__crsql_col_name = '{sentinel}' LEFT JOIN __crsql_siteid as t3 ON t1.__crsql_site_id = t3.ordinal",
         table_name_val = crate::util::escape_ident_as_value(table_name),
         pk_list = pk_list,
         table_name_ident = crate::util::escape_ident(table_name),

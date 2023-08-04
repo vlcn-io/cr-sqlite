@@ -200,7 +200,7 @@ fn set_winner_clock(
             }
             let ordinal = (*ext_data).pSetSiteIdOrdinalStmt.column_int64(0);
             (*ext_data).pSetSiteIdOrdinalStmt.clear_bindings()?;
-            (*ext_data).pClearSyncBitStmt.reset()?;
+            (*ext_data).pSetSiteIdOrdinalStmt.reset()?;
             Some(ordinal)
         }
     };

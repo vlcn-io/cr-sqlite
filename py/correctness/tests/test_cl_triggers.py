@@ -33,10 +33,11 @@ def test_upsert_non_existing():
     c.execute("INSERT INTO foo VALUES (2, '3') ON CONFLICT DO UPDATE set b = '4'")
     c.commit()
     changes = c.execute(
-        "SELECT pk, cid, cl FROM crsql_changes WHERE cid = '-1'").fetchall()
+        "SELECT pk, cl FROM crsql_changes").fetchall()
+
     # Causal lengths should be 1 for both
-    assert (changes == [(b'\x01\t\x01', '-1', 1),
-                        (b'\x01\t\x02', '-1', 1)])
+    assert (changes == [(b'\x01\t\x01', 1),
+                        (b'\x01\t\x02', 1)])
 
 
 def test_insert_delete_insert_delete():
@@ -109,18 +110,19 @@ def test_upsert_currently_existing():
     c.commit()
 
     changes = c.execute(
-        "SELECT pk, cid, cl FROM crsql_changes WHERE cid = '-1'").fetchall()
+        "SELECT pk, cid, cl FROM crsql_changes").fetchall()
     # Causal length bumps up to the next odd number given we are requesting to re-insert an existing row.
-    assert (changes == [(b'\x01\t\x01', '-1', 3)])
+    # Nope ^^ -- we're keeping it stable given the optimization to infer causal length records.
+    assert (changes == [(b'\x01\t\x01', 'b', 1)])
 
     c.execute(
         "INSERT INTO foo VALUES (1, 4) ON CONFLICT DO UPDATE set b = b")
     c.commit()
 
     changes = c.execute(
-        "SELECT pk, cid, cl FROM crsql_changes WHERE cid = '-1'").fetchall()
+        "SELECT pk, cid, cl FROM crsql_changes").fetchall()
     # Causal length remains stable given we asked to update, rather than re-insert, on conflict
-    assert (changes == [(b'\x01\t\x01', '-1', 3)])
+    assert (changes == [(b'\x01\t\x01', 'b', 1)])
 
 
 # Run of the mill update against a row that exists
@@ -135,15 +137,15 @@ def test_update_existing():
 
     c.execute("UPDATE foo SET b = 3 WHERE a = 1")
     changes = c.execute(
-        "SELECT pk, cid, cl FROM crsql_changes WHERE cid = '-1'").fetchall()
-    assert (changes == [(b'\x01\t\x01', '-1', 1)])
+        "SELECT pk, cid, cl FROM crsql_changes").fetchall()
+    assert (changes == [(b'\x01\t\x01', 'b', 1)])
     c.commit()
 
     c.execute("UPDATE foo SET b = 3 WHERE a = 3")
     c.commit()
     changes = c.execute(
-        "SELECT pk, cid, cl FROM crsql_changes WHERE cid = '-1'").fetchall()
-    assert (changes == [(b'\x01\t\x01', '-1', 1)])
+        "SELECT pk, cid, cl FROM crsql_changes").fetchall()
+    assert (changes == [(b'\x01\t\x01', 'b', 1)])
 
 
 # Run of the mill insert but the row we are trying to insert exists
@@ -162,9 +164,9 @@ def test_insert_existing():
         c.commit()
 
     changes = c.execute(
-        "SELECT pk, cid, cl FROM crsql_changes WHERE cid = '-1'").fetchall()
+        "SELECT pk, cid, cl FROM crsql_changes").fetchall()
     # attempt to over-write the existing row raises an error and changes nothing
-    assert (changes == [(b'\x01\t\x01', '-1', 1)])
+    assert (changes == [(b'\x01\t\x01', 'b', 1)])
 
 
 # Shoudl be a no-op
@@ -181,9 +183,9 @@ def test_insert_or_ignore_existing():
     c.commit()
 
     changes = c.execute(
-        "SELECT pk, cid, cl FROM crsql_changes WHERE cid = '-1'").fetchall()
+        "SELECT pk, cid, cl FROM crsql_changes").fetchall()
     # insert or ignore bumps no metadata
-    assert (changes == [(b'\x01\t\x01', '-1', 1)])
+    assert (changes == [(b'\x01\t\x01', 'b', 1)])
 
 
 # Run of the mill delete
@@ -286,12 +288,13 @@ def test_change_primary_key_to_currently_existing():
     c.commit()
 
     changes = c.execute(
-        "SELECT pk, cid, cl FROM crsql_changes WHERE cid = '-1'").fetchall()
+        "SELECT pk, cid, cl FROM crsql_changes").fetchall()
     # pk 2 is alive as we `update or replaced` to it
-    # and it is alive at version 3 given it is a re-insertion of the previously existing row
+    # and it is alive at version 3 given it is a re-insertion of the currently existing row
     # pk 1 is dead (cl of 2) given we mutated / updated away from it. E.g.,
     # set a = 2 where a = 1
-    assert (changes == [(b'\x01\t\x02', '-1', 3), (b'\x01\t\x01', '-1', 2)])
+    assert (changes == [(b'\x01\t\x02', 'b', 1),
+            (b'\x01\t\x02', '-1', 1), (b'\x01\t\x01', '-1', 2)])
 
 
 def test_change_primary_key_away_from_thing_with_large_length():

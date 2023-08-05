@@ -1,6 +1,6 @@
 pub const TBL_SITE_ID: &'static str = "__crsql_siteid";
 pub const TBL_SCHEMA: &'static str = "crsql_master";
-pub const TBL_DB_VERSIONS: &'static str = "crsql_dbversions_count";
+pub const TBL_DB_VERSIONS: &'static str = "crsql_db_versions_total";
 pub const CLOCK_TABLES_SELECT: &'static str =
     "SELECT tbl_name FROM sqlite_master WHERE type='table' AND tbl_name LIKE '%__crsql_clock'";
 pub const CRSQLITE_VERSION_0_15_0: i32 = 150000;

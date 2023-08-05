@@ -102,8 +102,8 @@ def test_not_created_on_noop_merge():
         "SELECT count(*) FROM crsql_changes WHERE cid = '-1'").fetchone()[0] == 0)
     assert (b.execute(
         "SELECT count(*) FROM crsql_changes WHERE cid = '-1'").fetchone()[0] == 0)
-    assert (a.execute("SELECT crsql_dbversion()").fetchall()
-            == b.execute("SELECT crsql_dbversion()").fetchall())
+    assert (a.execute("SELECT crsql_db_version()").fetchall()
+            == b.execute("SELECT crsql_db_version()").fetchall())
 
 
 def test_not_created_on_update_merge():

@@ -89,7 +89,7 @@ fn create_clock_rows_from_stmt(
             .join(", "),
         pk_values = pk_cols.iter().map(|_| "?").collect::<Vec<_>>().join(", "),
         dbversion_getter = if is_commit_alter {
-            "crsql_dbversion()"
+            "crsql_db_version()"
         } else {
             "crsql_nextdbversion()"
         }

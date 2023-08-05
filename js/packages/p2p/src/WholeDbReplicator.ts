@@ -191,7 +191,7 @@ export class WholeDbReplicator {
     this.pendingNotification = true;
     queueMicrotask(async () => {
       const r = await this.db.execA<[number | bigint]>(
-        "SELECT crsql_dbversion()"
+        "SELECT crsql_db_version()"
       );
       const dbv = r[0][0];
       this.pendingNotification = false;

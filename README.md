@@ -63,8 +63,8 @@ The full documentation site is available [here](https://vlcn.io/docs).
 - A function extension (`crsql_as_crr`) to upgrade existing tables to "crrs" or "conflict free replicated relations"
   - `SELECT crsql_as_crr('table_name')`
 - A virtual table (`crsql_changes`) to ask the database for changesets or to apply changesets from another database
-  - `SELECT "table", "pk", "cid", "val", "col_version", "db_version", COALESCE("site_id", crsql_siteid()) FROM crsql_changes WHERE db_version > x AND site_id IS NULL` -- to get local changes
-  - `SELECT "table", "pk", "cid", "val", "col_version", "db_version", COALESCE("site_id", crsql_siteid()) FROM crsql_changes WHERE db_version > x AND site_id IS NOT some_site` -- to get all changes excluding those synced from some site
+  - `SELECT "table", "pk", "cid", "val", "col_version", "db_version", COALESCE("site_id", crsql_site_id()) FROM crsql_changes WHERE db_version > x AND site_id IS NULL` -- to get local changes
+  - `SELECT "table", "pk", "cid", "val", "col_version", "db_version", COALESCE("site_id", crsql_site_id()) FROM crsql_changes WHERE db_version > x AND site_id IS NOT some_site` -- to get all changes excluding those synced from some site
   - `INSERT INTO crsql_changes VALUES ([patches receied from select on another peer])`
 - And `crsql_begin_alter('table_name')` & `crsql_alter_commit('table_name')` primitives to allow altering table definitions that have been upgraded to `crr`s.
   - Until we move forward with extending the syntax of SQLite to be CRR aware, altering CRRs looks like:

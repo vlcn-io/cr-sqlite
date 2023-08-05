@@ -127,7 +127,7 @@ export default async function getDB(wasmUri: string | undefined, dbid: DBID) {
     ]);
   pullChangesetStmt.raw(true);
 
-  let siteid = (await db.execA(`SELECT quote(crsql_siteid())`))[0][0];
+  let siteid = (await db.execA(`SELECT quote(crsql_site_id())`))[0][0];
   siteid = siteid.slice(2, -1); // remove X'' quoting
 
   const schemaNameResult = await db.execA(

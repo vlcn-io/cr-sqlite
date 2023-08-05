@@ -11,11 +11,11 @@ async function createSimpleSchema(db: DB) {
     "CREATE TABLE foo (a primary key, b);",
     "SELECT crsql_as_crr('foo');",
   ]);
-  return (await db.execA<[Uint8Array]>("SELECT crsql_siteid()"))[0][0];
+  return (await db.execA<[Uint8Array]>("SELECT crsql_site_id()"))[0][0];
 }
 
 async function getSite(db: DB) {
-  return (await db.execA<[Uint8Array]>("SELECT crsql_siteid()"))[0][0];
+  return (await db.execA<[Uint8Array]>("SELECT crsql_site_id()"))[0][0];
 }
 
 const dummyPoke: PokeProtocol = {
@@ -200,7 +200,7 @@ export const tests = {
       changesRequested = true;
 
       // should not be requesting changes from ourself
-      assert(siteId != (await db.execA("select crsql_siteid()"))[0][0]);
+      assert(siteId != (await db.execA("select crsql_site_id()"))[0][0]);
     };
 
     const db = await dbProvider();

@@ -18,7 +18,7 @@ export class DB implements IDB {
     this.db.loadExtension(extensionPath);
     this.open = true;
     this.siteid = this.db
-      .prepare("SELECT quote(crsql_siteid());")
+      .prepare("SELECT quote(crsql_site_id());")
       .raw()
       .get()[0]
       .replace(/'/g, "");

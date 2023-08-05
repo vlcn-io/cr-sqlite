@@ -89,7 +89,7 @@ static void testFilters() {
 
   printf("equals\n");
   assertCount(
-      db, "SELECT count(*) FROM crsql_changes WHERE site_id = crsql_siteid()",
+      db, "SELECT count(*) FROM crsql_changes WHERE site_id = crsql_site_id()",
       0);
 
   // 0 rows is actually correct ANSI sql behavior. NULLs are never equal, or not
@@ -99,14 +99,14 @@ static void testFilters() {
   // https://stackoverflow.com/questions/60017275/why-null-is-not-equal-to-anything-is-a-false-statement
   printf("not equals\n");
   assertCount(
-      db, "SELECT count(*) FROM crsql_changes WHERE site_id != crsql_siteid()",
+      db, "SELECT count(*) FROM crsql_changes WHERE site_id != crsql_site_id()",
       0);
 
   printf("is not\n");
   // All rows are currently null for site_id
   assertCount(
       db,
-      "SELECT count(*) FROM crsql_changes WHERE site_id IS NOT crsql_siteid()",
+      "SELECT count(*) FROM crsql_changes WHERE site_id IS NOT crsql_site_id()",
       3);
 
   // compare on db_version _and_ site_id

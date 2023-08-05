@@ -284,7 +284,7 @@ export class WholeDbReplicator {
   private changesRequested = async (from: SiteIDWire, since: bigint) => {
     const fromAsBlob = uuidParse(from);
     const changes: Changeset[] = await this.db.execA<Changeset>(
-      `SELECT "table", "pk", "cid", "val", "col_version", "db_version", COALESCE("site_id", crsql_siteid()), "cl" FROM crsql_changes WHERE site_id IS NOT ? AND db_version > ?`,
+      `SELECT "table", "pk", "cid", "val", "col_version", "db_version", COALESCE("site_id", crsql_site_id()), "cl" FROM crsql_changes WHERE site_id IS NOT ? AND db_version > ?`,
       [fromAsBlob, since]
     );
 

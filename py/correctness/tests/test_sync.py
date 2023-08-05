@@ -79,7 +79,7 @@ def test_changes_since():
     dbs = init()
 
     rows = get_changes_since(dbs[0], 0, "FF")
-    # siteid = dbs[0].execute("select crsql_siteid()").fetchone()[0]
+    # siteid = dbs[0].execute("select crsql_site_id()").fetchone()[0]
     siteid = None
     expected = [('user', b'\x01\t\x01', 'name', 'Javi', 1, 1, None, 1),
                 ('deck', b'\x01\t\x01', 'owner_id', 1, 1, 1, None, 1),

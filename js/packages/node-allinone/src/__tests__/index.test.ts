@@ -80,7 +80,7 @@ test("failing example", () => {
     `SELECT crsql_as_crr('todo');`,
   ]);
 
-  const siteid = db1.execA(`SELECT crsql_siteid()`)[0][0];
+  const siteid = db1.execA(`SELECT crsql_site_id()`)[0][0];
   db2.transaction(() => {
     for (const cs of changesets) {
       db2.exec(`INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, cs);
@@ -152,11 +152,11 @@ test("failing two -- discord: https://discord.com/channels/989870439897653248/98
 
   db.execMany([
     `DROP TABLE IF EXISTS todos;`,
-    `DROP TABLE IF EXISTS __crsql_siteid;`,
+    `DROP TABLE IF EXISTS __crsql_site_id;`,
     `DROP TABLE IF EXISTS todos__crsql_clock;`,
 
-    `CREATE TABLE IF NOT EXISTS "__crsql_siteid" (site_id);`,
-    `INSERT INTO __crsql_siteid VALUES(X'dc215665ff164407b63f423a469b7cb9');`,
+    `CREATE TABLE IF NOT EXISTS "__crsql_site_id" (site_id);`,
+    `INSERT INTO __crsql_site_id VALUES(X'dc215665ff164407b63f423a469b7cb9');`,
     `CREATE TABLE IF NOT EXISTS "todos" ("id" text primary key, "title" text, "text" text, "completed" boolean);`,
     `INSERT INTO todos VALUES('xc2yf7z5qb','123','132',0);`,
     `CREATE TABLE IF NOT EXISTS "todos__crsql_clock" ("id","__crsql_col_name" NOT NULL,"__crsql_col_version" NOT NULL, "__crsql_db_version" NOT NULL,"__crsql_site_id","__crsql_seq" NOT NULL,PRIMARY KEY ("id", "__crsql_col_name")    );`,

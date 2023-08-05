@@ -13,7 +13,7 @@ def test_c1():
 def test_c2():
     c = connect(":memory:")
     siteid_fn = c.execute("select crsql_site_id()").fetchone()[0]
-    siteid_tbl = c.execute("select site_id from __crsql_site_id").fetchone()[0]
+    siteid_tbl = c.execute("select site_id from crsql_site_id").fetchone()[0]
 
     assert siteid_fn == siteid_tbl
 

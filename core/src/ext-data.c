@@ -7,7 +7,7 @@
 void crsql_init_stmt_cache(crsql_ExtData *pExtData);
 void crsql_clear_stmt_cache(crsql_ExtData *pExtData);
 
-crsql_ExtData *crsql_newExtData(sqlite3 *db) {
+crsql_ExtData *crsql_newExtData(sqlite3 *db, unsigned char *siteIdBuffer) {
   crsql_ExtData *pExtData = sqlite3_malloc(sizeof *pExtData);
 
   pExtData->pPragmaSchemaVersionStmt = 0;
@@ -25,12 +25,19 @@ crsql_ExtData *crsql_newExtData(sqlite3 *db) {
   rc += sqlite3_prepare_v3(db, CLEAR_SYNC_BIT, -1, SQLITE_PREPARE_PERSISTENT,
                            &(pExtData->pClearSyncBitStmt), 0);
 
+  pExtData->pSetSiteIdOrdinalStmt = 0;
+  rc += sqlite3_prepare_v3(
+      db,
+      "INSERT INTO __crsql_siteid (site_id) VALUES (?) ON CONFLICT DO "
+      "UPDATE SET ordinal = ordinal RETURNING ordinal",
+      -1, SQLITE_PREPARE_PERSISTENT, &(pExtData->pSetSiteIdOrdinalStmt), 0);
+
   pExtData->dbVersion = -1;
   pExtData->seq = 0;
   pExtData->pragmaSchemaVersion = -1;
   pExtData->pragmaDataVersion = -1;
   pExtData->pragmaSchemaVersionForTableInfos = -1;
-  pExtData->siteId = sqlite3_malloc(SITE_ID_LEN * sizeof *(pExtData->siteId));
+  pExtData->siteId = siteIdBuffer;
   pExtData->pDbVersionStmt = 0;
   pExtData->zpTableInfos = 0;
   pExtData->tableInfosLen = 0;
@@ -54,6 +61,7 @@ void crsql_freeExtData(crsql_ExtData *pExtData) {
   sqlite3_finalize(pExtData->pPragmaDataVersionStmt);
   sqlite3_finalize(pExtData->pSetSyncBitStmt);
   sqlite3_finalize(pExtData->pClearSyncBitStmt);
+  sqlite3_finalize(pExtData->pSetSiteIdOrdinalStmt);
   crsql_freeAllTableInfos(pExtData->zpTableInfos, pExtData->tableInfosLen);
   crsql_clear_stmt_cache(pExtData);
   sqlite3_free(pExtData);
@@ -70,12 +78,14 @@ void crsql_finalize(crsql_ExtData *pExtData) {
   sqlite3_finalize(pExtData->pPragmaDataVersionStmt);
   sqlite3_finalize(pExtData->pSetSyncBitStmt);
   sqlite3_finalize(pExtData->pClearSyncBitStmt);
+  sqlite3_finalize(pExtData->pSetSiteIdOrdinalStmt);
   crsql_clear_stmt_cache(pExtData);
   pExtData->pDbVersionStmt = 0;
   pExtData->pPragmaSchemaVersionStmt = 0;
   pExtData->pPragmaDataVersionStmt = 0;
   pExtData->pSetSyncBitStmt = 0;
   pExtData->pClearSyncBitStmt = 0;
+  pExtData->pSetSiteIdOrdinalStmt = 0;
 }
 
 #define DB_VERSION_SCHEMA_VERSION 0

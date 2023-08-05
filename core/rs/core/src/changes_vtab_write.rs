@@ -180,6 +180,31 @@ fn set_winner_clock(
 ) -> Result<sqlite::int64, ResultCode> {
     let tbl_name_str = unsafe { CStr::from_ptr((*tbl_info).tblName).to_str()? };
 
+    // set the site_id ordinal
+    // get the returned ordinal
+    // use that in place of insert_site_id in the metadata table(s)
+
+    // on changes read, join to gather the proper site id.
+    let ordinal = unsafe {
+        if insert_site_id.is_empty() {
+            None
+        } else {
+            (*ext_data).pSetSiteIdOrdinalStmt.bind_blob(
+                1,
+                insert_site_id,
+                sqlite::Destructor::STATIC,
+            )?;
+            let rc = (*ext_data).pSetSiteIdOrdinalStmt.step()?;
+            if rc == ResultCode::DONE {
+                return Err(ResultCode::ABORT);
+            }
+            let ordinal = (*ext_data).pSetSiteIdOrdinalStmt.column_int64(0);
+            (*ext_data).pSetSiteIdOrdinalStmt.clear_bindings()?;
+            (*ext_data).pSetSiteIdOrdinalStmt.reset()?;
+            Some(ordinal)
+        }
+    };
+
     let stmt_key = get_cache_key(CachedStmtType::SetWinnerClock, tbl_name_str, None)?;
 
     let set_stmt = get_cached_stmt_rt_wt(db, ext_data, stmt_key, || {
@@ -214,16 +239,9 @@ fn set_winner_clock(
         )
         .and_then(|_| set_stmt.bind_int64(unpacked_pks.len() as i32 + 2, insert_col_vrsn))
         .and_then(|_| set_stmt.bind_int64(unpacked_pks.len() as i32 + 3, insert_db_vrsn))
-        .and_then(|_| {
-            if insert_site_id.is_empty() {
-                set_stmt.bind_null(unpacked_pks.len() as i32 + 4)
-            } else {
-                set_stmt.bind_blob(
-                    unpacked_pks.len() as i32 + 4,
-                    insert_site_id,
-                    sqlite::Destructor::STATIC,
-                )
-            }
+        .and_then(|_| match ordinal {
+            Some(ordinal) => set_stmt.bind_int64(unpacked_pks.len() as i32 + 4, ordinal),
+            None => set_stmt.bind_null(unpacked_pks.len() as i32 + 4),
         });
 
     if let Err(rc) = bind_result {
@@ -296,7 +314,7 @@ fn merge_sentinel_only_insert(
         return Err(rc);
     }
 
-    if let Ok(rc) = rc {
+    if let Ok(_) = rc {
         zero_clocks_on_resurrect(
             db,
             ext_data,

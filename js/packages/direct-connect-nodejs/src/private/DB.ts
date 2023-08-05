@@ -42,8 +42,14 @@ export default class DB {
       .pluck()
       .get();
     if (siteidTableExists == 0) {
-      this.db.exec(`CREATE TABLE __crsql_siteid (site_id)`);
-      this.db.prepare(`INSERT INTO "__crsql_siteid" VALUES (?)`).run(dbid);
+      this.db.exec(
+        `CREATE TABLE __crsql_siteid (site_id BLOB NOT NULL, ordinal INTEGER PRIMARY KEY AUTOINCREMENT)`
+      );
+      this.db
+        .prepare(
+          `INSERT INTO "__crsql_siteid" (site_id, ordinal) VALUES (?, 0)`
+        )
+        .run(dbid);
     }
 
     this.db.loadExtension(extensionPath);

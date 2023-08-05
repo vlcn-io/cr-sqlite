@@ -89,12 +89,12 @@ fn insert_trigger_body(
             {pk_new_list},
             '{col_name}',
             1,
-            crsql_nextdbversion(),
+            crsql_next_db_version(),
             crsql_increment_and_get_seq(),
             NULL
           ON CONFLICT DO UPDATE SET
             __crsql_col_version = CASE __crsql_col_version % 2 WHEN 0 THEN __crsql_col_version + 1 ELSE __crsql_col_version + 2 END,
-            __crsql_db_version = crsql_nextdbversion(),
+            __crsql_db_version = crsql_next_db_version(),
             __crsql_seq = crsql_get_seq() - 1,
             __crsql_site_id = NULL;",
           table_name = crate::util::escape_ident(table_name),
@@ -109,7 +109,7 @@ fn insert_trigger_body(
         trigger_components.push(format!(
           "UPDATE \"{table_name}__crsql_clock\" SET
             __crsql_col_version = CASE __crsql_col_version % 2 WHEN 0 THEN __crsql_col_version + 1 ELSE __crsql_col_version + 2 END,
-            __crsql_db_version = crsql_nextdbversion(),
+            __crsql_db_version = crsql_next_db_version(),
             __crsql_seq = crsql_get_seq() - 1,
             __crsql_site_id = NULL
           WHERE {pk_where_list} AND __crsql_col_name = '{col_name}';",
@@ -150,12 +150,12 @@ fn format_insert_trigger_component(
           {pk_new_list},
           '{col_name}',
           1,
-          crsql_nextdbversion(),
+          crsql_next_db_version(),
           crsql_increment_and_get_seq(),
           NULL
         ON CONFLICT DO UPDATE SET
           __crsql_col_version = __crsql_col_version + 1,
-          __crsql_db_version = crsql_nextdbversion(),
+          __crsql_db_version = crsql_next_db_version(),
           __crsql_seq = crsql_get_seq() - 1,
           __crsql_site_id = NULL;",
         table_name = crate::util::escape_ident(table_name),
@@ -207,12 +207,12 @@ fn create_update_trigger(
               {pk_old_list},
               '{sentinel}',
               2,
-              crsql_nextdbversion(),
+              crsql_next_db_version(),
               crsql_increment_and_get_seq(),
               NULL WHERE true
             ON CONFLICT DO UPDATE SET
               __crsql_col_version = 1 + __crsql_col_version,
-              __crsql_db_version = crsql_nextdbversion(),
+              __crsql_db_version = crsql_next_db_version(),
               __crsql_seq = crsql_get_seq() - 1,
               __crsql_site_id = NULL;
             DELETE FROM \"{table_name}__crsql_clock\"
@@ -268,13 +268,13 @@ fn update_trigger_body(
           {pk_new_list},
           '{sentinel}',
           1,
-          crsql_nextdbversion(),
+          crsql_next_db_version(),
           crsql_increment_and_get_seq(),
           NULL
         WHERE {any_pk_differs}
         ON CONFLICT DO UPDATE SET
           __crsql_col_version = CASE __crsql_col_version % 2 WHEN 0 THEN __crsql_col_version + 1 ELSE __crsql_col_version + 2 END,
-          __crsql_db_version = crsql_nextdbversion(),
+          __crsql_db_version = crsql_next_db_version(),
           __crsql_seq = crsql_get_seq() - 1,
           __crsql_site_id = NULL;",
         table_name = crate::util::escape_ident(table_name),
@@ -298,13 +298,13 @@ fn update_trigger_body(
           {pk_new_list},
           '{col_name_val}',
           1,
-          crsql_nextdbversion(),
+          crsql_next_db_version(),
           crsql_increment_and_get_seq(),
           NULL
         WHERE NEW.\"{col_name_ident}\" IS NOT OLD.\"{col_name_ident}\"
         ON CONFLICT DO UPDATE SET
           __crsql_col_version = __crsql_col_version + 1,
-          __crsql_db_version = crsql_nextdbversion(),
+          __crsql_db_version = crsql_next_db_version(),
           __crsql_seq = crsql_get_seq() - 1,
           __crsql_site_id = NULL;",
             table_name = crate::util::escape_ident(table_name),
@@ -345,12 +345,12 @@ fn create_delete_trigger(
         {pk_old_list},
         '{sentinel}',
         2,
-        crsql_nextdbversion(),
+        crsql_next_db_version(),
         crsql_increment_and_get_seq(),
         NULL WHERE true
       ON CONFLICT DO UPDATE SET
         __crsql_col_version = 1 + __crsql_col_version,
-        __crsql_db_version = crsql_nextdbversion(),
+        __crsql_db_version = crsql_next_db_version(),
         __crsql_seq = crsql_get_seq() - 1,
         __crsql_site_id = NULL;
       DELETE FROM \"{table_name}__crsql_clock\"

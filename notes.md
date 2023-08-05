@@ -322,7 +322,7 @@ single clock table impact on perf???
   or are they tracked by row so fine?
 
 Multi tab --
-`crsql_dbversion()`
+`crsql_db_version()`
 (1) check if version alrdy set for tx in extData
 if so, return it
 (2) check the schema version via pragma https://www.sqlite.org/pragma.html#pragma_schema_version against ext data pragma v
@@ -330,7 +330,7 @@ if delta, finalize pStmt, fetch tblSchemas, re-create pStmt
 (3) fetch max db version via pStmt
 (4) return max
 
-So get rid of `crsql_nextdbversion()`
+So get rid of `crsql_next_db_version()`
 
 (2) should be split into its own function since vtab needs to check schema version and re-pull
 table infos too

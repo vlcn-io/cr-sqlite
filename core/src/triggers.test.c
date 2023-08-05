@@ -23,10 +23,9 @@ static void testCreateTriggers() {
   char *errMsg = 0;
   int rc = sqlite3_open(":memory:", &db);
 
-  rc = sqlite3_exec(db,
-                    "CREATE TABLE \"foo\" (\"a\" PRIMARY KEY, \"b\", \"c\"); "
-                    "SELECT crsql_as_crr('foo');",
-                    0, 0, &errMsg);
+  rc =
+      sqlite3_exec(db, "CREATE TABLE \"foo\" (\"a\" PRIMARY KEY, \"b\", \"c\")",
+                   0, 0, &errMsg);
   rc = crsql_getTableInfo(db, "foo", &tableInfo, &errMsg);
 
   if (rc == SQLITE_OK) {

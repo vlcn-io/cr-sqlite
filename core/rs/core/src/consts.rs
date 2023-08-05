@@ -1,4 +1,4 @@
-pub const TBL_SITE_ID: &'static str = "__crsql_site_id";
+pub const TBL_SITE_ID: &'static str = "crsql_site_id";
 pub const TBL_SCHEMA: &'static str = "crsql_master";
 // pub const CRSQLITE_VERSION_0_15_0: i32 = 15_00_00;
 // pub const CRSQLITE_VERSION_0_13_0: i32 = 13_00_00;

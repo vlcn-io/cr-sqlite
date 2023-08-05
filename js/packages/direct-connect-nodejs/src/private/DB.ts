@@ -37,18 +37,16 @@ export default class DB {
     // check if siteid table exists
     const siteidTableExists = this.db
       .prepare(
-        "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='__crsql_site_id'"
+        "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='crsql_site_id'"
       )
       .pluck()
       .get();
     if (siteidTableExists == 0) {
       this.db.exec(
-        `CREATE TABLE __crsql_site_id (site_id BLOB NOT NULL, ordinal INTEGER PRIMARY KEY AUTOINCREMENT)`
+        `CREATE TABLE crsql_site_id (site_id BLOB NOT NULL, ordinal INTEGER PRIMARY KEY AUTOINCREMENT)`
       );
       this.db
-        .prepare(
-          `INSERT INTO "__crsql_site_id" (site_id, ordinal) VALUES (?, 0)`
-        )
+        .prepare(`INSERT INTO "crsql_site_id" (site_id, ordinal) VALUES (?, 0)`)
         .run(dbid);
     }
 

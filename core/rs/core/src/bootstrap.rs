@@ -1,9 +1,7 @@
 use core::ffi::{c_char, c_int, CStr};
 
-use crate::alloc::string::ToString;
 use crate::{c::crsql_TableInfo, consts};
 use alloc::format;
-use alloc::vec;
 use core::slice;
 use sqlite::{sqlite3, Connection, Destructor, ResultCode};
 use sqlite_nostd as sqlite;

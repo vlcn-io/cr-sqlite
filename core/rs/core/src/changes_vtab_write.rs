@@ -314,7 +314,7 @@ fn merge_sentinel_only_insert(
         return Err(rc);
     }
 
-    if let Ok(rc) = rc {
+    if let Ok(_) = rc {
         zero_clocks_on_resurrect(
             db,
             ext_data,

@@ -96,19 +96,6 @@ pub fn where_list(columns: &[crsql_ColumnInfo], prefix: Option<&str>) -> Result<
     Ok(result.join(" AND "))
 }
 
-pub fn self_join(columns: &[crsql_ColumnInfo]) -> Result<String, Utf8Error> {
-    let mut result = vec![];
-    for c in columns {
-        let name = unsafe { CStr::from_ptr(c.name) };
-        result.push(format!(
-            "t1.\"{col_name}\" IS t2.\"{col_name}\"",
-            col_name = crate::util::escape_ident(name.to_str()?)
-        ));
-    }
-
-    Ok(result.join(" AND "))
-}
-
 pub fn binding_list(num_slots: usize) -> String {
     core::iter::repeat('?')
         .take(num_slots)

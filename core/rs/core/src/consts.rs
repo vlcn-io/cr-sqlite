@@ -12,7 +12,7 @@ pub const TBL_SCHEMA: &'static str = "crsql_master";
 // and, if we ever need it, we can track individual builds of a patch release
 // 00_05_01_01
 pub const CRSQLITE_VERSION: i32 = 15_00_00;
-pub const TBL_DB_VERSIONS: &'static str = "crsql_dbversions_count";
+pub const TBL_DB_VERSIONS: &'static str = "crsql_db_versions_total";
 pub const CLOCK_TABLES_SELECT: &'static str =
     "SELECT tbl_name FROM sqlite_master WHERE type='table' AND tbl_name LIKE '%__crsql_clock'";
 pub const CRSQLITE_VERSION_0_15_0: i32 = 150000;

@@ -1,7 +1,7 @@
 use core::ffi::{c_char, c_int, CStr};
 
 use crate::{c::crsql_TableInfo, consts};
-use alloc::format;
+use alloc::{ffi::CString, format};
 use core::slice;
 use sqlite::{sqlite3, Connection, Destructor, ResultCode};
 use sqlite_nostd as sqlite;
@@ -109,12 +109,12 @@ pub extern "C" fn crsql_create_schema_table_if_not_exists(db: *mut sqlite3) -> c
 }
 
 #[no_mangle]
-pub extern "C" fn crsql_maybe_update_db(db: *mut sqlite3) -> c_int {
+pub extern "C" fn crsql_maybe_update_db(db: *mut sqlite3, err_msg: *mut *mut c_char) -> c_int {
     let r = db.exec_safe("SAVEPOINT crsql_maybe_update_db;");
     if let Err(code) = r {
         return code as c_int;
     }
-    if let Ok(_) = maybe_update_db_inner(db) {
+    if let Ok(_) = maybe_update_db_inner(db, err_msg) {
         let _ = db.exec_safe("RELEASE crsql_maybe_update_db;");
         return ResultCode::OK as c_int;
     } else {
@@ -123,7 +123,10 @@ pub extern "C" fn crsql_maybe_update_db(db: *mut sqlite3) -> c_int {
     }
 }
 
-fn maybe_update_db_inner(db: *mut sqlite3) -> Result<ResultCode, ResultCode> {
+fn maybe_update_db_inner(
+    db: *mut sqlite3,
+    err_msg: *mut *mut c_char,
+) -> Result<ResultCode, ResultCode> {
     let mut recorded_version: i32 = 0;
     // No site id table? First time this DB has been opened with this extension.
     let is_blank_slate = has_site_id_table(db)? == false;
@@ -135,7 +138,6 @@ fn maybe_update_db_inner(db: *mut sqlite3) -> Result<ResultCode, ResultCode> {
     } else {
         let stmt =
             db.prepare_v2("SELECT value FROM crsql_master WHERE key = 'crsqlite_version'")?;
-
         let step_result = stmt.step()?;
         if step_result == ResultCode::ROW {
             recorded_version = stmt.column_int(0)?;
@@ -145,6 +147,11 @@ fn maybe_update_db_inner(db: *mut sqlite3) -> Result<ResultCode, ResultCode> {
     if recorded_version < consts::CRSQLITE_VERSION && !is_blank_slate {
         // todo: return an error message to the user that their version is
         // not supported
+        let cstring = CString::new(format!("Opening a db created with cr-sqlite version {} is not supported. Upcoming release 0.15.0 is a breaking change.", recorded_version))?;
+        unsafe {
+            (*err_msg) = cstring.into_raw();
+            return Err(ResultCode::ERROR);
+        }
     }
 
     // if recorded_version < consts::CRSQLITE_VERSION_0_13_0 {

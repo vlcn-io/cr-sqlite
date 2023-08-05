@@ -19,7 +19,7 @@
 #define CLEAR_SYNC_BIT "SELECT crsql_internal_sync_bit(0)"
 
 #define TBL_SITE_ID "__crsql_site_id"
-#define TBL_DB_VERSION "__crsql_dbversion"
+#define TBL_DB_VERSION "__crsql_db_version"
 #define TBL_SCHEMA "crsql_master"
 #define UNION_ALL "UNION ALL"
 

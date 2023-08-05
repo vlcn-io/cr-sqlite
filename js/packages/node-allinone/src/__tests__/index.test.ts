@@ -92,8 +92,8 @@ test("failing example", () => {
   );
   work = db2.execO(`SELECT "list", "text" FROM "todo" WHERE "list" = 'work'`);
 
-  let db1version = db1.execA(`SELECT crsql_dbversion()`)[0][0];
-  let db2version = db2.execA(`SELECT crsql_dbversion()`)[0][0];
+  let db1version = db1.execA(`SELECT crsql_db_version()`)[0][0];
+  let db2version = db2.execA(`SELECT crsql_db_version()`)[0][0];
 
   db1.exec(`INSERT OR IGNORE INTO todo_list VALUES (?, ?)`, [
     "home",

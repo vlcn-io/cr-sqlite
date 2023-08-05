@@ -34,12 +34,12 @@ def test_sync():
     setup(db1)
     setup(db2)
 
-    db1vpre = db1.execute("SELECT crsql_dbversion()").fetchone()[0]
-    db2vpre = db2.execute("SELECT crsql_dbversion()").fetchone()[0]
+    db1vpre = db1.execute("SELECT crsql_db_version()").fetchone()[0]
+    db2vpre = db2.execute("SELECT crsql_db_version()").fetchone()[0]
 
     # sync_left_to_right(db1, db2)
 
-    dbv2post = db2.execute("SELECT crsql_dbversion()").fetchone()[0]
+    dbv2post = db2.execute("SELECT crsql_db_version()").fetchone()[0]
 
     pprint(db2vpre)
     pprint(dbv2post)

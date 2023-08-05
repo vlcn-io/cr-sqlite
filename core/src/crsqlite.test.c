@@ -474,7 +474,7 @@ static void testSelectChangesAfterChangingColumnName() {
 
 static sqlite3_int64 getDbVersion(sqlite3 *db) {
   sqlite3_stmt *pStmt = 0;
-  int rc = sqlite3_prepare_v2(db, "SELECT crsql_dbversion()", -1, &pStmt, 0);
+  int rc = sqlite3_prepare_v2(db, "SELECT crsql_db_version()", -1, &pStmt, 0);
   if (rc != SQLITE_OK) {
     return -1;
   }

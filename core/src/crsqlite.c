@@ -40,7 +40,7 @@ static void siteIdFunc(sqlite3_context *context, int argc,
 /**
  * Return the current version of the database.
  *
- * `select crsql_dbversion()`
+ * `select crsql_db_version()`
  */
 static void dbVersionFunc(sqlite3_context *context, int argc,
                           sqlite3_value **argv) {
@@ -395,7 +395,7 @@ __declspec(dllexport)
         siteIdFunc, 0, 0);
   }
   if (rc == SQLITE_OK) {
-    rc = sqlite3_create_function_v2(db, "crsql_dbversion", 0,
+    rc = sqlite3_create_function_v2(db, "crsql_db_version", 0,
                                     // dbversion can change on each invocation.
                                     SQLITE_UTF8 | SQLITE_INNOCUOUS, pExtData,
                                     dbVersionFunc, 0, 0, freeConnectionExtData);

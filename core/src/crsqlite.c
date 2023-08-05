@@ -25,7 +25,7 @@ unsigned char __rust_no_alloc_shim_is_unstable;
 /**
  * return the uuid which uniquely identifies this database.
  *
- * `select crsql_siteid()`
+ * `select crsql_site_id()`
  *
  * @param context
  * @param argc
@@ -389,7 +389,7 @@ __declspec(dllexport)
 
   if (rc == SQLITE_OK) {
     rc = sqlite3_create_function(
-        db, "crsql_siteid", 0,
+        db, "crsql_site_id", 0,
         // siteid never changes -- deterministic and innnocuous
         SQLITE_UTF8 | SQLITE_INNOCUOUS | SQLITE_DETERMINISTIC, pExtData,
         siteIdFunc, 0, 0);

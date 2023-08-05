@@ -43,7 +43,7 @@ int syncLeftToRight(sqlite3 *db1, sqlite3 *db2, sqlite3_int64 since) {
   sqlite3_stmt *pStmt = 0;
   int rc = SQLITE_OK;
 
-  rc += sqlite3_prepare_v2(db2, "SELECT crsql_siteid()", -1, &pStmt, 0);
+  rc += sqlite3_prepare_v2(db2, "SELECT crsql_site_id()", -1, &pStmt, 0);
   if (sqlite3_step(pStmt) != SQLITE_ROW) {
     sqlite3_finalize(pStmt);
     return SQLITE_ERROR;
@@ -138,7 +138,7 @@ static char *getQuotedSiteId(sqlite3 *db) {
   sqlite3_stmt *pStmt = 0;
   int rc = SQLITE_OK;
 
-  rc += sqlite3_prepare_v2(db, "SELECT quote(crsql_siteid())", -1, &pStmt, 0);
+  rc += sqlite3_prepare_v2(db, "SELECT quote(crsql_site_id())", -1, &pStmt, 0);
   assert(rc == SQLITE_OK);
   if (sqlite3_step(pStmt) != SQLITE_ROW) {
     sqlite3_finalize(pStmt);

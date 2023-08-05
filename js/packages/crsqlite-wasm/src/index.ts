@@ -28,7 +28,7 @@ export class SQLite3 {
       topLevelMutex
     ).then((db: any) => {
       const ret = new DB(this.base, db, filename || ":memory:");
-      return ret.execA("select quote(crsql_siteid());").then((siteid) => {
+      return ret.execA("select quote(crsql_site_id());").then((siteid) => {
         ret._setSiteid(siteid[0][0].replace(/'|X/g, ""));
         return ret;
       });

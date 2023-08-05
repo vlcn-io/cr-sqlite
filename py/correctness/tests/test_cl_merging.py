@@ -47,7 +47,7 @@ def sync_left_to_right(l, r, since):
 
 def sync_left_to_right_include_siteid(l, r, since):
     changes = l.execute(
-        "SELECT [table], pk, cid, val, col_version, db_version, coalesce(site_id, crsql_siteid()), cl FROM crsql_changes WHERE db_version > ?", (since,))
+        "SELECT [table], pk, cid, val, col_version, db_version, coalesce(site_id, crsql_site_id()), cl FROM crsql_changes WHERE db_version > ?", (since,))
     for change in changes:
         r.execute(
             "INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?, ?, ?)", change)
@@ -58,9 +58,9 @@ def sync_left_to_right_include_siteid(l, r, since):
 # - in order deliver
 # - delta state sync
 def sync_left_to_right_normal_delta_state(l, r, since):
-    r_siteid = r.execute("SELECT crsql_siteid()").fetchone()[0]
+    r_siteid = r.execute("SELECT crsql_site_id()").fetchone()[0]
     changes = l.execute(
-        "SELECT [table], pk, cid, val, col_version, db_version, coalesce(site_id, crsql_siteid()), cl FROM crsql_changes WHERE db_version > ? AND site_id IS NOT ?",
+        "SELECT [table], pk, cid, val, col_version, db_version, coalesce(site_id, crsql_site_id()), cl FROM crsql_changes WHERE db_version > ? AND site_id IS NOT ?",
         (since, r_siteid))
     largest_version = 0
     for change in changes:
@@ -72,9 +72,9 @@ def sync_left_to_right_normal_delta_state(l, r, since):
 
 
 def sync_left_to_right_single_vrsn(l, r, vrsn):
-    r_siteid = r.execute("SELECT crsql_siteid()").fetchone()[0]
+    r_siteid = r.execute("SELECT crsql_site_id()").fetchone()[0]
     changes = l.execute(
-        "SELECT [table], pk, cid, val, col_version, db_version, coalesce(site_id, crsql_siteid()), cl FROM crsql_changes WHERE db_version = ? AND site_id IS NOT ?",
+        "SELECT [table], pk, cid, val, col_version, db_version, coalesce(site_id, crsql_site_id()), cl FROM crsql_changes WHERE db_version = ? AND site_id IS NOT ?",
         (vrsn, r_siteid))
     for change in changes:
         r.execute(
@@ -291,7 +291,7 @@ def test_sync_with_siteid():
 
     sync_left_to_right_include_siteid(c1, c2, 0)
     changes = c2.execute("SELECT * FROM crsql_changes").fetchall()
-    c1_site_id = c1.execute("SELECT crsql_siteid()").fetchone()[0]
+    c1_site_id = c1.execute("SELECT crsql_site_id()").fetchone()[0]
     assert (changes == [('foo',
                          b'\x01\t\x01',
                          'b',

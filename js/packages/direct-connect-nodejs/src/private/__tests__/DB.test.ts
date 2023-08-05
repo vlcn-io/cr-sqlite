@@ -35,7 +35,7 @@ test("db bootstraps with correct dbid", () => {
 
   const dbidFromDb = db
     .__testsOnly()
-    .prepare("SELECT crsql_siteid()")
+    .prepare("SELECT crsql_site_id()")
     .pluck()
     .get();
   expect(Uint8Array.from(dbidFromDb as any)).toEqual(dbid);

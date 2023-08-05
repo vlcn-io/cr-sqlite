@@ -28,7 +28,7 @@ def test_insert_site_id():
     # site id is in the site id table for that given ordinal
     assert (
         a.execute(
-            "SELECT quote(site_id) FROM __crsql_siteid WHERE ordinal = ?", (ord,)
+            "SELECT quote(site_id) FROM __crsql_site_id WHERE ordinal = ?", (ord,)
         ).fetchone()[0] == "x'1dc8d6bb7f8941088327d9439a7927a4'".upper())
 
     # site id comes out of crsql_changes as expected

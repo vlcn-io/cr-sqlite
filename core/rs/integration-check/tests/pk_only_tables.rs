@@ -46,7 +46,7 @@ fn sync_left_to_right(
     r: &dyn Connection,
     since: sqlite::int64,
 ) -> Result<ResultCode, ResultCode> {
-    let siteid_stmt = r.prepare_v2("SELECT crsql_siteid()")?;
+    let siteid_stmt = r.prepare_v2("SELECT crsql_site_id()")?;
     siteid_stmt.step()?;
     let siteid = siteid_stmt.column_blob(0)?;
 
@@ -70,7 +70,7 @@ fn sync_left_to_right(
 //     for_db: Option<&dyn Connection>,
 // ) -> Result<ResultCode, ResultCode> {
 //     let stmt = if let Some(for_db) = for_db {
-//         let siteid_stmt = for_db.prepare_v2("SELECT crsql_siteid()")?;
+//         let siteid_stmt = for_db.prepare_v2("SELECT crsql_site_id()")?;
 //         siteid_stmt.step()?;
 //         let siteid = siteid_stmt.column_blob(0)?;
 //         let stmt = db.prepare_v2(

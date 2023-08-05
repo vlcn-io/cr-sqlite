@@ -28,7 +28,7 @@ crsql_ExtData *crsql_newExtData(sqlite3 *db, unsigned char *siteIdBuffer) {
   pExtData->pSetSiteIdOrdinalStmt = 0;
   rc += sqlite3_prepare_v3(
       db,
-      "INSERT INTO __crsql_siteid (site_id) VALUES (?) ON CONFLICT DO "
+      "INSERT INTO __crsql_site_id (site_id) VALUES (?) ON CONFLICT DO "
       "UPDATE SET ordinal = ordinal RETURNING ordinal",
       -1, SQLITE_PREPARE_PERSISTENT, &(pExtData->pSetSiteIdOrdinalStmt), 0);
 

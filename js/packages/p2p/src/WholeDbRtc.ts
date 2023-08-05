@@ -250,7 +250,9 @@ export default async function wholeDbRtc(
   db: DBAsync,
   peerServer?: PeerOptions
 ): Promise<WholeDbRtcPublic> {
-  const siteId = (await db.execA<[Uint8Array]>("SELECT crsql_siteid();"))[0][0];
+  const siteId = (
+    await db.execA<[Uint8Array]>("SELECT crsql_site_id();")
+  )[0][0];
   const internal = new WholeDbRtc(siteId, db, peerServer);
   await internal._init();
   return new WholeDbRtcPublic(internal);

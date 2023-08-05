@@ -15,7 +15,7 @@ struct crsql_ExtData {
   int pragmaDataVersion;
 
   // this gets set at the start of each transaction on the first invocation
-  // to crsql_nextdbversion()
+  // to crsql_next_db_version()
   // and re-set on transaction commit or rollback.
   sqlite3_int64 dbVersion;
   int pragmaSchemaVersion;

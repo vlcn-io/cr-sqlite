@@ -91,7 +91,7 @@ fn create_clock_rows_from_stmt(
         dbversion_getter = if is_commit_alter {
             "crsql_db_version()"
         } else {
-            "crsql_nextdbversion()"
+            "crsql_next_db_version()"
         }
     );
     let write_stmt = db.prepare_v2(&sql)?;

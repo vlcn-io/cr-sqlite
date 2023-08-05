@@ -60,7 +60,7 @@ static void dbVersionFunc(sqlite3_context *context, int argc,
 /**
  * Return the next version of the database for use in inserts/updates/deletes
  *
- * `select crsql_nextdbversion()`
+ * `select crsql_next_db_version()`
  *
  * Nit: this should be same as `crsql_db_version`
  * If you change this behavior you need to change trigger behaviors
@@ -401,7 +401,7 @@ __declspec(dllexport)
                                     dbVersionFunc, 0, 0, freeConnectionExtData);
   }
   if (rc == SQLITE_OK) {
-    rc = sqlite3_create_function(db, "crsql_nextdbversion", 0,
+    rc = sqlite3_create_function(db, "crsql_next_db_version", 0,
                                  // dbversion can change on each invocation.
                                  SQLITE_UTF8 | SQLITE_INNOCUOUS, pExtData,
                                  nextDbVersionFunc, 0, 0);

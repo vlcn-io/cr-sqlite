@@ -4,6 +4,7 @@ use crate::alloc::string::ToString;
 use crate::{c::crsql_TableInfo, consts};
 use alloc::format;
 use alloc::vec;
+use consts::TBL_DB_VERSIONS;
 use core::slice;
 use sqlite::{sqlite3, Connection, Destructor, ResultCode};
 use sqlite_nostd as sqlite;
@@ -110,8 +111,13 @@ pub extern "C" fn crsql_create_dbversions_if_not_exists(db: *mut sqlite3) -> c_i
     }
 
     if let Ok(_) = db.exec_safe(&format!(
-        "CREATE TABLE IF NOT EXISTS \"{}\" (\"db_version\" INTEGER PRIMARY KEY, \"count\" INTEGER NOT NULL DEFAULT 0);",
-        consts::TBL_DB_VERSIONS
+        "CREATE TABLE IF NOT EXISTS {TBL_DB_VERSIONS} (\"db_version\" INTEGER PRIMARY KEY, \"count\" INTEGER NOT NULL DEFAULT 0);
+        CREATE TRIGGER IF NOT EXISTS {TBL_DB_VERSIONS}_utrig
+            AFTER UPDATE ON {TBL_DB_VERSIONS} WHEN new.count = 0
+            BEGIN
+                DELETE FROM {TBL_DB_VERSIONS} WHERE db_version = new.db_version;
+            END;
+        "
     )) {
         let result = db.exec_safe("RELEASE crsql_create_dbversions_table;");
         match result {

@@ -262,7 +262,6 @@ fn create_update_trigger(
 
       -- decrement the counter for the old db version
       UPDATE {TBL_DB_VERSIONS} SET count = count - 1 WHERE db_version = old.__crsql_db_version;
-      DELETE FROM {TBL_DB_VERSIONS} WHERE db_version = old.__crsql_db_version AND count = 0;
     END;",
         table_name = crate::util::escape_ident(table_name),
     ))
@@ -396,7 +395,6 @@ fn create_delete_trigger(
     BEGIN
       -- decrement the counter for the old db version
       UPDATE {TBL_DB_VERSIONS} SET count = count - 1 WHERE db_version = old.__crsql_db_version;
-      DELETE FROM {TBL_DB_VERSIONS} WHERE db_version = old.__crsql_db_version AND count = 0;
     END;",
         table_name = crate::util::escape_ident(table_name),
     ))

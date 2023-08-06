@@ -16,7 +16,6 @@ int crsql_close(sqlite3 *db) {
 void crsqlUtilTestSuite();
 void crsqlTableInfoTestSuite();
 void crsqlTestSuite();
-void crsqlTriggersTestSuite();
 void crsqlChangesVtabReadTestSuite();
 void crsqlChangesVtabTestSuite();
 void crsqlChangesVtabCommonTestSuite();
@@ -35,7 +34,6 @@ int main(int argc, char *argv[]) {
 
   SUITE("util") crsqlUtilTestSuite();
   SUITE("tblinfo") crsqlTableInfoTestSuite();
-  SUITE("triggers") crsqlTriggersTestSuite();
   SUITE("vtab") crsqlChangesVtabTestSuite();
   SUITE("vtabread") crsqlChangesVtabReadTestSuite();
   SUITE("extdata") crsqlExtDataTestSuite();

@@ -374,8 +374,7 @@ __declspec(dllexport)
   }
 
   if (rc == SQLITE_OK) {
-    rc = crsql_create_schema_table_if_not_exists(db);
-    rc += crsql_maybe_update_db(db, pzErrMsg);
+    rc = crsql_maybe_update_db(db, pzErrMsg);
   }
 
   unsigned char *siteIdBuffer = sqlite3_malloc(SITE_ID_LEN * sizeof(char *));

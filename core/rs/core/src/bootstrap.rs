@@ -52,10 +52,10 @@ pub extern "C" fn crsql_init_peer_tracking_table(db: *mut sqlite3) -> c_int {
     }
 }
 
-fn has_site_id_table(db: *mut sqlite3) -> Result<bool, ResultCode> {
+fn has_table(db: *mut sqlite3, table_name: &str) -> Result<bool, ResultCode> {
     let stmt =
         db.prepare_v2("SELECT 1 FROM sqlite_master WHERE type = 'table' AND tbl_name = ?")?;
-    stmt.bind_text(1, consts::TBL_SITE_ID, Destructor::STATIC)?;
+    stmt.bind_text(1, table_name, Destructor::STATIC)?;
     let tbl_exists_result = stmt.step()?;
     Ok(tbl_exists_result == ResultCode::ROW)
 }
@@ -66,7 +66,7 @@ fn has_site_id_table(db: *mut sqlite3) -> Result<bool, ResultCode> {
  * and saved to the site id table.
  */
 fn init_site_id(db: *mut sqlite3) -> Result<[u8; 16], ResultCode> {
-    if !has_site_id_table(db)? {
+    if !has_table(db, consts::TBL_SITE_ID)? {
         return create_site_id_and_site_id_table(db);
     }
 
@@ -86,50 +86,49 @@ fn init_site_id(db: *mut sqlite3) -> Result<[u8; 16], ResultCode> {
     Ok(ret)
 }
 
-#[no_mangle]
-pub extern "C" fn crsql_create_schema_table_if_not_exists(db: *mut sqlite3) -> c_int {
-    let r = db.exec_safe("SAVEPOINT crsql_create_schema_table;");
-    if let Err(code) = r {
-        return code as c_int;
-    }
+fn crsql_create_schema_table_if_not_exists(db: *mut sqlite3) -> Result<ResultCode, ResultCode> {
+    db.exec_safe("SAVEPOINT crsql_create_schema_table;")?;
 
     if let Ok(_) = db.exec_safe(&format!(
         "CREATE TABLE IF NOT EXISTS \"{}\" (\"key\" TEXT PRIMARY KEY, \"value\" ANY);",
         consts::TBL_SCHEMA
     )) {
-        let result = db.exec_safe("RELEASE crsql_create_schema_table;");
-        match result {
-            Ok(_) => return ResultCode::OK as c_int,
-            Err(code) => return code as c_int,
-        }
+        db.exec_safe("RELEASE crsql_create_schema_table;")
     } else {
         let _ = db.exec_safe("ROLLBACK");
-        return ResultCode::ERROR as c_int;
+        Err(ResultCode::ERROR)
     }
 }
 
 #[no_mangle]
 pub extern "C" fn crsql_maybe_update_db(db: *mut sqlite3, err_msg: *mut *mut c_char) -> c_int {
-    let r = db.exec_safe("SAVEPOINT crsql_maybe_update_db;");
-    if let Err(code) = r {
-        return code as c_int;
-    }
-    if let Ok(_) = maybe_update_db_inner(db, err_msg) {
-        let _ = db.exec_safe("RELEASE crsql_maybe_update_db;");
-        return ResultCode::OK as c_int;
+    // No schema table? First time this DB has been opened with this extension.
+    if let Ok(has_schema_table) = has_table(db, consts::TBL_SCHEMA) {
+        if let Err(code) = crsql_create_schema_table_if_not_exists(db) {
+            return code as c_int;
+        }
+        let r = db.exec_safe("SAVEPOINT crsql_maybe_update_db;");
+        if let Err(code) = r {
+            return code as c_int;
+        }
+        if let Ok(_) = maybe_update_db_inner(db, has_schema_table == false, err_msg) {
+            let _ = db.exec_safe("RELEASE crsql_maybe_update_db;");
+            return ResultCode::OK as c_int;
+        } else {
+            let _ = db.exec_safe("ROLLBACK;");
+            return ResultCode::ERROR as c_int;
+        }
     } else {
-        let _ = db.exec_safe("ROLLBACK;");
         return ResultCode::ERROR as c_int;
     }
 }
 
 fn maybe_update_db_inner(
     db: *mut sqlite3,
+    is_blank_slate: bool,
     err_msg: *mut *mut c_char,
 ) -> Result<ResultCode, ResultCode> {
     let mut recorded_version: i32 = 0;
-    // No site id table? First time this DB has been opened with this extension.
-    let is_blank_slate = has_site_id_table(db)? == false;
 
     // Completely new DBs need no migrations.
     // We can set them to the current version.

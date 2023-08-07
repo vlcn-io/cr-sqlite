@@ -1,9 +1,10 @@
-export type Msg = ChangesAvailable | ChangesRequested | Changes;
+export type Msg = AnnouncePresence | Changes | RejectChanges;
 
 export const tags = {
-  ChangesAvailable: 1,
-  ChangesRequested: 2,
-  Changes: 3,
+  AnnouncePresence: 1,
+  Changes: 2,
+  RejectChanges: 3,
+  StartStreaming: 4,
 } as const;
 
 export type Tags = typeof tags;
@@ -29,36 +30,30 @@ export type Change = readonly [
   CausalLength
 ];
 
-export type ChangesAvailable = Readonly<{
-  _tag: Tags["ChangesAvailable"];
-  // The site that has the changes
-  siteId: Uint8Array;
-  // The latest DB version at that site
-  until: [bigint, number];
-  schemaVersion: bigint;
-}>;
-
-export type ChangesRequested = Readonly<{
-  _tag: Tags["ChangesRequested"];
-  // Who is requesting changes
-  requestor: Uint8Array;
-  // From which site are they requesting them
-  siteId: Uint8Array;
-  // Starting at which db version?
-  since: [bigint, number];
-  schemaVersion: bigint;
+export type AnnouncePresence = Readonly<{
+  _tag: Tags["AnnouncePresence"];
+  sender: Uint8Array;
+  lastSeens: [Uint8Array, [bigint, number]][];
 }>;
 
 export type Changes = Readonly<{
   _tag: Tags["Changes"];
   sender: Uint8Array;
-  receiver: Uint8Array;
   since: [bigint, number];
   until: [bigint, number];
   changes: Change[];
   schemaVersion: bigint;
 }>;
 
-export interface Transport {
-  announcePresence(siteId: Uint8Array): PromiseLike<[bigint, number]>;
-}
+export type RejectChanges = Readonly<{
+  _tag: Tags["RejectChanges"];
+  whose: Uint8Array;
+  since: [bigint, number];
+}>;
+
+export type StartStreaming = Readonly<{
+  _tag: Tags["StartStreaming"];
+  since: [bigint, number];
+  excludeSites: Uint8Array[];
+  localOnly: boolean;
+}>;

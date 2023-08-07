@@ -1,0 +1,26 @@
+{
+  "name": "@vlcn.io/partykit-server",
+  "type": "module",
+  "version": "0.0.1",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "module": "dist/index.js",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc --build",
+    "watch": "tsc --build --watch",
+    "test": "echo no tests here yet",
+    "rmtdata": "rm dbs-test/*",
+    "deep-clean": "rm -rf ./dist || true && rm tsconfig.tsbuildinfo || true"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:vlcn-io/cr-sqlite.git",
+    "directory": "https://github.com/vlcn-io/cr-sqlite/tree/main/js/packages/partykit-server"
+  },
+  "dependencies": {
+    "partykit": "0.0.0-8981945"
+  }
+}

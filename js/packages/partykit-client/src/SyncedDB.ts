@@ -1,7 +1,24 @@
 import { Transport } from "./transport/Transport.js";
 
 export default class SyncedDB {
-  start() {}
+  #transport;
+  #inboundStream;
+  #outboundStream;
+
+  constructor(transportProvider: () => Transport) {
+    // wire SyncedDB into Transport
+    // Announce our prsence
+    this.#transport = transportProvider();
+    this.#inboundStream = new InboundStream();
+    this.#outboundStream = new OutboundStream();
+    this.#transport.onChangesReceived = this.#inboundStream.onChangesReceived;
+    this.#transport.onStartStreaming = this.#outboundStream.onStartStreaming;
+    this.#transport.onResetStream = this.#outboundStream.onResetStream;
+  }
+
+  start() {
+    this.#transport.announcePresence();
+  }
 
   stop() {
     return true;
@@ -10,7 +27,7 @@ export default class SyncedDB {
 
 export async function createSyncedDB(
   dbName: string,
-  transport: Promise<Transport>
+  transportProvider: () => Transport
 ): Promise<SyncedDB> {
-  return new SyncedDB();
+  return new SyncedDB(transportProvider);
 }

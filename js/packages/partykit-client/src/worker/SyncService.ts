@@ -1,0 +1,47 @@
+import SyncedDB, { createSyncedDB } from "../SyncedDB.js";
+import config from "../config.js";
+import { StartSyncMsg, StopSyncMsg } from "./workerMsgTypes.js";
+
+/**
+ * There should be one instance of this class per application.
+ * Create this instance outside of the React lifecylce (if you're using React).
+ *
+ * Do we need this class?
+ */
+export default class SyncService {
+  /**
+   * Map from dbid to SyncedDB
+   */
+  private readonly dbs = new Map<string, Promise<SyncedDB>>();
+
+  async startSync(msg: StartSyncMsg) {
+    const entry = this.dbs.get(msg.dbid);
+    if (!entry) {
+      // TODO: eagerly cache the promise instead so we can't end up with a race and have the same
+      // db created twice.
+      const creator = createSyncedDB(
+        msg.dbid,
+        config.transportProvider(msg.dbid, msg.partyOpts)
+      );
+      this.dbs.set(msg.dbid, creator);
+      const db = await creator;
+      db.start();
+    } else {
+      console.warn(`Already syncing db: ${msg.dbid}`);
+      return;
+    }
+  }
+
+  async stopSync(msg: StopSyncMsg) {
+    // decrement reference count for the given db
+    // if reference count is 0, stop sync for that db
+    // TODO: can we understand when message ports close due to browser tab closing?
+    // If we send a msg on a closed channel do we just get an error?
+    const handle = this.dbs.get(msg.dbid);
+    if (handle) {
+      this.dbs.delete(msg.dbid);
+      const db = await handle;
+      db.stop();
+    }
+  }
+}

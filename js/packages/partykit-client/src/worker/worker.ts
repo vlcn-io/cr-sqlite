@@ -1,5 +1,5 @@
 import { Msg } from "./workerMsgTypes.js";
-import SyncService from "../SyncService.js";
+import SyncService from "./SyncService.js";
 
 const svc = new SyncService();
 

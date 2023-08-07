@@ -34,7 +34,7 @@ export type ChangesAvailable = Readonly<{
   // The site that has the changes
   siteId: Uint8Array;
   // The latest DB version at that site
-  until: [bigint, bigint];
+  until: [bigint, number];
   schemaVersion: bigint;
 }>;
 
@@ -45,7 +45,7 @@ export type ChangesRequested = Readonly<{
   // From which site are they requesting them
   siteId: Uint8Array;
   // Starting at which db version?
-  since: [bigint, bigint];
+  since: [bigint, number];
   schemaVersion: bigint;
 }>;
 
@@ -53,8 +53,12 @@ export type Changes = Readonly<{
   _tag: Tags["Changes"];
   sender: Uint8Array;
   receiver: Uint8Array;
-  since: [bigint, bigint];
-  until: [bigint, bigint];
+  since: [bigint, number];
+  until: [bigint, number];
   changes: Change[];
   schemaVersion: bigint;
 }>;
+
+export interface Transport {
+  announcePresence(siteId: Uint8Array): PromiseLike<[bigint, number]>;
+}

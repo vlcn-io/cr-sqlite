@@ -19,13 +19,11 @@ export default class SyncService {
     if (!entry) {
       // TODO: eagerly cache the promise instead so we can't end up with a race and have the same
       // db created twice.
-      const creator = createSyncedDB(
-        msg.dbid,
+      const creator = createSyncedDB(msg.dbid, () =>
         config.transportProvider(msg.dbid, msg.partyOpts)
       );
       this.dbs.set(msg.dbid, creator);
-      const db = await creator;
-      db.start();
+      await creator;
     } else {
       console.warn(`Already syncing db: ${msg.dbid}`);
       return;

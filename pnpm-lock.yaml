@@ -281,6 +281,9 @@ importers:
 
   js/packages/partykit-client:
     dependencies:
+      '@vlcn.io/partykit-common':
+        specifier: workspace:*
+        version: link:../partykit-common
       partysocket:
         specifier: 0.0.0-8981945
         version: 0.0.0-8981945

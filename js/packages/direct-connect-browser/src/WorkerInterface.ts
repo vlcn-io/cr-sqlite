@@ -12,8 +12,7 @@ type AsUrls<T> = {
 };
 export default class WorkerInterface {
   private readonly worker;
-  private readonly syncs = new Map<DBID, ReturnType<typeof tblrx>>();
-  private disposables = new Map<string, () => void>();
+  private readonly syncs = new Set<DBID>();
   private readonly workerPort: {
     postMessage: (msg: any) => void;
     close: () => void;
@@ -78,16 +77,15 @@ export default class WorkerInterface {
     wasmUri: string | undefined,
     dbid: DBID,
     endpoints: AsUrls<Endpoints>,
-    rx: ReturnType<typeof tblrx>,
     transportContentType:
       | "application/json"
       | "application/octet-stream" = "application/json"
   ) {
-    const existing = this.syncs.get(dbid);
+    const existing = this.syncs.has(dbid);
     if (existing) {
       throw new Error(`Already syncing ${dbid}`);
     }
-    this.syncs.set(dbid, rx);
+    this.syncs.add(dbid);
     const msg = {
       _tag: "StartSync",
       wasmUri,
@@ -110,9 +108,7 @@ export default class WorkerInterface {
       dbid,
     };
     this.workerPort.postMessage(msg);
-    this.disposables.get(dbid)?.();
     this.syncs.delete(dbid);
-    this.disposables.delete(dbid);
   }
 
   stopAll() {

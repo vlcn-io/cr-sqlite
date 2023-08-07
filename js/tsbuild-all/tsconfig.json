@@ -16,6 +16,9 @@
     { "path": "../packages/rx-tbl" },
     { "path": "../packages/xplat-api" },
     { "path": "../packages/xplat-tests" },
-    { "path": "../packages/crsqlite-wasm" }
+    { "path": "../packages/crsqlite-wasm" },
+    { "path": "../packages/partykit-server" },
+    { "path": "../packages/partykit-common" },
+    { "path": "../packages/partykit-client" }
   ]
 }

@@ -26,10 +26,7 @@ export default {
     );
   },
 
-  transportProvider: <T>(
-    dbname: string,
-    transportOpts: T
-  ): Promise<Transport> => {
+  transportProvider: <T>(dbname: string, transportOpts: T): Transport => {
     throw new Error(
       "You must configure a transport provider. `config.transportProvider = yourProvider;`"
     );

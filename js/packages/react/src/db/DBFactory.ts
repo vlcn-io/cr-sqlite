@@ -53,7 +53,7 @@ const dbFactory = {
       await db.automigrateTo(schema.name, schema.content);
       const rx = tblrx(db);
       const syncWorker = new WorkerInterface(endpoints.worker);
-      syncWorker.startSync(endpoints.wasm, dbid as any, endpoints, rx);
+      syncWorker.startSync(endpoints.wasm, dbid as any, endpoints);
       return {
         db,
         rx,

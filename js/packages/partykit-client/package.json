@@ -21,6 +21,7 @@
     "directory": "https://github.com/vlcn-io/cr-sqlite/tree/main/js/packages/partykit-client"
   },
   "dependencies": {
-    "partysocket": "0.0.0-8981945"
+    "partysocket": "0.0.0-8981945",
+    "@vlcn.io/partykit-common": "workspace:*"
   }
 }

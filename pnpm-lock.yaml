@@ -288,7 +288,11 @@ importers:
         specifier: 0.0.0-8981945
         version: 0.0.0-8981945
 
-  js/packages/partykit-common: {}
+  js/packages/partykit-common:
+    dependencies:
+      lib0:
+        specifier: ^0.2.73
+        version: 0.2.73
 
   js/packages/partykit-demo:
     dependencies:

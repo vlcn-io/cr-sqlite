@@ -1,6 +1,11 @@
 import * as encoding from "lib0/encoding";
 import { Change, Msg, tags } from "./msgTypes.js";
 
+// TODO: we can compress most of this by:
+// 1. adding varint encdoing support for bigints
+// 2. creating a lookup table for `siteId`, `tblName`, `colName`
+// But we should just go ahead and finally implement sync in native code.
+// I think we finally know the right design after this third implementation.
 export function encode(msg: Msg): Uint8Array {
   const encoder = encoding.createEncoder();
   encoding.writeUint8(encoder, msg._tag);
@@ -50,7 +55,7 @@ export const STRING = 3;
 export const BOOL = 4;
 export const BLOB = 5;
 
-function writeChanges(encoder: encoding.Encoder, changes: Change[]) {
+function writeChanges(encoder: encoding.Encoder, changes: readonly Change[]) {
   encoding.writeVarUint(encoder, changes.length);
   for (const change of changes) {
     encoding.writeVarString(encoder, change[0]);

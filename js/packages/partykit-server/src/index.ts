@@ -7,3 +7,11 @@ export default {
     });
   },
 } satisfies PartyKitServer;
+
+/**
+ * Create with persistence.
+ * - Transport...
+ * - DB Provider...
+ *
+ * Similar to client. Can we make it same as client?
+ */

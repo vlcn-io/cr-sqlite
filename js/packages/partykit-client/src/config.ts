@@ -2,15 +2,20 @@ import { Change } from "@vlcn.io/partykit-common";
 import { Transport } from "./transport/Transport";
 
 export interface DB {
+  readonly siteid: Uint8Array;
   pullChangeset(
     since: [bigint, number],
     excludeSites: Uint8Array[],
     localOnly: boolean
   ): PromiseLike<readonly Change[]>;
-  applyChangeset(changes: readonly Change[]): PromiseLike<void>;
+  applyChangesetAndSetLastSeen(
+    changes: readonly Change[],
+    setId: Uint8Array,
+    end: [bigint, number]
+  ): PromiseLike<void>;
 
   getLastSeen(siteId: Uint8Array): PromiseLike<[bigint, number]>;
-  setLastSeen(siteId: Uint8Array, end: [bigint, number]): PromiseLike<void>;
+  getLastSeens(): PromiseLike<[Uint8Array, [bigint, number]][]>;
 
   /**
    * Allow the sync layer to observe when the database changes as a result

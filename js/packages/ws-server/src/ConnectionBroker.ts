@@ -20,8 +20,8 @@ export default class ConnectionBroker {
     this.#ws = ws;
     this.#room = room;
 
-    this.#ws.on("message", (evt) => {
-      const msg = decode(new Uint8Array(evt as any));
+    this.#ws.on("message", (data) => {
+      const msg = decode(new Uint8Array(data as any));
       this.#handleMessage(msg);
     });
     this.#ws.on("close", () => {

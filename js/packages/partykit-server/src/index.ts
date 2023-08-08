@@ -1,8 +1,10 @@
 import type { PartyKitServer } from "partykit/server";
 import ConnectionBroker from "./ConnectionBroker.js";
 import { decode } from "@vlcn.io/partykit-common";
+import DBCache from "./DBCache.js";
 
-const connectionBroker = new ConnectionBroker();
+const dbCache = new DBCache();
+const connectionBroker = new ConnectionBroker(dbCache);
 export default {
   onConnect(ws, room, _ctx) {
     ws.addEventListener("message", (evt) => {
@@ -21,12 +23,3 @@ export default {
     connectionBroker.close(ws);
   },
 } satisfies PartyKitServer;
-
-/**
- * Create with persistence.
- * - Transport...
- * - DB Provider...
- *
- * Similar to client. Can we make it same as client?
- */
-function handleMessage() {}

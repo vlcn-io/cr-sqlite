@@ -321,6 +321,9 @@ importers:
       '@vlcn.io/partykit-common':
         specifier: workspace:*
         version: link:../partykit-common
+      better-sqlite3:
+        specifier: ^8.3.0
+        version: 8.3.0
       partykit:
         specifier: 0.0.0-8981945
         version: 0.0.0-8981945

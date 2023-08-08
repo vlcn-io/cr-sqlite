@@ -1,4 +1,9 @@
-import { Changes, bytesToHex, tags } from "@vlcn.io/partykit-common";
+import {
+  Changes,
+  bytesToHex,
+  tags,
+  greaterThanOrEqual,
+} from "@vlcn.io/partykit-common";
 import { Transport } from "../transport/Transport";
 import { DB } from "../config";
 
@@ -7,15 +12,15 @@ import { DB } from "../config";
  * database from one or more remote databases.
  */
 export default class InboundStream {
-  #transport;
-  #db;
+  readonly #transport;
+  readonly #db;
   /**
    * Used to ensure changes are applied in-order from all the peers
    * that are upstream of us.
    * While we do support out-of-order delivery it is more complicated
    * to track than just doing in-order delivery.
    */
-  #lastSeens: Map<string, [bigint, number]> = new Map();
+  readonly #lastSeens: Map<string, [bigint, number]> = new Map();
 
   constructor(db: DB, transport: Transport) {
     this.#transport = transport;
@@ -32,7 +37,7 @@ export default class InboundStream {
     const senderHex = bytesToHex(msg.sender);
     const lastSeen = this.#lastSeens.get(senderHex) || [0n, 0];
 
-    if (!acceptable(lastSeen, msg.since)) {
+    if (!greaterThanOrEqual(lastSeen, msg.since)) {
       await this.#transport.rejectChanges({
         _tag: tags.RejectChanges,
         whose: msg.sender,
@@ -49,18 +54,5 @@ export default class InboundStream {
       lastChange[5],
       0,
     ]);
-  }
-}
-
-export function acceptable(
-  lastSeen: [bigint, number],
-  msgSince: [bigint, number]
-) {
-  if (msgSince[0] < lastSeen[0]) {
-    return true;
-  } else if (msgSince[0] == lastSeen[0]) {
-    return msgSince[1] <= lastSeen[1];
-  } else {
-    return false;
   }
 }

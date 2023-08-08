@@ -32,6 +32,7 @@ export type AnnouncePresence = Readonly<{
   _tag: Tags["AnnouncePresence"];
   sender: Uint8Array;
   lastSeens: [Uint8Array, [bigint, number]][];
+  schemaName: string;
   schemaVersion: bigint;
 }>;
 

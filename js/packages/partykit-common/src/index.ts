@@ -19,3 +19,16 @@ export function bytesToHex(bytes: Uint8Array) {
   }
   return hex.join("");
 }
+
+export function greaterThanOrEqual(
+  lastSeen: [bigint, number],
+  msgSince: [bigint, number]
+) {
+  if (msgSince[0] < lastSeen[0]) {
+    return true;
+  } else if (msgSince[0] == lastSeen[0]) {
+    return msgSince[1] <= lastSeen[1];
+  } else {
+    return false;
+  }
+}

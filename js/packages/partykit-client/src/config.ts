@@ -14,8 +14,8 @@ export interface DB {
     end: [bigint, number]
   ): PromiseLike<void>;
 
-  getLastSeen(siteId: Uint8Array): PromiseLike<[bigint, number]>;
   getLastSeens(): PromiseLike<[Uint8Array, [bigint, number]][]>;
+  getSchemaNameAndVersion(): PromiseLike<[string, bigint]>;
 
   /**
    * Allow the sync layer to observe when the database changes as a result

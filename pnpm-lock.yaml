@@ -318,6 +318,15 @@ importers:
 
   js/packages/partykit-server:
     dependencies:
+      '@types/better-sqlite3':
+        specifier: ^7.6.4
+        version: 7.6.4
+      '@types/throttle-debounce':
+        specifier: ^5.0.0
+        version: 5.0.0
+      '@vlcn.io/crsqlite':
+        specifier: workspace:^
+        version: link:../../../core
       '@vlcn.io/partykit-common':
         specifier: workspace:*
         version: link:../partykit-common
@@ -327,6 +336,9 @@ importers:
       partykit:
         specifier: 0.0.0-8981945
         version: 0.0.0-8981945
+      throttle-debounce:
+        specifier: ^5.0.0
+        version: 5.0.0
       winston:
         specifier: ^3.10.0
         version: 3.10.0
@@ -2010,7 +2022,6 @@ packages:
     resolution: {integrity: sha512-dzrRZCYPXIXfSR1/surNbJ/grU3scTaygS0OMzjlGf71i9sc2fGyHPXXiXmEvNIoE0cGwsanEFMVJxPXmco9Eg==}
     dependencies:
       '@types/node': 18.16.1
-    dev: true
 
   /@types/body-parser@1.19.2:
     resolution: {integrity: sha512-ALYone6pm6QmwZoAgeyNksccT9Q4AWZQ6PvfwR37GT6r6FWUPguq6sUmNGSMV2Wr761oQoBxwGGa6DR5o1DC9g==}
@@ -2261,7 +2272,6 @@ packages:
 
   /@types/throttle-debounce@5.0.0:
     resolution: {integrity: sha512-Pb7k35iCGFcGPECoNE4DYp3Oyf2xcTd3FbFQxXUI9hEYKUl6YX+KLf7HrBmgVcD05nl50LIH6i+80js4iYmWbw==}
-    dev: true
 
   /@types/tinycolor2@1.4.3:
     resolution: {integrity: sha512-Kf1w9NE5HEgGxCRyIcRXR/ZYtDv0V8FVPtYHwLxl0O+maGX0erE77pQlD0gpP+/KByMZ87mOA79SjifhSB3PjQ==}

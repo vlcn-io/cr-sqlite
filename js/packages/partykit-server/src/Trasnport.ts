@@ -6,7 +6,10 @@ import {
 import type { PartyKitConnection } from "partykit/server";
 
 export default class Transport {
-  constructor(ws: PartyKitConnection) {}
+  readonly #ws;
+  constructor(ws: PartyKitConnection) {
+    this.#ws = ws;
+  }
 
   sendChanges(msg: Changes) {}
   rejectChanges(msg: RejectChanges) {}

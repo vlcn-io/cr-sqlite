@@ -1,4 +1,5 @@
-import DB from "./DB";
+import DB from "./DB.js";
+import { Config } from "./config.js";
 
 /**
  * Caches connections to active databases so we do not need to re-create the connection
@@ -8,11 +9,16 @@ import DB from "./DB";
  */
 export default class DBCache {
   readonly #dbs = new Map<string, [number, DB]>();
+  readonly #config;
+
+  constructor(config: Config) {
+    this.#config = config;
+  }
 
   getAndRef(roomId: string, schemaName: string, schemaVersion: bigint) {
     let entry = this.#dbs.get(roomId);
     if (entry == null) {
-      entry = [1, new DB(roomId, schemaName, schemaVersion)];
+      entry = [1, new DB(this.#config, roomId, schemaName, schemaVersion)];
     } else {
       const db = entry[1];
       if (db.schemasMatch(schemaName, schemaVersion)) {

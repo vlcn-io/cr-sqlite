@@ -1,4 +1,4 @@
-import { Msg, tags } from "@vlcn.io/ws-common";
+import { Msg, decode, tags } from "@vlcn.io/ws-common";
 import SyncConnection from "./SyncConnection.js";
 import DBCache from "./DBCache.js";
 import { WebSocket } from "ws";
@@ -19,9 +19,23 @@ export default class ConnectionBroker {
     this.#dbCache = dbCache;
     this.#ws = ws;
     this.#room = room;
+
+    this.#ws.on("message", (evt) => {
+      const msg = decode(new Uint8Array(evt as any));
+      this.#handleMessage(msg);
+    });
+    this.#ws.on("close", () => {
+      this.close();
+    });
+    this.#ws.on("error", () => {
+      this.close();
+    });
+    // TODO: impl ping & pong heartbeat to re-establish connections on close
+    this.#ws.on("pong", () => {});
+    this.#ws.on("ping", () => {});
   }
 
-  handleMessage(msg: Msg) {
+  #handleMessage(msg: Msg) {
     const tag = msg._tag;
     switch (tag) {
       case tags.AnnouncePresence: {
@@ -66,7 +80,7 @@ export default class ConnectionBroker {
     }
   }
 
-  close(ws: WebSocket) {
+  close() {
     this.#syncConnection?.close();
   }
 }

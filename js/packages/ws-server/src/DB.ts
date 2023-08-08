@@ -1,5 +1,5 @@
 import Database from "better-sqlite3";
-import { config } from "./config";
+import { Config } from "./config.js";
 import path from "node:path";
 import fs from "node:fs";
 import { extensionPath } from "@vlcn.io/crsqlite";
@@ -25,13 +25,14 @@ export default class DB {
   readonly #applyChangesAndSetLastSeenTx;
 
   constructor(
+    config: Config,
     name: string,
     requestedSchema: string,
     requestedSchemaVersion: bigint
   ) {
     // TODO: different rooms may need different DB schemas.
     // We should support some way of defining this.
-    const db = new Database(getDbPath(name));
+    const db = new Database(getDbPath(name, config));
     this.#db = db;
     db.pragma("journal_mode = WAL");
     db.pragma("synchronous = NORMAL");
@@ -44,6 +45,7 @@ export default class DB {
 
     if (schemaName == null) {
       [this.#schemaName, this.#schemaVersion] = this.#applySchema(
+        config,
         requestedSchema,
         requestedSchemaVersion
       );
@@ -66,6 +68,7 @@ export default class DB {
 
       if (schemaVersion != requestedSchemaVersion) {
         schemaVersion = this.#tryUpdatingSchema(
+          config,
           schemaName,
           requestedSchemaVersion
         );
@@ -198,8 +201,12 @@ export default class DB {
   }
 
   // No schema exists on the db. Straight apply it.
-  #applySchema(name: string, version: bigint): [string, bigint] {
-    const content = fs.readFileSync(getSchemaPath(name), "utf-8");
+  #applySchema(
+    config: Config,
+    name: string,
+    version: bigint
+  ): [string, bigint] {
+    const content = fs.readFileSync(getSchemaPath(name, config), "utf-8");
     const residentVersion = cryb64(content);
     if (residentVersion != version) {
       throw new Error(
@@ -225,8 +232,12 @@ export default class DB {
 
   // A schema exists and the client requested a version different than
   // the installed version. Try updating.
-  #tryUpdatingSchema(schemaName: string, requestedVersion: bigint): bigint {
-    const content = fs.readFileSync(getSchemaPath(schemaName), "utf-8");
+  #tryUpdatingSchema(
+    config: Config,
+    schemaName: string,
+    requestedVersion: bigint
+  ): bigint {
+    const content = fs.readFileSync(getSchemaPath(schemaName, config), "utf-8");
     const residentVersion = cryb64(content);
     if (residentVersion != requestedVersion) {
       throw new Error(
@@ -247,7 +258,7 @@ export default class DB {
   }
 }
 
-function getDbPath(dbName: string) {
+function getDbPath(dbName: string, config: Config) {
   if (hasPathParts(dbName)) {
     throw new Error(`${dbName} must not include '..', '/', or '\\'`);
   }
@@ -264,7 +275,7 @@ function getDbPath(dbName: string) {
   return path.join(config.dbFolder, dbName);
 }
 
-function getSchemaPath(schemaName: string) {
+function getSchemaPath(schemaName: string, config: Config) {
   if (hasPathParts(schemaName)) {
     throw new Error(`${schemaName} must not include '..', '/', or '\\'`);
   }

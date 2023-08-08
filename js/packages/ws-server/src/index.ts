@@ -4,6 +4,7 @@ import logger from "./logger.js";
 import type { Server } from "http";
 import DBCache from "./DBCache.js";
 import ConnectionBroker from "./ConnectionBroker.js";
+import { Config } from "./config.js";
 
 function noopAuth(req: IncomingMessage, cb: (err: any) => void) {
   cb(null);
@@ -11,13 +12,15 @@ function noopAuth(req: IncomingMessage, cb: (err: any) => void) {
 
 export function attachWebsocketServer(
   server: Server,
+  config: Config,
   authenticate: (
     req: IncomingMessage,
     cb: (err: any) => void
   ) => void = noopAuth
 ) {
+  // warn on multiple instantiations?
+  const dbCache = new DBCache(config);
   const wss = new WebSocketServer({ noServer: true });
-  const dbCache = new DBCache();
 
   server.on("upgrade", (request, socket, head) => {
     logger.info("upgrading to ws connection");

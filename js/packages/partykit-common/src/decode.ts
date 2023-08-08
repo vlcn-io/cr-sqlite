@@ -39,8 +39,8 @@ export function decode(msg: Uint8Array): Msg {
     case tags.RejectChanges:
       return {
         _tag: tags.RejectChanges,
-        since: [decoding.readBigInt64(decoder), decoding.readVarInt(decoder)],
         whose: decoding.readUint8Array(decoder, 16),
+        since: [decoding.readBigInt64(decoder), decoding.readVarInt(decoder)],
       } satisfies RejectChanges;
     case tags.StartStreaming:
       return {
@@ -72,7 +72,7 @@ function readChanges(decoder: decoding.Decoder) {
         case BIGINT:
           return decoding.readBigInt64(decoder);
         case NUMBER:
-          return decoding.readVarInt(decoder);
+          return decoding.readFloat64(decoder);
         case STRING:
           return decoding.readVarString(decoder);
         case BOOL:

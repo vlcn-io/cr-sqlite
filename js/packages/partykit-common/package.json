@@ -11,7 +11,7 @@
   "scripts": {
     "build": "tsc --build",
     "watch": "tsc --build --watch",
-    "test": "echo no tests here yet",
+    "test": "vitest run",
     "rmtdata": "rm dbs-test/*",
     "deep-clean": "rm -rf ./dist || true && rm tsconfig.tsbuildinfo || true"
   },
@@ -22,5 +22,9 @@
   },
   "dependencies": {
     "lib0": "^0.2.73"
+  },
+  "devDependencies": {
+    "fast-check": "^3.8.0",
+    "vitest": "^0.30.1"
   }
 }

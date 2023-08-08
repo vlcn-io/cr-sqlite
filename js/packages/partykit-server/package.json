@@ -11,7 +11,7 @@
   "scripts": {
     "build": "tsc --build",
     "watch": "tsc --build --watch",
-    "test": "echo no tests here yet",
+    "test": "vitest run",
     "rmtdata": "rm dbs-test/*",
     "deep-clean": "rm -rf ./dist || true && rm tsconfig.tsbuildinfo || true"
   },
@@ -30,6 +30,7 @@
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.4",
-    "@types/throttle-debounce": "^5.0.0"
+    "@types/throttle-debounce": "^5.0.0",
+    "vitest": "^0.30.1"
   }
 }

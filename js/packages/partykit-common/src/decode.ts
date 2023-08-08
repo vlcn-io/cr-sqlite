@@ -8,7 +8,7 @@ import {
   StartStreaming,
   tags,
 } from "./msgTypes.js";
-import { BIGINT, BLOB, BOOL, NULL, NUMBER, STRING } from "./encode";
+import { BIGINT, BLOB, BOOL, NULL, NUMBER, STRING } from "./encode.js";
 
 export function decode(msg: Uint8Array): Msg {
   const decoder = decoding.createDecoder(msg);

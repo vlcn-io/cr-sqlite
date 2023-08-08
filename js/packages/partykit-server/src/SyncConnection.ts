@@ -48,16 +48,6 @@ export default class SyncConnection {
 
   start() {
     logger.info(`Starting SyncConnection`);
-    // - start our oubound stream based on `lastSeens`
-    // - what if last seens don't match the room? New last seen..
-    //   room name is db file name but db site id is in the db.
-    //    so room name is just a handle to db.
-    // - ask the connected peer to start streaming their changes
-    // since the last time _we_ saw them.
-
-    // prepare to receive from...
-    // the dude that announced his presence.
-    // ask him to start his stream to us.
     this.#inboundStream.start();
     this.#outboundStream.start();
   }

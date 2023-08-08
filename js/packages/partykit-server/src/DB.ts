@@ -19,6 +19,7 @@ export default class DB {
   readonly #getChangesStmt;
   readonly #applyChangesStmt;
   readonly #setLastSeenStmt;
+  readonly #applyChangesAndSetLastSeenTx;
 
   constructor(
     name: string,
@@ -84,12 +85,12 @@ export default class DB {
       .safeIntegers();
     this.#getChangesStmt = db
       .prepare<[bigint, Uint8Array]>(
-        `SELECT ("table", "pk", "cid", "val", "col_version", "db_version", "site_id", "cl") FROM crsql_changes WHERE db_version > ? AND site_id IS NULL`
+        `SELECT "table", "pk", "cid", "val", "col_version", "db_version", "site_id", "cl" FROM crsql_changes WHERE db_version > ? AND site_id IS NULL`
       )
       .safeIntegers();
     this.#applyChangesStmt = db
       .prepare<[...Change]>(
-        `INSERT INTO ("table", "pk", "cid", "val", "col_version", "db_version", "site_id", "cl") crsql_changes VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO crsql_changes ("table", "pk", "cid", "val", "col_version", "db_version", "site_id", "cl") VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .safeIntegers();
     this.#siteid = db
@@ -99,13 +100,13 @@ export default class DB {
     this.#setLastSeenStmt = db.prepare<[Uint8Array, bigint, number]>(
       `INSERT OR REPLACE INTO crsql_tracked_peers (site_id, tag, event, version, seq) VALUES (?, 0, 0, ?, ?)`
     );
-    this.applyChangesetAndSetLastSeen = this.#db.transaction(
-      (changes: readonly Change[], siteId: Uint8Array) => {
-        let maxVersion = 0n;
+    this.#applyChangesAndSetLastSeenTx = this.#db.transaction(
+      (
+        changes: readonly Change[],
+        siteId: Uint8Array,
+        newLastSeen: readonly [bigint, number]
+      ) => {
         for (const c of changes) {
-          if (c[5] > maxVersion) {
-            maxVersion = c[5];
-          }
           this.#applyChangesStmt.run(
             c[0],
             c[1],
@@ -118,7 +119,7 @@ export default class DB {
           );
         }
 
-        this.#setLastSeenStmt.run(siteId, maxVersion, 0);
+        this.#setLastSeenStmt.run(siteId, newLastSeen[0], newLastSeen[1]);
       }
     );
   }
@@ -135,11 +136,14 @@ export default class DB {
     return [result[0], Number(result[1])];
   }
 
-  applyChangesetAndSetLastSeen: (
+  applyChangesetAndSetLastSeen(
     changes: readonly Change[],
     siteId: Uint8Array,
-    end: readonly [bigint, number]
-  ) => void;
+    newLastSeen: readonly [bigint, number]
+  ): void {
+    this.#applyChangesAndSetLastSeenTx(changes, siteId, newLastSeen);
+    this.#notifyOfChange();
+  }
 
   pullChangeset(
     since: readonly [bigint, number],
@@ -243,6 +247,15 @@ export default class DB {
 function getDbPath(dbName: string) {
   if (hasPathParts(dbName)) {
     throw new Error(`${dbName} must not include '..', '/', or '\\'`);
+  }
+
+  // allow for in-memory db and ephemeral sync
+  // it'll last as long as participants are in the room.
+  // we could also sync w/o an in-memory DB (e.g., by proxing messages) but this lets us keep the ephemeral
+  // and persisted sync identical.
+  // Note: room name is dbname so we'd have to indicate :memory: some other way.
+  if (dbName === ":memory:") {
+    return dbName;
   }
 
   return path.join(config.dbFolder, dbName);

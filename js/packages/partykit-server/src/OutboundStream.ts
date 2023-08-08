@@ -23,7 +23,7 @@ export default class OutboundStream {
   constructor(
     transport: Transport,
     db: DB,
-    lastSeenByClient: [Uint8Array, [bigint, number]][],
+    lastSeenByClient: readonly [Uint8Array, [bigint, number]][],
     clientDbId: Uint8Array
   ) {
     logger.info(

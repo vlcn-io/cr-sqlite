@@ -1,4 +1,4 @@
-import { Changes, tags } from "@vlcn.io/partykit-common";
+import { Changes, greaterThanOrEqual, tags } from "@vlcn.io/partykit-common";
 import DB from "./DB.js";
 import Transport from "./Trasnport.js";
 
@@ -13,7 +13,7 @@ export default class InboundStream {
   readonly #transport;
   readonly #db;
   readonly #from;
-  #lastSeen: [bigint, number] | null = null;
+  #lastSeen: readonly [bigint, number] | null = null;
 
   constructor(transport: Transport, db: DB, from: Uint8Array) {
     this.#transport = transport;
@@ -36,7 +36,7 @@ export default class InboundStream {
     });
   }
 
-  receiveChanges(changes: Changes) {
+  receiveChanges(msg: Changes) {
     // check for contiguity
     // apply
     if (this.#lastSeen == null) {
@@ -44,5 +44,21 @@ export default class InboundStream {
         `Illegal state -- last seen should not be null when receiving changes`
       );
     }
+
+    if (!greaterThanOrEqual(this.#lastSeen, msg.since)) {
+      this.#transport.rejectChanges({
+        _tag: tags.RejectChanges,
+        whose: msg.sender,
+        since: this.#lastSeen,
+      });
+    }
+
+    if (msg.changes.length == 0) {
+      return;
+    }
+    const lastChange = msg.changes[msg.changes.length - 1];
+    const newLastSeen = [lastChange[5], 0] as const;
+    this.#db.applyChangesetAndSetLastSeen(msg.changes, msg.sender, newLastSeen);
+    this.#lastSeen = newLastSeen;
   }
 }

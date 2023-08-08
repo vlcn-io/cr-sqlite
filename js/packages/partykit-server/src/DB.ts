@@ -138,7 +138,7 @@ export default class DB {
   applyChangesetAndSetLastSeen: (
     changes: readonly Change[],
     siteId: Uint8Array,
-    end: [bigint, number]
+    end: readonly [bigint, number]
   ) => void;
 
   pullChangeset(

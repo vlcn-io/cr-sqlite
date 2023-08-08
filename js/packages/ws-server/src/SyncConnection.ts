@@ -4,7 +4,6 @@ import {
   RejectChanges,
   bytesToHex,
 } from "@vlcn.io/ws-common";
-import type { PartyKitConnection, PartyKitRoom } from "partykit/server";
 import DBCache from "./DBCache.js";
 import OutboundStream from "./OutboundStream.js";
 import InboundStream from "./InboundStream.js";
@@ -23,19 +22,18 @@ export default class SyncConnection {
 
   constructor(
     dbCache: DBCache,
-    ws: PartyKitConnection,
-    room: PartyKitRoom,
+    transport: Transport,
+    room: string,
     msg: AnnouncePresence
   ) {
     logger.info(
-      `Spun up a sync connection on room ${room.id} to client ws id ${
-        ws.id
-      } and client dbid ${bytesToHex(msg.sender)}`
+      `Spun up a sync connection on room ${room} to client ws and client dbid ${bytesToHex(
+        msg.sender
+      )}`
     );
     this.#dbCache = dbCache;
-    this.#db = dbCache.getAndRef(room.id, msg.schemaName, msg.schemaVersion);
+    this.#db = dbCache.getAndRef(room, msg.schemaName, msg.schemaVersion);
     this.#room = room;
-    const transport = new Transport(ws);
 
     this.#outboundStream = new OutboundStream(
       transport,
@@ -68,6 +66,6 @@ export default class SyncConnection {
     logger.info(`Sync connection closed`);
     this.#outboundStream.stop();
     // tell the cache we're done. It'll close the db on 0 references.
-    this.#dbCache.unref(this.#room.id);
+    this.#dbCache.unref(this.#room);
   }
 }

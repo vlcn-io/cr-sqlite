@@ -23,7 +23,6 @@
   "dependencies": {
     "@types/throttle-debounce": "^5.0.0",
     "@vlcn.io/partykit-common": "workspace:*",
-    "partysocket": "0.0.0-8981945",
-    "throttle-debounce": "^5.0.0"
+    "partysocket": "0.0.0-8981945"
   }
 }

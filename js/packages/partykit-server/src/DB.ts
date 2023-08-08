@@ -3,7 +3,8 @@ import { config } from "./config";
 import path from "node:path";
 import fs from "node:fs";
 import { extensionPath } from "@vlcn.io/crsqlite";
-import { cryb64 } from "@vlcn.io/partykit-common";
+import { Change, bytesToHex, cryb64 } from "@vlcn.io/partykit-common";
+import { throttle } from "throttle-debounce";
 
 /**
  * Abstracts over a DB and provides just the operations requred by the sync server.
@@ -13,6 +14,11 @@ export default class DB {
   readonly #schemaName;
   readonly #schemaVersion;
   readonly #changeCallbacks = new Set<() => void>();
+  readonly #siteid;
+  readonly #getLastSeenStmt;
+  readonly #getChangesStmt;
+  readonly #applyChangesStmt;
+  readonly #setLastSeenStmt;
 
   constructor(
     name: string,
@@ -37,42 +43,109 @@ export default class DB {
         requestedSchema,
         requestedSchemaVersion
       );
-      return;
     } else if (schemaName != requestedSchema) {
       throw new Error(
         `${requestedSchema} requested but the db is already configured with ${schemaName}`
       );
-    }
+    } else {
+      let schemaVersion = db
+        .prepare("SELECT value FROM crsql_master WHERE key = 'schema_version'")
+        .safeIntegers(true)
+        .pluck()
+        .get() as bigint | undefined;
 
-    let schemaVersion = db
-      .prepare("SELECT value FROM crsql_master WHERE key = 'schema_version'")
-      .safeIntegers(true)
-      .pluck()
-      .get() as bigint | undefined;
-
-    if (schemaVersion == null) {
-      throw new Error(`Schema ${schemaName} was presente but with no version!`);
-    }
-
-    if (schemaVersion != requestedSchemaVersion) {
-      schemaVersion = this.#tryUpdatingSchema(
-        schemaName,
-        requestedSchemaVersion
-      );
-      if (schemaVersion !== requestedSchemaVersion) {
+      if (schemaVersion == null) {
         throw new Error(
-          `The server is at schema version ${schemaVersion} which is not the same as the requested version ${requestedSchemaVersion}`
+          `Schema ${schemaName} was presente but with no version!`
         );
       }
+
+      if (schemaVersion != requestedSchemaVersion) {
+        schemaVersion = this.#tryUpdatingSchema(
+          schemaName,
+          requestedSchemaVersion
+        );
+        if (schemaVersion !== requestedSchemaVersion) {
+          throw new Error(
+            `The server is at schema version ${schemaVersion} which is not the same as the requested version ${requestedSchemaVersion}`
+          );
+        }
+      }
+
+      // We're on a matching version with the client.
+      this.#schemaName = schemaName;
+      this.#schemaVersion = schemaVersion;
     }
 
-    // We're on a matching version with the client.
-    this.#schemaName = schemaName;
-    this.#schemaVersion = schemaVersion;
+    this.#getLastSeenStmt = db
+      .prepare<[Uint8Array]>(
+        `SELECT version, seq FROM crsql_tracked_peers WHERE site_id = ? AND tag = 0 AND event = 0`
+      )
+      .safeIntegers();
+    this.#getChangesStmt = db
+      .prepare<[bigint, Uint8Array]>(
+        `SELECT ("table", "pk", "cid", "val", "col_version", "db_version", "site_id", "cl") FROM crsql_changes WHERE db_version > ? AND site_id IS NULL`
+      )
+      .safeIntegers();
+    this.#applyChangesStmt = db
+      .prepare<[...Change]>(
+        `INSERT INTO ("table", "pk", "cid", "val", "col_version", "db_version", "site_id", "cl") crsql_changes VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+      )
+      .safeIntegers();
+    this.#siteid = db
+      .prepare(`SELECT crsql_site_id()`)
+      .pluck()
+      .get() as Uint8Array;
+    this.#setLastSeenStmt = db.prepare<[Uint8Array, bigint, number]>(
+      `INSERT OR REPLACE INTO crsql_tracked_peers (site_id, tag, event, version, seq) VALUES (?, 0, 0, ?, ?)`
+    );
+    this.applyChangesetAndSetLastSeen = this.#db.transaction(
+      (changes: readonly Change[], siteId: Uint8Array) => {
+        let maxVersion = 0n;
+        for (const c of changes) {
+          if (c[5] > maxVersion) {
+            maxVersion = c[5];
+          }
+          this.#applyChangesStmt.run(
+            c[0],
+            c[1],
+            c[2],
+            c[3],
+            c[4],
+            c[5],
+            c[6],
+            c[7]
+          );
+        }
+
+        this.#setLastSeenStmt.run(siteId, maxVersion, 0);
+      }
+    );
+  }
+
+  get siteId() {
+    return this.#siteid;
   }
 
   getLastSeen(site: Uint8Array): [bigint, number] {
-    return [0n, 0];
+    const result = this.#getLastSeenStmt.raw(true).get(site) as [
+      bigint,
+      bigint
+    ];
+    return [result[0], Number(result[1])];
+  }
+
+  applyChangesetAndSetLastSeen: (
+    changes: readonly Change[],
+    siteId: Uint8Array,
+    end: [bigint, number]
+  ) => void;
+
+  pullChangeset(
+    since: readonly [bigint, number],
+    excludeSite: Uint8Array
+  ): readonly Change[] {
+    return this.#getChangesStmt.all(since[0], excludeSite) as Change[];
   }
 
   schemasMatch(schemaName: string, schemaVersion: bigint): boolean {
@@ -99,10 +172,22 @@ export default class DB {
    *
    * @param cb
    */
-  #notifyOfChange() {}
+  // TODO: a better implementation would understand the current backpressure in the system
+  // rather than a random 50ms throttle.
+  #notifyOfChange = throttle(50, () => {
+    for (const cb of this.#changeCallbacks) {
+      try {
+        cb();
+        // failure of 1 callback shouldn't prevent notification of other callbacks.
+      } catch (e) {
+        console.warn(e);
+      }
+    }
+  });
 
   close() {
-    this.#db.prepare;
+    this.#db.prepare(`SELECT crsql_finalize()`).run();
+    this.#db.close();
   }
 
   // No schema exists on the db. Straight apply it.

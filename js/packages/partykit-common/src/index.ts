@@ -21,8 +21,8 @@ export function bytesToHex(bytes: Uint8Array) {
 }
 
 export function greaterThanOrEqual(
-  lastSeen: [bigint, number],
-  msgSince: [bigint, number]
+  lastSeen: readonly [bigint, number],
+  msgSince: readonly [bigint, number]
 ) {
   if (msgSince[0] < lastSeen[0]) {
     return true;
@@ -47,4 +47,17 @@ export function cryb64(str: string, seed: number = 0) {
   h2 ^= Math.imul(h1 ^ (h1 >>> 13), 3266489909);
 
   return 4294967296n * BigInt(h2) + BigInt(h1);
+}
+
+export function uintArraysEqual(l: Uint8Array, r: Uint8Array) {
+  if (l.length != r.length) {
+    return false;
+  }
+
+  for (let i = 0; i < l.length; ++i) {
+    if (l.at(i) !== r.at(i)) {
+      return false;
+    }
+  }
+  return true;
 }

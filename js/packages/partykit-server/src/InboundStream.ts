@@ -5,6 +5,9 @@ import Transport from "./Trasnport.js";
 /**
  * Processes a stream of changes from the given sender.
  * Sends the sender a rejection if the changes are out of order.
+ *
+ * TODO: make this isomorphic with the client? It should be the same logic on both sides.
+ * Well.. except that on the server our db interface is synchronous.
  */
 export default class InboundStream {
   readonly #transport;
@@ -36,5 +39,10 @@ export default class InboundStream {
   receiveChanges(changes: Changes) {
     // check for contiguity
     // apply
+    if (this.#lastSeen == null) {
+      throw new Error(
+        `Illegal state -- last seen should not be null when receiving changes`
+      );
+    }
   }
 }

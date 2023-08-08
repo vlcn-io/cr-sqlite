@@ -18,6 +18,7 @@ export default class OutboundStream {
     // 2. figure out the lastSeen for it based on lastSeens
     // 3. listen for db change events
     // 4. start publishing changes over the transport
+    // TODO: throttle notifications
   }
 
   reset(msg: RejectChanges) {

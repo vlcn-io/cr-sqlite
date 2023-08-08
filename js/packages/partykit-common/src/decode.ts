@@ -26,6 +26,7 @@ export function decode(msg: Uint8Array): Msg {
             ];
           }
         ),
+        schemaName: decoding.readVarString(decoder),
         schemaVersion: decoding.readBigInt64(decoder),
       } satisfies AnnouncePresence;
     case tags.Changes:

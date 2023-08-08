@@ -39,7 +39,7 @@ export type Changes = Readonly<{
   _tag: Tags["Changes"];
   sender: Uint8Array;
   since: [bigint, number];
-  changes: Change[];
+  changes: Readonly<Change[]>;
 }>;
 
 export type RejectChanges = Readonly<{

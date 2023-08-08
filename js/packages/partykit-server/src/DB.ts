@@ -8,6 +8,9 @@ import { throttle } from "throttle-debounce";
 
 /**
  * Abstracts over a DB and provides just the operations requred by the sync server.
+ *
+ * We could theoretically use Turso in this setup. Once they support multi-tenancy.
+ * fly and litefs is another option if we can control deploying ourselves.
  */
 export default class DB {
   readonly #db;
@@ -254,7 +257,7 @@ function getDbPath(dbName: string) {
   // we could also sync w/o an in-memory DB (e.g., by proxing messages) but this lets us keep the ephemeral
   // and persisted sync identical.
   // Note: room name is dbname so we'd have to indicate :memory: some other way.
-  if (dbName === ":memory:") {
+  if (dbName === ":memory:" || config.dbFolder == null) {
     return dbName;
   }
 

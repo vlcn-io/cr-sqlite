@@ -108,7 +108,7 @@ function writeChanges(encoder: encoding.Encoder, changes: readonly Change[]) {
         encoding.writeBigInt64(encoder, change[3]);
       } else if (typeof change[3] === "number") {
         encoding.writeUint8(encoder, NUMBER);
-        encoding.writeVarInt(encoder, change[3]);
+        encoding.writeFloat64(encoder, change[3]);
       } else if (typeof change[3] === "string") {
         encoding.writeUint8(encoder, STRING);
         encoding.writeVarString(encoder, change[3]);

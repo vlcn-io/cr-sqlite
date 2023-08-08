@@ -134,7 +134,7 @@ function readChanges(decoder: decoding.Decoder) {
         case BIGINT:
           return decoding.readBigInt64(decoder);
         case NUMBER:
-          return decoding.readVarInt(decoder);
+          return decoding.readFloat64(decoder);
         case STRING:
           return decoding.readVarString(decoder);
         case BOOL:

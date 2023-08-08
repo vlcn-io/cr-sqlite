@@ -1,45 +1,23 @@
-// import type { PartyKitServer } from "partykit/server";
-// import ConnectionBroker from "./ConnectionBroker.js";
-// import { decode } from "@vlcn.io/ws-common";
-// import DBCache from "./DBCache.js";
-// import logger from "./logger.js";
-
-// const dbCache = new DBCache();
-// const connectionBroker = new ConnectionBroker(dbCache);
-// export default {
-//   onConnect(ws, room, _ctx) {
-//     logger.info(`Connection opened for ${ws.id}`);
-//     ws.addEventListener("message", (evt) => {
-//       const data = evt.data;
-//       if (typeof data === "string") {
-//         throw new Error(`Unexpected message ${data}`);
-//       }
-//       const msg = decode(new Uint8Array(data));
-//       connectionBroker.handleMessage(ws, room, msg);
-//     });
-//   },
-//   onClose(ws, room) {
-//     logger.info(`Connection closed for ${ws.id}`);
-//     connectionBroker.close(ws);
-//   },
-//   onError(ws, err, room) {
-//     logger.error(err);
-//     connectionBroker.close(ws);
-//   },
-// } satisfies PartyKitServer;
-
 import { IncomingMessage } from "node:http";
 import { WebSocketServer, WebSocket } from "ws";
 import logger from "./logger.js";
 import type { Server } from "http";
+import DBCache from "./DBCache.js";
+import ConnectionBroker from "./ConnectionBroker.js";
 
-function authenticate(req: IncomingMessage, cb: (err: any) => void) {
-  // This function is not defined on purpose. Implement it with your own logic.
+function noopAuth(req: IncomingMessage, cb: (err: any) => void) {
   cb(null);
 }
 
-export function attachWebsocketServer(server: Server) {
+export function attachWebsocketServer(
+  server: Server,
+  authenticate: (
+    req: IncomingMessage,
+    cb: (err: any) => void
+  ) => void = noopAuth
+) {
   const wss = new WebSocketServer({ noServer: true });
+  const dbCache = new DBCache();
 
   server.on("upgrade", (request, socket, head) => {
     logger.info("upgrading to ws connection");
@@ -60,6 +38,21 @@ export function attachWebsocketServer(server: Server) {
   wss.on("connection", (ws: WebSocket, request) => {
     logger.info(`Connection opened`);
 
-    new Connection(config.get, new WebSocketWrapper(ws));
+    const proto = request.headers["sec-websocket-protocol"];
+    if (proto == null) {
+      throw new Error("Expected sec-websocket-protocol header");
+    }
+    const entries = proto?.split(";");
+    const options: { [key: string]: string } = {};
+    for (const entry of entries) {
+      const [key, value] = entry.split("=");
+      options[key] = value;
+    }
+    if (!options.room) {
+      throw new Error(
+        "Expected to receive a room in the sec-websocket-protocol"
+      );
+    }
+    new ConnectionBroker(ws, dbCache, options.room);
   });
 }

@@ -1,7 +1,8 @@
 import { Msg, tags } from "@vlcn.io/ws-common";
-import type { PartyKitConnection, PartyKitRoom } from "partykit/server";
 import SyncConnection from "./SyncConnection.js";
 import DBCache from "./DBCache.js";
+import { WebSocket } from "ws";
+import Transport from "./Trasnport.js";
 
 /**
  * A connection broker maps PartyKit connections to Database Sync connections
@@ -9,23 +10,34 @@ import DBCache from "./DBCache.js";
  * SyncConnection methods.
  */
 export default class ConnectionBroker {
-  readonly #syncConnections = new Map<string, SyncConnection>();
+  #syncConnection: SyncConnection | null = null;
   readonly #dbCache;
+  readonly #ws;
+  readonly #room;
 
-  constructor(dbCache: DBCache) {
+  constructor(ws: WebSocket, dbCache: DBCache, room: string) {
     this.#dbCache = dbCache;
+    this.#ws = ws;
+    this.#room = room;
   }
 
-  handleMessage(ws: PartyKitConnection, room: PartyKitRoom, msg: Msg) {
+  handleMessage(msg: Msg) {
     const tag = msg._tag;
     switch (tag) {
       case tags.AnnouncePresence: {
-        if (this.#syncConnections.has(ws.id)) {
-          throw new Error(`A sync connection for ${ws.id} was already started`);
+        if (this.#syncConnection != null) {
+          throw new Error(
+            `A sync connection for ${this.#room} was already started`
+          );
         }
 
-        const syncConnection = new SyncConnection(this.#dbCache, ws, room, msg);
-        this.#syncConnections.set(ws.id, syncConnection);
+        const syncConnection = new SyncConnection(
+          this.#dbCache,
+          new Transport(this.#ws),
+          this.#room,
+          msg
+        );
+        this.#syncConnection = syncConnection;
         syncConnection.start();
         return;
       }
@@ -33,13 +45,13 @@ export default class ConnectionBroker {
         // get our synced db from the cache
         // apply the changes
         // if no inbound stream is started, this'll start one.
-        const syncConn = this.#getSyncConnX(ws);
+        const syncConn = this.#syncConnection!;
         syncConn.receiveChanges(msg);
         return;
       }
       case tags.RejectChanges: {
         // get our synced db, tell it changes were rejected
-        const syncConn = this.#getSyncConnX(ws);
+        const syncConn = this.#syncConnection!;
         syncConn.changesRejected(msg);
         return;
       }
@@ -54,18 +66,7 @@ export default class ConnectionBroker {
     }
   }
 
-  close(ws: PartyKitConnection) {
-    const syncConn = this.#syncConnections.get(ws.id);
-    if (syncConn) {
-      syncConn.close();
-    }
-  }
-
-  #getSyncConnX(ws: PartyKitConnection) {
-    const syncConn = this.#syncConnections.get(ws.id);
-    if (syncConn == null) {
-      throw new Error(`Illegal state -- missing sync conn for ${ws.id}`);
-    }
-    return syncConn;
+  close(ws: WebSocket) {
+    this.#syncConnection?.close();
   }
 }

@@ -19,8 +19,11 @@ export default class InboundStream {
    * that are upstream of us.
    * While we do support out-of-order delivery it is more complicated
    * to track than just doing in-order delivery.
+   *
+   * We are doing a map here since the server could be ephemeral and multiplexing changes from
+   * many peers rather than "store and forwarding" changes from peers.
    */
-  readonly #lastSeens: Map<string, [bigint, number]> = new Map();
+  readonly #lastSeens: Map<string, readonly [bigint, number]> = new Map();
 
   constructor(db: DB, transport: Transport) {
     this.#transport = transport;
@@ -50,9 +53,17 @@ export default class InboundStream {
       return;
     }
     const lastChange = msg.changes[msg.changes.length - 1];
-    this.#db.applyChangesetAndSetLastSeen(msg.changes, msg.sender, [
-      lastChange[5],
-      0,
-    ]);
+    const newLastSeen = [lastChange[5], 0] as const;
+    this.#lastSeens.set(senderHex, newLastSeen);
+    try {
+      await this.#db.applyChangesetAndSetLastSeen(
+        msg.changes,
+        msg.sender,
+        newLastSeen
+      );
+    } catch (e) {
+      this.#lastSeens.set(senderHex, lastSeen);
+      throw e;
+    }
   }
 }

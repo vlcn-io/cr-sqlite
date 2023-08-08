@@ -4,14 +4,14 @@ import { Transport } from "./transport/Transport";
 export interface DB {
   readonly siteid: Uint8Array;
   pullChangeset(
-    since: [bigint, number],
-    excludeSites: Uint8Array[],
+    since: readonly [bigint, number],
+    excludeSites: readonly Uint8Array[],
     localOnly: boolean
   ): PromiseLike<readonly Change[]>;
   applyChangesetAndSetLastSeen(
     changes: readonly Change[],
     setId: Uint8Array,
-    end: [bigint, number]
+    end: readonly [bigint, number]
   ): PromiseLike<void>;
 
   getLastSeens(): PromiseLike<[Uint8Array, [bigint, number]][]>;

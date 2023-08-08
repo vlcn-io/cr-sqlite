@@ -5,8 +5,8 @@ import { Transport } from "../transport/Transport.js";
 export default class OutboundStream {
   readonly #db;
   readonly #transport;
-  #lastSent: [bigint, number] | null = null;
-  #excludeSites: Uint8Array[] = [];
+  #lastSent: readonly [bigint, number] | null = null;
+  #excludeSites: readonly Uint8Array[] = [];
   #localOnly: boolean = false;
   readonly #disposer;
 

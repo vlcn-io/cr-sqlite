@@ -31,7 +31,7 @@ export type Change = readonly [
 export type AnnouncePresence = Readonly<{
   _tag: Tags["AnnouncePresence"];
   sender: Uint8Array;
-  lastSeens: [Uint8Array, [bigint, number]][];
+  lastSeens: readonly [Uint8Array, [bigint, number]][];
   schemaName: string;
   schemaVersion: bigint;
 }>;
@@ -46,13 +46,13 @@ export type Changes = Readonly<{
 export type RejectChanges = Readonly<{
   _tag: Tags["RejectChanges"];
   whose: Uint8Array;
-  since: [bigint, number];
+  since: readonly [bigint, number];
 }>;
 
 export type StartStreaming = Readonly<{
   _tag: Tags["StartStreaming"];
-  since: [bigint, number];
-  excludeSites: Uint8Array[];
+  since: readonly [bigint, number];
+  excludeSites: readonly Uint8Array[];
   localOnly: boolean;
   schemaVersion: bigint;
 }>;

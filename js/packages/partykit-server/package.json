@@ -12,8 +12,9 @@
     "build": "tsc --build",
     "watch": "tsc --build --watch",
     "test": "vitest run",
-    "rmtdata": "rm dbs-test/*",
-    "deep-clean": "rm -rf ./dist || true && rm tsconfig.tsbuildinfo || true"
+    "rmtdata": "rm testDbs/*",
+    "deep-clean": "rm -rf ./dist || true && rm tsconfig.tsbuildinfo || true",
+    "start": "partykit dev server.js"
   },
   "repository": {
     "type": "git",

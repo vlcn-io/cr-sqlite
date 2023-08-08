@@ -72,7 +72,8 @@ function writeChanges(encoder: encoding.Encoder, changes: readonly Change[]) {
 }
 
 function writeValue(encoder: encoding.Encoder, value: any) {
-  if (value === null) {
+  // undefined will be encoded as null too.
+  if (value == null) {
     encoding.writeUint8(encoder, NULL);
   } else {
     if (typeof value === "bigint") {
@@ -80,7 +81,8 @@ function writeValue(encoder: encoding.Encoder, value: any) {
       encoding.writeBigInt64(encoder, value);
     } else if (typeof value === "number") {
       encoding.writeUint8(encoder, NUMBER);
-      encoding.writeVarInt(encoder, value);
+      // JS numbers are floating points.
+      encoding.writeFloat64(encoder, value);
     } else if (typeof value === "string") {
       encoding.writeUint8(encoder, STRING);
       encoding.writeVarString(encoder, value);

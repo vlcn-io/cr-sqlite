@@ -5,10 +5,10 @@ import OutboundStream from "./streams/OutboundStream.js";
 import { Transport } from "./transport/Transport.js";
 
 export default class SyncedDB {
-  #transport;
-  #inboundStream;
-  #outboundStream;
-  #db;
+  readonly #transport;
+  readonly #inboundStream;
+  readonly #outboundStream;
+  readonly #db;
 
   constructor(db: DB, transport: Transport) {
     this.#db = db;
@@ -23,15 +23,16 @@ export default class SyncedDB {
 
   async start() {
     const lastSeens = await this.#db.getLastSeens();
+    const [schemaName, schemaVersion] =
+      await this.#db.getSchemaNameAndVersion();
     // Prepare the inbound stream to receive changes from upstreams
     this.#inboundStream.prepare(lastSeens);
     // Announce our presence that we're ready to start receiving and sending changes
     await this.#transport.announcePresence({
       _tag: tags.AnnouncePresence,
       lastSeens,
-      // TODO: we should incorporate this to prevent nodes form syncing that are
-      // on divergent schemas.
-      schemaVersion: 1n,
+      schemaName,
+      schemaVersion,
       sender: this.#db.siteid,
     });
   }

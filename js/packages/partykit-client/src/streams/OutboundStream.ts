@@ -3,12 +3,12 @@ import { DB } from "../config.js";
 import { Transport } from "../transport/Transport.js";
 
 export default class OutboundStream {
-  #db;
-  #transport;
+  readonly #db;
+  readonly #transport;
   #lastSent: [bigint, number] | null = null;
   #excludeSites: Uint8Array[] = [];
   #localOnly: boolean = false;
-  #disposer;
+  readonly #disposer;
 
   constructor(db: DB, transport: Transport) {
     this.#db = db;

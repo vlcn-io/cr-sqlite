@@ -6,5 +6,5 @@
     "allowSyntheticDefaultImports": true
   },
   "include": ["./src/"],
-  "references": []
+  "references": [{ "path": "../partykit-common" }]
 }

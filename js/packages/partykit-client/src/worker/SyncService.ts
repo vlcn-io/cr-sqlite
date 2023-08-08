@@ -17,11 +17,7 @@ export default class SyncService {
   async startSync(msg: StartSyncMsg) {
     const entry = this.dbs.get(msg.dbid);
     if (!entry) {
-      // TODO: eagerly cache the promise instead so we can't end up with a race and have the same
-      // db created twice.
-      const creator = createSyncedDB(msg.dbid, () =>
-        config.transportProvider(msg.dbid, msg.partyOpts)
-      );
+      const creator = createSyncedDB(msg.dbid, msg.partyOpts);
       this.dbs.set(msg.dbid, creator);
       await creator;
     } else {

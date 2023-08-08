@@ -21,7 +21,9 @@
     "directory": "https://github.com/vlcn-io/cr-sqlite/tree/main/js/packages/partykit-client"
   },
   "dependencies": {
+    "@types/throttle-debounce": "^5.0.0",
+    "@vlcn.io/partykit-common": "workspace:*",
     "partysocket": "0.0.0-8981945",
-    "@vlcn.io/partykit-common": "workspace:*"
+    "throttle-debounce": "^5.0.0"
   }
 }

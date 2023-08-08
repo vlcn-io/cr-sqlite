@@ -39,7 +39,7 @@ export type AnnouncePresence = Readonly<{
 export type Changes = Readonly<{
   _tag: Tags["Changes"];
   sender: Uint8Array;
-  since: [bigint, number];
+  since: readonly [bigint, number];
   changes: Readonly<Change[]>;
 }>;
 

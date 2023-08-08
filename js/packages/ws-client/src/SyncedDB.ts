@@ -39,6 +39,7 @@ export default class SyncedDB {
 
   stop() {
     this.#outboundStream.stop();
+    this.#transport.close();
     return true;
   }
 }

@@ -21,4 +21,6 @@ export interface Transport {
   onStartStreaming: ((msg: StartStreaming) => Promise<void>) | null;
 
   onResetStream: ((msg: StartStreaming) => Promise<void>) | null;
+
+  close(): void;
 }

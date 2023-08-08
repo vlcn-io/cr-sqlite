@@ -1,4 +1,3 @@
-import PartySocket, { PartySocketOptions } from "partysocket";
 import { Transport } from "./Transport";
 import {
   AnnouncePresence,
@@ -10,22 +9,49 @@ import {
   tags,
 } from "@vlcn.io/ws-common";
 
-export default class PartyKitTransport implements Transport {
+export type TransporOptions = {
+  url: string;
+  room: string;
+};
+export default class WebSocketTransport implements Transport {
   #socket;
   #hadStartStream = false;
+  #closed = false;
 
-  constructor(options: PartySocketOptions) {
-    this.#socket = new PartySocket(options);
+  constructor(options: TransporOptions) {
+    this.#socket = this.#openSocketAndKeepAlive(options);
+  }
 
-    this.#socket.addEventListener("message", this.#processEvent);
+  // TODO: add ping-pong and reconnection?
+  #openSocketAndKeepAlive(options: TransporOptions) {
+    const socket = new WebSocket(options.url, ["room", options.room]);
+
+    socket.addEventListener("message", (e: MessageEvent<Blob>) => {
+      e.data.arrayBuffer().then((b) => {
+        this.#processEvent(new Uint8Array(b));
+      });
+    });
+
+    socket.onclose = () => {
+      if (!this.#closed) {
+        setTimeout(() => {});
+      }
+    };
+
+    socket.onerror = () => {
+      this.close();
+    };
+
+    return socket;
+    // https://stackoverflow.com/questions/22431751/websocket-how-to-automatically-reconnect-after-it-dies
   }
 
   onChangesReceived: ((msg: Changes) => Promise<void>) | null = null;
   onStartStreaming: ((msg: StartStreaming) => Promise<void>) | null = null;
   onResetStream: ((msg: StartStreaming) => Promise<void>) | null = null;
 
-  #processEvent = (e: MessageEvent<any>) => {
-    const msg = decode(e.data);
+  #processEvent = (data: Uint8Array) => {
+    const msg = decode(new Uint8Array(data));
     switch (msg._tag) {
       case tags.AnnouncePresence:
       case tags.RejectChanges:
@@ -60,5 +86,10 @@ export default class PartyKitTransport implements Transport {
 
   async rejectChanges(msg: RejectChanges): Promise<void> {
     this.#socket.send(encode(msg));
+  }
+
+  close() {
+    this.#closed = true;
+    this.#socket.close();
   }
 }

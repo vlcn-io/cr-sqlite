@@ -20,6 +20,7 @@ export function encode(msg: Msg): Uint8Array {
         encoding.writeBigInt64(encoder, lastSeen[1][0]);
         encoding.writeVarInt(encoder, lastSeen[1][1]);
       }
+      encoding.writeVarString(encoder, msg.schemaName);
       encoding.writeBigInt64(encoder, msg.schemaVersion);
       return encoding.toUint8Array(encoder);
     case tags.Changes:

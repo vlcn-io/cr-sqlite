@@ -12,12 +12,14 @@ export default class DBCache {
   getAndRef(roomId: string, schemaName: string, schemaVersion: bigint) {
     let entry = this.#dbs.get(roomId);
     if (entry == null) {
-      entry = [1, new DB(roomId)];
+      entry = [1, new DB(roomId, schemaName, schemaVersion)];
     } else {
       const db = entry[1];
       if (db.schemasMatch(schemaName, schemaVersion)) {
         entry[0] += 1;
       } else {
+        // TODO: note that this is not 100% accurate. We could be running an old schema version
+        // in a cached db and use this as a trigger to tear down existing connections and upgrade the schema.
         throw new Error(
           `Requested a schema name and version that the server does not have.`
         );

@@ -25,13 +25,7 @@ pub extern "C" fn crsql_init_site_id(db: *mut sqlite3, ret: *mut u8) -> c_int {
     }
 }
 
-fn create_site_id_and_site_id_table(db: *mut sqlite3) -> Result<[u8; 16], ResultCode> {
-    db.exec_safe(&format!(
-        "CREATE TABLE \"{tbl}\" (site_id BLOB NOT NULL, ordinal INTEGER PRIMARY KEY AUTOINCREMENT);
-        CREATE UNIQUE INDEX {tbl}_site_id ON \"{tbl}\" (site_id);",
-        tbl = consts::TBL_SITE_ID
-    ))?;
-
+fn insert_site_id(db: *mut sqlite3) -> Result<[u8; 16], ResultCode> {
     let stmt = db.prepare_v2(&format!(
         "INSERT INTO \"{tbl}\" (site_id, ordinal) VALUES (?, 0)",
         tbl = consts::TBL_SITE_ID
@@ -42,6 +36,16 @@ fn create_site_id_and_site_id_table(db: *mut sqlite3) -> Result<[u8; 16], Result
     stmt.step()?;
 
     Ok(site_id)
+}
+
+fn create_site_id_and_site_id_table(db: *mut sqlite3) -> Result<[u8; 16], ResultCode> {
+    db.exec_safe(&format!(
+        "CREATE TABLE \"{tbl}\" (site_id BLOB NOT NULL, ordinal INTEGER PRIMARY KEY AUTOINCREMENT);
+        CREATE UNIQUE INDEX {tbl}_site_id ON \"{tbl}\" (site_id);",
+        tbl = consts::TBL_SITE_ID
+    ))?;
+
+    insert_site_id(db)
 }
 
 #[no_mangle]
@@ -76,12 +80,12 @@ fn init_site_id(db: *mut sqlite3) -> Result<[u8; 16], ResultCode> {
     ))?;
     let result_code = stmt.step()?;
 
-    if result_code == ResultCode::DONE {
-        return Err(ResultCode::ERROR);
-    }
-
-    let site_id_from_table = stmt.column_blob(0)?;
-    let ret: [u8; 16] = site_id_from_table.try_into()?;
+    let ret = if result_code == ResultCode::DONE {
+        insert_site_id(db)?
+    } else {
+        let site_id_from_table = stmt.column_blob(0)?;
+        site_id_from_table.try_into()?
+    };
 
     Ok(ret)
 }

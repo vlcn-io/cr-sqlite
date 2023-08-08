@@ -318,9 +318,15 @@ importers:
 
   js/packages/partykit-server:
     dependencies:
+      '@vlcn.io/partykit-common':
+        specifier: workspace:*
+        version: link:../partykit-common
       partykit:
         specifier: 0.0.0-8981945
         version: 0.0.0-8981945
+      winston:
+        specifier: ^3.10.0
+        version: 3.10.0
 
   js/packages/react:
     dependencies:

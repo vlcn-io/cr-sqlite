@@ -189,19 +189,39 @@ fn set_winner_clock(
         if insert_site_id.is_empty() {
             None
         } else {
-            (*ext_data).pSetSiteIdOrdinalStmt.bind_blob(
+            (*ext_data).pSelectSiteIdOrdinalStmt.bind_blob(
                 1,
                 insert_site_id,
                 sqlite::Destructor::STATIC,
             )?;
-            let rc = (*ext_data).pSetSiteIdOrdinalStmt.step()?;
-            if rc == ResultCode::DONE {
-                return Err(ResultCode::ABORT);
+            let rc = (*ext_data).pSelectSiteIdOrdinalStmt.step()?;
+            if rc == ResultCode::ROW {
+                let ordinal = (*ext_data).pSelectSiteIdOrdinalStmt.column_int64(0);
+                (*ext_data).pSelectSiteIdOrdinalStmt.clear_bindings()?;
+                (*ext_data).pSelectSiteIdOrdinalStmt.reset()?;
+
+                Some(ordinal)
+            } else {
+                (*ext_data).pSelectSiteIdOrdinalStmt.clear_bindings()?;
+                (*ext_data).pSelectSiteIdOrdinalStmt.reset()?;
+                // site id had no ordinal yet.
+                // set one and return the ordinal.
+                (*ext_data).pSetSiteIdOrdinalStmt.bind_blob(
+                    1,
+                    insert_site_id,
+                    sqlite::Destructor::STATIC,
+                )?;
+                let rc = (*ext_data).pSetSiteIdOrdinalStmt.step()?;
+                if rc == ResultCode::DONE {
+                    (*ext_data).pSetSiteIdOrdinalStmt.clear_bindings()?;
+                    (*ext_data).pSetSiteIdOrdinalStmt.reset()?;
+                    return Err(ResultCode::ABORT);
+                }
+                let ordinal = (*ext_data).pSetSiteIdOrdinalStmt.column_int64(0);
+                (*ext_data).pSetSiteIdOrdinalStmt.clear_bindings()?;
+                (*ext_data).pSetSiteIdOrdinalStmt.reset()?;
+                Some(ordinal)
             }
-            let ordinal = (*ext_data).pSetSiteIdOrdinalStmt.column_int64(0);
-            (*ext_data).pSetSiteIdOrdinalStmt.clear_bindings()?;
-            (*ext_data).pSetSiteIdOrdinalStmt.reset()?;
-            Some(ordinal)
         }
     };
 

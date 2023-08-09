@@ -27,10 +27,13 @@ crsql_ExtData *crsql_newExtData(sqlite3 *db, unsigned char *siteIdBuffer) {
 
   pExtData->pSetSiteIdOrdinalStmt = 0;
   rc += sqlite3_prepare_v3(
-      db,
-      "INSERT INTO crsql_site_id (site_id) VALUES (?) ON CONFLICT DO "
-      "UPDATE SET ordinal = ordinal RETURNING ordinal",
+      db, "INSERT INTO crsql_site_id (site_id) VALUES (?) RETURNING ordinal",
       -1, SQLITE_PREPARE_PERSISTENT, &(pExtData->pSetSiteIdOrdinalStmt), 0);
+
+  pExtData->pSelectSiteIdOrdinalStmt = 0;
+  rc += sqlite3_prepare_v3(
+      db, "SELECT ordinal FROM crsql_site_id WHERE site_id = ?", -1,
+      SQLITE_PREPARE_PERSISTENT, &(pExtData->pSelectSiteIdOrdinalStmt), 0);
 
   pExtData->dbVersion = -1;
   pExtData->seq = 0;
@@ -62,6 +65,7 @@ void crsql_freeExtData(crsql_ExtData *pExtData) {
   sqlite3_finalize(pExtData->pSetSyncBitStmt);
   sqlite3_finalize(pExtData->pClearSyncBitStmt);
   sqlite3_finalize(pExtData->pSetSiteIdOrdinalStmt);
+  sqlite3_finalize(pExtData->pSelectSiteIdOrdinalStmt);
   crsql_freeAllTableInfos(pExtData->zpTableInfos, pExtData->tableInfosLen);
   crsql_clear_stmt_cache(pExtData);
   sqlite3_free(pExtData);
@@ -79,6 +83,7 @@ void crsql_finalize(crsql_ExtData *pExtData) {
   sqlite3_finalize(pExtData->pSetSyncBitStmt);
   sqlite3_finalize(pExtData->pClearSyncBitStmt);
   sqlite3_finalize(pExtData->pSetSiteIdOrdinalStmt);
+  sqlite3_finalize(pExtData->pSelectSiteIdOrdinalStmt);
   crsql_clear_stmt_cache(pExtData);
   pExtData->pDbVersionStmt = 0;
   pExtData->pPragmaSchemaVersionStmt = 0;
@@ -86,6 +91,7 @@ void crsql_finalize(crsql_ExtData *pExtData) {
   pExtData->pSetSyncBitStmt = 0;
   pExtData->pClearSyncBitStmt = 0;
   pExtData->pSetSiteIdOrdinalStmt = 0;
+  pExtData->pSelectSiteIdOrdinalStmt = 0;
 }
 
 #define DB_VERSION_SCHEMA_VERSION 0

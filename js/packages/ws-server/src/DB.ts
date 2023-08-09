@@ -89,9 +89,14 @@ export default class DB {
         `SELECT version, seq FROM crsql_tracked_peers WHERE site_id = ? AND tag = 0 AND event = 0`
       )
       .safeIntegers();
+    // NOTE: pulling `null` for site id.
+    // this isn't always the proper way. Depends on network topology.
+    // The most generic way is to always return site_id as that works in every topology
+    // but we don't have compression built into our networking stack yet so we'll do a dirty optimization
+    // that reduces data size but will require this to only be used in hub and spoke topologies.
     this.#getChangesStmt = db
       .prepare<[bigint, Uint8Array]>(
-        `SELECT "table", "pk", "cid", "val", "col_version", "db_version", "site_id", "cl" FROM crsql_changes WHERE db_version > ? AND site_id IS NULL`
+        `SELECT "table", "pk", "cid", "val", "col_version", "db_version", NULL, "cl" FROM crsql_changes WHERE db_version > ? AND site_id IS NULL`
       )
       .safeIntegers();
     this.#applyChangesStmt = db
@@ -120,7 +125,8 @@ export default class DB {
             c[3],
             c[4],
             c[5],
-            c[6],
+            // see note about `null` above.
+            siteId,
             c[7]
           );
         }
@@ -180,7 +186,7 @@ export default class DB {
   }
 
   /**
-   * A trivial `onChange` implementation.
+   * A trivial `notifyOfChange` implementation.
    *
    * Our other server implementations support geo-distributed strongly consistent replication of the DB **and** change
    * notification.
@@ -190,8 +196,8 @@ export default class DB {
    *
    * @param cb
    */
-  // TODO: a better implementation would understand the current backpressure in the system
-  // rather than a random 50ms throttle.
+  // TODO: a better implementation would understand the current backpressure on different
+  // websockets rather than a random 50 ms throttle.
   #notifyOfChange = throttle(50, () => {
     for (const cb of this.#changeCallbacks) {
       try {

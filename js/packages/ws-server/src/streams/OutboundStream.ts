@@ -19,6 +19,8 @@ export default class OutboundStream {
   #disposer: (() => void) | null = null;
   #closed = false;
   #lastSent: readonly [bigint, number];
+  #bufferFullBackoff = 50;
+  #timeoutHandle: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     transport: Transport,
@@ -60,10 +62,13 @@ export default class OutboundStream {
   }
 
   // db change notifications are already throttled for us in `DB.ts`
-  // although maybe it should happen here so we can respect back pressure
-  // per connection -- https://github.com/cloudflare/workerd/issues/988
+  // but we also apply some backpressure if the outbound buffer is full.
   #dbChanged = () => {
     logger.info(`OutboundStream got a db change event`);
+    if (this.#timeoutHandle != null) {
+      clearTimeout(this.#timeoutHandle);
+      this.#timeoutHandle = null;
+    }
     // #to to ignore changes from self.
     const changes = this.#db.pullChangeset(this.#lastSent, this.#to);
     if (changes.length == 0) {
@@ -75,12 +80,27 @@ export default class OutboundStream {
     this.#lastSent = [lastChange[5], 0] as const;
 
     try {
-      this.#transport.sendChanges({
+      const didSend = this.#transport.sendChanges({
         _tag: tags.Changes,
         changes,
         sender: this.#db.siteId,
         since,
       });
+      switch (didSend) {
+        case "sent":
+          this.#bufferFullBackoff = 50;
+          break;
+        case "buffer-full":
+          this.#lastSent = since;
+          this.#timeoutHandle = setTimeout(
+            this.#dbChanged,
+            (this.#bufferFullBackoff = Math.max(
+              this.#bufferFullBackoff * 2,
+              1000
+            ))
+          );
+          break;
+      }
     } catch (e) {
       this.#lastSent = since;
       throw e;

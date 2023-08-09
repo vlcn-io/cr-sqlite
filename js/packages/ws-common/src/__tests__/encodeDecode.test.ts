@@ -134,14 +134,12 @@ test("encoded, decode pairing StartStreaming", () => {
       fc.tuple(fc.bigIntN(64), fc.integer({ min: 0 })),
       fc.array(fc.uint8Array({ minLength: 16, maxLength: 16 })),
       fc.boolean(),
-      fc.bigIntN(64),
-      (since, excludeSites, localOnly, schemaVersion) => {
+      (since, excludeSites, localOnly) => {
         const msg = {
           _tag: tags.StartStreaming,
           since,
           excludeSites,
           localOnly,
-          schemaVersion,
         } as const;
         const encoded = encode(msg);
         const decoded = decode(encoded);

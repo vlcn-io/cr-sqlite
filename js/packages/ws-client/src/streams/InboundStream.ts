@@ -5,7 +5,7 @@ import {
   greaterThanOrEqual,
 } from "@vlcn.io/ws-common";
 import { Transport } from "../transport/Transport";
-import { DB } from "../config";
+import { DB } from "../DB";
 
 /**
  * Represents a stream of changes coming into the local

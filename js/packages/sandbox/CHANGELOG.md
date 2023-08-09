@@ -1,5 +1,21 @@
 # sandbox
 
+## 0.6.0-next.0
+
+### Minor Changes
+
+- re-insertion, api naming consistencies, metadata size reduction, websocket server, websocket client, websocket demo
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/direct-connect-browser@0.5.0-next.0
+  - @vlcn.io/direct-connect-common@0.6.0-next.0
+  - @vlcn.io/crsqlite-wasm@0.15.0-next.0
+  - @vlcn.io/react@2.5.0-next.0
+  - @vlcn.io/direct-connect-nodejs@0.6.0-next.0
+  - @vlcn.io/rx-tbl@0.14.0-next.0
+
 ## 0.5.0
 
 ### Minor Changes

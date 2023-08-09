@@ -8,6 +8,7 @@ test("db instantiation", () => {
   const config: Config = {
     schemaFolder: "./testSchemas",
     dbFolder: null,
+    pathPattern: /\/vlcn-ws/,
   };
 
   const schemaContent = fs.readFileSync("./testSchemas/test.sql", "utf-8");

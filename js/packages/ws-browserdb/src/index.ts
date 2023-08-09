@@ -9,6 +9,8 @@ export type Options = {
   schemaContent: string;
 };
 
+const ENVIRONMENT_IS_WORKER = typeof importScripts === "function";
+
 class WrappedDB implements DB {
   readonly #db;
   readonly #pullChangesetStmt;
@@ -108,7 +110,14 @@ class WrappedDB implements DB {
       // We should force sync to run in a worker in the browser so:
       // 1. we don't try to sync sync events
       // 2. we don't block the main thread
-      cb();
+      if (ENVIRONMENT_IS_WORKER) {
+        if (src !== "thisProcess") {
+          cb();
+        }
+      } else {
+        // We need a reliable way to filter out our own events if we're not in a worker.
+        cb();
+      }
     });
   }
 

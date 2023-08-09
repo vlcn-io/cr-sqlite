@@ -27,6 +27,7 @@
     "@vlcn.io/ws-client": "workspace:*",
     "@vlcn.io/ws-server": "workspace:*",
     "@vlcn.io/xplat-api": "workspace:*",
+    "@vlcn.io/crsqlite-wasm": "workspace:*",
     "express": "^4.18.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

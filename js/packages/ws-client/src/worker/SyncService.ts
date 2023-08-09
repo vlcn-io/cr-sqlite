@@ -1,4 +1,5 @@
 import { createAndStartSyncedDB_Exclusive } from "../SyncedDB.js";
+import { Config } from "../config.js";
 import { StartSyncMsg, StopSyncMsg } from "./workerMsgTypes.js";
 
 /**
@@ -16,10 +17,16 @@ export default class SyncService {
     ReturnType<typeof createAndStartSyncedDB_Exclusive>
   >();
 
+  constructor(private config: Config) {}
+
   async startSync(msg: StartSyncMsg) {
     const entry = this.dbs.get(msg.dbid);
     if (!entry) {
-      const creator = createAndStartSyncedDB_Exclusive(msg.dbid, msg.partyOpts);
+      const creator = createAndStartSyncedDB_Exclusive(
+        this.config,
+        msg.dbid,
+        msg.transportOpts
+      );
       this.dbs.set(msg.dbid, creator);
       await creator;
     } else {

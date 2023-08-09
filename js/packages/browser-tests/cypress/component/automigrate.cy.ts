@@ -2,6 +2,7 @@ import sqliteWasm from "@vlcn.io/crsqlite-wasm";
 // @ts-ignore
 import wasmUrl from "@vlcn.io/crsqlite-wasm/crsqlite.wasm?url";
 const crsqlite = await sqliteWasm((file) => wasmUrl);
+import { automigrateTests } from "@vlcn.io/xplat-tests";
 
 describe("automigrate.cy.ts", () => {
   it("handles column addition", async () => {
@@ -19,5 +20,15 @@ describe("automigrate.cy.ts", () => {
       /*sql*/ `SELECT crsql_automigrate(?, 'SELECT crsql_finalize();');`,
       [updatedSchema]
     );
+  });
+
+  Object.entries(automigrateTests).map((x) => {
+    it(x[0], () => {
+      const tc = x[1];
+      return tc(
+        () => crsqlite.open(),
+        (p: boolean) => expect(p).to.equal(true)
+      );
+    });
   });
 });

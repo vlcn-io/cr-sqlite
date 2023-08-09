@@ -40,6 +40,11 @@ export function serialize(
 
   log("Enqueueing query ", key);
 
+  let cause: Error | null = null;
+  if ((import.meta as any).env?.DEV) {
+    cause = new Error();
+  }
+
   const res = mutex.runExclusive(cb);
   // console.log('Running ', key);
 
@@ -48,6 +53,10 @@ export function serialize(
     res
       .finally(() => cache?.delete(key))
       .catch((e) => {
+        console.error(e);
+        if (cause) {
+          console.error("Caused by", cause);
+        }
         // this catch doesn't swallow, the exception still makes it to the user
         // of res as we return res rather than the caught variation of res.
       });

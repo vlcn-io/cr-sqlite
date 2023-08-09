@@ -10,9 +10,9 @@ export interface Transport {
   // Give it our version vector so it can determine
   // min version to request from us and multiplex to peers.
   // Return to us @ what version we should start sending changes.
-  announcePresence(msg: AnnouncePresence): Promise<void>;
-  sendChanges(msg: Changes): Promise<void>;
-  rejectChanges(msg: RejectChanges): Promise<void>;
+  announcePresence(msg: AnnouncePresence): void;
+  sendChanges(msg: Changes): "reconnecting" | "buffer-full" | "sent";
+  rejectChanges(msg: RejectChanges): void;
 
   onChangesReceived: ((msg: Changes) => Promise<void>) | null;
 

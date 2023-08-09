@@ -283,7 +283,7 @@ function getDbPath(dbName: string, config: Config) {
   // and persisted sync identical.
   // Note: room name is dbname so we'd have to indicate :memory: some other way.
   if (dbName === ":memory:" || config.dbFolder == null) {
-    return dbName;
+    return ":memory:";
   }
 
   return path.join(config.dbFolder, dbName);

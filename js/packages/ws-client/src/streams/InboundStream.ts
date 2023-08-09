@@ -41,7 +41,7 @@ export default class InboundStream {
     const lastSeen = this.#lastSeens.get(senderHex) || [0n, 0];
 
     if (!greaterThanOrEqual(lastSeen, msg.since)) {
-      await this.#transport.rejectChanges({
+      this.#transport.rejectChanges({
         _tag: tags.RejectChanges,
         whose: msg.sender,
         since: lastSeen,

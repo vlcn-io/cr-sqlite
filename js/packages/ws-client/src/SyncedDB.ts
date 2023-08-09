@@ -28,7 +28,7 @@ export default class SyncedDB {
     // Prepare the inbound stream to receive changes from upstreams
     this.#inboundStream.prepare(lastSeens);
     // Announce our presence that we're ready to start receiving and sending changes
-    await this.#transport.announcePresence({
+    this.#transport.announcePresence({
       _tag: tags.AnnouncePresence,
       lastSeens,
       schemaName,

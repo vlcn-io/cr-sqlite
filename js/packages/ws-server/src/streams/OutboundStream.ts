@@ -4,9 +4,9 @@ import {
   tags,
   uintArraysEqual,
 } from "@vlcn.io/ws-common";
-import DB from "./DB.js";
-import Transport from "./Trasnport.js";
-import logger from "./logger.js";
+import DB from "../DB.js";
+import Transport from "../Trasnport.js";
+import logger from "../logger.js";
 
 /**
  * Listens to the local db and sends out a stream

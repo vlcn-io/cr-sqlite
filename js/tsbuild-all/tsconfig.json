@@ -19,6 +19,7 @@
     { "path": "../packages/crsqlite-wasm" },
     { "path": "../packages/ws-server" },
     { "path": "../packages/ws-common" },
-    { "path": "../packages/ws-client" }
+    { "path": "../packages/ws-client" },
+    { "path": "../packages/ws-browserdb" }
   ]
 }

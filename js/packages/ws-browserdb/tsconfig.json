@@ -8,7 +8,10 @@
   "include": ["./src/"],
   "references": [
     {
-      "path": "../ws-common"
+      "path": "../crsqlite-wasm"
+    },
+    {
+      "path": "../ws-client"
     }
   ]
 }

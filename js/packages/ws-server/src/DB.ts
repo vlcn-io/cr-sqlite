@@ -88,6 +88,7 @@ export default class DB {
       .prepare<[Uint8Array]>(
         `SELECT version, seq FROM crsql_tracked_peers WHERE site_id = ? AND tag = 0 AND event = 0`
       )
+      .raw(true)
       .safeIntegers();
     // NOTE: pulling `null` for site id.
     // this isn't always the proper way. Depends on network topology.
@@ -98,6 +99,7 @@ export default class DB {
       .prepare<[bigint, Uint8Array]>(
         `SELECT "table", "pk", "cid", "val", "col_version", "db_version", NULL, "cl" FROM crsql_changes WHERE db_version > ? AND site_id IS NOT ?`
       )
+      .raw(true)
       .safeIntegers();
     this.#applyChangesStmt = db
       .prepare<[...Change]>(

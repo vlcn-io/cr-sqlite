@@ -15,6 +15,7 @@ export default class WebSocketTransport implements Transport {
   #closed = false;
   #options;
   #onReady: (() => void) | null = null;
+  #keepAliveInterval: number | null = null;
 
   constructor(options: TransporOptions) {
     this.#options = options;
@@ -25,8 +26,19 @@ export default class WebSocketTransport implements Transport {
     this.#socket = this.#openSocketAndKeepAlive(this.#options);
   }
 
-  // TODO: add ping-pong and reconnection?
   #openSocketAndKeepAlive(options: TransporOptions) {
+    if (this.#closed) {
+      return null;
+    }
+
+    if (this.#keepAliveInterval == null) {
+      this.#keepAliveInterval = setInterval(() => {
+        if (!this.#socket || this.#socket?.readyState === WebSocket.CLOSED) {
+          this.#openSocketAndKeepAlive(options);
+        }
+      }, Math.random() * 2000 + 1000);
+    }
+
     const socket = new WebSocket(options.url, [
       btoa(`room=${options.room}`).replaceAll("=", ""),
     ]);
@@ -37,25 +49,12 @@ export default class WebSocketTransport implements Transport {
       });
     });
 
-    socket.onclose = () => {
-      if (!this.#closed) {
-        setTimeout(() => {
-          this.#socket = this.#openSocketAndKeepAlive(options);
-        }, Math.random() * 2000 + 1000);
-      }
-    };
-
-    socket.onerror = () => {
-      this.close();
-    };
-
     socket.onopen = () => {
       if (this.#onReady) this.#onReady();
     };
 
     this.#socket = socket;
     return socket;
-    // https://stackoverflow.com/questions/22431751/websocket-how-to-automatically-reconnect-after-it-dies
   }
 
   onChangesReceived: ((msg: Changes) => Promise<void>) | null = null;
@@ -111,5 +110,8 @@ export default class WebSocketTransport implements Transport {
   close() {
     this.#closed = true;
     this.#socket!.close();
+    if (this.#keepAliveInterval) {
+      clearInterval(this.#keepAliveInterval);
+    }
   }
 }

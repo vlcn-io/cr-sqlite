@@ -36,7 +36,7 @@ export default class InboundStream {
     }
   }
 
-  async receiveChanges(msg: Changes) {
+  receiveChanges = async (msg: Changes) => {
     const senderHex = bytesToHex(msg.sender);
     const lastSeen = this.#lastSeens.get(senderHex) || [0n, 0];
 
@@ -65,5 +65,5 @@ export default class InboundStream {
       this.#lastSeens.set(senderHex, lastSeen);
       throw e;
     }
-  }
+  };
 }

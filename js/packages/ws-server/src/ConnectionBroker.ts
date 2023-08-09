@@ -38,10 +38,13 @@ export default class ConnectionBroker {
   #handleMessage(msg: Msg) {
     const tag = msg._tag;
     switch (tag) {
+      // Note: room could go in the `AnnouncePresence` message instead of the random headers.
       case tags.AnnouncePresence: {
         if (this.#syncConnection != null) {
           throw new Error(
-            `A sync connection for ${this.#room} was already started`
+            `A sync connection for ${
+              this.#room
+            } was already started for the given websocket`
           );
         }
 

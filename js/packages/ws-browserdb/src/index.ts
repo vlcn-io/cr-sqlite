@@ -41,18 +41,18 @@ class WrappedDB implements DB {
     excludeSites: readonly Uint8Array[],
     localOnly: boolean
   ): Promise<readonly Change[]> {
-    console.log(
-      "Asked for changes since:",
-      since[0],
-      "excluding:",
-      excludeSites[0]
-    );
+    // console.log("Asked for changes since:", since[0]);
     const ret = await this.#pullChangesetStmt.all(
       null,
       since[0],
       excludeSites[0]
     );
-    console.log(`returning ${ret.length} changes`);
+    for (const c of ret) {
+      c[4] = BigInt(c[4]);
+      c[5] = BigInt(c[5]);
+      c[7] = BigInt(c[7]);
+    }
+    // console.log(`returning ${ret.length} changes`);
     return ret;
   }
 
@@ -71,7 +71,6 @@ class WrappedDB implements DB {
           c[3],
           c[4],
           c[5],
-          c[6],
           // TODO: see the `null` note on the server side impl.
           // We'll need to change this for production grade sync primitives.
           siteId,
@@ -146,7 +145,7 @@ export function createDbProvider(
     const [pullChangesetStmt, applyChangesetStmt, updatePeerTrackerStmt] =
       await Promise.all([
         db.prepare(
-          `SELECT "table", "pk", "cid", "val", "col_version", "db_version", "cl" FROM crsql_changes WHERE db_version > ? AND site_id IS NOT ?`
+          `SELECT "table", "pk", "cid", "val", "col_version", "db_version", NULL, "cl" FROM crsql_changes WHERE db_version > ? AND site_id IS NOT ?`
         ),
         db.prepare(
           `INSERT INTO crsql_changes ("table", "pk", "cid", "val", "col_version", "db_version", "site_id", "cl") VALUES (?, ?, ?, ?, ?, ?, ?, ?)`

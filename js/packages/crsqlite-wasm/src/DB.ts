@@ -90,7 +90,7 @@ export class DB implements DBAsync {
         if (storedName !== schemaName) {
           // drop all tables since a schema name change is a reformat of the db.
           const tables = await tx.execA(
-            `SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE '%crsql_%'`
+            `SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE 'crsql_%'`
           );
           for (const table of tables) {
             await tx.exec(`DROP TABLE [${table[0]}]`);

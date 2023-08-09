@@ -1,5 +1,4 @@
-import { createSyncedDB, ISyncedDB } from "../SyncedDB.js";
-import config from "../config.js";
+import { createAndStartSyncedDB_Exclusive } from "../SyncedDB.js";
 import { StartSyncMsg, StopSyncMsg } from "./workerMsgTypes.js";
 
 /**
@@ -12,12 +11,15 @@ export default class SyncService {
   /**
    * Map from dbid to SyncedDB
    */
-  private readonly dbs = new Map<string, Promise<ISyncedDB>>();
+  private readonly dbs = new Map<
+    string,
+    ReturnType<typeof createAndStartSyncedDB_Exclusive>
+  >();
 
   async startSync(msg: StartSyncMsg) {
     const entry = this.dbs.get(msg.dbid);
     if (!entry) {
-      const creator = createSyncedDB(msg.dbid, msg.partyOpts);
+      const creator = createAndStartSyncedDB_Exclusive(msg.dbid, msg.partyOpts);
       this.dbs.set(msg.dbid, creator);
       await creator;
     } else {

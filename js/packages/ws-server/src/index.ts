@@ -6,6 +6,8 @@ import DBCache from "./DBCache.js";
 import ConnectionBroker from "./ConnectionBroker.js";
 import { Config } from "./config.js";
 
+export * from "./config.js";
+
 function noopAuth(req: IncomingMessage, cb: (err: any) => void) {
   cb(null);
 }
@@ -33,7 +35,9 @@ export function attachWebsocketServer(
       }
 
       wss.handleUpgrade(request, socket, head, (ws) => {
-        wss.emit("connection", ws, request);
+        if (config.pathPattern.test(request.url || "")) {
+          wss.emit("connection", ws, request);
+        }
       });
     });
   });

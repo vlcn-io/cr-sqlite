@@ -1,4 +1,4 @@
-import SyncedDB, { createSyncedDB } from "../SyncedDB.js";
+import { createSyncedDB, ISyncedDB } from "../SyncedDB.js";
 import config from "../config.js";
 import { StartSyncMsg, StopSyncMsg } from "./workerMsgTypes.js";
 
@@ -12,7 +12,7 @@ export default class SyncService {
   /**
    * Map from dbid to SyncedDB
    */
-  private readonly dbs = new Map<string, Promise<SyncedDB>>();
+  private readonly dbs = new Map<string, Promise<ISyncedDB>>();
 
   async startSync(msg: StartSyncMsg) {
     const entry = this.dbs.get(msg.dbid);

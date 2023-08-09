@@ -443,6 +443,9 @@ importers:
       '@vlcn.io/react':
         specifier: workspace:*
         version: link:../react
+      '@vlcn.io/rx-tbl':
+        specifier: workspace:*
+        version: link:../rx-tbl
       '@vlcn.io/ws-browserdb':
         specifier: workspace:*
         version: link:../ws-browserdb
@@ -468,6 +471,12 @@ importers:
         specifier: ^4.2.2
         version: 4.2.2(@types/node@18.16.1)
     devDependencies:
+      '@types/react':
+        specifier: ^18.0.37
+        version: 18.0.37
+      '@types/react-dom':
+        specifier: ^18.2.4
+        version: 18.2.4
       typescript:
         specifier: ^5.0.4
         version: 5.0.4

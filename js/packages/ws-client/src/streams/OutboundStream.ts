@@ -61,7 +61,7 @@ export default class OutboundStream {
     const lastChange = changes[changes.length - 1];
     this.#lastSent = [lastChange[5], 0];
 
-    console.log(`Sending ${changes.length} changes since ${this.#lastSent}`);
+    // console.log(`Sending ${changes.length} changes since ${this.#lastSent}`);
 
     try {
       const didSend = this.#transport.sendChanges({

@@ -61,3 +61,7 @@ def test_local_changes_have_null_site():
     assert (a.execute(
         "SELECT count(*) FROM crsql_changes").fetchone()[0] == 4)
     None
+
+
+def test_site_id_ordinals_do_not_move_on_merge():
+    None

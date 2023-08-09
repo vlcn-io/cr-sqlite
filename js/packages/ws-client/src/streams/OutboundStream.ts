@@ -18,17 +18,17 @@ export default class OutboundStream {
     this.#disposer = this.#db.onChange(this.#dbChanged);
   }
 
-  async startStreaming(msg: StartStreaming) {
+  startStreaming = async (msg: StartStreaming) => {
     this.#lastSent = msg.since;
     this.#excludeSites = msg.excludeSites;
     this.#localOnly = msg.localOnly;
     // initial kickoff so we don't wait for a db change event
     this.#dbChanged();
-  }
+  };
 
-  async resetStream(msg: StartStreaming) {
+  resetStream = async (msg: StartStreaming) => {
     this.startStreaming(msg);
-  }
+  };
 
   // TODO: ideally we get throttle information from signals from the rest of the system.
   // Should throttle be here or something that the user would be expected to set up?

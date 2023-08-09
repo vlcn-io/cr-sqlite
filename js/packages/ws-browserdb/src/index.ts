@@ -1,13 +1,8 @@
 import { DB } from "@vlcn.io/ws-client";
 import initWasm, { DB as WasmDB } from "@vlcn.io/crsqlite-wasm";
-import { Change, cryb64 } from "@vlcn.io/ws-common";
+import { Change } from "@vlcn.io/ws-common";
 import { StmtAsync, firstPick } from "@vlcn.io/xplat-api";
 import tblrx from "@vlcn.io/rx-tbl";
-
-export type Options = {
-  schemaName: string;
-  schemaContent: string;
-};
 
 const ENVIRONMENT_IS_WORKER = typeof importScripts === "function";
 
@@ -142,8 +137,7 @@ class WrappedDB implements DB {
  * @returns
  */
 export function createDbProvider(
-  wasmUri: string | undefined,
-  options?: Options
+  wasmUri: string | undefined
 ): (dbname: string) => PromiseLike<DB> {
   return async (dbname: string): Promise<DB> => {
     const sqlite = await initWasm(wasmUri ? () => wasmUri : undefined);
@@ -167,10 +161,20 @@ export function createDbProvider(
 
     let siteid = (await db.execA<[Uint8Array]>(`SELECT crsql_site_id()`))[0][0];
 
-    const [schemaName, schemaVersion] = await applyOrGetSchemaDetails(
-      db,
-      options?.schemaName,
-      options?.schemaContent
+    const schemaName = firstPick<string>(
+      await db.execA<[string]>(
+        `SELECT value FROM crsql_master WHERE key = 'schema_name'`
+      )
+    );
+    if (schemaName == null) {
+      throw new Error("The database does not have a schema applied.");
+    }
+    const schemaVersion = BigInt(
+      firstPick<number | bigint>(
+        await db.execA<[number | bigint]>(
+          `SELECT value FROM crsql_master WHERE key = 'schema_version'`
+        )
+      ) || -1
     );
 
     return new WrappedDB(
@@ -183,55 +187,4 @@ export function createDbProvider(
       updatePeerTrackerStmt
     );
   };
-}
-
-// TODO: the sync service probably should not incoroprate any schema application logic as it is now doing below.
-async function applyOrGetSchemaDetails(
-  db: WasmDB,
-  schemaName?: string,
-  schemaContent?: string
-): Promise<[string, bigint]> {
-  console.log("apply or get...");
-  const storedName = firstPick<string>(
-    await db.execA<[string]>(
-      `SELECT value FROM crsql_master WHERE key = 'schema_name'`
-    )
-  );
-  const storedVersion = BigInt(
-    firstPick<number | bigint>(
-      await db.execA<[number | bigint]>(
-        `SELECT value FROM crsql_master WHERE key = 'schema_version'`
-      )
-    ) || -1
-  );
-
-  if (schemaName == null || schemaContent == null) {
-    if (storedName == null) {
-      throw new Error(
-        `Illegal state -- DB has no schema and no schema was supplied to apply to it`
-      );
-    }
-    return [storedName, storedVersion];
-  }
-
-  const schemaVersion = cryb64(schemaContent);
-  if (storedName === schemaName && storedVersion === schemaVersion) {
-    return [storedName, storedVersion];
-  }
-
-  await db.tx(async (tx) => {
-    console.log(schemaContent);
-    await tx.exec(`SELECT crsql_automigrate(?)`, [schemaContent]);
-    console.log("automigrated?");
-    await tx.exec(
-      `INSERT OR REPLACE INTO crsql_master (key, value) VALUES (?, ?)`,
-      ["schema_name", schemaName]
-    );
-    await tx.exec(
-      `INSERT OR REPLACE INTO crsql_master (key, value) VALUES (?, ?)`,
-      ["schema_version", schemaVersion]
-    );
-  });
-
-  return [schemaName, schemaVersion];
 }

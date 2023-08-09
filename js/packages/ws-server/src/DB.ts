@@ -96,7 +96,7 @@ export default class DB {
     // that reduces data size but will require this to only be used in hub and spoke topologies.
     this.#getChangesStmt = db
       .prepare<[bigint, Uint8Array]>(
-        `SELECT "table", "pk", "cid", "val", "col_version", "db_version", NULL, "cl" FROM crsql_changes WHERE db_version > ? AND site_id IS NULL`
+        `SELECT "table", "pk", "cid", "val", "col_version", "db_version", NULL, "cl" FROM crsql_changes WHERE db_version > ? AND site_id IS NOT ?`
       )
       .safeIntegers();
     this.#applyChangesStmt = db
@@ -152,10 +152,13 @@ export default class DB {
   }
 
   getLastSeen(site: Uint8Array): [bigint, number] {
-    const result = this.#getLastSeenStmt.raw(true).get(site) as [
-      bigint,
-      bigint
-    ];
+    const result = this.#getLastSeenStmt.raw(true).get(site) as
+      | [bigint, bigint]
+      | null;
+    // No record of the client!
+    if (result == null) {
+      return [0n, 0];
+    }
     return [result[0], Number(result[1])];
   }
 

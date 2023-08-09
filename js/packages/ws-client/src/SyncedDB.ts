@@ -1,10 +1,18 @@
-import { tags } from "@vlcn.io/ws-common";
-import config, { DB } from "./config.js";
+import { bytesToHex, tags } from "@vlcn.io/ws-common";
+import config from "./config.js";
 import InboundStream from "./streams/InboundStream.js";
 import OutboundStream from "./streams/OutboundStream.js";
 import { Transport } from "./transport/Transport.js";
+import { DB } from "./DB.js";
 
-export default class SyncedDB {
+const locks = new Map<string, () => void>();
+
+export interface ISyncedDB {
+  start(): Promise<void>;
+  stop(): boolean;
+}
+
+class SyncedDB implements ISyncedDB {
   readonly #transport;
   readonly #inboundStream;
   readonly #outboundStream;
@@ -21,6 +29,9 @@ export default class SyncedDB {
     this.#transport.onResetStream = this.#outboundStream.resetStream;
   }
 
+  // TODO: acquire navigation lock on site id or db name?
+  // so we only have a single tab syncing the same db at the same time.
+  // or single worker.
   async start() {
     const lastSeens = await this.#db.getLastSeens();
     const [schemaName, schemaVersion] =
@@ -47,8 +58,69 @@ export default class SyncedDB {
 export async function createSyncedDB<T>(
   dbname: string,
   transportOptions: T
-): Promise<SyncedDB> {
+): Promise<ISyncedDB> {
   const db = await config.dbProvider(dbname);
   const transport = config.transportProvider(dbname, transportOptions);
   return new SyncedDB(db, transport);
+}
+
+/**
+ * Ensures that only one tab or worker is syncing the DB at a time.
+ * As soon as a tab or worker dies, then the next tab or worker will
+ * be able to sync the DB.
+ * @param dbname
+ * @param transportOptions
+ */
+export async function createSyncedDB_Exclusive<T>(
+  dbname: string,
+  transportOptions: T
+): Promise<{
+  stop: () => void;
+}> {
+  let stopRequested = false;
+  let db: ISyncedDB | null = null;
+  let releaser: (() => void) | null = null;
+  const hold = new Promise<void>((resolve, _reject) => {
+    releaser = resolve;
+  });
+  locks.set(dbname, releaser!);
+
+  navigator.locks.request(dbname, () => {
+    if (stopRequested) {
+      return;
+    }
+    startSync(dbname, transportOptions, (db: ISyncedDB) => {
+      if (stopRequested) {
+        return false;
+      }
+      db = db;
+      return true;
+    });
+    return hold;
+  });
+
+  return {
+    stop: () => {
+      stopRequested = true;
+      const releaser = locks.get(dbname);
+      if (releaser) {
+        releaser();
+      }
+      if (db) {
+        db.stop();
+      }
+    },
+  };
+}
+
+function startSync<T>(
+  dbname: string,
+  transportOptions: T,
+  cb: (db: ISyncedDB) => boolean
+) {
+  createSyncedDB(dbname, transportOptions).then((db) => {
+    if (cb(db)) {
+      db.start();
+    }
+  });
 }

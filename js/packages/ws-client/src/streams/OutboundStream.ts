@@ -1,6 +1,6 @@
 import { StartStreaming, tags } from "@vlcn.io/ws-common";
-import { DB } from "../config.js";
 import { Transport } from "../transport/Transport.js";
+import { DB } from "../DB.js";
 
 export default class OutboundStream {
   readonly #db;

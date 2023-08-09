@@ -21,4 +21,6 @@ export interface DB {
    * of non-sync events.
    */
   onChange(cb: () => void): () => void;
+
+  close(closeWrappedDB: boolean): void;
 }

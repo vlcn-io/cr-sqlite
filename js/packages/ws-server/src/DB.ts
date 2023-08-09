@@ -109,7 +109,10 @@ export default class DB {
       .pluck()
       .get() as Uint8Array;
     this.#setLastSeenStmt = db.prepare<[Uint8Array, bigint, number]>(
-      `INSERT OR REPLACE INTO crsql_tracked_peers (site_id, tag, event, version, seq) VALUES (?, 0, 0, ?, ?)`
+      `INSERT INTO crsql_tracked_peers (site_id, tag, event, version, seq) VALUES (?, 0, 0, ?, ?)
+        ON CONFLICT DO UPDATE SET
+          "version" = MAX("version", excluded."version"),
+          "seq" = CASE "version" > excluded."version" WHEN 1 THEN "seq" ELSE excluded."seq" END`
     );
     this.#applyChangesAndSetLastSeenTx = this.#db.transaction(
       (

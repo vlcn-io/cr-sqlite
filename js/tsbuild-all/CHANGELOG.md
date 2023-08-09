@@ -1,5 +1,11 @@
 # @vlcn.io/tsbuild-all
 
+## 0.13.0-next.0
+
+### Minor Changes
+
+- re-insertion, api naming consistencies, metadata size reduction, websocket server, websocket client, websocket demo
+
 ## 0.12.0
 
 ### Minor Changes

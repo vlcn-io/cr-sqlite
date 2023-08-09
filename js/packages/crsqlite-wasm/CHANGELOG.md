@@ -1,5 +1,17 @@
 # @vlcn.io/wa-crsqlite
 
+## 0.15.0-next.0
+
+### Minor Changes
+
+- re-insertion, api naming consistencies, metadata size reduction, websocket server, websocket client, websocket demo
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/wa-sqlite@0.21.0-next.0
+  - @vlcn.io/xplat-api@0.14.0-next.0
+
 ## 0.14.0
 
 ### Minor Changes

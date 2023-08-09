@@ -400,9 +400,18 @@ importers:
       '@vlcn.io/crsqlite-wasm':
         specifier: workspace:*
         version: link:../crsqlite-wasm
+      '@vlcn.io/rx-tbl':
+        specifier: workspace:*
+        version: link:../rx-tbl
       '@vlcn.io/ws-client':
         specifier: workspace:*
         version: link:../ws-client
+      '@vlcn.io/ws-common':
+        specifier: workspace:*
+        version: link:../ws-common
+      '@vlcn.io/xplat-api':
+        specifier: workspace:*
+        version: link:../xplat-api
 
   js/packages/ws-client:
     dependencies:

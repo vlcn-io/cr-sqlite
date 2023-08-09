@@ -12,6 +12,15 @@
     },
     {
       "path": "../ws-client"
+    },
+    {
+      "path": "../ws-common"
+    },
+    {
+      "path": "../rx-tbl"
+    },
+    {
+      "path": "../xplat-api"
     }
   ]
 }

@@ -23,6 +23,9 @@
   "dependencies": {
     "@types/throttle-debounce": "^5.0.0",
     "@vlcn.io/ws-client": "workspace:*",
-    "@vlcn.io/crsqlite-wasm": "workspace:*"
+    "@vlcn.io/ws-common": "workspace:*",
+    "@vlcn.io/crsqlite-wasm": "workspace:*",
+    "@vlcn.io/xplat-api": "workspace:*",
+    "@vlcn.io/rx-tbl": "workspace:*"
   }
 }

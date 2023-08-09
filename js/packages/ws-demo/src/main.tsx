@@ -10,7 +10,7 @@ const worker = new WorkerInterface(
 
 worker.startSync("some-db", {
   room: "some-room",
-  url: "http://localhost:8080/sync",
+  url: "ws://localhost:8080/sync",
 });
 
 console.log("bya");

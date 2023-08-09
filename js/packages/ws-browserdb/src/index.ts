@@ -191,6 +191,7 @@ async function applyOrGetSchemaDetails(
   schemaName?: string,
   schemaContent?: string
 ): Promise<[string, bigint]> {
+  console.log("apply or get...");
   const storedName = firstPick<string>(
     await db.execA<[string]>(
       `SELECT value FROM crsql_master WHERE key = 'schema_name'`

@@ -440,9 +440,21 @@ importers:
       '@vlcn.io/react':
         specifier: workspace:*
         version: link:../react
+      '@vlcn.io/ws-browserdb':
+        specifier: workspace:*
+        version: link:../ws-browserdb
+      '@vlcn.io/ws-client':
+        specifier: workspace:*
+        version: link:../ws-client
+      '@vlcn.io/ws-server':
+        specifier: workspace:*
+        version: link:../ws-server
       '@vlcn.io/xplat-api':
         specifier: workspace:*
         version: link:../xplat-api
+      express:
+        specifier: ^4.18.2
+        version: 4.18.2
       react:
         specifier: ^18.2.0
         version: 18.2.0

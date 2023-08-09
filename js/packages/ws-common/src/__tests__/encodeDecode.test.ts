@@ -87,7 +87,10 @@ test("encoded, decode pairing Changes", () => {
           ),
           fc.bigIntN(64),
           fc.bigIntN(64),
-          fc.uint8Array({ minLength: 16, maxLength: 16 }),
+          fc.oneof(
+            fc.uint8Array({ minLength: 16, maxLength: 16 }),
+            fc.constant(null)
+          ),
           fc.bigIntN(64)
         )
       ),

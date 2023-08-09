@@ -34,7 +34,9 @@ export default class WebSocketTransport implements Transport {
 
     socket.onclose = () => {
       if (!this.#closed) {
-        setTimeout(() => {});
+        setTimeout(() => {
+          this.#socket = this.#openSocketAndKeepAlive(options);
+        }, Math.random() * 2000 + 1000);
       }
     };
 
@@ -42,6 +44,7 @@ export default class WebSocketTransport implements Transport {
       this.close();
     };
 
+    this.#socket = socket;
     return socket;
     // https://stackoverflow.com/questions/22431751/websocket-how-to-automatically-reconnect-after-it-dies
   }
@@ -49,6 +52,7 @@ export default class WebSocketTransport implements Transport {
   onChangesReceived: ((msg: Changes) => Promise<void>) | null = null;
   onStartStreaming: ((msg: StartStreaming) => Promise<void>) | null = null;
   onResetStream: ((msg: StartStreaming) => Promise<void>) | null = null;
+  onReconnected: (() => Promise<void>) | null = null;
 
   #processEvent = (data: Uint8Array) => {
     const msg = decode(new Uint8Array(data));
@@ -72,19 +76,26 @@ export default class WebSocketTransport implements Transport {
     }
   };
 
-  async announcePresence(msg: AnnouncePresence): Promise<void> {
+  announcePresence(msg: AnnouncePresence): void {
     this.#socket.send(encode(msg));
   }
 
-  async sendChanges(msg: Changes): Promise<void> {
-    // TODO: hm... we can't see if it is still in-flight?
-    // or if we should back off on sending?
-    // Ideally we could observe the socket and back off on sending if we're sending too frequently for the
-    // receiver.
+  sendChanges(msg: Changes): "reconnecting" | "buffer-full" | "sent" {
+    if (this.#socket.readyState !== WebSocket.OPEN) {
+      return "reconnecting";
+    }
+    // If we do the below we need to nofiy the caller to back off on sending.
+    if (this.#socket.bufferedAmount > 1024 * 5) {
+      console.warn(
+        "socket buffer full. Waiting till buffer is drained before allowing more changes to be queue for send."
+      );
+      return "buffer-full";
+    }
     this.#socket.send(encode(msg));
+    return "sent";
   }
 
-  async rejectChanges(msg: RejectChanges): Promise<void> {
+  rejectChanges(msg: RejectChanges): void {
     this.#socket.send(encode(msg));
   }
 

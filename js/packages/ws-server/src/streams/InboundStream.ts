@@ -1,6 +1,6 @@
 import { Changes, greaterThanOrEqual, tags } from "@vlcn.io/ws-common";
-import DB from "./DB.js";
-import Transport from "./Trasnport.js";
+import DB from "../DB.js";
+import Transport from "../Trasnport.js";
 
 /**
  * Processes a stream of changes from the given sender.

@@ -17,5 +17,5 @@ export type StopSyncMsg = {
 
 export type ConfigureMsg = {
   _tag: "Configure";
-  config: Config;
+  configModule: string;
 };

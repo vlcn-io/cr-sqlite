@@ -11,7 +11,8 @@ self.onmessage = (e: MessageEvent<Msg>) => {
 
   switch (msg._tag) {
     case "Configure": {
-      import(msg.configModule).then((module) => {
+      // TODO
+      import(msg.configModule /* @vite-ignore */).then((module) => {
         syncSvcResolver(new SyncService(module.config));
       });
       break;

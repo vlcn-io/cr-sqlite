@@ -1,7 +1,7 @@
 import { DB } from "@vlcn.io/ws-client";
 import initWasm, { DB as WasmDB } from "@vlcn.io/crsqlite-wasm";
 import { Change, cryb64 } from "@vlcn.io/ws-common";
-import { StmtAsync } from "@vlcn.io/xplat-api";
+import { StmtAsync, firstPick } from "@vlcn.io/xplat-api";
 import tblrx from "@vlcn.io/rx-tbl";
 
 export type Options = {
@@ -191,20 +191,25 @@ async function applyOrGetSchemaDetails(
   schemaName?: string,
   schemaContent?: string
 ): Promise<[string, bigint]> {
-  const storedName = (
+  const storedName = firstPick<string>(
     await db.execA<[string]>(
       `SELECT value FROM crsql_master WHERE key = 'schema_name'`
     )
-  )[0][0];
+  );
   const storedVersion = BigInt(
-    (
+    firstPick<number | bigint>(
       await db.execA<[number | bigint]>(
         `SELECT value FROM crsql_master WHERE key = 'schema_version'`
       )
-    )[0][0]
+    ) || -1
   );
 
   if (schemaName == null || schemaContent == null) {
+    if (storedName == null) {
+      throw new Error(
+        `Illegal state -- DB has no schema and no schema was supplied to apply to it`
+      );
+    }
     return [storedName, storedVersion];
   }
 
@@ -214,7 +219,9 @@ async function applyOrGetSchemaDetails(
   }
 
   await db.tx(async (tx) => {
+    console.log(schemaContent);
     await tx.exec(`SELECT crsql_automigrate(?)`, [schemaContent]);
+    console.log("automigrated?");
     await tx.exec(
       `INSERT OR REPLACE INTO crsql_master (key, value) VALUES (?, ?)`,
       ["schema_name", schemaName]

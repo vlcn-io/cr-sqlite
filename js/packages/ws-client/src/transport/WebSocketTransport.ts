@@ -10,17 +10,26 @@ import {
 } from "@vlcn.io/ws-common";
 
 export default class WebSocketTransport implements Transport {
-  #socket;
+  #socket: WebSocket | null = null;
   #hadStartStream = false;
   #closed = false;
+  #options;
+  #onReady: (() => void) | null = null;
 
   constructor(options: TransporOptions) {
-    this.#socket = this.#openSocketAndKeepAlive(options);
+    this.#options = options;
+  }
+
+  start(onReady: () => void) {
+    this.#onReady = onReady;
+    this.#socket = this.#openSocketAndKeepAlive(this.#options);
   }
 
   // TODO: add ping-pong and reconnection?
   #openSocketAndKeepAlive(options: TransporOptions) {
-    const socket = new WebSocket(options.url, ["room", options.room]);
+    const socket = new WebSocket(options.url, [
+      btoa(`room=${options.room}`).replaceAll("=", ""),
+    ]);
 
     socket.addEventListener("message", (e: MessageEvent<Blob>) => {
       e.data.arrayBuffer().then((b) => {
@@ -38,6 +47,10 @@ export default class WebSocketTransport implements Transport {
 
     socket.onerror = () => {
       this.close();
+    };
+
+    socket.onopen = () => {
+      if (this.#onReady) this.#onReady();
     };
 
     this.#socket = socket;
@@ -73,30 +86,30 @@ export default class WebSocketTransport implements Transport {
   };
 
   announcePresence(msg: AnnouncePresence): void {
-    this.#socket.send(encode(msg));
+    this.#socket!.send(encode(msg));
   }
 
   sendChanges(msg: Changes): "reconnecting" | "buffer-full" | "sent" {
-    if (this.#socket.readyState !== WebSocket.OPEN) {
+    if (this.#socket!.readyState !== WebSocket.OPEN) {
       return "reconnecting";
     }
     // If we do the below we need to nofiy the caller to back off on sending.
-    if (this.#socket.bufferedAmount > 1024 * 1024 * 5) {
+    if (this.#socket!.bufferedAmount > 1024 * 1024 * 5) {
       console.warn(
         "socket buffer full. Waiting till buffer is drained before allowing more changes to be queue for send."
       );
       return "buffer-full";
     }
-    this.#socket.send(encode(msg));
+    this.#socket!.send(encode(msg));
     return "sent";
   }
 
   rejectChanges(msg: RejectChanges): void {
-    this.#socket.send(encode(msg));
+    this.#socket!.send(encode(msg));
   }
 
   close() {
     this.#closed = true;
-    this.#socket.close();
+    this.#socket!.close();
   }
 }

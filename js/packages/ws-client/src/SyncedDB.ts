@@ -37,13 +37,16 @@ class SyncedDB implements ISyncedDB {
       await this.#db.getSchemaNameAndVersion();
     // Prepare the inbound stream to receive changes from upstreams
     this.#inboundStream.prepare(lastSeens);
-    // Announce our presence that we're ready to start receiving and sending changes
-    this.#transport.announcePresence({
-      _tag: tags.AnnouncePresence,
-      lastSeens,
-      schemaName,
-      schemaVersion,
-      sender: this.#db.siteid,
+
+    this.#transport.start(() => {
+      // Announce our presence that we're ready to start receiving and sending changes
+      this.#transport.announcePresence({
+        _tag: tags.AnnouncePresence,
+        lastSeens,
+        schemaName,
+        schemaVersion,
+        sender: this.#db.siteid,
+      });
     });
   }
 

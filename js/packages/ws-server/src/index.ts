@@ -49,16 +49,17 @@ export function attachWebsocketServer(
     if (proto == null) {
       throw new Error("Expected sec-websocket-protocol header");
     }
-    const entries = proto?.split(";");
+    console.log(proto);
+    const entries = proto?.split(",");
     const options: { [key: string]: string } = {};
     for (const entry of entries) {
-      const [key, value] = entry.split("=");
+      const [key, value] = atob(entry).split("=");
       options[key] = value;
     }
     if (!options.room) {
-      throw new Error(
-        "Expected to receive a room in the sec-websocket-protocol"
-      );
+      console.error("Expected to receive a room in the sec-websocket-protocol");
+      ws.close();
+      return;
     }
     new ConnectionBroker(ws, dbCache, options.room);
   });

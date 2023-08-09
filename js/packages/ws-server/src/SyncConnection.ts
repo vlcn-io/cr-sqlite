@@ -5,8 +5,8 @@ import {
   bytesToHex,
 } from "@vlcn.io/ws-common";
 import DBCache from "./DBCache.js";
-import OutboundStream from "./OutboundStream.js";
-import InboundStream from "./InboundStream.js";
+import OutboundStream from "./streams/OutboundStream.js";
+import InboundStream from "./streams/InboundStream.js";
 import Transport from "./Trasnport.js";
 import logger from "./logger.js";
 

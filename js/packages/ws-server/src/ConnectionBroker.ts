@@ -30,9 +30,9 @@ export default class ConnectionBroker {
     this.#ws.on("error", () => {
       this.close();
     });
-    // TODO: impl ping & pong heartbeat to re-establish connections on close
-    this.#ws.on("pong", () => {});
-    this.#ws.on("ping", () => {});
+    // TODO: impl ping & pong heartbeat
+    // this.#ws.on("pong", () => {});
+    // this.#ws.on("ping", () => {});
   }
 
   #handleMessage(msg: Msg) {

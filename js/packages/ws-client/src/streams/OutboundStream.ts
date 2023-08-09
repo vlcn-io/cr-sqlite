@@ -8,6 +8,8 @@ export default class OutboundStream {
   #lastSent: readonly [bigint, number] | null = null;
   #excludeSites: readonly Uint8Array[] = [];
   #localOnly: boolean = false;
+  #timeoutHandle: number | null = null;
+  #bufferFullBackoff = 50;
   readonly #disposer;
 
   constructor(db: DB, transport: Transport) {
@@ -35,6 +37,10 @@ export default class OutboundStream {
     if (this.#lastSent == null) {
       return;
     }
+    if (this.#timeoutHandle != null) {
+      clearTimeout(this.#timeoutHandle);
+      this.#timeoutHandle = null;
+    }
 
     // save off last sent so we can detect a reset that happened while pulling changes.
     const lastSent = this.#lastSent;
@@ -58,12 +64,30 @@ export default class OutboundStream {
     console.log(`Sending ${changes.length} changes since ${this.#lastSent}`);
 
     try {
-      await this.#transport.sendChanges({
+      const didSend = this.#transport.sendChanges({
         _tag: tags.Changes,
         changes,
         sender: this.#db.siteid,
         since: lastSent,
       });
+      // buffer full or reconnecting. Try again later.
+      switch (didSend) {
+        case "sent":
+          this.#bufferFullBackoff = 50;
+          break;
+        case "buffer-full":
+          this.#lastSent = lastSent;
+          this.#timeoutHandle = setTimeout(
+            this.#dbChanged,
+            (this.#bufferFullBackoff = Math.max(
+              this.#bufferFullBackoff * 2,
+              1000
+            ))
+          );
+        case "reconnecting":
+          this.#lastSent = lastSent;
+          this.#timeoutHandle = setTimeout(this.#dbChanged, 3000);
+      }
     } catch (e) {
       this.#lastSent = lastSent;
       throw e;

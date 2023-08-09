@@ -5,6 +5,11 @@ import {
   StartStreaming,
 } from "@vlcn.io/ws-common";
 
+export type TransporOptions = {
+  url: string;
+  room: string;
+};
+
 export interface Transport {
   // Announce ourselves to the server.
   // Give it our version vector so it can determine

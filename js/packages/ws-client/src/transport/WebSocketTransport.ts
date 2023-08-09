@@ -1,4 +1,4 @@
-import { Transport } from "./Transport";
+import { TransporOptions, Transport } from "./Transport";
 import {
   AnnouncePresence,
   Changes,
@@ -9,10 +9,6 @@ import {
   tags,
 } from "@vlcn.io/ws-common";
 
-export type TransporOptions = {
-  url: string;
-  room: string;
-};
 export default class WebSocketTransport implements Transport {
   #socket;
   #hadStartStream = false;
@@ -85,7 +81,7 @@ export default class WebSocketTransport implements Transport {
       return "reconnecting";
     }
     // If we do the below we need to nofiy the caller to back off on sending.
-    if (this.#socket.bufferedAmount > 1024 * 5) {
+    if (this.#socket.bufferedAmount > 1024 * 1024 * 5) {
       console.warn(
         "socket buffer full. Waiting till buffer is drained before allowing more changes to be queue for send."
       );

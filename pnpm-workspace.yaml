@@ -5,6 +5,7 @@ packages:
   - "js/packages/crsqlite-wasm"
   - "js/packages/node-allinone"
   - "js/packages/node-tests"
+  - "js/packages/ws-browserdb"
   - "js/packages/ws-client"
   - "js/packages/ws-common"
   - "js/packages/ws-server"

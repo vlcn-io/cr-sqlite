@@ -1,6 +1,7 @@
 {
-  "name": "@vlcn.io/ws-client",
+  "name": "@vlcn.io/ws-demo",
   "type": "module",
+  "private": true,
   "version": "0.0.1",
   "files": [
     "dist",

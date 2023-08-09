@@ -8,6 +8,10 @@
   ],
   "module": "dist/index.js",
   "main": "dist/index.js",
+  "exports": {
+    ".": "./dist/index.js",
+    "./worker.js": "./dist/worker/worker.js"
+  },
   "scripts": {
     "build": "tsc --build",
     "watch": "tsc --build --watch",

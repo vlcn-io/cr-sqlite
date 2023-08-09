@@ -43,5 +43,6 @@ export default class WorkerInterface {
       _tag: "StopSync",
       dbid,
     } satisfies StopSyncMsg);
+    this.#syncs.delete(dbid);
   }
 }

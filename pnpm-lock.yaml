@@ -437,6 +437,9 @@ importers:
 
   js/packages/ws-demo:
     dependencies:
+      '@vlcn.io/crsqlite-wasm':
+        specifier: workspace:*
+        version: link:../crsqlite-wasm
       '@vlcn.io/react':
         specifier: workspace:*
         version: link:../react

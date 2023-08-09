@@ -99,7 +99,7 @@ export class DB implements DBAsync {
         await tx.exec(schemaContent);
       } else {
         await tx.exec(
-          `SELECT crsql_automigrate(?, 'SELECT crsql_finalize();')`,
+          `SELECT crsql_automigrate(?)`, //'SELECT crsql_finalize();'
           [schemaContent]
         );
       }

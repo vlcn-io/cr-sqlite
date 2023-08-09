@@ -1,5 +1,6 @@
 import DB from "./DB.js";
 import { Config } from "./config.js";
+import logger from "./logger.js";
 
 /**
  * Caches connections to active databases so we do not need to re-create the connection
@@ -16,9 +17,11 @@ export default class DBCache {
   }
 
   getAndRef(roomId: string, schemaName: string, schemaVersion: bigint) {
+    logger.info(`Get db from cache for room "${roomId}"`);
     let entry = this.#dbs.get(roomId);
     if (entry == null) {
       entry = [1, new DB(this.#config, roomId, schemaName, schemaVersion)];
+      this.#dbs.set(roomId, entry);
     } else {
       const db = entry[1];
       if (db.schemasMatch(schemaName, schemaVersion)) {
@@ -35,6 +38,7 @@ export default class DBCache {
   }
 
   unref(roomId: string) {
+    logger.info(`Remove db from cache for room "${roomId}"`);
     const entry = this.#dbs.get(roomId);
     if (entry == null) {
       throw new Error(

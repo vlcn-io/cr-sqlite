@@ -1,15 +1,18 @@
 import { test, expect } from "vitest";
 import DB from "../DB.js";
 import fs from "node:fs";
-import { config } from "../config.js";
+import { Config } from "../config.js";
 import { cryb64 } from "@vlcn.io/ws-common";
 
 test("db instantiation", () => {
-  config.schemaFolder = "./testSchemas";
-  config.dbFolder = null;
+  const config: Config = {
+    schemaFolder: "./testSchemas",
+    dbFolder: null,
+  };
+
   const schemaContent = fs.readFileSync("./testSchemas/test.sql", "utf-8");
   const schemaVersion = cryb64(schemaContent);
-  const db = new DB("some-db", "test.sql", schemaVersion);
+  const db = new DB(config, "some-db", "test.sql", schemaVersion);
   expect(db).toBeDefined();
   db.close();
 });

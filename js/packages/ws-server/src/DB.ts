@@ -134,6 +134,14 @@ export default class DB {
     return this.#siteid;
   }
 
+  get schemaName() {
+    return this.#schemaName;
+  }
+
+  get schemaVersion() {
+    return this.#schemaVersion;
+  }
+
   getLastSeen(site: Uint8Array): [bigint, number] {
     const result = this.#getLastSeenStmt.raw(true).get(site) as [
       bigint,

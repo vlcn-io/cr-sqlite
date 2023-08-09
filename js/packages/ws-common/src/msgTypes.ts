@@ -16,17 +16,17 @@ export type Version = bigint;
 export type CausalLength = bigint;
 export type Val = any;
 
-export type Change = readonly [
-  TableName,
-  PackedPks,
-  CID,
-  Val,
-  Version, // col version
-  Version, // db version
-  // Site id... we could optimize out . . .
-  Uint8Array,
-  CausalLength
-];
+export type Change =
+  | readonly [
+      TableName,
+      PackedPks,
+      CID,
+      Val,
+      Version, // col version
+      Version, // db version
+      Uint8Array | null,
+      CausalLength
+    ];
 
 export type AnnouncePresence = Readonly<{
   _tag: Tags["AnnouncePresence"];
@@ -54,5 +54,4 @@ export type StartStreaming = Readonly<{
   since: readonly [bigint, number];
   excludeSites: readonly Uint8Array[];
   localOnly: boolean;
-  schemaVersion: bigint;
 }>;

@@ -52,7 +52,6 @@ export function decode(msg: Uint8Array): Msg {
           }
         ),
         localOnly: decoding.readUint8(decoder) == 1 ? true : false,
-        schemaVersion: decoding.readBigInt64(decoder),
       } satisfies StartStreaming;
   }
 
@@ -84,8 +83,14 @@ function readChanges(decoder: decoding.Decoder) {
     })(),
     decoding.readBigInt64(decoder),
     decoding.readBigInt64(decoder),
-    // TODO: we don't need to always pass site id
-    decoding.readUint8Array(decoder, 16),
+    (() => {
+      const type = decoding.readUint8(decoder);
+      if (type == NULL) {
+        return null;
+      } else {
+        return decoding.readUint8Array(decoder, 16);
+      }
+    })(),
     decoding.readBigInt64(decoder),
   ]) satisfies Change[];
 }

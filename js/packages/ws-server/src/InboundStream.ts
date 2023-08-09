@@ -29,9 +29,8 @@ export default class InboundStream {
     // Tell the connected client to start streaming
     this.#transport.startStreaming({
       _tag: tags.StartStreaming,
-      excludeSites: [],
-      localOnly: true,
-      schemaVersion: 0n,
+      excludeSites: [this.#db.siteId],
+      localOnly: false,
       since: this.#lastSeen,
     });
   }

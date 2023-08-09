@@ -43,7 +43,6 @@ export function encode(msg: Msg): Uint8Array {
         encoding.writeUint8Array(encoder, exclude);
       }
       encoding.writeUint8(encoder, msg.localOnly ? 1 : 0);
-      encoding.writeBigInt64(encoder, msg.schemaVersion);
       return encoding.toUint8Array(encoder);
   }
 }
@@ -66,7 +65,13 @@ function writeChanges(encoder: encoding.Encoder, changes: readonly Change[]) {
     // TODO: huge space wasters that we need to fix lib0 for
     encoding.writeBigInt64(encoder, change[4]);
     encoding.writeBigInt64(encoder, change[5]);
-    encoding.writeUint8Array(encoder, change[6]);
+    const siteid = change[6];
+    if (siteid == null) {
+      encoding.writeUint8(encoder, NULL);
+    } else {
+      encoding.writeUint8(encoder, BLOB);
+      encoding.writeUint8Array(encoder, siteid);
+    }
     encoding.writeBigInt64(encoder, change[7]);
   }
 }

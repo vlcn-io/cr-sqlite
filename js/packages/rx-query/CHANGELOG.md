@@ -1,5 +1,16 @@
 # @vlcn.io/rx-query
 
+## 0.7.0-next.0
+
+### Minor Changes
+
+- re-insertion, api naming consistencies, metadata size reduction, websocket server, websocket client, websocket demo
+
+### Patch Changes
+
+- Updated dependencies
+  - @vlcn.io/xplat-api@0.14.0-next.0
+
 ## 0.6.0
 
 ### Minor Changes

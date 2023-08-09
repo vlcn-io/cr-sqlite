@@ -1,5 +1,11 @@
 # @vlcn.io/direct-connect-common
 
+## 0.6.0-next.0
+
+### Minor Changes
+
+- re-insertion, api naming consistencies, metadata size reduction, websocket server, websocket client, websocket demo
+
 ## 0.5.0
 
 ### Minor Changes

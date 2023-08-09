@@ -14,7 +14,7 @@
     "ws": "node ./server.js",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "text": "echo no tests here yet"
+    "test": "echo no tests here yet"
   },
   "repository": {
     "type": "git",

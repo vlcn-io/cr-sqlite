@@ -1,9 +1,10 @@
 import { tags } from "@vlcn.io/ws-common";
-import config from "./config.js";
+import type { Config } from "./config.js";
 import InboundStream from "./streams/InboundStream.js";
 import OutboundStream from "./streams/OutboundStream.js";
 import { Transport } from "./transport/Transport.js";
 import { DB } from "./DB.js";
+import { TransporOptions } from "./transport/Transport.js";
 
 export interface ISyncedDB {
   start(): Promise<void>;
@@ -53,12 +54,13 @@ class SyncedDB implements ISyncedDB {
   }
 }
 
-export async function createSyncedDB<T>(
+export async function createSyncedDB(
+  config: Config,
   dbname: string,
-  transportOptions: T
+  transportOptions: TransporOptions
 ): Promise<ISyncedDB> {
   const db = await config.dbProvider(dbname);
-  const transport = config.transportProvider(dbname, transportOptions);
+  const transport = config.transportProvider(transportOptions);
   return new SyncedDB(db, transport);
 }
 
@@ -69,9 +71,10 @@ export async function createSyncedDB<T>(
  * @param dbname
  * @param transportOptions
  */
-export async function createAndStartSyncedDB_Exclusive<T>(
+export async function createAndStartSyncedDB_Exclusive(
+  config: Config,
   dbname: string,
-  transportOptions: T
+  transportOptions: TransporOptions
 ): Promise<{
   stop: () => void;
 }> {
@@ -86,7 +89,7 @@ export async function createAndStartSyncedDB_Exclusive<T>(
     if (stopRequested) {
       return;
     }
-    startSync(dbname, transportOptions, (db: ISyncedDB) => {
+    startSync(config, dbname, transportOptions, (db: ISyncedDB) => {
       if (stopRequested) {
         return false;
       }
@@ -107,12 +110,13 @@ export async function createAndStartSyncedDB_Exclusive<T>(
   };
 }
 
-function startSync<T>(
+function startSync(
+  config: Config,
   dbname: string,
-  transportOptions: T,
+  transportOptions: TransporOptions,
   cb: (db: ISyncedDB) => boolean
 ) {
-  createSyncedDB(dbname, transportOptions).then((db) => {
+  createSyncedDB(config, dbname, transportOptions).then((db) => {
     if (cb(db)) {
       db.start();
     }

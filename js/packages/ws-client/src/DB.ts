@@ -9,7 +9,7 @@ export interface DB {
   ): PromiseLike<readonly Change[]>;
   applyChangesetAndSetLastSeen(
     changes: readonly Change[],
-    setId: Uint8Array,
+    siteId: Uint8Array,
     end: readonly [bigint, number]
   ): PromiseLike<void>;
 

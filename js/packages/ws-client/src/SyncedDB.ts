@@ -1,11 +1,9 @@
-import { bytesToHex, tags } from "@vlcn.io/ws-common";
+import { tags } from "@vlcn.io/ws-common";
 import config from "./config.js";
 import InboundStream from "./streams/InboundStream.js";
 import OutboundStream from "./streams/OutboundStream.js";
 import { Transport } from "./transport/Transport.js";
 import { DB } from "./DB.js";
-
-const locks = new Map<string, () => void>();
 
 export interface ISyncedDB {
   start(): Promise<void>;
@@ -71,7 +69,7 @@ export async function createSyncedDB<T>(
  * @param dbname
  * @param transportOptions
  */
-export async function createSyncedDB_Exclusive<T>(
+export async function createAndStartSyncedDB_Exclusive<T>(
   dbname: string,
   transportOptions: T
 ): Promise<{
@@ -83,7 +81,6 @@ export async function createSyncedDB_Exclusive<T>(
   const hold = new Promise<void>((resolve, _reject) => {
     releaser = resolve;
   });
-  locks.set(dbname, releaser!);
 
   navigator.locks.request(dbname, () => {
     if (stopRequested) {
@@ -102,10 +99,7 @@ export async function createSyncedDB_Exclusive<T>(
   return {
     stop: () => {
       stopRequested = true;
-      const releaser = locks.get(dbname);
-      if (releaser) {
-        releaser();
-      }
+      releaser!();
       if (db) {
         db.stop();
       }

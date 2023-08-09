@@ -11,26 +11,11 @@ self.onmessage = (e: MessageEvent<Msg>) => {
 
   switch (msg._tag) {
     case "StartSync": {
-      let releaser: (() => void) | null = null;
-      const hold = new Promise<void>((resolve, _reject) => {
-        releaser = resolve;
-      });
-      locks.set(msg.dbid, releaser!);
-      doesHoldLock.set(msg.dbid, false);
-      navigator.locks.request(msg.dbid, () => {
-        doesHoldLock.set(msg.dbid, true);
-        svc.startSync(msg);
-        return hold;
-      });
+      svc.startSync(msg);
       break;
     }
     case "StopSync": {
       svc.stopSync(msg);
-      const releaser = locks.get(msg.dbid);
-      if (releaser) {
-        releaser();
-        doesHoldLock.delete(msg.dbid);
-      }
       break;
     }
   }

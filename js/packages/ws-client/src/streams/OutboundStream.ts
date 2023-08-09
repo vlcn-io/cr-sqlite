@@ -84,9 +84,11 @@ export default class OutboundStream {
               1000
             ))
           );
+          break;
         case "reconnecting":
           this.#lastSent = lastSent;
           this.#timeoutHandle = setTimeout(this.#dbChanged, 3000);
+          break;
       }
     } catch (e) {
       this.#lastSent = lastSent;

@@ -5,6 +5,7 @@ import {
   encode,
 } from "@vlcn.io/ws-common";
 import { WebSocket } from "ws";
+import logger from "./logger";
 
 /**
  * Abstracts over the exact transport so we can swap out to any transport (http, websockets, tcp, etc) we want.
@@ -15,8 +16,13 @@ export default class Transport {
     this.#ws = ws;
   }
 
-  sendChanges(msg: Changes) {
+  sendChanges(msg: Changes): "buffer-full" | "sent" {
+    if (this.#ws.bufferedAmount > 1024 * 1024 * 5) {
+      logger.warn(`Buffer full. Telling DB to call us back later`);
+      return "buffer-full";
+    }
     this.#ws.send(encode(msg));
+    return "sent";
     // TODO: return back pressure if too much is buffered.
     // this.#ws.bufferedAmount
   }

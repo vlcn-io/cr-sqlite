@@ -1,24 +1,31 @@
 import { Msg } from "./workerMsgTypes.js";
 import SyncService from "./SyncService.js";
 
-let svc: SyncService | null = null;
-const locks = new Map<string, () => void>();
-const doesHoldLock = new Map<string, boolean>();
+let syncSvcResolver: (svc: SyncService) => void;
+let svcPromise: Promise<SyncService> = new Promise((resolve, reject) => {
+  syncSvcResolver = resolve;
+});
 
 self.onmessage = (e: MessageEvent<Msg>) => {
   const msg = e.data;
 
   switch (msg._tag) {
     case "Configure": {
-      svc = new SyncService(msg.config);
+      import(msg.configModule).then((module) => {
+        syncSvcResolver(new SyncService(module.config));
+      });
       break;
     }
     case "StartSync": {
-      svc!.startSync(msg);
+      // update the promise so `StopSync` is guaranteed to be called after `StartSync`
+      svcPromise = svcPromise.then((svc) => {
+        svc.startSync(msg);
+        return svc;
+      });
       break;
     }
     case "StopSync": {
-      svc!.stopSync(msg);
+      svcPromise.then((svc) => svc.stopSync(msg));
       break;
     }
   }

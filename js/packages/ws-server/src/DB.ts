@@ -178,6 +178,7 @@ export default class DB {
     siteId: Uint8Array,
     newLastSeen: readonly [bigint, number]
   ): void {
+    console.log("applying changes", changes);
     this.#applyChangesAndSetLastSeenTx(changes, siteId, newLastSeen);
     this.#notifyOfChange();
   }

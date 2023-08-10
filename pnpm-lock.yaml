@@ -484,8 +484,8 @@ importers:
   js/packages/ws-server:
     dependencies:
       '@vlcn.io/crsqlite':
-        specifier: workspace:^
-        version: link:../../../core
+        specifier: 0.14.0
+        version: 0.14.0
       '@vlcn.io/ws-common':
         specifier: workspace:*
         version: link:../ws-common
@@ -2113,6 +2113,11 @@ packages:
       loupe: 2.3.6
       pretty-format: 27.5.1
     dev: true
+
+  /@vlcn.io/crsqlite@0.14.0:
+    resolution: {integrity: sha512-b0p/Sc68pnbUyxr3WTb7FA7CatX/XEwV3ZdvIIz7TxMmK619LHnVrt3qJWePuNDpCHOx2IttwSHA69BudIk4rQ==}
+    requiresBuild: true
+    dev: false
 
   /@web/config-loader@0.1.3:
     resolution: {integrity: sha512-XVKH79pk4d3EHRhofete8eAnqto1e8mCRAqPV00KLNFzCWSe8sWmLnqKCqkPNARC6nksMaGrATnA5sPDRllMpQ==}

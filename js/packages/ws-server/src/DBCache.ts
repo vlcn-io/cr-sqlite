@@ -38,7 +38,6 @@ export default class DBCache {
   }
 
   unref(roomId: string) {
-    logger.info(`Remove db from cache for room "${roomId}"`);
     const entry = this.#dbs.get(roomId);
     if (entry == null) {
       throw new Error(
@@ -48,6 +47,7 @@ export default class DBCache {
 
     entry[0] -= 1;
     if (entry[0] === 0) {
+      logger.info(`Remove db from cache for room "${roomId}"`);
       entry[1].close();
       this.#dbs.delete(roomId);
     } else if (entry[0] < 0) {

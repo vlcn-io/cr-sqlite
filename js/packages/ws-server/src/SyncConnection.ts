@@ -52,6 +52,7 @@ export default class SyncConnection {
 
   receiveChanges(changes: Changes) {
     logger.info(`Sync connection received changes`);
+    logger.info(changes);
     this.#inboundStream.receiveChanges(changes);
   }
 

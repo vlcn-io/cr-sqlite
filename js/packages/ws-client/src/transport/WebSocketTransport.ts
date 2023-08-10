@@ -42,11 +42,10 @@ export default class WebSocketTransport implements Transport {
     const socket = new WebSocket(options.url, [
       btoa(`room=${options.room}`).replaceAll("=", ""),
     ]);
+    socket.binaryType = "arraybuffer";
 
-    socket.addEventListener("message", (e: MessageEvent<Blob>) => {
-      e.data.arrayBuffer().then((b) => {
-        this.#processEvent(new Uint8Array(b));
-      });
+    socket.addEventListener("message", (e: MessageEvent<ArrayBuffer>) => {
+      this.#processEvent(new Uint8Array(e.data));
     });
 
     socket.onopen = () => {
@@ -63,7 +62,9 @@ export default class WebSocketTransport implements Transport {
   onReconnected: (() => Promise<void>) | null = null;
 
   #processEvent = (data: Uint8Array) => {
-    const msg = decode(new Uint8Array(data));
+    const msg = decode(data);
+    console.log("process msg:");
+    console.log(msg);
     switch (msg._tag) {
       case tags.AnnouncePresence:
       case tags.RejectChanges:
@@ -81,6 +82,7 @@ export default class WebSocketTransport implements Transport {
           this.#hadStartStream = true;
           this.onStartStreaming && this.onStartStreaming(msg);
         }
+        return;
     }
   };
 

@@ -10,9 +10,7 @@
     "turbo": "^1.9.3"
   },
   "scripts": {
-    "build": "cd core && make loadable",
-    "test": "turbo run test",
-    "deep-clean": "turbo run deep-clean"
+    "build": "cd core && make loadable"
   },
   "dependencies": {
     "@changesets/cli": "^2.26.1"

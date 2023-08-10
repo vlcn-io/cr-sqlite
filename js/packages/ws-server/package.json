@@ -1,7 +1,7 @@
 {
   "name": "@vlcn.io/ws-server",
   "type": "module",
-  "version": "0.1.0-next.0",
+  "version": "0.1.0-next.12",
   "files": [
     "dist",
     "src"
@@ -22,7 +22,7 @@
     "directory": "https://github.com/vlcn-io/cr-sqlite/tree/main/js/packages/ws-server"
   },
   "dependencies": {
-    "@vlcn.io/crsqlite": "workspace:^",
+    "@vlcn.io/crsqlite": "workspace:*",
     "@vlcn.io/ws-common": "workspace:*",
     "better-sqlite3": "^8.3.0",
     "throttle-debounce": "^5.0.0",

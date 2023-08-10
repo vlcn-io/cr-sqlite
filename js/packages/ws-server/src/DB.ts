@@ -97,17 +97,27 @@ export default class DB {
     // that reduces data size but will require this to only be used in hub and spoke topologies.
     this.#getChangesStmt = db
       .prepare<[bigint, Uint8Array]>(
-        `SELECT "table", "pk", "cid", "val", "col_version", "db_version", NULL, "cl" FROM crsql_changes WHERE db_version > ? AND site_id IS NOT ?`
+        `SELECT "table", "pk", "cid", "val", "col_version", "db_version", NULL, 0 as "cl" FROM crsql_changes WHERE db_version > ? AND site_id IS NOT ?`
       )
       .raw(true)
       .safeIntegers();
     this.#applyChangesStmt = db
-      .prepare<[...Change]>(
-        `INSERT INTO crsql_changes ("table", "pk", "cid", "val", "col_version", "db_version", "site_id", "cl") VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+      .prepare<
+        [
+          Change[0],
+          Change[1],
+          Change[2],
+          Change[3],
+          Change[4],
+          Change[5],
+          Change[6]
+        ]
+      >(
+        `INSERT INTO crsql_changes ("table", "pk", "cid", "val", "col_version", "db_version", "site_id") VALUES (?, ?, ?, ?, ?, ?, ?)`
       )
       .safeIntegers();
     this.#siteid = db
-      .prepare(`SELECT crsql_site_id()`)
+      .prepare(`SELECT crsql_siteid()`)
       .pluck()
       .get() as Uint8Array;
     this.#setLastSeenStmt = db.prepare<[Uint8Array, bigint, number]>(
@@ -131,8 +141,7 @@ export default class DB {
             c[4],
             c[5],
             // see note about `null` above.
-            siteId,
-            c[7]
+            siteId
           );
         }
 

@@ -22,7 +22,12 @@ export default class ConnectionBroker {
 
     this.#ws.on("message", (data) => {
       const msg = decode(new Uint8Array(data as any));
-      this.#handleMessage(msg);
+      try {
+        this.#handleMessage(msg);
+      } catch (e) {
+        console.error(e);
+        this.close();
+      }
     });
     this.#ws.on("close", () => {
       this.close();

@@ -484,7 +484,7 @@ importers:
   js/packages/ws-server:
     dependencies:
       '@vlcn.io/crsqlite':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../../../core
       '@vlcn.io/ws-common':
         specifier: workspace:*

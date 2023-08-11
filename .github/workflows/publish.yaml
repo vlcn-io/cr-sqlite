@@ -76,10 +76,23 @@ jobs:
           rustup toolchain install nightly-2023-06-17
           rustup target add aarch64-apple-darwin --toolchain nightly-2023-06-17
 
-      - name: Build all ios
+      - name: Build MacOS Arm dylib
         run: |
           cd core
-          ./all-ios.sh
+          export CI_MAYBE_TARGET="aarch64-apple-darwin" && make loadable
+
+      - name: Upload macos dylib to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: core/dist/${{ matrix.artifact_name }}
+          asset_name: ${{ matrix.asset_name }}
+          tag: ${{ github.ref }}
+
+      - name: Build all ios static
+        run: |
+          cd core
+          ./all-ios-static.sh
 
       - name: Upload static ios libs to release
         uses: svenstaro/upload-release-action@v2
@@ -87,14 +100,6 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: core/dist-ios/crsqlite-universal-ios.a
           asset_name: crsqlite-universal-ios.a
-          tag: ${{ github.ref }}
-
-      - name: Upload dynamic ios libs to release
-        uses: svenstaro/upload-release-action@v2
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: core/dist-ios/crsqlite-universal-ios.dylib
-          asset_name: crsqlite-universal-ios.dylib
           tag: ${{ github.ref }}
 
       - name: Upload static ios-sim libs to release
@@ -105,14 +110,6 @@ jobs:
           asset_name: crsqlite-universal-ios-sim.a
           tag: ${{ github.ref }}
 
-      - name: Upload dynamic ios-sim libs to release
-        uses: svenstaro/upload-release-action@v2
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: core/dist-ios-sim/crsqlite-universal-ios-sim.dylib
-          asset_name: crsqlite-universal-ios-sim.dylib
-          tag: ${{ github.ref }}
-
       - name: Upload static macos libs to release
         uses: svenstaro/upload-release-action@v2
         with:
@@ -121,12 +118,25 @@ jobs:
           asset_name: crsqlite-aarch64-apple-drawin.a
           tag: ${{ github.ref }}
 
-      - name: Upload dynamic macos libs to release
+      - name: Build all ios dynamic
+        run: |
+          cd core
+          ./all-ios-loadable.sh
+
+      - name: Upload dynamic ios libs to release
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: core/dist-macos/crsqlite-aarch64-apple-drawin.dylib
-          asset_name: crsqlite-aarch64-apple-drawin.dylib
+          file: core/dist-ios/crsqlite-aarch64-apple-ios.dylib
+          asset_name: crsqlite-aarch64-apple-ios.dylib
+          tag: ${{ github.ref }}
+
+      - name: Upload dynamic ios-sim libs to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: core/dist-ios-sim/crsqlite-universal-ios-sim.dylib
+          asset_name: crsqlite-universal-ios-sim.dylib
           tag: ${{ github.ref }}
 
   prebuild-linux-arm:

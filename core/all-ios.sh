@@ -9,15 +9,15 @@ mkdir -p ./dist-ios
 
 # TODO: fix things up to not require a clean before each target.
 make clean
-export IOS_TARGET=aarch64-apple-ios; make static_lib
+export IOS_TARGET=aarch64-apple-ios; make static
 cp ./dist/crsqlite-aarch64-apple-ios.a ./dist-ios
 
 make clean
-export IOS_TARGET=armv7-apple-ios; make static_lib
+export IOS_TARGET=armv7-apple-ios; make static
 cp ./dist/crsqlite-armv7-apple-ios.a ./dist-ios
 
 make clean
-export IOS_TARGET=armv7s-apple-ios; make static_lib
+export IOS_TARGET=armv7s-apple-ios; make static
 cp ./dist/crsqlite-armv7s-apple-ios.a ./dist-ios
 
 cd ./dist-ios
@@ -31,11 +31,11 @@ cd ..
 mkdir -p ./dist-ios-sim
 
 make clean
-export IOS_TARGET=aarch64-apple-ios-sim; make static_lib
+export IOS_TARGET=aarch64-apple-ios-sim; make static
 cp ./dist/crsqlite-aarch64-apple-ios-sim.a ./dist-ios-sim
 
 make clean
-export IOS_TARGET=x86_64-apple-ios; make static_lib
+export IOS_TARGET=x86_64-apple-ios; make static
 cp ./dist/crsqlite-x86_64-apple-ios.a ./dist-ios-sim
 
 cd ./dist-ios-sim
@@ -44,10 +44,50 @@ lipo crsqlite-aarch64-apple-ios-sim.a crsqlite-x86_64-apple-ios.a -create -outpu
 cd ..
 # ===
 
-# Make the macos lib
+# Make the macos static lib
 mkdir -p ./dist-macos
 make clean
 unset IOS_TARGET
-make static_lib
+export CI_MAYBE_TARGET="aarch64-apple-darwin"; make static
 
-cp ./dist/crsqlite-.a ./dist-macos
+cp ./dist/crsqlite-aarch64-apple-darwin.a ./dist-macos
+
+# == mac/ios dylibs
+
+make clean
+export IOS_TARGET=aarch64-apple-ios; make loadable
+cp ./dist/crsqlite-aarch64-apple-ios.dylib ./dist-ios
+
+make clean
+export IOS_TARGET=armv7-apple-ios; make loadable
+cp ./dist/crsqlite-armv7-apple-ios.dylib ./dist-ios
+
+make clean
+export IOS_TARGET=armv7s-apple-ios; make loadable
+cp ./dist/crsqlite-armv7s-apple-ios.dylib ./dist-ios
+
+cd ./dist-ios
+lipo crsqlite-aarch64-apple-ios.dylib crsqlite-armv7-apple-ios.dylib crsqlite-armv7s-apple-ios.dylib -create -output crsqlite-universal-ios.dylib
+
+cd ..
+# == mac/ios simulator dylibs
+
+make clean
+export IOS_TARGET=aarch64-apple-ios-sim; make loadable
+cp ./dist/crsqlite-aarch64-apple-ios-sim.dylib ./dist-ios-sim
+
+make clean
+export IOS_TARGET=x86_64-apple-ios; make loadable
+cp ./dist/crsqlite-x86_64-apple-ios.dylib ./dist-ios-sim
+
+cd ./dist-ios-sim
+lipo crsqlite-aarch64-apple-ios-sim.dylib crsqlite-x86_64-apple-ios.dylib -create -output crsqlite-universal-ios-sim.dylib
+
+cd ..
+# == Make the macos dylib
+
+make clean
+unset IOS_TARGET
+export CI_MAYBE_TARGET="aarch64-apple-darwin"; make loadable
+
+cp ./dist/crsqlite.dylib ./dist-macos/crsqlite-aarch64-macos.dylib

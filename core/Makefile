@@ -5,7 +5,7 @@ CC:=$(CI_GCC)
 endif
 
 LOADABLE_CFLAGS=-std=c99 -fPIC -shared -Wall
-LIB_CFLAGS=-std=c99 -fPIC -c -Wall
+STATIC_CFLAGS=-std=c99 -fPIC -c -Wall
 
 ifeq ($(shell uname -s),Darwin)
 CONFIG_DARWIN=y
@@ -46,7 +46,7 @@ TARGET_DBG_LOADABLE=$(dbg_prefix)/crsqlite.$(LOADABLE_EXTENSION)
 TARGET_SQLITE3_EXTRA_C=$(prefix)/sqlite3-extra.c
 TARGET_SQLITE3=$(prefix)/sqlite3
 TARGET_SQLITE3_VANILLA=$(prefix)/vanilla-sqlite3
-TARGET_LIB=$(prefix)/crsqlite.a
+TARGET_STATIC=$(prefix)/crsqlite.a
 TARGET_TEST=$(prefix)/test
 TARGET_FUZZ=$(prefix)/fuzz
 TARGET_TEST_ASAN=$(prefix)/test-asan
@@ -84,7 +84,7 @@ loadable: $(TARGET_LOADABLE)
 loadable_dbg: $(TARGET_DBG_LOADABLE)
 sqlite3: $(TARGET_SQLITE3)
 vanilla: $(TARGET_SQLITE3_VANILLA)
-static_lib: $(TARGET_LIB)
+static: $(TARGET_STATIC)
 test: $(TARGET_TEST)
 	$(prefix)/test
 # ASAN_OPTIONS=detect_leaks=1
@@ -176,13 +176,11 @@ $(TARGET_SQLITE3): $(prefix) $(TARGET_SQLITE3_EXTRA_C) $(rs_lib_dbg_static_cpy) 
 	$(LDLIBS) -o $@
 
 # Build the SQLite library w/ cr-sqlite statically linked in
-$(TARGET_LIB): $(prefix) $(TARGET_SQLITE3_EXTRA_C) $(rs_lib_static_cpy) $(ext_files)
+$(TARGET_STATIC): $(prefix) $(ext_files) $(rs_lib_static_cpy)
 	$(CC) -g \
-	-DSQLITE_OMIT_LOAD_EXTENSION=1 \
-	-DSQLITE_EXTRA_INIT=core_init \
 	-DHAVE_GETHOSTUUID=0 \
 	-I./src/ -I./src/sqlite \
-	$(LIB_CFLAGS) \
+	$(STATIC_CFLAGS) \
 	$(C_TARGET) \
 	$(sysroot_option) \
 	$(ext_files)
@@ -242,6 +240,6 @@ $(TARGET_FUZZ): $(prefix) $(TARGET_SQLITE3_EXTRA_C) src/fuzzer.cc $(ext_files)
 	sqlite3 \
 	correctness \
 	valgrind \
-	ubsan analyzer fuzz asan static_lib
+	ubsan analyzer fuzz asan static
 
 FORCE: ;

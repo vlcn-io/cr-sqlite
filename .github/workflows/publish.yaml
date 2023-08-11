@@ -123,20 +123,12 @@ jobs:
           cd core
           ./all-ios-loadable.sh
 
-      - name: Upload dynamic ios libs to release
+      - name: Upload framework to release
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: core/dist-ios/crsqlite-aarch64-apple-ios.dylib
-          asset_name: crsqlite-aarch64-apple-ios.dylib
-          tag: ${{ github.ref }}
-
-      - name: Upload dynamic ios-sim libs to release
-        uses: svenstaro/upload-release-action@v2
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: core/dist-ios-sim/crsqlite-universal-ios-sim.dylib
-          asset_name: crsqlite-universal-ios-sim.dylib
+          file: core/dist/crsqlite-ios-dylib.xcframework.tar.gz
+          asset_name: crsqlite-ios-dylib.xcframework.tar.gz
           tag: ${{ github.ref }}
 
   prebuild-linux-arm:

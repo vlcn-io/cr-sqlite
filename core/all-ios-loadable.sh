@@ -46,6 +46,7 @@ EOF
 
   mkdir -p DIST_PACKAGE_DIR
   cp -Rf "${BUILD_DIR}/crsqlite.xcframework" "${DIST_PACKAGE_DIR}/crsqlite.xcframework"
+  tar -czvf crsqlite-ios-dylib.xcframework.tar.gz crsqlite.xcframework
   rm -rf BUILD_DIR
 }
 

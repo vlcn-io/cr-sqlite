@@ -462,8 +462,8 @@ __declspec(dllexport)
   }
 
   if (rc == SQLITE_OK) {
-    rc = sqlite3_create_module_v2(db, "createcrr", &crsql_createCrrModule,
-                                  pExtData, 0);
+    rc = sqlite3_create_module_v2(db, "CLSet", &crsql_createCrrModule, pExtData,
+                                  0);
   }
 
   if (rc == SQLITE_OK) {

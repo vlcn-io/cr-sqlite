@@ -11,6 +11,7 @@ mod changes_vtab_read;
 mod changes_vtab_write;
 mod compare_values;
 mod consts;
+mod create_cl_set_vtab;
 mod is_crr;
 mod pack_columns;
 mod stmt_cache;
@@ -123,6 +124,10 @@ pub extern "C" fn sqlite3_crsqlcore_init(
     }
 
     let rc = unpack_columns_vtab::create_module(db).unwrap_or(sqlite::ResultCode::ERROR);
+    if rc != ResultCode::OK {
+        return rc as c_int;
+    }
+    let rc = create_cl_set_vtab::create_module(db).unwrap_or(ResultCode::ERROR);
     return rc as c_int;
 }
 

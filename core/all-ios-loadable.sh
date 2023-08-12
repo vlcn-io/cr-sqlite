@@ -44,10 +44,11 @@ EOF
   rm -rf "${BUILD_DIR}/crsqlite.xcframework"
   xcodebuild -create-xcframework -framework "${BUILD_DIR}/ios-arm64/crsqlite.framework" -framework "${BUILD_DIR}/ios-arm64_x86_64-simulator/crsqlite.framework" -output "${BUILD_DIR}/crsqlite.xcframework"
 
-  mkdir -p DIST_PACKAGE_DIR
+  mkdir -p ${DIST_PACKAGE_DIR}
   cp -Rf "${BUILD_DIR}/crsqlite.xcframework" "${DIST_PACKAGE_DIR}/crsqlite.xcframework"
+  cd ${DIST_PACKAGE_DIR}
   tar -czvf crsqlite-ios-dylib.xcframework.tar.gz crsqlite.xcframework
-  rm -rf BUILD_DIR
+  rm -rf ${BUILD_DIR}
 }
 
 # Make all the non-simulator libs

@@ -89,35 +89,6 @@ jobs:
           asset_name: ${{ matrix.asset_name }}
           tag: ${{ github.ref }}
 
-      - name: Build all ios static
-        run: |
-          cd core
-          ./all-ios-static.sh
-
-      - name: Upload static ios libs to release
-        uses: svenstaro/upload-release-action@v2
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: core/dist-ios/crsqlite-universal-ios.a
-          asset_name: crsqlite-universal-ios.a
-          tag: ${{ github.ref }}
-
-      - name: Upload static ios-sim libs to release
-        uses: svenstaro/upload-release-action@v2
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: core/dist-ios-sim/crsqlite-universal-ios-sim.a
-          asset_name: crsqlite-universal-ios-sim.a
-          tag: ${{ github.ref }}
-
-      - name: Upload static macos libs to release
-        uses: svenstaro/upload-release-action@v2
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: core/dist-macos/crsqlite-aarch64-apple-darwin.a
-          asset_name: crsqlite-aarch64-apple-darwin.a
-          tag: ${{ github.ref }}
-
       - name: Build all ios dynamic
         run: |
           cd core

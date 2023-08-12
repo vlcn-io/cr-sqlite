@@ -114,8 +114,8 @@ jobs:
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: core/dist-macos/crsqlite-aarch64-apple-drawin.a
-          asset_name: crsqlite-aarch64-apple-drawin.a
+          file: core/dist-macos/crsqlite-aarch64-apple-darwin.a
+          asset_name: crsqlite-aarch64-apple-darwin.a
           tag: ${{ github.ref }}
 
       - name: Build all ios dynamic

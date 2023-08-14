@@ -36,17 +36,7 @@ fn create_impl(
     err: *mut *mut c_char,
 ) -> Result<ResultCode, ResultCode> {
     // This is the schema component
-    sqlite::declare_vtab(
-        db,
-        "CREATE TABLE x(column_name TEXT, column_type TEXT, crdt_type TEXT);",
-    )?;
-    let tab = Box::new(sqlite::vtab {
-        nRef: 0,
-        pModule: core::ptr::null(),
-        zErrMsg: core::ptr::null_mut(),
-    });
-    vtab.set(tab);
-    sqlite::vtab_config(db, sqlite::INNOCUOUS);
+    connect_create_shared(db, vtab)?;
 
     // now we need to go and _create_ the backing storage / companion tables.
     let vtab_args = sqlite::parse_vtab_args(argc, argv)?;
@@ -88,7 +78,26 @@ extern "C" fn connect(
     vtab: *mut *mut sqlite::vtab,
     _err: *mut *mut c_char,
 ) -> c_int {
-    0
+    match connect_create_shared(db, vtab) {
+        Ok(rc) | Err(rc) => rc as c_int,
+    }
+}
+
+fn connect_create_shared(
+    db: *mut sqlite::sqlite3,
+    vtab: *mut *mut sqlite::vtab,
+) -> Result<ResultCode, ResultCode> {
+    sqlite::declare_vtab(
+        db,
+        "CREATE TABLE x(column_name TEXT, column_type TEXT, crdt_type TEXT);",
+    )?;
+    let tab = Box::new(sqlite::vtab {
+        nRef: 0,
+        pModule: core::ptr::null(),
+        zErrMsg: core::ptr::null_mut(),
+    });
+    vtab.set(tab);
+    sqlite::vtab_config(db, sqlite::INNOCUOUS)
 }
 
 extern "C" fn best_index(vtab: *mut sqlite::vtab, index_info: *mut sqlite::index_info) -> c_int {
@@ -107,7 +116,11 @@ extern "C" fn open(_vtab: *mut sqlite::vtab, cursor: *mut *mut sqlite::vtab_curs
 }
 
 extern "C" fn close(cursor: *mut sqlite::vtab_cursor) -> c_int {
-    0
+    // let crsr = cursor.cast::<Cursor>();
+    // unsafe {
+    //     drop(Box::from_raw(crsr));
+    // }
+    ResultCode::OK as c_int
 }
 
 extern "C" fn filter(

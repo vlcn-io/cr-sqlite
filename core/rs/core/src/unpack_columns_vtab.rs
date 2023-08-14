@@ -28,13 +28,10 @@ extern "C" fn connect(
     _err: *mut *mut c_char,
 ) -> c_int {
     // TODO: more ergonomic rust binding for this
-    let rc = sqlite::declare_vtab(
-        db,
-        sqlite::strlit!("CREATE TABLE x(cell ANY, package BLOB hidden);"),
-    );
-    if rc != 0 {
-        return rc;
+    if let Err(rc) = sqlite::declare_vtab(db, "CREATE TABLE x(cell ANY, package BLOB hidden);") {
+        return rc as c_int;
     }
+
     unsafe {
         // TODO: more ergonomic rust bindings
         *vtab = Box::into_raw(Box::new(sqlite::vtab {

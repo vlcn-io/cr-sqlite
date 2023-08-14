@@ -139,6 +139,7 @@ extern "C" {
         schemaName: *const c_char,
         tblName: *const c_char,
         isCommitAlter: c_int,
+        noTx: c_int,
         err: *mut *mut c_char,
     ) -> c_int;
 }

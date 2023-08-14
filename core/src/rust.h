@@ -11,7 +11,7 @@
 int crsql_backfill_table(sqlite3_context *context, const char *tblName,
                          const char **zpkNames, int pkCount,
                          const char **zNonPkNames, int nonPkCount,
-                         int isCommitAlter);
+                         int isCommitAlter, int noTx);
 int crsql_is_crr(sqlite3 *db, const char *tblName);
 int crsql_compare_sqlite_values(const sqlite3_value *l, const sqlite3_value *r);
 int crsql_create_crr_triggers(sqlite3 *db, crsql_TableInfo *tableInfo,

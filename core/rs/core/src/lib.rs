@@ -32,7 +32,7 @@ pub use pack_columns::unpack_columns;
 pub use pack_columns::ColumnValue;
 use sqlite::ResultCode;
 use sqlite_nostd as sqlite;
-use sqlite_nostd::{context, Connection, Context, Value};
+use sqlite_nostd::{Connection, Context, Value};
 pub use teardown::*;
 
 pub extern "C" fn crsql_as_table(
@@ -133,7 +133,7 @@ pub extern "C" fn sqlite3_crsqlcore_init(
 
 #[no_mangle]
 pub extern "C" fn crsql_backfill_table(
-    context: *mut context,
+    db: *mut sqlite::sqlite3,
     table: *const c_char,
     pk_cols: *const *const c_char,
     pk_cols_len: c_int,
@@ -159,7 +159,6 @@ pub extern "C" fn crsql_backfill_table(
 
     let result = match (table, pk_cols, non_pk_cols) {
         (Ok(table), Ok(pk_cols), Ok(non_pk_cols)) => {
-            let db = context.db_handle();
             backfill_table(db, table, pk_cols, non_pk_cols, is_commit_alter != 0)
         }
         _ => Err(ResultCode::ERROR),

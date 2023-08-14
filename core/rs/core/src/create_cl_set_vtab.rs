@@ -3,10 +3,12 @@ extern crate alloc;
 use core::ffi::{c_char, c_int, c_void};
 
 use crate::alloc::borrow::ToOwned;
+use crate::c::crsql_createCrr;
 use alloc::boxed::Box;
+use alloc::ffi::CString;
 use alloc::format;
 use alloc::string::String;
-use sqlite::{sqlite3, Connection, CursorRef, StrRef, VTabArgs, VTabRef};
+use sqlite::{convert_rc, sqlite3, Connection, CursorRef, StrRef, VTabArgs, VTabRef};
 use sqlite_nostd as sqlite;
 use sqlite_nostd::ResultCode;
 
@@ -45,16 +47,15 @@ fn create_impl(
     let vtab_args = sqlite::parse_vtab_args(argc, argv)?;
     connect_create_shared(db, vtab, &vtab_args)?;
 
-    // now we need to go and _create_ the backing storage / companion tables.
-    // wrapped in a tx
-    db.exec_safe("SAVEPOINT create_clset;")?;
-    if let Err(rc) = create_clset_storage(db, &vtab_args, err)
-        .and_then(|_| as_crr(db, base_name_from_virtual_name(vtab_args.table_name)))
-    {
-        let _ = db.exec_safe("ROLLBACK TO create_clset;");
-        return Err(rc);
-    }
-    db.exec_safe("RELEASE create_clset;")
+    // We can't wrap this in a savepoint for some reason. I guess because the `CREATE VIRTUAL TABLE..`
+    // statement is processing? 🤷‍♂️
+    create_clset_storage(db, &vtab_args, err)?;
+    let db_name_c = CString::new(vtab_args.database_name)?;
+    let table_name_c = CString::new(base_name_from_virtual_name(vtab_args.table_name))?;
+
+    // TODO: move `createCrr` to Rust
+    let rc = unsafe { crsql_createCrr(db, db_name_c.as_ptr(), table_name_c.as_ptr(), 0, err) };
+    convert_rc(rc)
 }
 
 fn create_clset_storage(
@@ -77,12 +78,6 @@ fn create_clset_storage(
         table_name = crate::util::escape_ident(base_name_from_virtual_name(args.table_name)),
         table_def = table_def
     ))
-}
-
-fn as_crr(db: *mut sqlite3, tbl_name: &str) -> Result<ResultCode, ResultCode> {
-    let stmt = db.prepare_v2("SELECT crsql_as_crr(?);")?;
-    stmt.bind_text(1, tbl_name, sqlite::Destructor::STATIC)?;
-    stmt.step()
 }
 
 fn base_name_from_virtual_name(virtual_name: &str) -> &str {

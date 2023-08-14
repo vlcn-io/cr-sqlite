@@ -39,7 +39,7 @@ extern "C" fn connect(
             pModule: core::ptr::null(),
             zErrMsg: core::ptr::null_mut(),
         }));
-        sqlite::vtab_config(db, sqlite::INNOCUOUS);
+        let _ = sqlite::vtab_config(db, sqlite::INNOCUOUS);
     }
     ResultCode::OK as c_int
 }

@@ -14,8 +14,11 @@ pub fn backfill_table(
     pk_cols: Vec<&str>,
     non_pk_cols: Vec<&str>,
     is_commit_alter: bool,
+    no_tx: bool,
 ) -> Result<ResultCode, ResultCode> {
-    db.exec_safe("SAVEPOINT backfill")?;
+    if !no_tx {
+        db.exec_safe("SAVEPOINT backfill")?;
+    }
 
     let sql = format!(
         "SELECT {pk_cols} FROM \"{table}\" AS t1
@@ -46,16 +49,26 @@ pub fn backfill_table(
     };
 
     if let Err(e) = result {
-        db.exec_safe("ROLLBACK TO backfill")?;
+        if !no_tx {
+            db.exec_safe("ROLLBACK TO backfill")?;
+        }
+
         return Err(e);
     }
 
     if let Err(e) = backfill_missing_columns(db, table, &pk_cols, &non_pk_cols, is_commit_alter) {
-        db.exec_safe("ROLLBACK TO backfill")?;
+        if !no_tx {
+            db.exec_safe("ROLLBACK TO backfill")?;
+        }
+
         return Err(e);
     }
 
-    db.exec_safe("RELEASE backfill")
+    if !no_tx {
+        db.exec_safe("RELEASE backfill")
+    } else {
+        Ok(ResultCode::OK)
+    }
 }
 
 /**

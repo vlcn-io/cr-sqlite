@@ -54,7 +54,7 @@ fn create_impl(
     let table_name_c = CString::new(base_name_from_virtual_name(vtab_args.table_name))?;
 
     // TODO: move `createCrr` to Rust
-    let rc = unsafe { crsql_createCrr(db, db_name_c.as_ptr(), table_name_c.as_ptr(), 0, err) };
+    let rc = unsafe { crsql_createCrr(db, db_name_c.as_ptr(), table_name_c.as_ptr(), 0, 1, err) };
     convert_rc(rc)
 }
 
@@ -136,10 +136,8 @@ extern "C" fn disconnect(vtab: *mut sqlite::vtab) -> c_int {
 extern "C" fn destroy(vtab: *mut sqlite::vtab) -> c_int {
     let tab = unsafe { Box::from_raw(vtab.cast::<CLSetTab>()) };
     let ret = tab.db.exec_safe(&format!(
-        "SAVEPOINT drop_ccr;
-        DROP TABLE \"{db_name}\".\"{table_name}\";
-        DROP TABLE \"{db_name}\".\"{table_name}__crsql_clock\";
-        RELEASE drop_crr;",
+        "DROP TABLE \"{db_name}\".\"{table_name}\";
+        DROP TABLE \"{db_name}\".\"{table_name}__crsql_clock\";",
         table_name = crate::util::escape_ident(&tab.base_table_name),
         db_name = crate::util::escape_ident(&tab.db_name)
     ));

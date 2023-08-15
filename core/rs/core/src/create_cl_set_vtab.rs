@@ -131,7 +131,8 @@ extern "C" fn best_index(_vtab: *mut sqlite::vtab, _index_info: *mut sqlite::ind
 
 extern "C" fn disconnect(vtab: *mut sqlite::vtab) -> c_int {
     unsafe {
-        drop(Box::from_raw(vtab));
+        let tab = unsafe { Box::from_raw(vtab.cast::<CLSetTab>()) };
+        drop(tab);
     }
     ResultCode::OK as c_int
 }

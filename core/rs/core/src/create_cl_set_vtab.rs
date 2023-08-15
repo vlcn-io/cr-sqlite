@@ -107,7 +107,10 @@ fn connect_create_shared(
     vtab: *mut *mut sqlite::vtab,
     args: &VTabArgs,
 ) -> Result<ResultCode, ResultCode> {
-    sqlite::declare_vtab(db, "CREATE TABLE x(alteration TEXT);")?;
+    sqlite::declare_vtab(
+        db,
+        "CREATE TABLE x(alteration TEXT HIDDEN, schema TEXT HIDDEN);",
+    )?;
     let tab = Box::new(CLSetTab {
         base: sqlite::vtab {
             nRef: 0,

@@ -32,7 +32,18 @@ extern "C" fn create(
     err: *mut *mut c_char,
 ) -> c_int {
     match create_impl(db, argc, argv, vtab, err) {
-        Ok(rc) | Err(rc) => rc as c_int,
+        Ok(rc) => rc as c_int,
+        Err(rc) => {
+            // deallocate the vtab on error.
+            unsafe {
+                if *vtab != core::ptr::null_mut() {
+                    let tab = Box::from_raw((*vtab).cast::<CLSetTab>());
+                    drop(tab);
+                    *vtab = core::ptr::null_mut();
+                }
+            }
+            rc as c_int
+        }
     }
 }
 
@@ -98,7 +109,17 @@ extern "C" fn connect(
         Ok(vtab_args) => match connect_create_shared(db, vtab, &vtab_args) {
             Ok(rc) | Err(rc) => rc as c_int,
         },
-        Err(_e) => ResultCode::FORMAT as c_int,
+        Err(_e) => {
+            // free the tab if it was allocated
+            unsafe {
+                if *vtab != core::ptr::null_mut() {
+                    let tab = Box::from_raw((*vtab).cast::<CLSetTab>());
+                    drop(tab);
+                    *vtab = core::ptr::null_mut();
+                }
+            };
+            ResultCode::FORMAT as c_int
+        }
     }
 }
 
@@ -130,7 +151,7 @@ extern "C" fn best_index(_vtab: *mut sqlite::vtab, _index_info: *mut sqlite::ind
 }
 
 extern "C" fn disconnect(vtab: *mut sqlite::vtab) -> c_int {
-    unsafe {
+    if vtab != core::ptr::null_mut() {
         let tab = unsafe { Box::from_raw(vtab.cast::<CLSetTab>()) };
         drop(tab);
     }

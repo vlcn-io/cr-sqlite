@@ -8,7 +8,7 @@
 // structures to the old C-code that hasn't been converted yet.
 // These are those definitions.
 
-int crsql_backfill_table(sqlite3_context *context, const char *tblName,
+int crsql_backfill_table(sqlite3 *db, const char *tblName,
                          const char **zpkNames, int pkCount,
                          const char **zNonPkNames, int nonPkCount,
                          int isCommitAlter, int noTx);

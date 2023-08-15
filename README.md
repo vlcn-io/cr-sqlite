@@ -2,7 +2,6 @@
 
 [![c-tests](https://github.com/vlcn-io/cr-sqlite/actions/workflows/c-tests.yaml/badge.svg)](https://github.com/vlcn-io/cr-sqlite/actions/workflows/c-tests.yaml)
 [![c-valgrind](https://github.com/vlcn-io/cr-sqlite/actions/workflows/c-valgrind.yaml/badge.svg)](https://github.com/vlcn-io/cr-sqlite/actions/workflows/c-valgrind.yaml)
-[![js-tests](https://github.com/vlcn-io/cr-sqlite/actions/workflows/js-tests.yaml/badge.svg)](https://github.com/vlcn-io/cr-sqlite/actions/workflows/js-tests.yaml)
 [![py-tests](https://github.com/vlcn-io/cr-sqlite/actions/workflows/py-tests.yaml/badge.svg)](https://github.com/vlcn-io/cr-sqlite/actions/workflows/py-tests.yaml)
 [![rs-tests](https://github.com/vlcn-io/cr-sqlite/actions/workflows/rs-tests.yml/badge.svg)](https://github.com/vlcn-io/cr-sqlite/actions/workflows/rs-tests.yml)
 
@@ -259,7 +258,7 @@ This will create a shared library at `dist/crsqlite.[lib extension]`
 
 ## WASM
 
-For a WASM build that works in the browser, see the [js](./js) directory.
+For a WASM build that works in the browser, see the [js](https://github.com/vlcn-io/js) repository.
 
 ## CLI
 
@@ -282,25 +281,18 @@ cd core
 make test
 ```
 
-js integration tests:
-
-```bash
-cd js
-make test
-```
-
 py integration tests:
 
 ```bash
-cd py/correctness
-pip install -e .
-export PYTHONPATH=./src
-pytest
+cd core
+make loadable
+cd ../py/correctness
+./install-and-test.sh
 ```
 
 # JS APIs
 
-JS APIs for using `cr-sqlite` in the browser are not yet documented but exist in the [js dir](./js). You can also see examples of them in use here:
+JS APIs for using `cr-sqlite` in the browser are not yet documented but exist in the [js repo](https://github.com/vlcn-io/js). You can also see examples of them in use here:
 
 - [Observable Notebook](https://observablehq.com/@tantaman/cr-sqlite-basic-setup)
 - https://github.com/vlcn-io/live-examples

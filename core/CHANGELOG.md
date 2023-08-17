@@ -1,5 +1,11 @@
 # @vlcn.io/crsqlite
 
+## 0.15.0-next.1
+
+### Patch Changes
+
+- react strict mode fiex, migrator fixes, typed-sql basic support, ws replication, db provider hooks
+
 ## 0.15.0-next.0
 
 ### Minor Changes

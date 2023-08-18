@@ -38,6 +38,18 @@ rs_build_flags = -Zbuild-std
 		endif
 endif
 
+# aarch64-linux-android
+# https://github.com/marketplace/actions/setup-android-ndk
+ifdef ANDROID_TARGET
+CI_MAYBE_TARGET=$(ANDROID_TARGET)
+NDK = $(ANDROID_NDK_HOME) # ANDROID_NDK_HOME is an env variable
+NDK_HOSTARCH = linux-x86_64
+CC     			 = $(NDK)/toolchains/llvm/prebuilt/$(NDK_HOSTARCH)/bin/clang
+
+rs_build_flags = -Zbuild-std
+sysroot_option = --sysroot=$(NDK)/toolchains/llvm/prebuilt/$(NDK_HOSTARCH)/sysroot
+endif
+
 prefix=./dist
 dbg_prefix=./dbg
 

@@ -154,6 +154,11 @@ jobs:
         with:
           submodules: true
 
+      - name: Rust Nightly
+        run: |
+          rustup toolchain install nightly-2023-06-17
+          rustup target add aarch64-linux-android --toolchain nightly-2023-06-17
+
       - uses: nttld/setup-ndk@v1
         id: setup-ndk
         with:

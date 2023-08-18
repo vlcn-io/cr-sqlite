@@ -146,7 +146,7 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            artifact_name: crsqlite-aarch64-linux-android.so
+            artifact_name: crsqlite.so
             asset_name: crsqlite-aarch64-linux-android.so
 
     steps:

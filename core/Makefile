@@ -44,8 +44,8 @@ ifdef ANDROID_TARGET
 CI_MAYBE_TARGET=$(ANDROID_TARGET)
 NDK=$(ANDROID_NDK_HOME)
 LOADABLE_EXTENSION=so
-# NDK_HOSTARCH = linux-x86_64
-NDK_HOSTARCH=darwin-x86_64
+NDK_HOSTARCH=linux-x86_64
+# NDK_HOSTARCH=darwin-x86_64
 CC=$(NDK)/toolchains/llvm/prebuilt/$(NDK_HOSTARCH)/bin/clang
 rs_ndk=ndk -t $(ANDROID_TARGET)
 # unset rs target?

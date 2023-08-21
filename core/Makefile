@@ -42,12 +42,16 @@ endif
 # https://github.com/marketplace/actions/setup-android-ndk
 ifdef ANDROID_TARGET
 CI_MAYBE_TARGET=$(ANDROID_TARGET)
-NDK = $(ANDROID_NDK_HOME) # ANDROID_NDK_HOME is an env variable
+NDK = $(ANDROID_NDK_HOME)
 NDK_HOSTARCH = linux-x86_64
+# NDK_HOSTARCH = darwin-x86_64
 CC     			 = $(NDK)/toolchains/llvm/prebuilt/$(NDK_HOSTARCH)/bin/clang
-
+rs_ndk = ndk -t $(ANDROID_TARGET)
+# unset rs target?
 rs_build_flags = -Zbuild-std
-sysroot_option = --sysroot=$(NDK)/toolchains/llvm/prebuilt/$(NDK_HOSTARCH)/sysroot
+sysroot_option = --sysroot="$(NDK)/toolchains/llvm/prebuilt/$(NDK_HOSTARCH)/sysroot"
+# android_I = -I$(NDK)/toolchains/llvm/prebuilt/$(NDK_HOSTARCH)/sysroot/usr/include/$(ANDROID_TARGET)/asm
+# android_L = -L$(NDK)/toolchains/llvm/prebuilt/$(NDK_HOSTARCH)/sysroot/usr/lib/$(ANDROID_TARGET)/33
 endif
 
 prefix=./dist
@@ -153,7 +157,7 @@ $(rs_lib_static_cpy): FORCE $(prefix)
 	cp $(rs_lib_static) $(rs_lib_static_cpy)
 
 $(rs_lib_loadable_cpy): FORCE $(prefix)
-	cd ./rs/bundle && cargo build $(RS_TARGET) --release --features loadable_extension $(rs_build_flags)
+	cd ./rs/bundle && cargo $(rs_ndk) build $(RS_TARGET) --release --features loadable_extension $(rs_build_flags)
 	cp $(rs_lib_loadable) $(rs_lib_loadable_cpy)
 
 $(rs_lib_dbg_loadable_cpy): FORCE $(dbg_prefix)

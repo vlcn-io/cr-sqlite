@@ -17,10 +17,13 @@ endif
 
 ifdef CONFIG_DARWIN
 LOADABLE_EXTENSION=dylib
+# apparently `darwin-x86_64` also works on arm macs and is the proper host arch for ndk builds.
+NDK_HOSTARCH=darwin-x86_64
 endif
 
 ifdef CONFIG_LINUX
 LOADABLE_EXTENSION=so
+NDK_HOSTARCH=linux-x86_64
 endif
 
 ifdef CONFIG_WINDOWS
@@ -44,8 +47,6 @@ ifdef ANDROID_TARGET
 CI_MAYBE_TARGET=$(ANDROID_TARGET)
 NDK=$(ANDROID_NDK_HOME)
 LOADABLE_EXTENSION=so
-NDK_HOSTARCH=linux-x86_64
-# NDK_HOSTARCH=darwin-x86_64
 CC=$(NDK)/toolchains/llvm/prebuilt/$(NDK_HOSTARCH)/bin/clang
 rs_ndk=ndk -t $(ANDROID_TARGET)
 ANDROID_API_VERSION=33

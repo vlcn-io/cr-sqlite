@@ -42,14 +42,15 @@ endif
 # https://github.com/marketplace/actions/setup-android-ndk
 ifdef ANDROID_TARGET
 CI_MAYBE_TARGET=$(ANDROID_TARGET)
-NDK = $(ANDROID_NDK_HOME)
-NDK_HOSTARCH = linux-x86_64
-# NDK_HOSTARCH = darwin-x86_64
-CC     			 = $(NDK)/toolchains/llvm/prebuilt/$(NDK_HOSTARCH)/bin/clang
-rs_ndk = ndk -t $(ANDROID_TARGET)
+NDK=$(ANDROID_NDK_HOME)
+LOADABLE_EXTENSION=so
+# NDK_HOSTARCH = linux-x86_64
+NDK_HOSTARCH=darwin-x86_64
+CC=$(NDK)/toolchains/llvm/prebuilt/$(NDK_HOSTARCH)/bin/clang
+rs_ndk=ndk -t $(ANDROID_TARGET)
 # unset rs target?
-rs_build_flags = -Zbuild-std
-sysroot_option = --sysroot="$(NDK)/toolchains/llvm/prebuilt/$(NDK_HOSTARCH)/sysroot"
+rs_build_flags=-Zbuild-std
+sysroot_option=--sysroot=$(NDK)/toolchains/llvm/prebuilt/$(NDK_HOSTARCH)/sysroot
 # android_I = -I$(NDK)/toolchains/llvm/prebuilt/$(NDK_HOSTARCH)/sysroot/usr/include/$(ANDROID_TARGET)/asm
 # android_L = -L$(NDK)/toolchains/llvm/prebuilt/$(NDK_HOSTARCH)/sysroot/usr/lib/$(ANDROID_TARGET)/33
 endif
@@ -141,9 +142,9 @@ ifdef CI_MAYBE_TARGET
 	ifndef CI_GCC
 # clang has a different target triple than Rust for ios simuators
 		ifeq ($(findstring sim,$(CI_MAYBE_TARGET)),)
-			C_TARGET = -target $(CI_MAYBE_TARGET)
+			C_TARGET = --target=$(CI_MAYBE_TARGET)
 		else
-			C_TARGET = -target $(CI_MAYBE_TARGET)ulator
+			C_TARGET = --target=$(CI_MAYBE_TARGET)ulator
 		endif
 	endif
 endif

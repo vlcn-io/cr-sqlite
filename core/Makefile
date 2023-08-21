@@ -48,11 +48,9 @@ NDK_HOSTARCH=linux-x86_64
 # NDK_HOSTARCH=darwin-x86_64
 CC=$(NDK)/toolchains/llvm/prebuilt/$(NDK_HOSTARCH)/bin/clang
 rs_ndk=ndk -t $(ANDROID_TARGET)
-# unset rs target?
+ANDROID_API_VERSION=33
 rs_build_flags=-Zbuild-std
 sysroot_option=--sysroot=$(NDK)/toolchains/llvm/prebuilt/$(NDK_HOSTARCH)/sysroot
-# android_I = -I$(NDK)/toolchains/llvm/prebuilt/$(NDK_HOSTARCH)/sysroot/usr/include/$(ANDROID_TARGET)/asm
-# android_L = -L$(NDK)/toolchains/llvm/prebuilt/$(NDK_HOSTARCH)/sysroot/usr/lib/$(ANDROID_TARGET)/33
 endif
 
 prefix=./dist
@@ -142,7 +140,7 @@ ifdef CI_MAYBE_TARGET
 	ifndef CI_GCC
 # clang has a different target triple than Rust for ios simuators
 		ifeq ($(findstring sim,$(CI_MAYBE_TARGET)),)
-			C_TARGET = --target=$(CI_MAYBE_TARGET)
+			C_TARGET = --target=$(CI_MAYBE_TARGET)$(ANDROID_API_VERSION)
 		else
 			C_TARGET = --target=$(CI_MAYBE_TARGET)ulator
 		endif

@@ -56,8 +56,9 @@ fn sync_left_to_right(
     stmt_l.bind_blob(2, siteid, Destructor::STATIC)?;
 
     while stmt_l.step()? == ResultCode::ROW {
-        let stmt_r = r.prepare_v2("INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?, ?, ?)")?;
-        for x in 0..8 {
+        let stmt_r =
+            r.prepare_v2("INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")?;
+        for x in 0..9 {
             stmt_r.bind_value(x + 1, stmt_l.column_value(x)?)?;
         }
         stmt_r.step()?;

@@ -263,7 +263,7 @@ fn set_winner_clock(
         .and_then(|_| set_stmt.bind_int64(unpacked_pks.len() as i32 + 4, insert_seq))
         .and_then(|_| match ordinal {
             Some(ordinal) => set_stmt.bind_int64(unpacked_pks.len() as i32 + 5, ordinal),
-            None => set_stmt.bind_null(unpacked_pks.len() as i32 + 6),
+            None => set_stmt.bind_null(unpacked_pks.len() as i32 + 5),
         });
 
     if let Err(rc) = bind_result {

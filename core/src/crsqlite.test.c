@@ -59,13 +59,13 @@ int syncLeftToRight(sqlite3 *db1, sqlite3 *db2, sqlite3_int64 since) {
   rc += sqlite3_bind_value(pStmtRead, 1, sqlite3_column_value(pStmt, 0));
   assert(rc == SQLITE_OK);
   rc += sqlite3_prepare_v2(
-      db2, "INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?, ?, ?)", -1,
+      db2, "INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", -1,
       &pStmtWrite, 0);
   assert(rc == SQLITE_OK);
   // printf("err: %s\n", err);
 
   while (sqlite3_step(pStmtRead) == SQLITE_ROW) {
-    for (int i = 0; i < 8; ++i) {
+    for (int i = 0; i < 9; ++i) {
       assert(sqlite3_bind_value(pStmtWrite, i + 1,
                                 sqlite3_column_value(pStmtRead, i)) ==
              SQLITE_OK);

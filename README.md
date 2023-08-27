@@ -307,3 +307,4 @@ cr-sqlite was inspired by and built on ideas from these papers:
 - [Time, Clocks, and the Ordering of Events in a Distributed System](https://lamport.azurewebsites.net/pubs/time-clocks.pdf)
 - [Replicated abstract data types: Building blocks for collaborative applications](http://csl.skku.edu/papers/jpdc11.pdf)
 - [CRDTs for Brrr](https://josephg.com/blog/crdts-go-brrr/)
+

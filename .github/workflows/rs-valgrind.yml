@@ -19,7 +19,6 @@ jobs:
         uses: xom9ikk/dotenv@v2
         with:
           path: ./
-          load-mode: strict
 
       - name: Install valgrind
         run: sudo apt install -y valgrind

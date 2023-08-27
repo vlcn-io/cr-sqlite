@@ -33,7 +33,6 @@ jobs:
         uses: xom9ikk/dotenv@v2
         with:
           path: ./
-          load-mode: strict
 
       - name: Windows rust toolchain
         if: runner.os == 'Windows'

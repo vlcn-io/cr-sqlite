@@ -18,7 +18,7 @@ def test_insert_site_id():
     # is an ordinal in actual table
     a = make_simple_schema()
     a.execute(
-        "INSERT INTO crsql_changes VALUES ('foo', x'010901', 'b', 1, 1, 1, x'1dc8d6bb7f8941088327d9439a7927a4', 1)")
+        "INSERT INTO crsql_changes VALUES ('foo', x'010901', 'b', 1, 1, 1, x'1dc8d6bb7f8941088327d9439a7927a4', 1, 0)")
     a.commit()
 
     # Ordinal value, not site id, is in the clock table
@@ -39,7 +39,7 @@ def test_insert_site_id():
 def test_site_id_filter():
     a = make_simple_schema()
     a.execute(
-        "INSERT INTO crsql_changes VALUES ('foo', x'010901', 'b', 1, 1, 1, x'1dc8d6bb7f8941088327d9439a7927a4', 1)")
+        "INSERT INTO crsql_changes VALUES ('foo', x'010901', 'b', 1, 1, 1, x'1dc8d6bb7f8941088327d9439a7927a4', 1, 0)")
     a.commit()
 
     assert (a.execute(
@@ -53,7 +53,7 @@ def test_local_changes_have_null_site():
     a.execute("INSERT INTO foo VALUES (4,2)")
     a.commit()
     a.execute(
-        "INSERT INTO crsql_changes VALUES ('foo', x'010901', 'b', 1, 1, 1, x'1dc8d6bb7f8941088327d9439a7927a4', 1)")
+        "INSERT INTO crsql_changes VALUES ('foo', x'010901', 'b', 1, 1, 1, x'1dc8d6bb7f8941088327d9439a7927a4', 1, 0)")
     a.commit()
 
     assert (a.execute(
@@ -67,7 +67,7 @@ def test_site_id_ordinals_do_not_move_on_merge():
     a = make_simple_schema()
 
     a.execute(
-        "INSERT INTO crsql_changes VALUES ('foo', x'010901', 'b', 1, 1, 1, x'1dc8d6bb7f8941088327d9439a7927a4', 1)")
+        "INSERT INTO crsql_changes VALUES ('foo', x'010901', 'b', 1, 1, 1, x'1dc8d6bb7f8941088327d9439a7927a4', 1, 0)")
     a.commit()
 
     x = a.execute("SELECT quote(site_id) FROM crsql_changes").fetchall()
@@ -75,7 +75,7 @@ def test_site_id_ordinals_do_not_move_on_merge():
 
     # insert again with the same site id
     a.execute(
-        "INSERT INTO crsql_changes VALUES ('foo', x'010902', 'b', 1, 1, 1, x'1dc8d6bb7f8941088327d9439a7927a4', 1)")
+        "INSERT INTO crsql_changes VALUES ('foo', x'010902', 'b', 1, 1, 1, x'1dc8d6bb7f8941088327d9439a7927a4', 1, 0)")
     a.commit()
 
     x = a.execute("SELECT quote(site_id) FROM crsql_changes").fetchall()
@@ -85,11 +85,11 @@ def test_site_id_ordinals_do_not_move_on_merge():
 
     # insert a new site id
     a.execute(
-        "INSERT INTO crsql_changes VALUES ('foo', x'010903', 'b', 1, 1, 1, x'2dc8d6bb7f8941088327d9439a7927a4', 1)")
+        "INSERT INTO crsql_changes VALUES ('foo', x'010903', 'b', 1, 1, 1, x'2dc8d6bb7f8941088327d9439a7927a4', 1, 0)")
     a.commit()
     # insert again with that new site id
     a.execute(
-        "INSERT INTO crsql_changes VALUES ('foo', x'010904', 'b', 1, 1, 1, x'2dc8d6bb7f8941088327d9439a7927a4', 1)")
+        "INSERT INTO crsql_changes VALUES ('foo', x'010904', 'b', 1, 1, 1, x'2dc8d6bb7f8941088327d9439a7927a4', 1, 0)")
     a.commit()
     # should only be 2 site ids w/ ordinals 1 and 2. 1DC... -> 1, 2DC... -> 2
     x = a.execute(

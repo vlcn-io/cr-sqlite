@@ -147,9 +147,11 @@ def test_larger_cl_delete_deletes_all():
     assert (rows == [])
 
     # c1 shouldn't have column metadata but only a delete record of the dropped item whose causal length should be 2.
-    assert (c1_changes == [('foo', b'\x01\t\x01', '-1', None, 2, 1, None, 2, 1)])
+    assert (c1_changes == [
+            ('foo', b'\x01\t\x01', '-1', None, 2, 1, None, 2, 1)])
     # c2 merged in the delete thus bumping causal length to 2 and bumping db version since there was a change.
-    assert (c2_changes == [('foo', b'\x01\t\x01', '-1', None, 2, 2, None, 2, 1)])
+    assert (c2_changes == [
+            ('foo', b'\x01\t\x01', '-1', None, 2, 2, None, 2, 1)])
     close(c1)
     close(c2)
 
@@ -169,7 +171,8 @@ def test_smaller_delete_does_not_delete_larger_cl():
 
     # check the pre-condition the c1 actually has a delete event
     c1_changes = c1.execute("SELECT * FROM crsql_changes").fetchall()
-    assert (c1_changes == [('foo', b'\x01\t\x01', '-1', None, 2, 1, None, 2, 1)])
+    assert (c1_changes == [
+            ('foo', b'\x01\t\x01', '-1', None, 2, 1, None, 2, 1)])
 
     c2_changes_pre_merge = c2.execute("SELECT * FROM crsql_changes").fetchall()
 
@@ -264,8 +267,8 @@ def test_pr_299_scenario():
     # c2 should have accepted all the changes given the higher causal length
     # a = 1, b = 1, cl = 3
     # note: why is site_id missing??? Ah, it is missing since we don't coalesce to get it. This is expected.
-    assert (changes == [('foo', b'\x01\t\x01', '-1', None, 3, 3, None, 3),
-                        ('foo', b'\x01\t\x01', 'b', 1, 1, 3, None, 3)])
+    assert (changes == [('foo', b'\x01\t\x01', '-1', None, 3, 3, None, 3, 0),
+                        ('foo', b'\x01\t\x01', 'b', 1, 1, 3, None, 3, 1)])
     # c2 and c1 should match in terms of data
     assert (c1.execute("SELECT * FROM foo").fetchall() ==
             c2.execute("SELECT * FROM foo").fetchall())
@@ -380,7 +383,7 @@ def test_resurrection_of_live_thing_via_sentinel():
 
     # 'b' should be zeroed column version but latest db version.
     assert (changes == [('foo', b'\x01\t\x01', 'b', 1, 0, 2, None, 3, 0),
-                        ('foo', b'\x01\t\x01', '-1', None, 3, 2, None, 3, 1)])
+                        ('foo', b'\x01\t\x01', '-1', None, 3, 2, None, 3, 2)])
     # now lets finish getting changes from the other node
     changes = c1.execute(
         "SELECT * FROM crsql_changes WHERE cid != '-1'").fetchone()
@@ -389,7 +392,7 @@ def test_resurrection_of_live_thing_via_sentinel():
     c2.commit()
 
     changes = c2.execute("SELECT * FROM crsql_changes").fetchall()
-    assert (changes == [('foo', b'\x01\t\x01', '-1', None, 3, 2, None, 3, 1),
+    assert (changes == [('foo', b'\x01\t\x01', '-1', None, 3, 2, None, 3, 2),
                         # col version bump to 1 since the other guy won on col version.
                         # db version bumped as well since the col version changed.
                         # holding the db version stable would prevent nodes that proxy other nodes
@@ -400,7 +403,7 @@ def test_resurrection_of_live_thing_via_sentinel():
                         # Then B receives changes from A which move B's clock forward w/o changing B's value
                         # C then merges to B and loses there
                         # If B db version didn't change then C would never get the changes that B is proxying from A
-                        ('foo', b'\x01\t\x01', 'b', 1, 1, 3, None, 3, 2)])
+                        ('foo', b'\x01\t\x01', 'b', 1, 1, 3, None, 3, 3)])
     close(c1)
     close(c2)
 
@@ -427,8 +430,8 @@ def test_resurrection_of_live_thing_via_non_sentinel():
     # we get the new values as expected
     # db version pushed
     # col version is at 1 given we rolled the causal length forward for the resurrection
-    assert (changes == [('foo', b'\x01\t\x01', '-1', None, 3, 2, None, 3, 2),
-                        ('foo', b'\x01\t\x01', 'b', 1, 1, 2, None, 3, 2)])
+    assert (changes == [('foo', b'\x01\t\x01', '-1', None, 3, 2, None, 3, 3),
+                        ('foo', b'\x01\t\x01', 'b', 1, 1, 2, None, 3, 3)])
 
     # sync all other entries should be a no-op
     sync_left_to_right(c1, c2, 0)
@@ -461,7 +464,7 @@ def test_resurrection_of_dead_thing_via_sentinel():
     # row comes back
     # cl = 3 given resurrected from dead (2)
     # db_version = 2 given it was a change
-    assert (changes == [('foo', b'\x01\t\x01', '-1', None, 3, 2, None, 3, 1)])
+    assert (changes == [('foo', b'\x01\t\x01', '-1', None, 3, 2, None, 3, 2)])
     close(c1)
     close(c2)
 
@@ -490,8 +493,8 @@ def test_resurrection_of_dead_thing_via_non_sentinel():
     # cl = 3 given resurrected from dead (2)
     # db_version = 2 given it was a change
     # col version rolled back given cl moved forward
-    assert (changes == [('foo', b'\x01\t\x01', '-1', None, 3, 2, None, 3, 2),
-                        ('foo', b'\x01\t\x01', 'b', 1, 1, 2, None, 3, 2)])
+    assert (changes == [('foo', b'\x01\t\x01', '-1', None, 3, 2, None, 3, 3),
+                        ('foo', b'\x01\t\x01', 'b', 1, 1, 2, None, 3, 3)])
     close(c1)
     close(c2)
 

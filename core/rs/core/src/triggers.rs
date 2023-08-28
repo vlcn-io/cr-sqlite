@@ -110,7 +110,7 @@ fn insert_trigger_body(
           "UPDATE \"{table_name}__crsql_clock\" SET
             __crsql_col_version = CASE __crsql_col_version % 2 WHEN 0 THEN __crsql_col_version + 1 ELSE __crsql_col_version + 2 END,
             __crsql_db_version = crsql_next_db_version(),
-            __crsql_seq = crsql_get_seq() - 1,
+            __crsql_seq = crsql_increment_and_get_seq(),
             __crsql_site_id = NULL
           WHERE {pk_where_list} AND __crsql_col_name = '{col_name}';",
           table_name = crate::util::escape_ident(table_name),

@@ -45,6 +45,15 @@ def sync_left_to_right(l, r, since):
     r.commit()
 
 
+def sync_left_to_right_exact_version(l, r, db_version):
+    changes = l.execute(
+        "SELECT * FROM crsql_changes WHERE db_version = ?", (db_version,))
+    for change in changes:
+        r.execute(
+            "INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", change)
+    r.commit()
+
+
 def sync_left_to_right_include_siteid(l, r, since):
     changes = l.execute(
         "SELECT [table], pk, cid, val, col_version, db_version, coalesce(site_id, crsql_site_id()), cl, seq FROM crsql_changes WHERE db_version > ?", (since,))
@@ -893,6 +902,96 @@ def test_pko_resurrect():
 
     close(c1)
     close(c2)
+
+
+# The case is:
+# Nodes A, B and C all have the same row
+# C deletes it
+# A receives the delete
+# B receives the delete
+# C re-inserts it
+# B receive the re-insertion and all cols for that re-insert
+# A receives nothing
+# C updates a few columns
+# A receives the column updates
+# B receives the column updates
+# A now receives the re-inesrtion and all colls for that re-insert
+# Everyone should be converged. In the user report,
+# A lost the values from the update.
+# https://discord.com/channels/989870439897653248/1145793546788544542/1146199296019009576
+def test_discord_report_corrosion():
+    changes_q = "SELECT * FROM crsql_changes"
+
+    def make_schema():
+        c = connect(":memory:")
+        c.execute("CREATE TABLE foo (a primary key, b, c, d, e)")
+        c.execute("SELECT crsql_as_crr('foo')")
+        c.commit()
+        return c
+
+    a = make_schema()
+    b = make_schema()
+    c = make_schema()
+
+    c.execute("INSERT INTO foo VALUES (1, 'b', 'c', 'd', 'e')")
+    c.commit()
+    sync_left_to_right_single_vrsn(c, a, 1)
+    sync_left_to_right_single_vrsn(c, b, 1)
+
+    # all dbs in same state
+    # c now does the delete
+    c.execute("DELETE FROM foo WHERE a = 1")
+    c.commit()
+
+    # that delete now goes to peers
+    sync_left_to_right_single_vrsn(c, a, 2)
+    sync_left_to_right_single_vrsn(c, b, 2)
+
+    # c now re-inserts
+    c.execute("INSERT INTO foo VALUES (1, 'b1', 'c1', 'd1', 'e1')")
+    c.commit()
+
+    # b gets the re-insertion
+    sync_left_to_right_single_vrsn(c, b, 3)
+
+    # c makes updates
+    c.execute("UPDATE foo SET b = 'b2', c = 'c2' WHERE a = 1")
+    c.commit()
+
+    # those updates go to A and B
+    sync_left_to_right_exact_version(c, a, 4)
+    sync_left_to_right_exact_version(c, b, 4)
+
+    # make sure we have the expected change coming out of node C
+    assert (c.execute(
+        "SELECT cid, col_version, cl FROM crsql_changes WHERE db_version = 4").fetchall() ==
+        [('b', 2, 3), ('c', 2, 3)])
+
+    # a received the delete followed by updates of cells `b` and `c`
+    # so it's changes should only have:
+    # 1. the sentinal with causal length 3
+    # 2. cell b with col version 2 and causal length 3
+    # 3. cell c with the same
+    assert (a.execute("SELECT cid, col_version, cl FROM crsql_changes").fetchall(
+    ) == [('-1', 3, 3), ('b', 2, 3), ('c', 2, 3)])
+
+    # now that old re-insert goes to A
+    sync_left_to_right_single_vrsn(c, a, 3)
+
+    # nodes have the same final tables
+    q = "SELECT * FROM foo"
+    assert (a.execute(q).fetchall() ==
+            b.execute(q).fetchall())
+
+    # all nodes should have the same:
+    # 1. column versions
+    # 2. causal length
+    # 3. value
+    # db_versions could be different as changes are applied in different
+    # orders on each node.
+    q = "SELECT cid, col_version, cl, val FROM crsql_changes ORDER BY cid"
+    assert (a.execute(q).fetchall() == b.execute(q).fetchall())
+    assert (a.execute(q).fetchall() == c.execute(q).fetchall())
 
 
 def test_cl_does_not_move_forward_when_equal():

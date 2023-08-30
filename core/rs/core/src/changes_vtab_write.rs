@@ -629,7 +629,7 @@ unsafe fn merge_insert(
     // The current node might have missed the delete preceeding this causal length
     // in out-of-order delivery setups but we still call it a resurrect as special
     // handling needs to happen in the "alive -> missed_delete -> alive" case.
-    let needs_resurrect = insert_cl > local_cl && insert_col_vrsn % 2 == 1;
+    let needs_resurrect = insert_cl > local_cl && insert_cl % 2 == 1;
     let row_exists_locally = local_cl != 0;
     let is_sentinel_only = crate::c::INSERT_SENTINEL == insert_col;
 

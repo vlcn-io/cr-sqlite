@@ -56,6 +56,13 @@ fn create_impl(
 ) -> Result<ResultCode, ResultCode> {
     // This is the schema component
     let vtab_args = sqlite::parse_vtab_args(argc, argv)?;
+    if !vtab_args.table_name.ends_with("_schema") {
+        err.set(&format!(
+          "{tbl_name} MUST end with _schema. E.g., {tbl_name}_schema. Two tables will be created: {tbl_name}_schema for managing the CRDT schemas and {tbl_name} for storing the data.",
+          tbl_name = vtab_args.table_name
+        ));
+        return Err(ResultCode::ERROR);
+    }
     connect_create_shared(db, vtab, &vtab_args)?;
 
     // We can't wrap this in a savepoint for some reason. I guess because the `CREATE VIRTUAL TABLE..`

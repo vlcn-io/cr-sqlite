@@ -9,6 +9,7 @@ use alloc::string::ToString;
 use alloc::vec;
 use alloc::vec::Vec;
 use core::ffi::{c_char, c_int};
+use core::mem;
 use core::slice;
 use sqlite::ColumnType;
 use sqlite_nostd as sqlite;
@@ -41,8 +42,12 @@ pub extern "C" fn crsql_automigrate(
 
     let args = args!(argc, argv);
     if let Err(code) = automigrate_impl(ctx, args) {
-        ctx.result_error(&format!("failed to apply the updated schema {:?}", code));
-        ctx.result_error_code(code);
+        // We're using `Err(OK)` to signify that error message and code were already set.
+        if code != ResultCode::OK {
+            ctx.result_error(&format!("failed to apply the updated schema {:?}", code));
+            ctx.result_error_code(code);
+        }
+
         return;
     }
 
@@ -53,6 +58,14 @@ fn automigrate_impl(
     ctx: *mut sqlite::context,
     args: &[*mut sqlite::value],
 ) -> Result<ResultCode, ResultCode> {
+    let cleanup = |mem_db: ManagedConnection| {
+        if args.len() == 2 {
+            let cleanup_stmt = args[1].text();
+            mem_db.exec_safe(cleanup_stmt)
+        } else {
+            Ok(ResultCode::OK)
+        }
+    };
     let local_db = ctx.db_handle();
     let desired_schema = args[0].text();
     let stripped_schema = strip_crr_statements(desired_schema);
@@ -60,19 +73,25 @@ fn automigrate_impl(
     let result = sqlite::open(strlit!(":memory:"));
     if let Ok(mem_db) = result {
         if let Err(_) = mem_db.exec_safe(&stripped_schema) {
-            return Err(ResultCode::SCHEMA);
+            let mem_db_err_msg = mem_db.errmsg()?;
+            ctx.result_error(&mem_db_err_msg);
+            ctx.result_error_code(mem_db.errcode());
+            cleanup(mem_db)?;
+            return Err(ResultCode::OK);
         }
         local_db.exec_safe("SAVEPOINT automigrate_tables;")?;
 
         let migrate_result = migrate_to(local_db, &mem_db);
-        if args.len() == 2 {
-            let cleanup_stmt = args[1].text();
-            mem_db.exec_safe(cleanup_stmt)?;
-        }
 
         if let Err(_) = migrate_result {
             local_db.exec_safe("ROLLBACK TO automigrate_tables")?;
-            return Err(ResultCode::MISMATCH);
+            let mem_db_err_msg = mem_db.errmsg()?;
+            ctx.result_error(&mem_db_err_msg);
+            ctx.result_error_code(mem_db.errcode());
+            cleanup(mem_db)?;
+            return Err(ResultCode::OK);
+        } else {
+            cleanup(mem_db)?;
         }
 
         if !desired_schema.is_empty() {
@@ -80,7 +99,9 @@ fn automigrate_impl(
         }
         local_db.exec_safe("RELEASE automigrate_tables")
     } else {
-        return Err(ResultCode::CANTOPEN);
+        ctx.result_error("could not open the temporary migration db");
+        ctx.result_error_code(ResultCode::CANTOPEN);
+        return Err(ResultCode::OK);
     }
 }
 

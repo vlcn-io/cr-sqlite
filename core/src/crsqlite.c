@@ -339,6 +339,7 @@ static void crsqlRowsImpacted(sqlite3_context *context, int argc,
 static int commitHook(void *pUserData) {
   crsql_ExtData *pExtData = (crsql_ExtData *)pUserData;
 
+  pExtData->dbVersion = pExtData->pendingDbVersion;
   pExtData->pendingDbVersion = -1;
   pExtData->seq = 0;
   return SQLITE_OK;

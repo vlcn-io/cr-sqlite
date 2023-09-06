@@ -18,6 +18,9 @@ struct crsql_ExtData {
   // to crsql_next_db_version()
   // and re-set on transaction commit or rollback.
   sqlite3_int64 dbVersion;
+  // the version that the db will be set to at the end of the transaction
+  // if that transaction were to commit at the time this value is checked.
+  sqlite3_int64 pendingDbVersion;
   int pragmaSchemaVersion;
 
   // we need another schema version number that tracks when we checked it

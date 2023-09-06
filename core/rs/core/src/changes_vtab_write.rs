@@ -237,7 +237,7 @@ fn set_winner_clock(
               {pk_bind_list},
               ?,
               ?,
-              MAX(crsql_next_db_version(), ?),
+              crsql_next_db_version(?),
               ?,
               ?
             ) RETURNING _rowid_",
@@ -373,7 +373,7 @@ fn zero_clocks_on_resurrect(
     let stmt_key = get_cache_key(CachedStmtType::ZeroClocksOnResurrect, table_name, None)?;
     let zero_stmt = get_cached_stmt_rt_wt(db, ext_data, stmt_key, || {
         Ok(format!(
-            "UPDATE \"{table_name}__crsql_clock\" SET __crsql_col_version = 0, __crsql_db_version = MAX(crsql_next_db_version(), ?) WHERE {pk_where_list} AND __crsql_col_name IS NOT '{sentinel}'",
+            "UPDATE \"{table_name}__crsql_clock\" SET __crsql_col_version = 0, __crsql_db_version = crsql_next_db_version(?) WHERE {pk_where_list} AND __crsql_col_name IS NOT '{sentinel}'",
             table_name = crate::util::escape_ident(table_name),
             pk_where_list = pk_where_list_from_tbl_info(tbl_info, None)?,
             sentinel = crate::c::INSERT_SENTINEL

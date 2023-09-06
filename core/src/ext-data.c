@@ -36,6 +36,7 @@ crsql_ExtData *crsql_newExtData(sqlite3 *db, unsigned char *siteIdBuffer) {
       SQLITE_PREPARE_PERSISTENT, &(pExtData->pSelectSiteIdOrdinalStmt), 0);
 
   pExtData->dbVersion = -1;
+  pExtData->pendingDbVersion = -1;
   pExtData->seq = 0;
   pExtData->pragmaSchemaVersion = -1;
   pExtData->pragmaDataVersion = -1;
@@ -254,11 +255,12 @@ int crsql_fetchDbVersionFromStorage(sqlite3 *db, crsql_ExtData *pExtData,
 int crsql_getDbVersion(sqlite3 *db, crsql_ExtData *pExtData, char **errmsg) {
   int rc = SQLITE_OK;
 
-  // version is cached. We clear the cached version
-  // at the end of each transaction so it is safe to return this
-  // without checking the schema version.
-  // It is an error to use crsqlite in such a way that you modify
-  // a schema and fetch changes in the same transaction.
+  // Version is cached. We update the cached version at the end of every
+  // transaction to match what is written to disk. The cache is only invalid if
+  // another connection also made writes. We detect this via `pragmaDataVersion`
+  // and force a re-fetch of the db version when `pragmaDataVersion` changes. It
+  // is an error to use crsqlite in such a way that you modify a schema and
+  // fetch changes in the same transaction.
   rc = crsql_fetchPragmaDataVersion(db, pExtData);
   if (rc == -1) {
     *errmsg = sqlite3_mprintf("failed to fetch PRAGMA data_version");

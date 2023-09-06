@@ -67,11 +67,41 @@ def test_each_tx_gets_a_version():
     c.execute("insert into foo values (1, 2)")
     c.execute("insert into foo values (2, 2)")
     c.commit()
-    c.execute("SELECT crsql_db_version()").fetchone()[0] == min_db_v + 1
+    assert c.execute("SELECT crsql_db_version()").fetchone()[0] == min_db_v + 1
 
     c.execute("insert into foo values (3, 2)")
     c.execute("insert into foo values (4, 2)")
     c.commit()
-    c.execute("SELECT crsql_db_version()").fetchone()[0] == min_db_v + 2
+    assert c.execute("SELECT crsql_db_version()").fetchone()[0] == min_db_v + 2
+
+    close(c)
+
+
+def test_rollback_does_not_move_db_version():
+    c = connect(":memory:")
+
+    c.execute("create table foo (id primary key, a)")
+    c.execute("select crsql_as_crr('foo')")
+
+    c.execute("insert into foo values (1, 2)")
+    c.execute("insert into foo values (2, 2)")
+    c.rollback()
+    assert c.execute("SELECT crsql_db_version()").fetchone()[0] == min_db_v
+
+    c.execute("insert into foo values (3, 2)")
+    c.execute("insert into foo values (4, 2)")
+    c.rollback()
+    assert c.execute("SELECT crsql_db_version()").fetchone()[
+        0] == min_db_v
+
+    c.execute("insert into foo values (1, 2)")
+    c.execute("insert into foo values (2, 2)")
+    c.commit()
+    assert c.execute("SELECT crsql_db_version()").fetchone()[0] == min_db_v + 1
+
+    c.execute("insert into foo values (3, 2)")
+    c.execute("insert into foo values (4, 2)")
+    c.commit()
+    assert c.execute("SELECT crsql_db_version()").fetchone()[0] == min_db_v + 2
 
     close(c)

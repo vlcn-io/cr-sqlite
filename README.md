@@ -62,8 +62,8 @@ The full documentation site is available [here](https://vlcn.io/docs).
 - A function extension (`crsql_as_crr`) to upgrade existing tables to "crrs" or "conflict free replicated relations"
   - `SELECT crsql_as_crr('table_name')`
 - A virtual table (`crsql_changes`) to ask the database for changesets or to apply changesets from another database
-  - `SELECT "table", "pk", "cid", "val", "col_version", "db_version", COALESCE("site_id", crsql_site_id()) FROM crsql_changes WHERE db_version > x AND site_id IS NULL` -- to get local changes
-  - `SELECT "table", "pk", "cid", "val", "col_version", "db_version", COALESCE("site_id", crsql_site_id()) FROM crsql_changes WHERE db_version > x AND site_id IS NOT some_site` -- to get all changes excluding those synced from some site
+  - `SELECT "table", "pk", "cid", "val", "col_version", "db_version", COALESCE("site_id", crsql_site_id()), cl, seq FROM crsql_changes WHERE db_version > x AND site_id IS NULL` -- to get local changes
+  - `SELECT "table", "pk", "cid", "val", "col_version", "db_version", COALESCE("site_id", crsql_site_id()), cl, seq FROM crsql_changes WHERE db_version > x AND site_id IS NOT some_site` -- to get all changes excluding those synced from some site
   - `INSERT INTO crsql_changes VALUES ([patches received from select on another peer])`
 - And `crsql_begin_alter('table_name')` & `crsql_alter_commit('table_name')` primitives to allow altering table definitions that have been upgraded to `crr`s.
   - Until we move forward with extending the syntax of SQLite to be CRR aware, altering CRRs looks like:
@@ -84,7 +84,7 @@ Usage looks like:
 ```sql
 -- load the extension if it is not statically linked
 .load crsqlite
-.mode column
+.mode qbox
 -- create tables as normal
 create table foo (a primary key, b);
 create table baz (a primary key, b, c, d);
@@ -98,42 +98,41 @@ insert into foo (a,b) values (1,2);
 insert into baz (a,b,c,d) values ('a', 'woo', 'doo', 'daa');
 
 -- ask for a record of what has changed
-select * from crsql_changes;
+select "table", "pk", "cid", "val", "col_version", "db_version", COALESCE("site_id", crsql_site_id()), "cl", "seq" from crsql_changes;
 
-table  pk   cid  val    col_version  db_version  site_id
------  ---  ---  -----  -----------  ----------  -------
-foo    1    b    2      1            1           1(�zL
-                                                 \hx
-
-baz    'a'  b    'woo'  1            2           1(�zL
-                                                 \hx
-
-baz    'a'  c    'doo'  1            2           1(�zL
-                                                 \hx
-
-baz    'a'  d    'daa'  1            2           1(�zL
-                                                 \hx
+┌───────┬─────────────┬─────┬───────┬─────────────┬────────────┬──────────────────────────────────────┬────┬─────┐
+│ table │     pk      │ cid │  val  │ col_version │ db_version │ COALESCE("site_id", crsql_site_id()) │ cl │ seq │
+├───────┼─────────────┼─────┼───────┼─────────────┼────────────┼──────────────────────────────────────┼────┼─────┤
+│ 'foo' │ x'010901'   │ 'b' │ 2     │ 1           │ 1          │ x'049c48eadf4440d7944ed9ec88b13ea5'  │ 1  │ 0   │
+│ 'baz' │ x'010b0161' │ 'b' │ 'woo' │ 1           │ 2          │ x'049c48eadf4440d7944ed9ec88b13ea5'  │ 1  │ 0   │
+│ 'baz' │ x'010b0161' │ 'c' │ 'doo' │ 1           │ 2          │ x'049c48eadf4440d7944ed9ec88b13ea5'  │ 1  │ 1   │
+│ 'baz' │ x'010b0161' │ 'd' │ 'daa' │ 1           │ 2          │ x'049c48eadf4440d7944ed9ec88b13ea5'  │ 1  │ 2   │
+└───────┴─────────────┴─────┴───────┴─────────────┴────────────┴──────────────────────────────────────┴────┴─────┘
 
 -- merge changes from a peer
 insert into crsql_changes
-  ("table", pk, cid, val, col_version, db_version, site_id)
+  ("table", "pk", "cid", "val", "col_version", "db_version", "site_id", "cl", "seq")
   values
-  ('foo', 5, 'b', '''thing''', 5, 5, X'7096E2D505314699A59C95FABA14ABB5');
-insert into crsql_changes ("table", pk, cid, val, col_version, db_version, site_id)
+  ('foo', x'010905', 'b', 'thing', 5, 5, X'7096E2D505314699A59C95FABA14ABB5', 1, 0);
+insert into crsql_changes ("table", "pk", "cid", "val", "col_version", "db_version", "site_id", "cl", "seq")
   values
-  ('baz', '''a''', 'b', 123, 101, 233, X'7096E2D505314699A59C95FABA14ABB5');
+  ('baz', x'010b0161', 'b', 123, 101, 233, X'7096E2D505314699A59C95FABA14ABB5', 1, 0);
 
 -- check that peer's changes were applied
-select * from foo;
-a  b
--  -----
-1  2
-5  thing
+sqlite> select * from foo;
+┌───┬─────────┐
+│ a │    b    │
+├───┼─────────┤
+│ 1 │ 2       │
+│ 5 │ 'thing' │
+└───┴─────────┘
 
 select * from baz;
-a  b    c    d
--  ---  ---  ---
-a  123  doo  daa
+┌─────┬─────┬───────┬───────┐
+│  a  │  b  │   c   │   d   │
+├─────┼─────┼───────┼───────┤
+│ 'a' │ 123 │ 'doo' │ 'daa' │
+└─────┴─────┴───────┴───────┘
 
 -- tear down the extension before closing the connection
 -- https://sqlite.org/forum/forumpost/c94f943821

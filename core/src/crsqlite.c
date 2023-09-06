@@ -72,6 +72,8 @@ static void nextDbVersionFunc(sqlite3_context *context, int argc,
   char *errmsg = 0;
   crsql_ExtData *pExtData = (crsql_ExtData *)sqlite3_user_data(context);
   sqlite3 *db = sqlite3_context_db_handle(context);
+  // "getDbVersion" is really just filling the cached db version value if
+  // invalid
   int rc = crsql_getDbVersion(db, pExtData, &errmsg);
   if (rc != SQLITE_OK) {
     sqlite3_result_error(context, errmsg, -1);
@@ -79,7 +81,24 @@ static void nextDbVersionFunc(sqlite3_context *context, int argc,
     return;
   }
 
-  sqlite3_result_int64(context, pExtData->dbVersion + 1);
+  sqlite3_int64 providedVersion = 0;
+  if (argc == 1) {
+    providedVersion = sqlite3_value_int64(argv[0]);
+  }
+
+  // now return max of:
+  // dbVersion + 1, pendingDbVersion, arg (if there is one)
+  // and set pendingDbVersion to that max
+  sqlite3_int64 ret = pExtData->dbVersion + 1;
+  if (ret < pExtData->pendingDbVersion) {
+    ret = pExtData->pendingDbVersion;
+  }
+  if (ret < providedVersion) {
+    ret = providedVersion;
+  }
+  pExtData->pendingDbVersion = ret;
+
+  sqlite3_result_int64(context, ret);
 }
 
 static void incrementAndGetSeqFunc(sqlite3_context *context, int argc,
@@ -320,7 +339,7 @@ static void crsqlRowsImpacted(sqlite3_context *context, int argc,
 static int commitHook(void *pUserData) {
   crsql_ExtData *pExtData = (crsql_ExtData *)pUserData;
 
-  pExtData->dbVersion = -1;
+  pExtData->pendingDbVersion = -1;
   pExtData->seq = 0;
   return SQLITE_OK;
 }
@@ -328,7 +347,8 @@ static int commitHook(void *pUserData) {
 static void rollbackHook(void *pUserData) {
   crsql_ExtData *pExtData = (crsql_ExtData *)pUserData;
 
-  pExtData->dbVersion = -1;
+  pExtData->pendingDbVersion = -1;
+  pExtData->seq = 0;
 }
 
 int sqlite3_crsqlrustbundle_init(sqlite3 *db, char **pzErrMsg,
@@ -400,7 +420,7 @@ __declspec(dllexport)
                                     dbVersionFunc, 0, 0, freeConnectionExtData);
   }
   if (rc == SQLITE_OK) {
-    rc = sqlite3_create_function(db, "crsql_next_db_version", 0,
+    rc = sqlite3_create_function(db, "crsql_next_db_version", -1,
                                  // dbversion can change on each invocation.
                                  SQLITE_UTF8 | SQLITE_INNOCUOUS, pExtData,
                                  nextDbVersionFunc, 0, 0);

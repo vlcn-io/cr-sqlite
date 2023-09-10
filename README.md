@@ -50,7 +50,7 @@ Individuals:
 
 Perf data: https://github.com/vlcn-io/cr-sqlite/blob/main/py/perf/perf.ipynb
 
-- Currently inserts into CRRs are 2.5-3x slower than inserts into regular SQLite tables.
+- Currently inserts into CRRs are 2.5x slower than inserts into regular SQLite tables.
 - Reads are the same speed
 
 # Usage

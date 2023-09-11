@@ -15,6 +15,7 @@ mod create_cl_set_vtab;
 mod is_crr;
 mod pack_columns;
 mod stmt_cache;
+mod tableinfo;
 mod teardown;
 mod triggers;
 mod unpack_columns_vtab;
@@ -33,6 +34,7 @@ pub use pack_columns::ColumnValue;
 use sqlite::ResultCode;
 use sqlite_nostd as sqlite;
 use sqlite_nostd::{Connection, Context, Value};
+use tableinfo::is_table_compatible;
 pub use teardown::*;
 
 pub extern "C" fn crsql_as_table(
@@ -205,6 +207,19 @@ pub extern "C" fn crsql_is_crr(db: *mut sqlite::sqlite3, table: *const c_char) -
             }
             Err(c) => (c as c_int) * -1,
         }
+    } else {
+        (ResultCode::NOMEM as c_int) * -1
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn crsql_is_table_compatible(
+    db: *mut sqlite::sqlite3,
+    table: *const c_char,
+    err: *mut *mut c_char,
+) -> c_int {
+    if let Ok(table) = unsafe { CStr::from_ptr(table).to_str() } {
+        is_table_compatible(db, table, err) as c_int
     } else {
         (ResultCode::NOMEM as c_int) * -1
     }

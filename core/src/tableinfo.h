@@ -52,6 +52,5 @@ int crsql_indexofTableInfo(crsql_TableInfo **tblInfos, int len,
 sqlite3_int64 crsql_slabRowid(int idx, sqlite3_int64 rowid);
 int crsql_pullAllTableInfos(sqlite3 *db, crsql_TableInfo ***pzpTableInfos,
                             int *rTableInfosLen, char **errmsg);
-int crsql_isTableCompatible(sqlite3 *db, const char *tblName, char **errmsg);
 
 #endif

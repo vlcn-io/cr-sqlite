@@ -123,7 +123,7 @@ int crsql_createCrr(sqlite3 *db, const char *schemaName, const char *tblName,
   int rc = SQLITE_OK;
   crsql_TableInfo *tableInfo = 0;
 
-  if (!crsql_isTableCompatible(db, tblName, err)) {
+  if (!crsql_is_table_compatible(db, tblName, err)) {
     return SQLITE_ERROR;
   }
 

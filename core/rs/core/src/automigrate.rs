@@ -240,6 +240,10 @@ fn drop_columns(
     table: &str,
     columns: Vec<String>,
 ) -> Result<ResultCode, ResultCode> {
+    local_db.exec_safe(&format!(
+        "DROP VIEW IF EXISTS \"{table}_fractindex\"",
+        table = crate::util::escape_ident(table)
+    ))?;
     for col in columns {
         local_db.exec_safe(&format!(
             "ALTER TABLE \"{table}\" DROP \"{column}\"",

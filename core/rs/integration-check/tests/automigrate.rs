@@ -553,6 +553,28 @@ fn remove_col_impl() -> Result<(), ResultCode> {
     Ok(())
 }
 
+#[test]
+fn remove_col_fract_table() {
+    let db = integration_utils::opendb().expect("db opened");
+    db.db
+        .exec_safe("CREATE TABLE todo (id primary key, content text, position, thing)")
+        .expect("table made");
+    db.db
+        .exec_safe("SELECT crsql_fract_as_ordered('todo', 'position');")
+        .expect("as ordered");
+
+    let schema = "
+      CREATE TABLE IF NOT EXISTS todo (
+          id primary key,
+          content text,
+          position
+      );
+  ";
+    invoke_automigrate(&db.db, schema).expect("migrated");
+
+    assert!(expect_columns(&db.db, "todo", vec!["id", "content", "position"]).expect("matched"));
+}
+
 fn remove_index_impl() -> Result<(), ResultCode> {
     let db = integration_utils::opendb()?;
     db.db.exec_safe(

@@ -135,10 +135,10 @@ int crsql_createCrr(sqlite3 *db, const char *schemaName, const char *tblName,
     return SQLITE_OK;
   }
 
-  rc = crsql_getTableInfo(db, tblName, &tableInfo, err);
+  rc = crsql_pull_table_info(db, tblName, &tableInfo, err);
 
   if (rc != SQLITE_OK) {
-    crsql_freeTableInfo(tableInfo);
+    crsql_free_table_info(tableInfo);
     return rc;
   }
 
@@ -164,7 +164,7 @@ int crsql_createCrr(sqlite3 *db, const char *schemaName, const char *tblName,
   sqlite3_free(pkNames);
   sqlite3_free(nonPkNames);
 
-  crsql_freeTableInfo(tableInfo);
+  crsql_free_table_info(tableInfo);
   return rc;
 }
 

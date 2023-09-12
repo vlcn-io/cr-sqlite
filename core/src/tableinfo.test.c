@@ -22,7 +22,7 @@ static void testGetTableInfo() {
   rc = sqlite3_open(":memory:", &db);
 
   sqlite3_exec(db, "CREATE TABLE foo (a INT NOT NULL, b)", 0, 0, 0);
-  rc = crsql_getTableInfo(db, "foo", &tableInfo, &errMsg);
+  rc = crsql_pull_table_info(db, "foo", &tableInfo, &errMsg);
 
   if (rc != SQLITE_OK) {
     printf("err: %s %d\n", errMsg, rc);
@@ -49,10 +49,10 @@ static void testGetTableInfo() {
   assert(tableInfo->nonPks[0].notnull == 1);
   assert(tableInfo->nonPks[0].pk == 0);
 
-  crsql_freeTableInfo(tableInfo);
+  crsql_free_table_info(tableInfo);
 
   sqlite3_exec(db, "CREATE TABLE bar (a PRIMARY KEY, b)", 0, 0, 0);
-  rc = crsql_getTableInfo(db, "bar", &tableInfo, &errMsg);
+  rc = crsql_pull_table_info(db, "bar", &tableInfo, &errMsg);
   if (rc != SQLITE_OK) {
     printf("err: %s %d\n", errMsg, rc);
     sqlite3_free(errMsg);
@@ -71,7 +71,7 @@ static void testGetTableInfo() {
   assert(tableInfo->pksLen == 1);
   assert(tableInfo->nonPksLen == 1);
 
-  crsql_freeTableInfo(tableInfo);
+  crsql_free_table_info(tableInfo);
 
   printf("\t\e[0;32mSuccess\e[0m\n");
   crsql_close(db);

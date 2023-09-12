@@ -98,13 +98,13 @@ static void testCreateClockTable() {
   sqlite3_exec(db, "CREATE TABLE baz (a primary key, b)", 0, 0, 0);
   sqlite3_exec(db, "CREATE TABLE boo (a primary key, b, c)", 0, 0, 0);
 
-  rc = crsql_getTableInfo(db, "foo", &tc1, &err);
+  rc = crsql_pull_table_info(db, "foo", &tc1, &err);
   CHECK_OK
-  rc = crsql_getTableInfo(db, "bar", &tc2, &err);
+  rc = crsql_pull_table_info(db, "bar", &tc2, &err);
   CHECK_OK
-  rc = crsql_getTableInfo(db, "baz", &tc3, &err);
+  rc = crsql_pull_table_info(db, "baz", &tc3, &err);
   CHECK_OK
-  rc = crsql_getTableInfo(db, "boo", &tc4, &err);
+  rc = crsql_pull_table_info(db, "boo", &tc4, &err);
   CHECK_OK
 
   rc = crsql_create_clock_table(db, tc1, &err);
@@ -116,10 +116,10 @@ static void testCreateClockTable() {
   rc = crsql_create_clock_table(db, tc4, &err);
   CHECK_OK
 
-  crsql_freeTableInfo(tc1);
-  crsql_freeTableInfo(tc2);
-  crsql_freeTableInfo(tc3);
-  crsql_freeTableInfo(tc4);
+  crsql_free_table_info(tc1);
+  crsql_free_table_info(tc2);
+  crsql_free_table_info(tc3);
+  crsql_free_table_info(tc4);
 
   // TODO: check that the tables have the expected schema
 

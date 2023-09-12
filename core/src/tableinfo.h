@@ -37,13 +37,6 @@ struct crsql_TableInfo {
 crsql_ColumnInfo *crsql_extractBaseCols(crsql_ColumnInfo *colInfos,
                                         int colInfosLen, int *pBaseColsLen);
 
-void crsql_freeColumnInfoContents(crsql_ColumnInfo *columnInfo);
-void crsql_freeTableInfo(crsql_TableInfo *tableInfo);
-
-// TODO: this should be pullTableInfo
-int crsql_getTableInfo(sqlite3 *db, const char *tblName,
-                       crsql_TableInfo **pTableInfo, char **pErrMsg);
-
 void crsql_freeAllTableInfos(crsql_TableInfo **tableInfos, int len);
 crsql_TableInfo *crsql_findTableInfo(crsql_TableInfo **tblInfos, int len,
                                      const char *tblName);

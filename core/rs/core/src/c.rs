@@ -1,5 +1,9 @@
 extern crate alloc;
+use alloc::boxed::Box;
+use alloc::ffi::CString;
+use alloc::vec::Vec;
 use core::ffi::{c_char, c_int};
+use core::ptr::null_mut;
 #[cfg(not(feature = "std"))]
 use num_derive::FromPrimitive;
 
@@ -639,4 +643,33 @@ fn bindgen_test_layout_crsql_ExtData() {
             stringify!(pStmtCache)
         )
     );
+}
+
+pub trait CPointer<T> {
+    fn into_c_ptr(self) -> *mut T;
+}
+
+impl<T> CPointer<T> for Vec<T> {
+    fn into_c_ptr(mut self) -> *mut T {
+        if self.len() == 0 {
+            null_mut()
+        } else {
+            self.shrink_to(0);
+            self.into_raw_parts().0
+        }
+    }
+}
+
+impl CPointer<c_char> for &str {
+    fn into_c_ptr(self) -> *mut c_char {
+        CString::new(self)
+            .map(|x| x.into_raw())
+            .unwrap_or(null_mut())
+    }
+}
+
+impl CPointer<crsql_TableInfo> for crsql_TableInfo {
+    fn into_c_ptr(self) -> *mut crsql_TableInfo {
+        Box::into_raw(Box::new(self))
+    }
 }

@@ -26,13 +26,13 @@ static void testCreateTriggers() {
   rc =
       sqlite3_exec(db, "CREATE TABLE \"foo\" (\"a\" PRIMARY KEY, \"b\", \"c\")",
                    0, 0, &errMsg);
-  rc = crsql_getTableInfo(db, "foo", &tableInfo, &errMsg);
+  rc = crsql_pull_table_info(db, "foo", &tableInfo, &errMsg);
 
   if (rc == SQLITE_OK) {
     rc = crsql_create_crr_triggers(db, tableInfo, &errMsg);
   }
 
-  crsql_freeTableInfo(tableInfo);
+  crsql_free_table_info(tableInfo);
   if (rc != SQLITE_OK) {
     crsql_close(db);
     printf("err: %s | rc: %d\n", errMsg, rc);

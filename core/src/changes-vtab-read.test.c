@@ -23,8 +23,8 @@ static void testChangesUnionQuery() {
                      &err);
   rc += sqlite3_exec(db, "select crsql_as_crr('foo');", 0, 0, &err);
   rc += sqlite3_exec(db, "select crsql_as_crr('bar');", 0, 0, &err);
-  rc += crsql_getTableInfo(db, "foo", &tblInfos[0], &err);
-  rc += crsql_getTableInfo(db, "bar", &tblInfos[1], &err);
+  rc += crsql_pull_table_info(db, "foo", &tblInfos[0], &err);
+  rc += crsql_pull_table_info(db, "bar", &tblInfos[1], &err);
   assert(rc == SQLITE_OK);
 
   char *query = crsql_changes_union_query(tblInfos, 2, "");
@@ -119,7 +119,7 @@ static void testRowPatchDataQuery() {
   rc += sqlite3_exec(db, "select crsql_as_crr('foo');", 0, 0, &err);
   rc += sqlite3_exec(db, "insert into foo values(1, 'cb', 'cc', 'cd')", 0, 0,
                      &err);
-  rc += crsql_getTableInfo(db, "foo", &tblInfo, &err);
+  rc += crsql_pull_table_info(db, "foo", &tblInfo, &err);
   assert(rc == SQLITE_OK);
 
   // TC1: single pk table, 1 col change
@@ -131,7 +131,7 @@ static void testRowPatchDataQuery() {
 
   printf("\t\e[0;32mSuccess\e[0m\n");
   sqlite3_free(err);
-  crsql_freeTableInfo(tblInfo);
+  crsql_free_table_info(tblInfo);
   crsql_close(db);
   assert(rc == SQLITE_OK);
 }

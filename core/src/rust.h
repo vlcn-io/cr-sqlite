@@ -28,5 +28,8 @@ int crsql_init_peer_tracking_table(sqlite3 *db);
 int crsql_create_schema_table_if_not_exists(sqlite3 *db);
 int crsql_maybe_update_db(sqlite3 *db, char **pzErrMsg);
 int crsql_is_table_compatible(sqlite3 *db, const char *tblName, char **err);
+int crsql_pull_table_info(sqlite3 *db, const char *tblName,
+                          crsql_TableInfo **tableInfo, char **err);
+void crsql_free_table_info(crsql_TableInfo *tableInfo);
 
 #endif

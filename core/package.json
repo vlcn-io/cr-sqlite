@@ -1,6 +1,6 @@
 {
   "name": "@vlcn.io/crsqlite",
-  "version": "0.15.1-next.0",
+  "version": "0.15.1",
   "description": "CR-SQLite loadable extension",
   "homepage": "https://vlcn.io",
   "repository": {

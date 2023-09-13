@@ -224,7 +224,9 @@ pub extern "C" fn crsql_is_table_compatible(
     err: *mut *mut c_char,
 ) -> c_int {
     if let Ok(table) = unsafe { CStr::from_ptr(table).to_str() } {
-        is_table_compatible(db, table, err) as c_int
+        is_table_compatible(db, table, err)
+            .map(|x| x as c_int)
+            .unwrap_or_else(|err| (err as c_int) * -1)
     } else {
         (ResultCode::NOMEM as c_int) * -1
     }

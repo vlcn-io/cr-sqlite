@@ -21,7 +21,7 @@ pub fn create_crr(
     no_tx: bool,
     err: *mut *mut c_char,
 ) -> Result<ResultCode, ResultCode> {
-    if !is_table_compatible(db, table, err) {
+    if !is_table_compatible(db, table, err)? {
         return Err(ResultCode::ERROR);
     }
     if is_crr(db, table)? {

@@ -638,6 +638,10 @@ fn bindgen_test_layout_crsql_ExtData() {
 }
 
 pub trait CPointer<T> {
+    /**
+     * Returns a C compatible pointer to the underlying data.
+     * After calling this function, the caller is responsible for the memory.
+     */
     fn into_c_ptr(self) -> *mut T;
 }
 
@@ -662,6 +666,6 @@ impl CPointer<c_char> for &str {
 
 impl CPointer<crsql_TableInfo> for crsql_TableInfo {
     fn into_c_ptr(self) -> *mut crsql_TableInfo {
-        Box::into_raw(Box::new(self))
+        Box::into_raw(Box::from(self))
     }
 }

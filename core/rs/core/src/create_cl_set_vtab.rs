@@ -3,12 +3,11 @@ extern crate alloc;
 use core::ffi::{c_char, c_int, c_void};
 
 use crate::alloc::borrow::ToOwned;
-use crate::c::crsql_createCrr;
+use crate::create_crr::create_crr;
 use alloc::boxed::Box;
-use alloc::ffi::CString;
 use alloc::format;
 use alloc::string::String;
-use sqlite::{convert_rc, sqlite3, Connection, CursorRef, StrRef, VTabArgs, VTabRef};
+use sqlite::{sqlite3, Connection, CursorRef, StrRef, VTabArgs, VTabRef};
 use sqlite_nostd as sqlite;
 use sqlite_nostd::ResultCode;
 
@@ -68,12 +67,9 @@ fn create_impl(
     // We can't wrap this in a savepoint for some reason. I guess because the `CREATE VIRTUAL TABLE..`
     // statement is processing? 🤷‍♂️
     create_clset_storage(db, &vtab_args, err)?;
-    let db_name_c = CString::new(vtab_args.database_name)?;
-    let table_name_c = CString::new(base_name_from_virtual_name(vtab_args.table_name))?;
-
-    // TODO: move `createCrr` to Rust
-    let rc = unsafe { crsql_createCrr(db, db_name_c.as_ptr(), table_name_c.as_ptr(), 0, 1, err) };
-    convert_rc(rc)
+    let schema = vtab_args.database_name;
+    let table = base_name_from_virtual_name(vtab_args.table_name);
+    create_crr(db, schema, table, false, true, err)
 }
 
 fn create_clset_storage(

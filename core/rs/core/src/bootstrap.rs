@@ -204,7 +204,7 @@ pub extern "C" fn crsql_create_clock_table(
     }
 }
 
-fn create_clock_table(
+pub fn create_clock_table(
     db: *mut sqlite3,
     table_info: *mut crsql_TableInfo,
     _err: *mut *mut c_char,

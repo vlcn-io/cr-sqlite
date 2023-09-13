@@ -12,6 +12,7 @@ mod changes_vtab_write;
 mod compare_values;
 mod consts;
 mod create_cl_set_vtab;
+mod create_crr;
 mod is_crr;
 mod pack_columns;
 mod stmt_cache;
@@ -28,6 +29,7 @@ use alloc::vec::Vec;
 pub use automigrate::*;
 pub use backfill::*;
 use core::ffi::{c_int, CStr};
+use create_crr::create_crr;
 pub use is_crr::*;
 use pack_columns::crsql_pack_columns;
 pub use pack_columns::unpack_columns;
@@ -236,7 +238,7 @@ pub extern "C" fn crsql_pull_table_info(
     err: *mut *mut c_char,
 ) -> c_int {
     if let Ok(table) = unsafe { CStr::from_ptr(table).to_str() } {
-        pull_table_info(db, table, table_info, err).unwrap_or(ResultCode::ERROR) as c_int
+        pull_table_info(db, table, table_info, err).unwrap_or_else(|err| err) as c_int
     } else {
         (ResultCode::NOMEM as c_int) * -1
     }
@@ -245,4 +247,25 @@ pub extern "C" fn crsql_pull_table_info(
 #[no_mangle]
 pub extern "C" fn crsql_free_table_info(table_info: *mut crsql_TableInfo) {
     unsafe { free_table_info(table_info) };
+}
+
+#[no_mangle]
+pub extern "C" fn crsql_create_crr(
+    db: *mut sqlite::sqlite3,
+    schema: *const c_char,
+    table: *const c_char,
+    is_commit_alter: c_int,
+    no_tx: c_int,
+    err: *mut *mut c_char,
+) -> c_int {
+    let schema = unsafe { CStr::from_ptr(schema).to_str() };
+    let table = unsafe { CStr::from_ptr(table).to_str() };
+
+    return match (table, schema) {
+        (Ok(table), Ok(schema)) => {
+            create_crr(db, schema, table, is_commit_alter != 0, no_tx != 0, err)
+                .unwrap_or_else(|err| err) as c_int
+        }
+        _ => ResultCode::NOMEM as c_int,
+    };
 }

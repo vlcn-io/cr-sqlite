@@ -42,27 +42,23 @@ pub fn pull_table_info(
     );
     let column_infos = match db.prepare_v2(&sql) {
         Ok(stmt) => {
-            let mut column_infos: Vec<crsql_ColumnInfo> = vec![];
+            let mut cols: Vec<crsql_ColumnInfo> = vec![];
 
             while stmt.step()? == ResultCode::ROW {
-                column_infos.push(crsql_ColumnInfo {
-                    type_: stmt.column_text(2)?.into_c_ptr(),
-                    name: stmt.column_text(1)?.into_c_ptr(),
+                cols.push(crsql_ColumnInfo {
+                    type_: stmt.column_text(2).map_err(free_cols(&cols))?.into_c_ptr(),
+                    name: stmt.column_text(1).map_err(free_cols(&cols))?.into_c_ptr(),
                     notnull: stmt.column_int(3)?,
                     cid: stmt.column_int(0)?,
                     pk: stmt.column_int(4)?,
                 });
             }
 
-            if column_infos.len() != columns_len {
-                for info in column_infos {
-                    drop(unsafe { CString::from_raw(info.type_) });
-                    drop(unsafe { CString::from_raw(info.name) });
-                }
+            if cols.len() != columns_len {
                 err.set(&"Number of fetched columns did not match expected number of columns");
-                return Err(ResultCode::ERROR);
+                return Err(free_cols(&cols)(ResultCode::ERROR));
             }
-            column_infos
+            cols
         }
         Err(code) => {
             err.set(&format!("Failed to prepare select for crr -- {table}"));
@@ -90,6 +86,16 @@ pub fn pull_table_info(
     return Ok(ResultCode::OK);
 }
 
+fn free_cols<'a>(cols: &'a Vec<crsql_ColumnInfo>) -> impl Fn(ResultCode) -> ResultCode + 'a {
+    move |err: ResultCode| {
+        for info in cols {
+            drop(unsafe { CString::from_raw(info.type_) });
+            drop(unsafe { CString::from_raw(info.name) });
+        }
+        err
+    }
+}
+
 pub unsafe fn free_table_info(table_info: *mut crsql_TableInfo) {
     if table_info.is_null() {
         return;
@@ -100,14 +106,11 @@ pub unsafe fn free_table_info(table_info: *mut crsql_TableInfo) {
         drop(CString::from_raw(info.tblName));
     }
     if !info.baseCols.is_null() {
-        for column in Vec::from_raw_parts(
+        free_cols(&Vec::from_raw_parts(
             info.baseCols,
             info.baseColsLen as usize,
             info.baseColsLen as usize,
-        ) {
-            drop(CString::from_raw(column.name));
-            drop(CString::from_raw(column.type_));
-        }
+        ))(ResultCode::OK);
     }
     if !info.pks.is_null() {
         drop(Vec::from_raw_parts(

@@ -26,7 +26,7 @@ pub extern "C" fn crsql_create_crr_triggers(
     }
 }
 
-fn create_triggers(
+pub fn create_triggers(
     db: *mut sqlite3,
     table_info: *mut crsql_TableInfo,
     err: *mut *mut c_char,

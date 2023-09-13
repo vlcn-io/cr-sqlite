@@ -139,14 +139,6 @@ extern "C" {
         ext_data: *mut crsql_ExtData,
         err_msg: *mut *mut c_char,
     ) -> c_int;
-    pub fn crsql_createCrr(
-        db: *mut sqlite::sqlite3,
-        schemaName: *const c_char,
-        tblName: *const c_char,
-        isCommitAlter: c_int,
-        noTx: c_int,
-        err: *mut *mut c_char,
-    ) -> c_int;
 }
 
 #[test]

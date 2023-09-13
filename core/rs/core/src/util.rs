@@ -144,3 +144,16 @@ pub fn escape_ident(ident: &str) -> String {
 pub fn escape_ident_as_value(ident: &str) -> String {
     return ident.replace("'", "''");
 }
+
+pub trait Countable {
+    fn count(self, sql: &str) -> Result<i32, ResultCode>;
+}
+
+impl Countable for *mut sqlite::sqlite3 {
+    fn count(self, sql: &str) -> Result<i32, ResultCode> {
+        self.prepare_v2(sql).and_then(|stmt| {
+            stmt.step()?;
+            stmt.column_int(0)
+        })
+    }
+}

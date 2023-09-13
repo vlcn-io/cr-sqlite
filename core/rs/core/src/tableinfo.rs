@@ -1,5 +1,6 @@
 use crate::c::CPointer;
 use crate::c::{crsql_ColumnInfo, crsql_TableInfo};
+use crate::util::Countable;
 use alloc::boxed::Box;
 use alloc::ffi::CString;
 use alloc::format;
@@ -55,7 +56,7 @@ pub fn pull_table_info(
             }
 
             if cols.len() != columns_len {
-                err.set(&"Number of fetched columns did not match expected number of columns");
+                err.set("Number of fetched columns did not match expected number of columns");
                 return Err(free_cols(&cols)(ResultCode::ERROR));
             }
             cols
@@ -129,133 +130,84 @@ pub unsafe fn free_table_info(table_info: *mut crsql_TableInfo) {
     drop(Box::from_raw(table_info));
 }
 
-pub fn is_table_compatible(db: *mut sqlite::sqlite3, table: &str, err: *mut *mut c_char) -> bool {
+pub fn is_table_compatible(
+    db: *mut sqlite::sqlite3,
+    table: &str,
+    err: *mut *mut c_char,
+) -> Result<bool, ResultCode> {
     // No unique indices besides primary key
-    let sql = format!(
+    if db.count(&format!(
         "SELECT count(*) FROM pragma_index_list('{table}')
-        WHERE \"origin\" != 'pk' AND \"unique\" = 1"
-    );
-    match db.prepare_v2(&sql).and_then(|stmt| {
-        stmt.step()?;
-        stmt.column_int(0)
-    }) {
-        Err(_) => {
-            err.set(&format!("Failed to analyze index information for {table}"));
-            return false;
-        }
-        Ok(0) => {}
-        Ok(_) => {
-            err.set(&format!(
-                "Table {table} has unique indices besides\
-                    the primary key. This is not allowed for CRRs"
-            ));
-            return false;
-        }
-    };
+            WHERE \"origin\" != 'pk' AND \"unique\" = 1"
+    ))? != 0
+    {
+        err.set(&format!(
+            "Table {table} has unique indices besides\
+                        the primary key. This is not allowed for CRRs"
+        ));
+        return Ok(false);
+    }
 
     // Must have a primary key
-    let sql = format!(
+    if db.count(&format!(
         // pragma_index_list does not include primary keys that alias rowid...
         // hence why we cannot use
         // `select * from pragma_index_list where origin = pk`
         "SELECT count(*) FROM pragma_table_info('{table}')
         WHERE \"pk\" > 0"
-    );
-    match db.prepare_v2(&sql).and_then(|stmt| {
-        stmt.step()?;
-        stmt.column_int(0)
-    }) {
-        Err(_) => {
-            err.set(&format!(
-                "Failed to analyze primary key information for {table}"
-            ));
-            return false;
-        }
-        Ok(0) => {
-            err.set(&format!(
-                "Table {table} has no primary key. \
-                CRRs must have a primary key"
-            ));
-            return false;
-        }
-        _ => {}
-    };
+    ))? == 0
+    {
+        err.set(&format!(
+            "Table {table} has no primary key. \
+            CRRs must have a primary key"
+        ));
+        return Ok(false);
+    }
 
     // No auto-increment primary keys
-    let sql = format!(
+    let stmt = db.prepare_v2(&format!(
         "SELECT 1 FROM sqlite_master WHERE name = ? AND type = 'table' AND sql
-        LIKE '%autoincrement%' limit 1"
-    );
-    match db.prepare_v2(&sql).and_then(|stmt| {
-        stmt.bind_text(1, table, sqlite::Destructor::STATIC)?;
-        stmt.step()
-    }) {
-        Err(_) => {
-            err.set(&format!(
-                "Failed to analyze autoincrement status for {table}"
-            ));
-            return false;
-        }
-        Ok(ResultCode::ROW) => {
-            err.set(&format!(
-                "{table} has auto-increment primary keys. This is likely a mistake as two \
+            LIKE '%autoincrement%' limit 1"
+    ))?;
+    stmt.bind_text(1, table, sqlite::Destructor::STATIC)?;
+    if stmt.step()? == ResultCode::ROW {
+        err.set(&format!(
+            "{table} has auto-increment primary keys. This is likely a mistake as two \
                 concurrent nodes will assign unrelated rows the same primary key. \
                 Either use a primary key that represents the identity of your row or \
                 use a database friendly UUID such as UUIDv7"
-            ));
-            return false;
-        }
-        Ok(_) => {}
+        ));
+        return Ok(false);
     };
 
     // No checked foreign key constraints
-    let sql = format!("SELECT count(*) FROM pragma_foreign_key_list('{table}')");
-    match db.prepare_v2(&sql).and_then(|stmt| {
-        stmt.step()?;
-        stmt.column_int(0)
-    }) {
-        Err(_) => {
-            err.set(&format!(
-                "Failed to analyze foreign key information for {table}"
-            ));
-            return false;
-        }
-        Ok(0) => {}
-        Ok(_) => {
-            err.set(&format!(
-                "Table {table} has checked foreign key constraints. \
-                CRRs may have foreign keys but must not have \
-                checked foreign key constraints as they can be violated \
-                by row level security or replication."
-            ));
-            return false;
-        }
-    };
+    if db.count(&format!(
+        "SELECT count(*) FROM pragma_foreign_key_list('{table}')"
+    ))? != 0
+    {
+        err.set(&format!(
+            "Table {table} has checked foreign key constraints. \
+            CRRs may have foreign keys but must not have \
+            checked foreign key constraints as they can be violated \
+            by row level security or replication."
+        ));
+        return Ok(false);
+    }
 
     // Check for default value or nullable
-    let sql = format!(
+    if db.count(&format!(
         "SELECT count(*) FROM pragma_table_xinfo('{table}')
         WHERE \"notnull\" = 1 AND \"dflt_value\" IS NULL AND \"pk\" = 0"
-    );
-    match db.prepare_v2(&sql).and_then(|stmt| {
-        stmt.step()?;
-        stmt.column_int(0)
-    }) {
-        Err(_) => {
-            err.set(&format!(
-                "Failed to analyze default value information for {table}"
-            ));
-            return false;
-        }
-        Ok(0) => return true,
-        Ok(_) => {
-            err.set(&format!(
-                "Table {table} has a NOT NULL column without a DEFAULT VALUE. \
-                This is not allowed as it prevents forwards and backwards \
-                compatibility between schema versions. Make the column \
-                nullable or assign a default value to it."
-            ));
-            return false;
-        }
-    };
+    ))? != 0
+    {
+        err.set(&format!(
+            "Table {table} has a NOT NULL column without a DEFAULT VALUE. \
+            This is not allowed as it prevents forwards and backwards \
+            compatibility between schema versions. Make the column \
+            nullable or assign a default value to it."
+        ));
+        return Ok(false);
+    }
+
+    return Ok(true);
 }

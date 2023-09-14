@@ -13,6 +13,13 @@ use sqlite_nostd::Connection;
 use sqlite_nostd::ResultCode;
 use sqlite_nostd::StrRef;
 
+pub struct TableInfo {
+    pub tbl_name: String,
+    pub base_columns: Vec<ColumnInfo>,
+    pub pks: Vec<ColumnInfo>,
+    pub nonPks: Vec<ColumnInfo>,
+}
+
 /**
  * Given a table name, return the table info that describes that table.
  * TableInfo is a struct that represents the results

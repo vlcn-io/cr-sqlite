@@ -143,10 +143,11 @@ select crsql_finalize();
 
 Example apps that use `cr-sqlite`:
 
-- Basic setup & sync via an [Observable Notebook](https://observablehq.com/@tantaman/cr-sqlite-basic-setup)
-- TodoMVC - https://github.com/vlcn-io/live-examples
+- Vite starter - [Example](https://vite-starter2.fly.dev/) | [Repository](https://github.com/vlcn-io/vite-starter)
+- TodoMVC - [Example](https://vlcn-live-examples.fly.dev/) | [Repository](https://github.com/vlcn-io/live-examples)
 - [Tutorials](https://vlcn.io/docs/guide-sync)
 - [WIP Local-First Presentation Editor](https://github.com/tantaman/strut)
+- Basic setup & sync via an [Observable Notebook](https://observablehq.com/@tantaman/cr-sqlite-basic-setup)
 
 # Packages
 

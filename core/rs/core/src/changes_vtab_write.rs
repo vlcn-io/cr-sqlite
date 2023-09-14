@@ -11,13 +11,13 @@ use sqlite_nostd as sqlite;
 use sqlite_nostd::{sqlite3, ResultCode, Value};
 
 use crate::c::crsql_ExtData;
-use crate::c::{crsql_Changes_vtab, crsql_ensureTableInfosAreUpToDate, CrsqlChangesColumn};
+use crate::c::{crsql_Changes_vtab, CrsqlChangesColumn};
 use crate::compare_values::crsql_compare_sqlite_values;
 use crate::pack_columns::bind_package_to_stmt;
 use crate::stmt_cache::{
     get_cache_key, get_cached_stmt, reset_cached_stmt, set_cached_stmt, CachedStmtType,
 };
-use crate::tableinfo::TableInfo;
+use crate::tableinfo::{crsql_ensure_table_infos_are_up_to_date, TableInfo};
 use crate::util::{self, slab_rowid};
 use crate::{unpack_columns, ColumnValue};
 
@@ -548,7 +548,7 @@ unsafe fn merge_insert(
     let tab = vtab.cast::<crsql_Changes_vtab>();
     let db = (*tab).db;
 
-    let rc = crsql_ensureTableInfosAreUpToDate(db, (*tab).pExtData, errmsg);
+    let rc = crsql_ensure_table_infos_are_up_to_date(db, (*tab).pExtData, errmsg);
     if rc != ResultCode::OK as i32 {
         let err = CString::new("Failed to update CRR table information")?;
         *errmsg = err.into_raw();

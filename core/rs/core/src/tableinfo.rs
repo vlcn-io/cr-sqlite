@@ -105,18 +105,18 @@ pub unsafe fn free_table_info(table_info: *mut crsql_TableInfo) {
         drop(CString::from_raw(info.tblName));
     }
     if !info.pks.is_null() {
-        drop(Vec::from_raw_parts(
+        free_cols(&Vec::from_raw_parts(
             info.pks,
             info.pksLen as usize,
             info.pksLen as usize,
-        ));
+        ))(ResultCode::OK);
     }
     if !info.nonPks.is_null() {
-        drop(Vec::from_raw_parts(
+        free_cols(&Vec::from_raw_parts(
             info.nonPks,
             info.nonPksLen as usize,
             info.nonPksLen as usize,
-        ));
+        ))(ResultCode::OK);
     }
     drop(Box::from_raw(table_info));
 }

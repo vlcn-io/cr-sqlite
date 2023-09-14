@@ -32,13 +32,6 @@ static void testGetTableInfo() {
     return;
   }
 
-  assert(tableInfo->baseColsLen == 2);
-  assert(tableInfo->baseCols[0].cid == 0);
-  assert(strcmp(tableInfo->baseCols[0].name, "a") == 0);
-  assert(strcmp(tableInfo->baseCols[0].type, "INT") == 0);
-  assert(tableInfo->baseCols[0].notnull == 1);
-  assert(tableInfo->baseCols[0].pk == 0);
-
   assert(tableInfo->pksLen == 0);
   assert(tableInfo->pks == 0);
 
@@ -60,13 +53,6 @@ static void testGetTableInfo() {
     assert(0);
     return;
   }
-
-  assert(tableInfo->baseColsLen == 2);
-  assert(tableInfo->baseCols[0].cid == 0);
-  assert(strcmp(tableInfo->baseCols[0].name, "a") == 0);
-  assert(strcmp(tableInfo->baseCols[0].type, "") == 0);
-  assert(tableInfo->baseCols[0].notnull == 0);
-  assert(tableInfo->baseCols[0].pk == 1);
 
   assert(tableInfo->pksLen == 1);
   assert(tableInfo->nonPksLen == 1);

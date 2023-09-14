@@ -73,8 +73,6 @@ pub fn pull_table_info(
 
     unsafe {
         *table_info = crsql_TableInfo {
-            baseCols: column_infos.into_c_ptr(),
-            baseColsLen: columns_len as i32,
             tblName: table.into_c_ptr(),
             nonPksLen: non_pks.len() as i32,
             nonPks: non_pks.into_c_ptr(),
@@ -105,13 +103,6 @@ pub unsafe fn free_table_info(table_info: *mut crsql_TableInfo) {
     let info = *table_info;
     if !info.tblName.is_null() {
         drop(CString::from_raw(info.tblName));
-    }
-    if !info.baseCols.is_null() {
-        free_cols(&Vec::from_raw_parts(
-            info.baseCols,
-            info.baseColsLen as usize,
-            info.baseColsLen as usize,
-        ))(ResultCode::OK);
     }
     if !info.pks.is_null() {
         drop(Vec::from_raw_parts(

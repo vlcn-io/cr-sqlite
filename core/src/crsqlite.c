@@ -55,23 +55,6 @@ static void dbVersionFunc(sqlite3_context *context, int argc,
   sqlite3_result_int64(context, pExtData->dbVersion);
 }
 
-static void setValueFunc(sqlite3_context *context, int args,
-                         sqlite3_value **argv) {
-  sqlite3_value **ppValue = (sqlite3_value **)sqlite3_user_data(context);
-  *ppValue = argv[0];
-  sqlite3_result_int(context, 0);
-}
-
-static void getValueFunc(sqlite3_context *context, int args,
-                         sqlite3_value **argv) {
-  sqlite3_value **ppValue = (sqlite3_value **)sqlite3_user_data(context);
-  if (*ppValue == 0) {
-    sqlite3_result_null(context);
-    return;
-  }
-  sqlite3_result_value(context, *ppValue);
-}
-
 /**
  * Return the next version of the database for use in inserts/updates/deletes
  *
@@ -380,19 +363,6 @@ __declspec(dllexport)
                                     // dbversion can change on each invocation.
                                     SQLITE_UTF8 | SQLITE_INNOCUOUS, pExtData,
                                     dbVersionFunc, 0, 0, freeConnectionExtData);
-  }
-  if (rc == SQLITE_OK) {
-    sqlite3_value **ppValue = sqlite3_malloc(sizeof *ppValue);
-    *ppValue = 0;
-    rc = sqlite3_create_function_v2(
-        db, "crsql_internal_set_value", 1,
-        SQLITE_UTF8 | SQLITE_INNOCUOUS | SQLITE_DETERMINISTIC, ppValue,
-        setValueFunc, 0, 0, sqlite3_free);
-    if (rc == SQLITE_OK) {
-      rc = sqlite3_create_function(db, "crsql_internal_get_value", 0,
-                                   SQLITE_UTF8 | SQLITE_INNOCUOUS, ppValue,
-                                   getValueFunc, 0, 0);
-    }
   }
   if (rc == SQLITE_OK) {
     rc = sqlite3_create_function(db, "crsql_next_db_version", -1,

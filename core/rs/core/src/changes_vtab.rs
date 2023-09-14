@@ -4,7 +4,7 @@ use crate::changes_vtab_write::crsql_merge_insert;
 use crate::stmt_cache::{
     get_cache_key, get_cached_stmt, reset_cached_stmt, set_cached_stmt, CachedStmtType,
 };
-use crate::tableinfo::TableInfo;
+use crate::tableinfo::{crsql_ensure_table_infos_are_up_to_date, TableInfo};
 use alloc::format;
 use alloc::string::String;
 use core::ffi::{c_char, c_int, CStr};
@@ -20,8 +20,7 @@ use sqlite_nostd as sqlite;
 use sqlite_nostd::ResultCode;
 
 use crate::c::{
-    crsql_Changes_cursor, crsql_Changes_vtab, crsql_ensureTableInfosAreUpToDate, ChangeRowType,
-    ClockUnionColumn, CrsqlChangesColumn,
+    crsql_Changes_cursor, crsql_Changes_vtab, ChangeRowType, ClockUnionColumn, CrsqlChangesColumn,
 };
 use crate::changes_vtab_read::{changes_union_query, row_patch_data_query};
 use crate::pack_columns::bind_package_to_stmt;
@@ -276,8 +275,11 @@ unsafe fn changes_filter(
         (*cursor).pChangesStmt = null_mut();
     }
 
-    let c_rc =
-        crsql_ensureTableInfosAreUpToDate(db, (*tab).pExtData, &mut (*tab).base.zErrMsg as *mut _);
+    let c_rc = crsql_ensure_table_infos_are_up_to_date(
+        db,
+        (*tab).pExtData,
+        &mut (*tab).base.zErrMsg as *mut _,
+    );
     if c_rc != 0 {
         if let Some(rc) = ResultCode::from_i32(c_rc) {
             return Err(rc);

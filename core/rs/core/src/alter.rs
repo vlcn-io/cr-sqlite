@@ -10,9 +10,8 @@ use num_traits::FromPrimitive;
 use sqlite_nostd as sqlite;
 use sqlite_nostd::{sqlite3, Connection, ResultCode};
 
-use crate::c::{
-    crsql_ExtData, crsql_ensureTableInfosAreUpToDate, crsql_findTableInfo, crsql_getDbVersion,
-};
+use crate::c::{crsql_ExtData, crsql_getDbVersion};
+use crate::tableinfo::crsql_ensure_table_infos_are_up_to_date;
 
 #[no_mangle]
 pub unsafe extern "C" fn crsql_compact_post_alter(
@@ -93,7 +92,7 @@ unsafe fn compact_post_alter(
               tbl_name = crate::util::escape_ident(tbl_name_str),
             ),
         );
-        let c_rc = crsql_ensureTableInfosAreUpToDate(db, ext_data, errmsg);
+        let c_rc = crsql_ensure_table_infos_are_up_to_date(db, ext_data, errmsg);
         if c_rc != ResultCode::OK as c_int {
             if let Some(rc) = ResultCode::from_i32(c_rc) {
                 return Err(rc);

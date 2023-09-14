@@ -1,5 +1,7 @@
 use crate::c::crsql_ExtData;
+use crate::c::crsql_fetchPragmaSchemaVersion;
 use crate::c::CPointer;
+use crate::c::TABLE_INFO_SCHEMA_VERSION;
 use crate::util::Countable;
 use alloc::boxed::Box;
 use alloc::ffi::CString;
@@ -12,6 +14,7 @@ use num_traits::ToPrimitive;
 use sqlite_nostd as sqlite;
 use sqlite_nostd::Connection;
 use sqlite_nostd::ResultCode;
+use sqlite_nostd::Stmt;
 use sqlite_nostd::StrRef;
 
 pub struct TableInfo {
@@ -39,6 +42,74 @@ pub extern "C" fn crsql_init_table_info_vec(ext_data: *mut crsql_ExtData) {
         (*ext_data).tableInfosLen = len;
         (*ext_data).tableInfosCap = cap;
     }
+}
+
+#[no_mangle]
+pub extern "C" fn crsql_ensure_table_infos_are_up_to_date(
+    db: *mut sqlite3,
+    ext_data: *mut crsql_ExtData,
+    err: *mut *mut c_char,
+) -> c_int {
+    let schema_changed =
+        unsafe { crsql_fetchPragmaSchemaVersion(db, ext_data, TABLE_INFO_SCHEMA_VERSION) };
+
+    if schema_changed < 0 {
+        return ResultCode::ERROR as c_int;
+    }
+
+    let mut table_infos = unsafe {
+        mem::ManuallyDrop::new(Vec::from_raw_parts(
+            (*ext_data).tableInfos as *mut TableInfo,
+            (*ext_data).tableInfosLen,
+            (*ext_data).tableInfosCap,
+        ))
+    };
+
+    if schema_changed > 0 || table_infos.len() == 0 {
+        table_infos.clear();
+        match pull_all_table_infos(db, ext_data, err) {
+            Ok(new_table_infos) => {
+                table_infos.extend(new_table_infos.iter());
+                return ResultCode::OK as c_int;
+            }
+            Err(e) => {
+                return e as c_int;
+            }
+        }
+    }
+
+    return ResultCode::OK as c_int;
+}
+
+fn pull_all_table_infos(
+    db: *mut sqlite3,
+    ext_data: *mut crsql_ExtData,
+    err: *mut *mut c_char,
+) -> Result<Vec<TableInfo>, ResultCode> {
+    let mut clock_table_names = vec![];
+    let stmt = unsafe { (*ext_data).pSelectClockTablesStmt };
+    loop {
+        match stmt.step() {
+            Ok(ResultCode::ROW) => {
+                clock_table_names.push(stmt.column_text(0).to_string());
+            }
+            Ok(ResultCode::DONE) => {
+                stmt.reset();
+                break;
+            }
+            Ok(rc) | Err(rc) => {
+                stmt.reset();
+                return Err(rc);
+            }
+        }
+    }
+
+    let mut ret = vec![];
+    for name in clock_table_names {
+        ret.push(pull_table_info(db, &name, err)?)
+    }
+
+    Ok(ret)
 }
 
 /**

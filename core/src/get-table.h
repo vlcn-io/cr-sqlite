@@ -4,6 +4,7 @@
 #include "sqlite3ext.h"
 SQLITE_EXTENSION_INIT3
 
+// TODO: remove me!
 int crsql_get_table(
     sqlite3 *db,       /* The database on which the SQL executes */
     const char *zSql,  /* The SQL to be executed */

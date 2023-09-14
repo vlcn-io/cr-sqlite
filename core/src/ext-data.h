@@ -42,6 +42,7 @@ struct crsql_ExtData {
   sqlite3_stmt *pClearSyncBitStmt;
   sqlite3_stmt *pSetSiteIdOrdinalStmt;
   sqlite3_stmt *pSelectSiteIdOrdinalStmt;
+  sqlite3_stmt *pSelectClockTablesStmt;
   void *pStmtCache;
 };
 
@@ -55,7 +56,5 @@ int crsql_fetchDbVersionFromStorage(sqlite3 *db, crsql_ExtData *pExtData,
                                     char **errmsg);
 int crsql_getDbVersion(sqlite3 *db, crsql_ExtData *pExtData, char **errmsg);
 void crsql_finalize(crsql_ExtData *pExtData);
-int crsql_ensureTableInfosAreUpToDate(sqlite3 *db, crsql_ExtData *pExtData,
-                                      char **errmsg);
 
 #endif

@@ -22,7 +22,6 @@ mod triggers;
 mod unpack_columns_vtab;
 mod util;
 
-use crate::c::crsql_TableInfo;
 use core::{ffi::c_char, slice};
 extern crate alloc;
 use alloc::vec::Vec;
@@ -230,25 +229,6 @@ pub extern "C" fn crsql_is_table_compatible(
     } else {
         (ResultCode::NOMEM as c_int) * -1
     }
-}
-
-#[no_mangle]
-pub extern "C" fn crsql_pull_table_info(
-    db: *mut sqlite::sqlite3,
-    table: *const c_char,
-    table_info: *mut *mut crsql_TableInfo,
-    err: *mut *mut c_char,
-) -> c_int {
-    if let Ok(table) = unsafe { CStr::from_ptr(table).to_str() } {
-        pull_table_info(db, table, table_info, err).unwrap_or_else(|err| err) as c_int
-    } else {
-        (ResultCode::NOMEM as c_int) * -1
-    }
-}
-
-#[no_mangle]
-pub extern "C" fn crsql_free_table_info(table_info: *mut crsql_TableInfo) {
-    unsafe { free_table_info(table_info) };
 }
 
 #[no_mangle]

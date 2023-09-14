@@ -7,7 +7,6 @@
 
 #include "consts.h"
 #include "crsqlite.h"
-#include "tableinfo.h"
 
 #ifndef CHECK_OK
 #define CHECK_OK         \

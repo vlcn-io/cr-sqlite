@@ -1,6 +1,9 @@
-use core::ffi::{c_char, c_int, CStr};
+use core::{
+    ffi::{c_char, c_int, CStr},
+    mem::{self, ManuallyDrop},
+};
 
-use crate::{c::crsql_TableInfo, consts};
+use crate::{consts, tableinfo::TableInfo};
 use alloc::{ffi::CString, format};
 use core::slice;
 use sqlite::{sqlite3, Connection, Destructor, ResultCode};
@@ -192,25 +195,12 @@ fn maybe_update_db_inner(
  *
  * @param tableInfo
  */
-#[no_mangle]
-pub extern "C" fn crsql_create_clock_table(
-    db: *mut sqlite3,
-    table_info: *mut crsql_TableInfo,
-    err: *mut *mut c_char,
-) -> c_int {
-    match create_clock_table(db, table_info, err) {
-        Ok(_) => ResultCode::OK as c_int,
-        Err(code) => code as c_int,
-    }
-}
-
 pub fn create_clock_table(
     db: *mut sqlite3,
-    table_info: *mut crsql_TableInfo,
+    table_info: &TableInfo,
     _err: *mut *mut c_char,
 ) -> Result<ResultCode, ResultCode> {
-    let columns = sqlite::args!((*table_info).pksLen, (*table_info).pks);
-    let pk_list = crate::util::as_identifier_list(columns, None)?;
+    let pk_list = crate::util::as_identifier_list(&table_info.pks, None)?;
     let table_name = unsafe { CStr::from_ptr((*table_info).tblName).to_str() }?;
 
     db.exec_safe(&format!(

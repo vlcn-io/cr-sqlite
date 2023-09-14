@@ -4,7 +4,6 @@ use sqlite_nostd as sqlite;
 use sqlite_nostd::ResultCode;
 
 use crate::bootstrap::create_clock_table;
-use crate::c::crsql_TableInfo;
 use crate::tableinfo::{free_table_info, is_table_compatible, pull_table_info};
 use crate::triggers::create_triggers;
 use crate::{backfill_table, is_crr, remove_crr_triggers_if_exist};
@@ -28,17 +27,15 @@ pub fn create_crr(
         return Ok(ResultCode::OK);
     }
 
-    let mut table_info: *mut crsql_TableInfo = core::ptr::null_mut();
-    pull_table_info(db, table, &mut table_info, err)?;
+    // We do not / can not pull this from the cached set of table infos
+    // since nothing would exist in it for a table not yet made into a crr.
+    // TODO: Note: we can optimize out our `ensureTableInfosAreUpToDate` by mutating our ext data
+    // when upgrading stuff to CRRs
+    let table_info = pull_table_info(db, table, err)?;
 
-    let cleanup = |err: ResultCode| unsafe {
-        free_table_info(table_info);
-        err
-    };
-
-    create_clock_table(db, table_info, err)
+    create_clock_table(db, &table_info, err)
         .and_then(|_| remove_crr_triggers_if_exist(db, table))
-        .and_then(|_| create_triggers(db, table_info, err))
+        .and_then(|_| create_triggers(db, &table_info, err))
         .map_err(cleanup)?;
 
     let (non_pk_cols, pk_cols) = unsafe {

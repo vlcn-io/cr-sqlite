@@ -3,7 +3,7 @@ use alloc::format;
 use alloc::string::String;
 use alloc::vec::Vec;
 use core::ffi::{c_char, c_int, CStr};
-use core::mem::forget;
+use core::mem::{self, forget};
 use core::ptr::null_mut;
 use core::slice;
 use sqlite::{Connection, Stmt};
@@ -11,24 +11,21 @@ use sqlite_nostd as sqlite;
 use sqlite_nostd::{sqlite3, ResultCode, Value};
 
 use crate::c::crsql_ExtData;
-use crate::c::{
-    crsql_Changes_vtab, crsql_TableInfo, crsql_ensureTableInfosAreUpToDate, crsql_indexofTableInfo,
-    CrsqlChangesColumn,
-};
+use crate::c::{crsql_Changes_vtab, crsql_ensureTableInfosAreUpToDate, CrsqlChangesColumn};
 use crate::compare_values::crsql_compare_sqlite_values;
 use crate::pack_columns::bind_package_to_stmt;
 use crate::stmt_cache::{
     get_cache_key, get_cached_stmt, reset_cached_stmt, set_cached_stmt, CachedStmtType,
 };
+use crate::tableinfo::TableInfo;
 use crate::util::{self, slab_rowid};
 use crate::{unpack_columns, ColumnValue};
 
 fn pk_where_list_from_tbl_info(
-    tbl_info: *mut crsql_TableInfo,
+    tbl_info: &TableInfo,
     prefix: Option<&str>,
 ) -> Result<String, core::str::Utf8Error> {
-    let pk_cols = sqlite::args!((*tbl_info).pksLen, (*tbl_info).pks);
-    util::where_list(pk_cols, prefix)
+    util::where_list(&tbl_info.pks, prefix)
 }
 
 /**
@@ -43,7 +40,7 @@ fn did_cid_win(
     db: *mut sqlite3,
     ext_data: *mut crsql_ExtData,
     insert_tbl: &str,
-    tbl_info: *mut crsql_TableInfo,
+    tbl_info: &TableInfo,
     unpacked_pks: &Vec<ColumnValue>,
     col_name: &str,
     insert_val: *mut sqlite::value,
@@ -171,7 +168,7 @@ where
 fn set_winner_clock(
     db: *mut sqlite3,
     ext_data: *mut crsql_ExtData,
-    tbl_info: *mut crsql_TableInfo,
+    tbl_info: &TableInfo,
     unpacked_pks: &Vec<ColumnValue>,
     insert_col_name: &str,
     insert_col_vrsn: sqlite::int64,
@@ -179,8 +176,6 @@ fn set_winner_clock(
     insert_site_id: &[u8],
     insert_seq: sqlite::int64,
 ) -> Result<sqlite::int64, ResultCode> {
-    let tbl_name_str = unsafe { CStr::from_ptr((*tbl_info).tblName).to_str()? };
-
     // set the site_id ordinal
     // get the returned ordinal
     // use that in place of insert_site_id in the metadata table(s)
@@ -241,7 +236,7 @@ fn set_winner_clock(
               ?,
               ?
             ) RETURNING _rowid_",
-          table_name = crate::util::escape_ident(tbl_name_str),
+          table_name = crate::util::escape_ident(&tbl_info.tbl_name),
           pk_ident_list = crate::util::as_identifier_list(pk_cols, None)?,
           pk_bind_list = crate::util::binding_list(pk_cols.len()),
         ))
@@ -287,21 +282,19 @@ fn set_winner_clock(
 fn merge_sentinel_only_insert(
     db: *mut sqlite3,
     ext_data: *mut crsql_ExtData,
-    tbl_info: *mut crsql_TableInfo,
+    tbl_info: &TableInfo,
     unpacked_pks: &Vec<ColumnValue>,
     remote_col_vrsn: sqlite::int64,
     remote_db_vsn: sqlite::int64,
     remote_site_id: &[u8],
     remote_seq: sqlite::int64,
 ) -> Result<sqlite::int64, ResultCode> {
-    let tbl_name_str = unsafe { CStr::from_ptr((*tbl_info).tblName).to_str()? };
-
     let stmt_key = get_cache_key(CachedStmtType::MergePkOnlyInsert, tbl_name_str, None)?;
     let merge_stmt = get_cached_stmt_rt_wt(db, ext_data, stmt_key, || {
         let pk_cols = sqlite::args!((*tbl_info).pksLen, (*tbl_info).pks);
         Ok(format!(
             "INSERT OR IGNORE INTO \"{table_name}\" ({pk_idents}) VALUES ({pk_bindings})",
-            table_name = crate::util::escape_ident(tbl_name_str),
+            table_name = crate::util::escape_ident(&tbl_info.tbl_name),
             pk_idents = crate::util::as_identifier_list(pk_cols, None)?,
             pk_bindings = crate::util::binding_list(pk_cols.len()),
         ))
@@ -366,7 +359,7 @@ fn zero_clocks_on_resurrect(
     db: *mut sqlite3,
     ext_data: *mut crsql_ExtData,
     table_name: &str,
-    tbl_info: *mut crsql_TableInfo,
+    tbl_info: &TableInfo,
     unpacked_pks: &Vec<ColumnValue>,
     insert_db_vrsn: sqlite::int64,
 ) -> Result<ResultCode, ResultCode> {
@@ -401,15 +394,14 @@ fn zero_clocks_on_resurrect(
 unsafe fn merge_delete(
     db: *mut sqlite3,
     ext_data: *mut crsql_ExtData,
-    tbl_info: *mut crsql_TableInfo,
+    tbl_info: &TableInfo,
     unpacked_pks: &Vec<ColumnValue>,
     remote_col_vrsn: sqlite::int64,
     remote_db_vrsn: sqlite::int64,
     remote_site_id: &[u8],
     remote_seq: sqlite::int64,
 ) -> Result<sqlite::int64, ResultCode> {
-    let tbl_name_str = CStr::from_ptr((*tbl_info).tblName).to_str()?;
-    let stmt_key = get_cache_key(CachedStmtType::MergeDelete, tbl_name_str, None)?;
+    let stmt_key = get_cache_key(CachedStmtType::MergeDelete, &tbl_info.tbl_name, None)?;
     let delete_stmt = get_cached_stmt_rt_wt(db, ext_data, stmt_key, || {
         Ok(format!(
             "DELETE FROM \"{table_name}\" WHERE {pk_where_list}",
@@ -498,7 +490,7 @@ fn get_local_cl(
     db: *mut sqlite::sqlite3,
     ext_data: *mut crsql_ExtData,
     tbl_name: &str,
-    tbl_info: *mut crsql_TableInfo,
+    tbl_info: &TableInfo,
     unpacked_pks: &Vec<ColumnValue>,
 ) -> Result<sqlite::int64, ResultCode> {
     let stmt_key = get_cache_key(CachedStmtType::GetLocalCl, tbl_name, None)?;
@@ -595,17 +587,15 @@ unsafe fn merge_insert(
     }
 
     let insert_site_id = insert_site_id.blob();
-    let tbl_info_index = crsql_indexofTableInfo(
-        (*(*tab).pExtData).zpTableInfos,
+    let tbl_infos = mem::ManuallyDrop::new(Vec::from_raw_parts(
+        (*(*tab).pExtData).tableInfos as *mut TableInfo,
         (*(*tab).pExtData).tableInfosLen,
-        insert_tbl.as_ptr() as *const c_char,
-    );
+        (*(*tab).pExtData).tableInfosCap,
+    ));
+    // TODO: will this work given `insert_tbl` is null termed?
+    let tbl_info_index = tbl_infos.iter().position(|&x| x.tbl_name == insert_tbl);
 
-    let tbl_infos = sqlite::args!(
-        (*(*tab).pExtData).tableInfosLen,
-        (*(*tab).pExtData).zpTableInfos
-    );
-    if tbl_info_index == -1 {
+    if tbl_info_index.is_none() {
         let err = CString::new(format!(
             "crsql - could not find the schema information for table {}",
             insert_tbl
@@ -613,10 +603,12 @@ unsafe fn merge_insert(
         *errmsg = err.into_raw();
         return Err(ResultCode::ERROR);
     }
+    // TODO: technically safe since we checked `is_none` but this should be more idiomatic
+    let tbl_info_index = tbl_info_index.unwrap();
 
-    let tbl_info = tbl_infos[tbl_info_index as usize];
+    let tbl_info = &tbl_infos[tbl_info_index];
     let unpacked_pks = unpack_columns(insert_pks.blob())?;
-    let local_cl = get_local_cl(db, (*tab).pExtData, insert_tbl, tbl_info, &unpacked_pks)?;
+    let local_cl = get_local_cl(db, (*tab).pExtData, insert_tbl, &tbl_info, &unpacked_pks)?;
 
     // We can ignore all updates from older causal lengths.
     // They won't win at anything.
@@ -643,7 +635,7 @@ unsafe fn merge_insert(
         let merge_result = merge_delete(
             db,
             (*tab).pExtData,
-            tbl_info,
+            &tbl_info,
             &unpacked_pks,
             insert_col_vrsn,
             insert_db_vrsn,
@@ -679,7 +671,7 @@ unsafe fn merge_insert(
         let merge_result = merge_sentinel_only_insert(
             db,
             (*tab).pExtData,
-            tbl_info,
+            &tbl_info,
             &unpacked_pks,
             insert_col_vrsn,
             insert_db_vrsn,
@@ -713,7 +705,7 @@ unsafe fn merge_insert(
         merge_sentinel_only_insert(
             db,
             (*tab).pExtData,
-            tbl_info,
+            &tbl_info,
             &unpacked_pks,
             insert_cl,
             insert_db_vrsn,
@@ -732,7 +724,7 @@ unsafe fn merge_insert(
             db,
             (*tab).pExtData,
             insert_tbl,
-            tbl_info,
+            &tbl_info,
             &unpacked_pks,
             insert_col,
             insert_val,
@@ -798,7 +790,7 @@ unsafe fn merge_insert(
     let merge_result = set_winner_clock(
         db,
         (*tab).pExtData,
-        tbl_info,
+        &tbl_info,
         &unpacked_pks,
         insert_col,
         insert_col_vrsn,

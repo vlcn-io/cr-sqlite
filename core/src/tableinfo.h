@@ -31,13 +31,6 @@ struct crsql_TableInfo {
   int nonPksLen;
 };
 
-void crsql_freeAllTableInfos(crsql_TableInfo **tableInfos, int len);
-crsql_TableInfo *crsql_findTableInfo(crsql_TableInfo **tblInfos, int len,
-                                     const char *tblName);
-int crsql_indexofTableInfo(crsql_TableInfo **tblInfos, int len,
-                           const char *tblName);
 sqlite3_int64 crsql_slabRowid(int idx, sqlite3_int64 rowid);
-int crsql_pullAllTableInfos(sqlite3 *db, crsql_TableInfo ***pzpTableInfos,
-                            int *rTableInfosLen, char **errmsg);
 
 #endif

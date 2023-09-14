@@ -11,7 +11,6 @@ SQLITE_EXTENSION_INIT1
 #include "consts.h"
 #include "ext-data.h"
 #include "rust.h"
-#include "tableinfo.h"
 #include "util.h"
 
 // see

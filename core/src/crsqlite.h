@@ -6,8 +6,6 @@ SQLITE_EXTENSION_INIT3
 
 #include <stdint.h>
 
-#include "tableinfo.h"
-
 #ifndef UNIT_TEST
 #define STATIC static
 #else

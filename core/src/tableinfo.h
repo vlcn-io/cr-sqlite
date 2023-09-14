@@ -24,18 +24,12 @@ struct crsql_TableInfo {
   // Name of the table. Owned by this struct.
   char *tblName;
 
-  crsql_ColumnInfo *baseCols;
-  int baseColsLen;
-
   crsql_ColumnInfo *pks;
   int pksLen;
 
   crsql_ColumnInfo *nonPks;
   int nonPksLen;
 };
-
-crsql_ColumnInfo *crsql_extractBaseCols(crsql_ColumnInfo *colInfos,
-                                        int colInfosLen, int *pBaseColsLen);
 
 void crsql_freeAllTableInfos(crsql_TableInfo **tableInfos, int len);
 crsql_TableInfo *crsql_findTableInfo(crsql_TableInfo **tblInfos, int len,

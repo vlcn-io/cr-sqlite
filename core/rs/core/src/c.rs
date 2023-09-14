@@ -52,8 +52,6 @@ pub enum ChangeRowType {
 #[allow(non_snake_case, non_camel_case_types)]
 pub struct crsql_TableInfo {
     pub tblName: *mut ::core::ffi::c_char,
-    pub baseCols: *mut crsql_ColumnInfo,
-    pub baseColsLen: ::core::ffi::c_int,
     pub pks: *mut crsql_ColumnInfo,
     pub pksLen: ::core::ffi::c_int,
     pub nonPks: *mut crsql_ColumnInfo,
@@ -358,7 +356,7 @@ fn bindgen_test_layout_crsql_TableInfo() {
     let ptr = UNINIT.as_ptr();
     assert_eq!(
         ::core::mem::size_of::<crsql_TableInfo>(),
-        56usize,
+        40usize,
         concat!("Size of: ", stringify!(crsql_TableInfo))
     );
     assert_eq!(
@@ -377,28 +375,8 @@ fn bindgen_test_layout_crsql_TableInfo() {
         )
     );
     assert_eq!(
-        unsafe { ::core::ptr::addr_of!((*ptr).baseCols) as usize - ptr as usize },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(crsql_TableInfo),
-            "::",
-            stringify!(baseCols)
-        )
-    );
-    assert_eq!(
-        unsafe { ::core::ptr::addr_of!((*ptr).baseColsLen) as usize - ptr as usize },
-        16usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(crsql_TableInfo),
-            "::",
-            stringify!(baseColsLen)
-        )
-    );
-    assert_eq!(
         unsafe { ::core::ptr::addr_of!((*ptr).pks) as usize - ptr as usize },
-        24usize,
+        8usize,
         concat!(
             "Offset of field: ",
             stringify!(crsql_TableInfo),
@@ -408,7 +386,7 @@ fn bindgen_test_layout_crsql_TableInfo() {
     );
     assert_eq!(
         unsafe { ::core::ptr::addr_of!((*ptr).pksLen) as usize - ptr as usize },
-        32usize,
+        16usize,
         concat!(
             "Offset of field: ",
             stringify!(crsql_TableInfo),
@@ -418,7 +396,7 @@ fn bindgen_test_layout_crsql_TableInfo() {
     );
     assert_eq!(
         unsafe { ::core::ptr::addr_of!((*ptr).nonPks) as usize - ptr as usize },
-        40usize,
+        24usize,
         concat!(
             "Offset of field: ",
             stringify!(crsql_TableInfo),
@@ -428,7 +406,7 @@ fn bindgen_test_layout_crsql_TableInfo() {
     );
     assert_eq!(
         unsafe { ::core::ptr::addr_of!((*ptr).nonPksLen) as usize - ptr as usize },
-        48usize,
+        32usize,
         concat!(
             "Offset of field: ",
             stringify!(crsql_TableInfo),

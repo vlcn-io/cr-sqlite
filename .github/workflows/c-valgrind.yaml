@@ -23,7 +23,7 @@ jobs:
           path: ./
 
       - name: Install valgrind
-        run: sudo apt install -y valgrind
+        run: sudo apt update && sudo apt install -y valgrind
 
       - name: Valgrind Test
         run: |

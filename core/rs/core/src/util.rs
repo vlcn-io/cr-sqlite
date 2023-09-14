@@ -1,7 +1,6 @@
 extern crate alloc;
 
-use crate::alloc::string::ToString;
-use crate::c::crsql_ColumnInfo;
+use crate::{alloc::string::ToString, tableinfo::ColumnInfo};
 use alloc::format;
 use alloc::string::String;
 use alloc::vec;
@@ -28,7 +27,7 @@ pub fn get_dflt_value(
     let notnull = stmt.column_int(1)?;
     let dflt_column_type = stmt.column_type(0)?;
 
-    // if the column is nullable and no default value is specified
+    // if the column is nullable and no default value is specified
     // then the default value is null.
     if notnull == 0 && dflt_column_type == ColumnType::Null {
         return Ok(Some(String::from("NULL")));
@@ -53,42 +52,42 @@ pub fn slab_rowid(idx: i32, rowid: sqlite::int64) -> sqlite::int64 {
 }
 
 pub fn pk_where_list(
-    columns: &[crsql_ColumnInfo],
+    columns: &Vec<ColumnInfo>,
     rhs_prefix: Option<&str>,
 ) -> Result<String, Utf8Error> {
     let mut result = vec![];
     for c in columns {
-        let name = unsafe { CStr::from_ptr(c.name) };
+        let name = &c.name;
         result.push(if let Some(prefix) = rhs_prefix {
             format!(
                 "\"{col_name}\" IS {prefix}\"{col_name}\"",
                 prefix = prefix,
-                col_name = crate::util::escape_ident(name.to_str()?)
+                col_name = crate::util::escape_ident(name)
             )
         } else {
             format!(
                 "\"{col_name}\" = \"{col_name}\"",
-                col_name = crate::util::escape_ident(name.to_str()?)
+                col_name = crate::util::escape_ident(name)
             )
         })
     }
     Ok(result.join(" AND "))
 }
 
-pub fn where_list(columns: &[crsql_ColumnInfo], prefix: Option<&str>) -> Result<String, Utf8Error> {
+pub fn where_list(columns: &Vec<ColumnInfo>, prefix: Option<&str>) -> Result<String, Utf8Error> {
     let mut result = vec![];
     for c in columns {
-        let name = unsafe { CStr::from_ptr(c.name) };
+        let name = &c.name;
         if let Some(prefix) = prefix {
             result.push(format!(
                 "{prefix}\"{col_name}\" IS ?",
                 prefix = prefix,
-                col_name = crate::util::escape_ident(name.to_str()?)
+                col_name = crate::util::escape_ident(name)
             ));
         } else {
             result.push(format!(
                 "\"{col_name}\" IS ?",
-                col_name = crate::util::escape_ident(name.to_str()?)
+                col_name = crate::util::escape_ident(name)
             ));
         }
     }
@@ -105,33 +104,27 @@ pub fn binding_list(num_slots: usize) -> String {
 }
 
 pub fn as_identifier_list(
-    columns: &[crsql_ColumnInfo],
+    columns: &Vec<ColumnInfo>,
     prefix: Option<&str>,
 ) -> Result<String, Utf8Error> {
     let mut result = vec![];
     for c in columns {
-        let name = unsafe { CStr::from_ptr(c.name) };
         result.push(if let Some(prefix) = prefix {
-            format!(
-                "{}\"{}\"",
-                prefix,
-                crate::util::escape_ident(name.to_str()?)
-            )
+            format!("{}\"{}\"", prefix, crate::util::escape_ident(&c.name))
         } else {
-            format!("\"{}\"", crate::util::escape_ident(name.to_str()?))
+            format!("\"{}\"", crate::util::escape_ident(&c.name))
         })
     }
     Ok(result.join(","))
 }
 
-pub fn map_columns<F>(columns: &[crsql_ColumnInfo], map: F) -> Result<Vec<String>, Utf8Error>
+pub fn map_columns<F>(columns: &Vec<ColumnInfo>, map: F) -> Result<Vec<String>, Utf8Error>
 where
     F: Fn(&str) -> String,
 {
     let mut result = vec![];
     for c in columns {
-        let name = unsafe { CStr::from_ptr(c.name) };
-        result.push(map(name.to_str()?))
+        result.push(map(&c.name))
     }
 
     return Ok(result);

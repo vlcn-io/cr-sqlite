@@ -3,7 +3,6 @@
 
 #include "sqlite3ext.h"
 SQLITE_EXTENSION_INIT3
-#include "tableinfo.h"
 
 // NOTE: any changes here must be updated in `c.rs` until we've finished porting
 // to rust.
@@ -29,8 +28,9 @@ struct crsql_ExtData {
 
   unsigned char *siteId;
   sqlite3_stmt *pDbVersionStmt;
-  crsql_TableInfo **zpTableInfos;
+  void *tableInfos;
   int tableInfosLen;
+  int tableInfosCap;
 
   // tracks the number of rows impacted by all inserts into crsql_changes in the
   // current transaction. This number is reset on transaction commit.

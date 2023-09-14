@@ -6,6 +6,7 @@
 
 void crsql_init_stmt_cache(crsql_ExtData *pExtData);
 void crsql_clear_stmt_cache(crsql_ExtData *pExtData);
+void crsql_init_table_info_vec(crsql_ExtData *pExtData);
 
 crsql_ExtData *crsql_newExtData(sqlite3 *db, unsigned char *siteIdBuffer) {
   crsql_ExtData *pExtData = sqlite3_malloc(sizeof *pExtData);
@@ -43,11 +44,13 @@ crsql_ExtData *crsql_newExtData(sqlite3 *db, unsigned char *siteIdBuffer) {
   pExtData->pragmaSchemaVersionForTableInfos = -1;
   pExtData->siteId = siteIdBuffer;
   pExtData->pDbVersionStmt = 0;
-  pExtData->zpTableInfos = 0;
+  pExtData->tableInfos = 0;
+  pExtData->tableInfosCap = 0;
   pExtData->tableInfosLen = 0;
   pExtData->rowsImpacted = 0;
   pExtData->pStmtCache = 0;
   crsql_init_stmt_cache(pExtData);
+  crsql_init_table_info_vec(pExtData);
 
   int pv = crsql_fetchPragmaDataVersion(db, pExtData);
   if (pv == -1 || rc != SQLITE_OK) {
@@ -67,7 +70,6 @@ void crsql_freeExtData(crsql_ExtData *pExtData) {
   sqlite3_finalize(pExtData->pClearSyncBitStmt);
   sqlite3_finalize(pExtData->pSetSiteIdOrdinalStmt);
   sqlite3_finalize(pExtData->pSelectSiteIdOrdinalStmt);
-  crsql_freeAllTableInfos(pExtData->zpTableInfos, pExtData->tableInfosLen);
   crsql_clear_stmt_cache(pExtData);
   sqlite3_free(pExtData);
 }
@@ -271,49 +273,5 @@ int crsql_getDbVersion(sqlite3 *db, crsql_ExtData *pExtData, char **errmsg) {
   }
 
   rc = crsql_fetchDbVersionFromStorage(db, pExtData, errmsg);
-  return rc;
-}
-
-/**
- * Should only ever be called when absolutely required.
- * This can be an expensive operation.
- *
- * (1) checks if the db schema has changed
- * (2) if so, re-pulls table infos after de-allocating previous set of table
- * infos
- *
- * due to 2, nobody should ever save a reference
- * to a table info or contained object.
- *
- * This is called in two cases:
- * (1) in `xFilter` of the changes-vtab to ensure we hit the right tables for
- * changes (2) in `xUpdate` of the changes-vtab to ensure we apply received
- * changed correctly
- */
-int crsql_ensureTableInfosAreUpToDate(sqlite3 *db, crsql_ExtData *pExtData,
-                                      char **errmsg) {
-  int rc = SQLITE_OK;
-
-  int bSchemaChanged =
-      crsql_fetchPragmaSchemaVersion(db, pExtData, TABLE_INFO_SCHEMA_VERSION);
-  if (bSchemaChanged < 0) {
-    return SQLITE_ERROR;
-  }
-
-  if (bSchemaChanged || pExtData->zpTableInfos == 0) {
-    // clean up old table infos
-    crsql_freeAllTableInfos(pExtData->zpTableInfos, pExtData->tableInfosLen);
-
-    // re-fetch table infos
-    rc = crsql_pullAllTableInfos(db, &(pExtData->zpTableInfos),
-                                 &(pExtData->tableInfosLen), errmsg);
-    if (rc != SQLITE_OK) {
-      crsql_freeAllTableInfos(pExtData->zpTableInfos, pExtData->tableInfosLen);
-      pExtData->zpTableInfos = 0;
-      pExtData->tableInfosLen = 0;
-      return rc;
-    }
-  }
-
   return rc;
 }

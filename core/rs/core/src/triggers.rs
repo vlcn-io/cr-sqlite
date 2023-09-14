@@ -10,25 +10,14 @@ use core::{
     str::Utf8Error,
 };
 
-use crate::c::crsql_TableInfo;
 use sqlite::{sqlite3, ResultCode};
 use sqlite_nostd as sqlite;
 
-#[no_mangle]
-pub extern "C" fn crsql_create_crr_triggers(
-    db: *mut sqlite3,
-    table_info: *mut crsql_TableInfo,
-    err: *mut *mut c_char,
-) -> c_int {
-    match create_triggers(db, table_info, err) {
-        Ok(code) => code as c_int,
-        Err(code) => code as c_int,
-    }
-}
+use crate::tableinfo::TableInfo;
 
 pub fn create_triggers(
     db: *mut sqlite3,
-    table_info: *mut crsql_TableInfo,
+    table_info: &TableInfo,
     err: *mut *mut c_char,
 ) -> Result<ResultCode, ResultCode> {
     create_insert_trigger(db, table_info, err)?;
@@ -38,15 +27,12 @@ pub fn create_triggers(
 
 fn create_insert_trigger(
     db: *mut sqlite3,
-    table_info: *mut crsql_TableInfo,
+    table_info: &TableInfo,
     _err: *mut *mut c_char,
 ) -> Result<ResultCode, ResultCode> {
-    let table_name = unsafe { CStr::from_ptr((*table_info).tblName).to_str()? };
-    let pk_columns =
-        unsafe { slice::from_raw_parts((*table_info).pks, (*table_info).pksLen as usize) };
-    let pk_list = crate::util::as_identifier_list(pk_columns, None)?;
-    let pk_new_list = crate::util::as_identifier_list(pk_columns, Some("NEW."))?;
-    let pk_where_list = crate::util::pk_where_list(pk_columns, Some("NEW."))?;
+    let pk_list = crate::util::as_identifier_list(&table_info.pks, None)?;
+    let pk_new_list = crate::util::as_identifier_list(&table_info.pks, Some("NEW."))?;
+    let pk_where_list = crate::util::pk_where_list(&table_info.pks, Some("NEW."))?;
     let trigger_body =
         insert_trigger_body(table_info, table_name, pk_list, pk_new_list, pk_where_list)?;
 
@@ -56,7 +42,7 @@ fn create_insert_trigger(
       BEGIN
         {trigger_body}
       END;",
-        table_name = crate::util::escape_ident(table_name),
+        table_name = crate::util::escape_ident(&table_info.tbl_name),
         trigger_body = trigger_body
     );
 
@@ -64,17 +50,15 @@ fn create_insert_trigger(
 }
 
 fn insert_trigger_body(
-    table_info: *mut crsql_TableInfo,
+    table_info: &TableInfo,
     table_name: &str,
     pk_list: String,
     pk_new_list: String,
     pk_where_list: String,
 ) -> Result<String, Utf8Error> {
-    let non_pk_columns =
-        unsafe { slice::from_raw_parts((*table_info).nonPks, (*table_info).nonPksLen as usize) };
     let mut trigger_components = vec![];
 
-    if non_pk_columns.len() == 0 {
+    if table_info.non_pks.len() == 0 {
         // a table that only has primary keys.
         // we'll need to record a create record in this case.
         trigger_components.push(format!(
@@ -98,7 +82,7 @@ fn insert_trigger_body(
             __crsql_seq = crsql_get_seq() - 1,
             __crsql_site_id = NULL;",
           table_name = crate::util::escape_ident(table_name),
-          pk_list = pk_list,
+          pk_list = table_info.pks,
           pk_new_list = pk_new_list,
           col_name = crate::c::INSERT_SENTINEL
       ));
@@ -119,13 +103,12 @@ fn insert_trigger_body(
         ));
     }
 
-    for col in non_pk_columns {
-        let col_name = unsafe { CStr::from_ptr(col.name).to_str()? };
+    for col in table_info.non_pks {
         trigger_components.push(format_insert_trigger_component(
             table_name,
             &pk_list,
             &pk_new_list,
-            col_name,
+            &col.name,
         ))
     }
 
@@ -167,12 +150,11 @@ fn format_insert_trigger_component(
 
 fn create_update_trigger(
     db: *mut sqlite3,
-    table_info: *mut crsql_TableInfo,
+    table_info: &TableInfo,
     _err: *mut *mut c_char,
 ) -> Result<ResultCode, ResultCode> {
-    let table_name = unsafe { CStr::from_ptr((*table_info).tblName).to_str()? };
-    let pk_columns =
-        unsafe { slice::from_raw_parts((*table_info).pks, (*table_info).pksLen as usize) };
+    let table_name = &table_info.tbl_name;
+    let pk_columns = &table_info.pks;
     let pk_list = crate::util::as_identifier_list(pk_columns, None)?;
     let pk_new_list = crate::util::as_identifier_list(pk_columns, Some("NEW."))?;
     let pk_old_list = crate::util::as_identifier_list(pk_columns, Some("OLD."))?;
@@ -243,14 +225,13 @@ fn create_update_trigger(
 }
 
 fn update_trigger_body(
-    table_info: *mut crsql_TableInfo,
+    table_info: &TableInfo,
     table_name: &str,
     pk_list: String,
     pk_new_list: String,
     any_pk_differs: String,
 ) -> Result<String, Utf8Error> {
-    let non_pk_columns =
-        unsafe { slice::from_raw_parts((*table_info).nonPks, (*table_info).nonPksLen as usize) };
+    let non_pk_columns = &table_info.non_pks;
     let mut trigger_components = vec![];
 
     // If any PK is different, record a create for the row
@@ -285,7 +266,6 @@ fn update_trigger_body(
     ));
 
     for col in non_pk_columns {
-        let col_name = unsafe { CStr::from_ptr(col.name).to_str()? };
         trigger_components.push(format!(
             "INSERT INTO \"{table_name}__crsql_clock\" (
           {pk_list},
@@ -310,8 +290,8 @@ fn update_trigger_body(
             table_name = crate::util::escape_ident(table_name),
             pk_list = pk_list,
             pk_new_list = pk_new_list,
-            col_name_val = crate::util::escape_ident_as_value(col_name),
-            col_name_ident = crate::util::escape_ident(col_name)
+            col_name_val = crate::util::escape_ident_as_value(&col.name),
+            col_name_ident = crate::util::escape_ident(&col.name)
         ))
     }
 
@@ -320,12 +300,11 @@ fn update_trigger_body(
 
 fn create_delete_trigger(
     db: *mut sqlite3,
-    table_info: *mut crsql_TableInfo,
+    table_info: &TableInfo,
     _err: *mut *mut c_char,
 ) -> Result<ResultCode, ResultCode> {
-    let table_name = unsafe { CStr::from_ptr((*table_info).tblName).to_str()? };
-    let pk_columns =
-        unsafe { slice::from_raw_parts((*table_info).pks, (*table_info).pksLen as usize) };
+    let table_name = &table_info.tbl_name;
+    let pk_columns = &table_info.pks;
     let pk_list = crate::util::as_identifier_list(pk_columns, None)?;
     let pk_old_list = crate::util::as_identifier_list(pk_columns, Some("OLD."))?;
     let pk_where_list = crate::util::pk_where_list(pk_columns, Some("OLD."))?;

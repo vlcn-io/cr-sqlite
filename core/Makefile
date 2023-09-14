@@ -71,13 +71,11 @@ TARGET_TEST_ASAN=$(prefix)/test-asan
 # js/browser/wa-sqlite/Makefile, deps/sqlite/GNUMakefile, core/binding.gyp, core/Makefile
 ext_files=src/crsqlite.c \
 	src/util.c \
-	src/tableinfo.c \
 	src/changes-vtab.c \
 	src/ext-data.c \
 	src/get-table.c
 ext_headers=src/crsqlite.h \
 	src/util.h \
-	src/tableinfo.h \
 	src/changes-vtab.h \
 	src/ext-data.h
 

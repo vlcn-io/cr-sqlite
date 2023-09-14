@@ -1,5 +1,5 @@
+use crate::c::crsql_ExtData;
 use crate::c::CPointer;
-use crate::c::{crsql_ColumnInfo, crsql_TableInfo};
 use crate::util::Countable;
 use alloc::boxed::Box;
 use alloc::ffi::CString;
@@ -7,6 +7,7 @@ use alloc::format;
 use alloc::vec;
 use alloc::vec::Vec;
 use core::ffi::c_char;
+use core::mem;
 use num_traits::ToPrimitive;
 use sqlite_nostd as sqlite;
 use sqlite_nostd::Connection;
@@ -15,9 +16,29 @@ use sqlite_nostd::StrRef;
 
 pub struct TableInfo {
     pub tbl_name: String,
-    pub base_columns: Vec<ColumnInfo>,
     pub pks: Vec<ColumnInfo>,
-    pub nonPks: Vec<ColumnInfo>,
+    pub non_pks: Vec<ColumnInfo>,
+}
+
+pub struct ColumnInfo {
+    pub cid: i32,
+    pub name: String,
+    pub type_: String,
+    pub notnull: bool,
+    // > 0 if it is a primary key columns
+    // the value refers to the position in the `PRIMARY KEY (cols...)` statement
+    pub pk: i32,
+}
+
+#[no_mangle]
+pub extern "C" fn crsql_init_table_info_vec(ext_data: *mut crsql_ExtData) {
+    let vec = vec![];
+    let (ptr, len, cap) = vec.into_raw_parts();
+    unsafe {
+        (*ext_data).tableInfos = ptr;
+        (*ext_data).tableInfosLen = len;
+        (*ext_data).tableInfosCap = cap;
+    }
 }
 
 /**
@@ -29,9 +50,8 @@ pub struct TableInfo {
 pub fn pull_table_info(
     db: *mut sqlite::sqlite3,
     table: &str,
-    table_info: *mut *mut crsql_TableInfo,
     err: *mut *mut c_char,
-) -> Result<ResultCode, ResultCode> {
+) -> Result<TableInfo, ResultCode> {
     let sql = format!("SELECT count(*) FROM pragma_table_info('{table}')");
     let columns_len = match db.prepare_v2(&sql).and_then(|stmt| {
         stmt.step()?;
@@ -50,12 +70,12 @@ pub fn pull_table_info(
     );
     let column_infos = match db.prepare_v2(&sql) {
         Ok(stmt) => {
-            let mut cols: Vec<crsql_ColumnInfo> = vec![];
+            let mut cols: Vec<ColumnInfo> = vec![];
 
             while stmt.step()? == ResultCode::ROW {
-                cols.push(crsql_ColumnInfo {
-                    type_: stmt.column_text(2).map_err(free_cols(&cols))?.into_c_ptr(),
-                    name: stmt.column_text(1).map_err(free_cols(&cols))?.into_c_ptr(),
+                cols.push(ColumnInfo {
+                    type_: stmt.column_text(2)?.to_string(),
+                    name: stmt.column_text(1)?.to_string(),
                     notnull: stmt.column_int(3)?,
                     cid: stmt.column_int(0)?,
                     pk: stmt.column_int(4)?,
@@ -64,7 +84,7 @@ pub fn pull_table_info(
 
             if cols.len() != columns_len {
                 err.set("Number of fetched columns did not match expected number of columns");
-                return Err(free_cols(&cols)(ResultCode::ERROR));
+                return Err(ResultCode::ERROR);
             }
             cols
         }
@@ -78,54 +98,11 @@ pub fn pull_table_info(
         column_infos.clone().into_iter().partition(|x| x.pk > 0);
     pks.sort_by_key(|x| x.pk);
 
-    unsafe {
-        *table_info = crsql_TableInfo {
-            tblName: table.into_c_ptr(),
-            nonPksLen: non_pks.len() as i32,
-            nonPks: non_pks.into_c_ptr(),
-            pksLen: pks.len() as i32,
-            pks: pks.into_c_ptr(),
-        }
-        .into_c_ptr();
-    }
-
-    return Ok(ResultCode::OK);
-}
-
-fn free_cols<'a>(cols: &'a Vec<crsql_ColumnInfo>) -> impl Fn(ResultCode) -> ResultCode + 'a {
-    move |err: ResultCode| {
-        for info in cols {
-            drop(unsafe { CString::from_raw(info.type_) });
-            drop(unsafe { CString::from_raw(info.name) });
-        }
-        err
-    }
-}
-
-pub unsafe fn free_table_info(table_info: *mut crsql_TableInfo) {
-    if table_info.is_null() {
-        return;
-    }
-
-    let info = *table_info;
-    if !info.tblName.is_null() {
-        drop(CString::from_raw(info.tblName));
-    }
-    if !info.pks.is_null() {
-        free_cols(&Vec::from_raw_parts(
-            info.pks,
-            info.pksLen as usize,
-            info.pksLen as usize,
-        ))(ResultCode::OK);
-    }
-    if !info.nonPks.is_null() {
-        free_cols(&Vec::from_raw_parts(
-            info.nonPks,
-            info.nonPksLen as usize,
-            info.nonPksLen as usize,
-        ))(ResultCode::OK);
-    }
-    drop(Box::from_raw(table_info));
+    return Ok(TableInfo {
+        tbl_name: table.to_string(),
+        pks,
+        non_pks,
+    });
 }
 
 pub fn is_table_compatible(

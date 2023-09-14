@@ -4,10 +4,11 @@ use crate::changes_vtab_write::crsql_merge_insert;
 use crate::stmt_cache::{
     get_cache_key, get_cached_stmt, reset_cached_stmt, set_cached_stmt, CachedStmtType,
 };
+use crate::tableinfo::TableInfo;
 use alloc::format;
 use alloc::string::String;
 use core::ffi::{c_char, c_int, CStr};
-use core::mem::forget;
+use core::mem::{self, forget};
 use core::ptr::null_mut;
 use core::slice;
 
@@ -370,28 +371,27 @@ unsafe fn changes_next(
         .column_int64(ClockUnionColumn::RowId as i32);
     (*cursor).dbVersion = db_version;
 
-    let tbl_info_index = crate::c::crsql_indexofTableInfo(
-        (*(*(*cursor).pTab).pExtData).zpTableInfos,
+    let tbl_infos = mem::ManuallyDrop::new(Vec::from_raw_parts(
+        (*(*(*cursor).pTab).pExtData).tableInfos as *mut TableInfo,
         (*(*(*cursor).pTab).pExtData).tableInfosLen,
-        // this should be safe since the underlying memory from column_text is null terminated at slice_len + 1.
-        tbl.as_ptr() as *const c_char,
-    );
+        (*(*(*cursor).pTab).pExtData).tableInfosCap,
+    ));
+    // TODO: will this work given `insert_tbl` is null termed?
+    let tbl_info_index = tbl_infos.iter().position(|&x| x.tbl_name == tbl);
 
-    if tbl_info_index < 0 {
+    if tbl_info_index.is_none() {
         let err = CString::new(format!("could not find schema for table {}", tbl))?;
         (*vtab).zErrMsg = err.into_raw();
         return Err(ResultCode::ERROR);
     }
+    // TODO: technically safe since we checked `is_none` but this should be more idiomatic
+    let tbl_info_index = tbl_info_index.unwrap();
 
-    let tbl_infos = sqlite::args!(
-        (*(*(*cursor).pTab).pExtData).tableInfosLen,
-        (*(*(*cursor).pTab).pExtData).zpTableInfos
-    );
-    let tbl_info = tbl_infos[tbl_info_index as usize];
+    let tbl_info = &tbl_infos[tbl_info_index];
     (*cursor).changesRowid = changes_rowid;
     (*cursor).tblInfoIdx = tbl_info_index;
 
-    if (*tbl_info).pksLen == 0 {
+    if tbl_info.pks.len() == 0 {
         let err = CString::new(format!("crr {} is missing primary keys", tbl))?;
         (*vtab).zErrMsg = err.into_raw();
         return Err(ResultCode::ERROR);
@@ -415,7 +415,7 @@ unsafe fn changes_next(
     };
 
     if row_stmt.is_null() {
-        let sql = row_patch_data_query(tbl_info, cid);
+        let sql = row_patch_data_query(&tbl_info, cid);
         if let Some(sql) = sql {
             let stmt = (*(*cursor).pTab)
                 .db

@@ -104,7 +104,7 @@ unsafe fn compact_post_alter(
             (*ext_data).tableInfosLen as usize,
             (*ext_data).tableInfosCap as usize,
         ));
-        let table_info = table_infos.iter().find(|&x| x.tbl_name == tbl_name_str);
+        let table_info = table_infos.iter().find(|x| x.tbl_name == tbl_name_str);
         if table_info.is_none() {
             return Err(ResultCode::ERROR);
         }

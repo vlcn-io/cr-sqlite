@@ -8,8 +8,8 @@ keywords = ["sqlite"]
 license = "Apache-2.0"
 
 [dependencies]
-sqlite_nostd = { path="../sqlite-rs-embedded/sqlite_nostd", features=["static"] }
-crsql_core = { path="../core" }
+sqlite_nostd = { path="../sqlite-rs-embedded/sqlite_nostd", features=["static", "omit_load_extension"] }
+crsql_bundle = { path="../bundle", features=["static", "omit_load_extension", "test"] }
 integration_utils = { path="../integration-utils" }
 cargo-valgrind = "2.1.0"
 

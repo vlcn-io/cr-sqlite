@@ -1,3 +1,4 @@
+extern crate crsql_bundle;
 use sqlite::ColumnType;
 use sqlite::Destructor;
 use sqlite::ManagedConnection;

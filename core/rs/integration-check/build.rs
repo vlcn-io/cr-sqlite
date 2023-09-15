@@ -2,25 +2,30 @@ use cc;
 use std::process::Command;
 
 fn main() {
-    let target = if let Ok(profile) = std::env::var("PROFILE") {
-        match profile.as_str() {
-            "debug" => "loadable_dbg",
-            "release" => "loadable",
-            _ => "loadable",
-        }
-    } else {
-        "loadable"
-    };
-
     Command::new("make")
         .current_dir("../../")
-        .arg(target)
+        .arg("./dist/sqlite3-extra.c")
         .status()
-        .expect("failed to make loadable extension");
+        .expect("failed to make sqlite3-extra.c");
 
     cc::Build::new()
-        .file("../../src/sqlite/sqlite3.c")
+        .files(vec![
+            "../../src/changes-vtab.c",
+            "../../src/crsqlite.c",
+            "../../src/ext-data.c",
+            "../../src/get-table.c",
+            "../../src/util.c",
+        ])
+        .include("../../src")
+        .compile("crsqlite");
+
+    cc::Build::new()
+        .file("../../dist/sqlite3-extra.c")
         .include("../../src/sqlite/")
+        .include("../../src")
         .flag("-DSQLITE_CORE")
+        .flag("-DSQLITE_EXTRA_INIT=core_init")
+        .flag("-DSQLITE_OMIT_LOAD_EXTENSION=1")
+        .flag("-DSQLITE_THREADSAFE=0")
         .compile("sqlite3");
 }

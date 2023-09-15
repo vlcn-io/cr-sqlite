@@ -1,6 +1,9 @@
-use std::ffi::{c_char, CString};
+use std::{
+    ffi::{c_char, CString},
+    mem,
+};
 
-use crsql_bundle::crsql_core;
+use crsql_bundle::crsql_core::{self, tableinfo::TableInfo};
 use sqlite::Connection;
 use sqlite_nostd as sqlite;
 
@@ -41,12 +44,31 @@ fn test_ensure_table_infos_are_up_to_date() {
     )
     .expect("made foo clock");
 
+    let stmt = c
+        .prepare_v2("SELECT tbl_name FROM sqlite_master WHERE type='table' AND tbl_name LIKE '%__crsql_clock'")
+        .expect("preped");
+    let r = stmt.step().expect("stepped");
+    assert_eq!(r, sqlite::ResultCode::ROW);
+
     let ext_data = unsafe { crsql_core::c::crsql_newExtData(raw_db, make_site()) };
     crsql_core::tableinfo::crsql_ensure_table_infos_are_up_to_date(
         raw_db,
         ext_data,
         make_err_ptr(),
     );
+
+    let table_infos = unsafe {
+        mem::ManuallyDrop::new(Box::from_raw((*ext_data).tableInfos as *mut Vec<TableInfo>))
+    };
+
+    assert_eq!(table_infos.len(), 1);
+    assert_eq!(table_infos[0].tbl_name, "foo");
+
+    unsafe {
+        crsql_core::c::crsql_freeExtData(ext_data);
+    };
+
+    // free ext_data since it has prepared statements
 
     // ideally we can check if it does a repull or not...
     // we could do this by mutating table infos to something unexpected and checking it is still that.

@@ -35,8 +35,6 @@ static void textNewExtData() {
   assert(pExtData->pDbVersionStmt == 0);
   // table info allocated to an empty vec
   assert(pExtData->tableInfos != 0);
-  assert(pExtData->tableInfosLen == 0);
-  assert(pExtData->tableInfosCap == 0);
 
   // data version should have been fetched
   assert(pExtData->pragmaDataVersion != -1);

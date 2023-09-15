@@ -1,10 +1,10 @@
 // Not yet fully migrated from `crsqlite.c`
 
-use core::ffi::{c_char, c_int, CStr};
-
+use alloc::boxed::Box;
 use alloc::format;
 use alloc::string::String;
 use alloc::vec::Vec;
+use core::ffi::{c_char, c_int, CStr};
 use core::mem;
 #[cfg(not(feature = "std"))]
 use num_traits::FromPrimitive;
@@ -99,11 +99,8 @@ unsafe fn compact_post_alter(
             }
             return Err(ResultCode::ERROR);
         }
-        let table_infos = mem::ManuallyDrop::new(Vec::from_raw_parts(
-            (*ext_data).tableInfos as *mut TableInfo,
-            (*ext_data).tableInfosLen as usize,
-            (*ext_data).tableInfosCap as usize,
-        ));
+        let table_infos =
+            mem::ManuallyDrop::new(Box::from_raw((*ext_data).tableInfos as *mut Vec<TableInfo>));
         let table_info = table_infos.iter().find(|x| x.tbl_name == tbl_name_str);
         if table_info.is_none() {
             return Err(ResultCode::ERROR);

@@ -1,3 +1,4 @@
+use alloc::boxed::Box;
 use alloc::ffi::CString;
 use alloc::format;
 use alloc::string::String;
@@ -591,10 +592,8 @@ unsafe fn merge_insert(
     }
 
     let insert_site_id = insert_site_id.blob();
-    let tbl_infos = mem::ManuallyDrop::new(Vec::from_raw_parts(
-        (*(*tab).pExtData).tableInfos as *mut TableInfo,
-        (*(*tab).pExtData).tableInfosLen as usize,
-        (*(*tab).pExtData).tableInfosCap as usize,
+    let tbl_infos = mem::ManuallyDrop::new(Box::from_raw(
+        (*(*tab).pExtData).tableInfos as *mut Vec<TableInfo>,
     ));
     // TODO: will this work given `insert_tbl` is null termed?
     let tbl_info_index = tbl_infos.iter().position(|x| x.tbl_name == insert_tbl);

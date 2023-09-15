@@ -68,8 +68,6 @@ fn test_ensure_table_infos_are_up_to_date() {
         crsql_core::c::crsql_freeExtData(ext_data);
     };
 
-    // free ext_data since it has prepared statements
-
     // ideally we can check if it does a repull or not...
     // we could do this by mutating table infos to something unexpected and checking it is still that.
     decrement_counter();

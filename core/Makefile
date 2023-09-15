@@ -146,8 +146,6 @@ ifdef CI_MAYBE_TARGET
 	endif
 endif
 
-# TODO: may need to override crate type now: cargo rustc -- --crate-type=staticlib
-# https://stackoverflow.com/questions/65012484/is-it-possible-to-override-the-crate-type-specified-in-cargo-toml-from-the-comma
 $(rs_lib_dbg_static_cpy): FORCE $(dbg_prefix)
 	cd ./rs/bundle && cargo build $(RS_TARGET) --features static,omit_load_extension $(rs_build_flags)
 	cp $(rs_lib_dbg_static) $(rs_lib_dbg_static_cpy)

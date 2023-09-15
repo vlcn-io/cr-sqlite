@@ -8,7 +8,7 @@ use core::alloc::GlobalAlloc;
 use core::alloc::Layout;
 use core::ffi::{c_char, c_int};
 use core::panic::PanicInfo;
-use crsql_core;
+pub use crsql_core;
 use crsql_core::sqlite3_crsqlcore_init;
 use crsql_fractindex_core::sqlite3_crsqlfractionalindex_init;
 use sqlite_nostd as sqlite;
@@ -21,16 +21,17 @@ static ALLOCATOR: SQLite3Allocator = SQLite3Allocator {};
 
 // This must be our panic handler for WASM builds. For simplicity, we make it our panic handler for
 // all builds. Abort is also more portable than unwind, enabling us to go to more embedded use cases.
+#[cfg(not(feature = "test"))]
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
     core::intrinsics::abort()
 }
 
-#[cfg(not(target_family = "wasm"))]
+#[cfg(all(not(target_family = "wasm"), not(feature = "test")))]
 #[lang = "eh_personality"]
 extern "C" fn eh_personality() {}
 
-#[cfg(target_family = "wasm")]
+#[cfg(all(not(target_family = "wasm"), not(feature = "test")))]
 #[no_mangle]
 pub fn __rust_alloc_error_handler(_: Layout) -> ! {
     core::intrinsics::abort()

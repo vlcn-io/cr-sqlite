@@ -4,8 +4,8 @@ use sqlite_nostd as sqlite;
 
 pub fn opendb() -> Result<CRConnection, ResultCode> {
     let connection = sqlite::open(sqlite::strlit!(":memory:"))?;
-    connection.enable_load_extension(true)?;
-    connection.load_extension("../../dbg/crsqlite", None)?;
+    // connection.enable_load_extension(true)?;
+    // connection.load_extension("../../dbg/crsqlite", None)?;
     Ok(CRConnection { db: connection })
 }
 

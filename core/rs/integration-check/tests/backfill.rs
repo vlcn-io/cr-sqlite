@@ -1,3 +1,4 @@
+extern crate crsql_bundle;
 // Test that we can backfill old tables
 // the bulk of these tests have been moved to the python code
 // given integration tests are much more easily written in python

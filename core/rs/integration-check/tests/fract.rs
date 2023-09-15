@@ -1,4 +1,5 @@
-use sqlite::{Connection, ResultCode};
+extern crate crsql_bundle;
+use sqlite::Connection;
 use sqlite_nostd as sqlite;
 
 #[test]

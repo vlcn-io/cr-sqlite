@@ -105,6 +105,10 @@ extern "C" {
         pExtData: *mut crsql_ExtData,
         which: c_int,
     ) -> c_int;
+    pub fn crsql_newExtData(
+        db: *mut sqlite::sqlite3,
+        siteIdBuffer: *mut c_char,
+    ) -> *mut crsql_ExtData;
 }
 
 #[test]

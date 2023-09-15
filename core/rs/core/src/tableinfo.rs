@@ -24,14 +24,13 @@ pub struct TableInfo {
     pub tbl_name: String,
     pub pks: Vec<ColumnInfo>,
     pub non_pks: Vec<ColumnInfo>,
+    // put statement cache here, remove btreeset based cache.
 }
 
 #[derive(Clone)]
 pub struct ColumnInfo {
     pub cid: i32,
     pub name: String,
-    pub type_: String,
-    pub notnull: bool,
     // > 0 if it is a primary key columns
     // the value refers to the position in the `PRIMARY KEY (cols...)` statement
     pub pk: i32,
@@ -142,7 +141,7 @@ pub fn pull_table_info(
     };
 
     let sql = format!(
-        "SELECT \"cid\", \"name\", \"type\", \"notnull\", \"pk\"
+        "SELECT \"cid\", \"name\", \"pk\"
          FROM pragma_table_info('{table}') ORDER BY cid ASC"
     );
     let column_infos = match db.prepare_v2(&sql) {
@@ -151,11 +150,9 @@ pub fn pull_table_info(
 
             while stmt.step()? == ResultCode::ROW {
                 cols.push(ColumnInfo {
-                    type_: stmt.column_text(2)?.to_string(),
                     name: stmt.column_text(1)?.to_string(),
-                    notnull: stmt.column_int(3)? == 1,
                     cid: stmt.column_int(0)?,
-                    pk: stmt.column_int(4)?,
+                    pk: stmt.column_int(2)?,
                 });
             }
 

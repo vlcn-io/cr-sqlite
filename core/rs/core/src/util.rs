@@ -150,3 +150,11 @@ impl Countable for *mut sqlite::sqlite3 {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_slab_rowid() {}
+}

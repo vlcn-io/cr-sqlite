@@ -33,9 +33,10 @@ static void textNewExtData() {
   assert(pExtData->siteId != 0);
   // no db version extraction yet
   assert(pExtData->pDbVersionStmt == 0);
-  // no table info allocation yet
-  assert(pExtData->zpTableInfos == 0);
+  // table info allocated to an empty vec
+  assert(pExtData->tableInfos != 0);
   assert(pExtData->tableInfosLen == 0);
+  assert(pExtData->tableInfosCap == 0);
 
   // data version should have been fetched
   assert(pExtData->pragmaDataVersion != -1);

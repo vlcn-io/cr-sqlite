@@ -1,9 +1,5 @@
 extern crate alloc;
-use alloc::boxed::Box;
-use alloc::ffi::CString;
-use alloc::vec::Vec;
 use core::ffi::{c_char, c_int};
-use core::ptr::null_mut;
 #[cfg(not(feature = "std"))]
 use num_derive::FromPrimitive;
 
@@ -13,7 +9,7 @@ use sqlite_nostd as sqlite;
 
 pub static INSERT_SENTINEL: &str = "-1";
 pub static DELETE_SENTINEL: &str = "-1";
-pub static DB_VERSION_SCHEMA_VERSION: c_int = 0;
+// pub static DB_VERSION_SCHEMA_VERSION: c_int = 0;
 pub static TABLE_INFO_SCHEMA_VERSION: c_int = 1;
 
 #[derive(FromPrimitive, PartialEq, Debug)]
@@ -53,25 +49,25 @@ pub enum ChangeRowType {
 #[derive(Debug, Copy, Clone)]
 #[allow(non_snake_case, non_camel_case_types)]
 pub struct crsql_ExtData {
-    pub pPragmaSchemaVersionStmt: *mut sqlite3_stmt,
-    pub pPragmaDataVersionStmt: *mut sqlite3_stmt,
+    pub pPragmaSchemaVersionStmt: *mut sqlite::stmt,
+    pub pPragmaDataVersionStmt: *mut sqlite::stmt,
     pub pragmaDataVersion: ::core::ffi::c_int,
-    pub dbVersion: sqlite3_int64,
-    pub pendingDbVersion: sqlite3_int64,
+    pub dbVersion: sqlite::int64,
+    pub pendingDbVersion: sqlite::int64,
     pub pragmaSchemaVersion: ::core::ffi::c_int,
     pub pragmaSchemaVersionForTableInfos: ::core::ffi::c_int,
     pub siteId: *mut ::core::ffi::c_uchar,
-    pub pDbVersionStmt: *mut sqlite3_stmt,
+    pub pDbVersionStmt: *mut sqlite::stmt,
     pub tableInfos: *mut ::core::ffi::c_void,
     pub tableInfosLen: ::core::ffi::c_int,
     pub tableInfosCap: ::core::ffi::c_int,
     pub rowsImpacted: ::core::ffi::c_int,
     pub seq: ::core::ffi::c_int,
-    pub pSetSyncBitStmt: *mut sqlite3_stmt,
-    pub pClearSyncBitStmt: *mut sqlite3_stmt,
-    pub pSetSiteIdOrdinalStmt: *mut sqlite3_stmt,
-    pub pSelectSiteIdOrdinalStmt: *mut sqlite3_stmt,
-    pub pSelectClockTablesStmt: *mut sqlite3_stmt,
+    pub pSetSyncBitStmt: *mut sqlite::stmt,
+    pub pClearSyncBitStmt: *mut sqlite::stmt,
+    pub pSetSiteIdOrdinalStmt: *mut sqlite::stmt,
+    pub pSelectSiteIdOrdinalStmt: *mut sqlite::stmt,
+    pub pSelectClockTablesStmt: *mut sqlite::stmt,
     pub pStmtCache: *mut ::core::ffi::c_void,
 }
 
@@ -473,31 +469,4 @@ fn bindgen_test_layout_crsql_ExtData() {
             stringify!(pStmtCache)
         )
     );
-}
-
-pub trait CPointer<T> {
-    /**
-     * Returns a C compatible pointer to the underlying data.
-     * After calling this function, the caller is responsible for the memory.
-     */
-    fn into_c_ptr(self) -> *mut T;
-}
-
-impl<T> CPointer<T> for Vec<T> {
-    fn into_c_ptr(mut self) -> *mut T {
-        if self.len() == 0 {
-            null_mut()
-        } else {
-            self.shrink_to(0);
-            self.into_raw_parts().0
-        }
-    }
-}
-
-impl CPointer<c_char> for &str {
-    fn into_c_ptr(self) -> *mut c_char {
-        CString::new(self)
-            .map(|x| x.into_raw())
-            .unwrap_or(null_mut())
-    }
 }

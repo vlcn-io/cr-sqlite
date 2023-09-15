@@ -3,22 +3,16 @@ use crate::{tableinfo::TableInfo, util};
 use alloc::format;
 use alloc::string::String;
 use alloc::vec;
-use core::{
-    ffi::{c_char, c_int, CStr},
-    ptr::null_mut,
-    slice,
-};
+use alloc::vec::Vec;
 use sqlite::ResultCode;
 
 use sqlite_nostd as sqlite;
 
 fn crsql_changes_query_for_table(table_info: &TableInfo) -> Result<String, ResultCode> {
-    unsafe {
-        if table_info.pks.len() == 0 {
-            // no primary keys? We can't get changes for a table w/o primary keys...
-            // this should be an impossible case.
-            return Err(ResultCode::ABORT);
-        }
+    if table_info.pks.len() == 0 {
+        // no primary keys? We can't get changes for a table w/o primary keys...
+        // this should be an impossible case.
+        return Err(ResultCode::ABORT);
     }
 
     let pk_list = crate::util::as_identifier_list(&table_info.pks, Some("t1."))?;

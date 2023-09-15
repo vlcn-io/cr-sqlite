@@ -1,14 +1,14 @@
+use crate::alloc::string::ToString;
 use crate::c::crsql_ExtData;
 use crate::c::crsql_fetchPragmaSchemaVersion;
-use crate::c::CPointer;
 use crate::c::TABLE_INFO_SCHEMA_VERSION;
 use crate::util::Countable;
-use alloc::boxed::Box;
-use alloc::ffi::CString;
 use alloc::format;
+use alloc::string::String;
 use alloc::vec;
 use alloc::vec::Vec;
 use core::ffi::c_char;
+use core::ffi::c_int;
 use core::mem;
 use num_traits::ToPrimitive;
 use sqlite_nostd as sqlite;
@@ -23,6 +23,7 @@ pub struct TableInfo {
     pub non_pks: Vec<ColumnInfo>,
 }
 
+#[derive(Clone)]
 pub struct ColumnInfo {
     pub cid: i32,
     pub name: String,
@@ -39,14 +40,14 @@ pub extern "C" fn crsql_init_table_info_vec(ext_data: *mut crsql_ExtData) {
     let (ptr, len, cap) = vec.into_raw_parts();
     unsafe {
         (*ext_data).tableInfos = ptr;
-        (*ext_data).tableInfosLen = len;
-        (*ext_data).tableInfosCap = cap;
+        (*ext_data).tableInfosLen = len as i32;
+        (*ext_data).tableInfosCap = cap as i32;
     }
 }
 
 #[no_mangle]
 pub extern "C" fn crsql_ensure_table_infos_are_up_to_date(
-    db: *mut sqlite3,
+    db: *mut sqlite::sqlite3,
     ext_data: *mut crsql_ExtData,
     err: *mut *mut c_char,
 ) -> c_int {
@@ -60,8 +61,8 @@ pub extern "C" fn crsql_ensure_table_infos_are_up_to_date(
     let mut table_infos = unsafe {
         mem::ManuallyDrop::new(Vec::from_raw_parts(
             (*ext_data).tableInfos as *mut TableInfo,
-            (*ext_data).tableInfosLen,
-            (*ext_data).tableInfosCap,
+            (*ext_data).tableInfosLen as usize,
+            (*ext_data).tableInfosCap as usize,
         ))
     };
 
@@ -69,7 +70,7 @@ pub extern "C" fn crsql_ensure_table_infos_are_up_to_date(
         table_infos.clear();
         match pull_all_table_infos(db, ext_data, err) {
             Ok(new_table_infos) => {
-                table_infos.extend(new_table_infos.iter());
+                table_infos.extend(new_table_infos.into_iter());
                 return ResultCode::OK as c_int;
             }
             Err(e) => {
@@ -82,7 +83,7 @@ pub extern "C" fn crsql_ensure_table_infos_are_up_to_date(
 }
 
 fn pull_all_table_infos(
-    db: *mut sqlite3,
+    db: *mut sqlite::sqlite3,
     ext_data: *mut crsql_ExtData,
     err: *mut *mut c_char,
 ) -> Result<Vec<TableInfo>, ResultCode> {
@@ -94,11 +95,11 @@ fn pull_all_table_infos(
                 clock_table_names.push(stmt.column_text(0).to_string());
             }
             Ok(ResultCode::DONE) => {
-                stmt.reset();
+                stmt.reset()?;
                 break;
             }
             Ok(rc) | Err(rc) => {
-                stmt.reset();
+                stmt.reset()?;
                 return Err(rc);
             }
         }
@@ -147,7 +148,7 @@ pub fn pull_table_info(
                 cols.push(ColumnInfo {
                     type_: stmt.column_text(2)?.to_string(),
                     name: stmt.column_text(1)?.to_string(),
-                    notnull: stmt.column_int(3)?,
+                    notnull: stmt.column_int(3)? == 1,
                     cid: stmt.column_int(0)?,
                     pk: stmt.column_int(4)?,
                 });
@@ -165,8 +166,7 @@ pub fn pull_table_info(
         }
     };
 
-    let (mut pks, non_pks): (Vec<_>, Vec<_>) =
-        column_infos.clone().into_iter().partition(|x| x.pk > 0);
+    let (mut pks, non_pks): (Vec<_>, Vec<_>) = column_infos.into_iter().partition(|x| x.pk > 0);
     pks.sort_by_key(|x| x.pk);
 
     return Ok(TableInfo {

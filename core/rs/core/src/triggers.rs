@@ -4,11 +4,7 @@ use alloc::string::String;
 use alloc::vec;
 use sqlite::Connection;
 
-use core::{
-    ffi::{c_char, c_int, CStr},
-    slice,
-    str::Utf8Error,
-};
+use core::{ffi::c_char, str::Utf8Error};
 
 use sqlite::{sqlite3, ResultCode};
 use sqlite_nostd as sqlite;
@@ -33,8 +29,13 @@ fn create_insert_trigger(
     let pk_list = crate::util::as_identifier_list(&table_info.pks, None)?;
     let pk_new_list = crate::util::as_identifier_list(&table_info.pks, Some("NEW."))?;
     let pk_where_list = crate::util::pk_where_list(&table_info.pks, Some("NEW."))?;
-    let trigger_body =
-        insert_trigger_body(table_info, table_name, pk_list, pk_new_list, pk_where_list)?;
+    let trigger_body = insert_trigger_body(
+        table_info,
+        &table_info.tbl_name,
+        pk_list,
+        pk_new_list,
+        pk_where_list,
+    )?;
 
     let create_trigger_sql = format!(
         "CREATE TRIGGER IF NOT EXISTS \"{table_name}__crsql_itrig\"
@@ -82,7 +83,7 @@ fn insert_trigger_body(
             __crsql_seq = crsql_get_seq() - 1,
             __crsql_site_id = NULL;",
           table_name = crate::util::escape_ident(table_name),
-          pk_list = table_info.pks,
+          pk_list = &pk_list,
           pk_new_list = pk_new_list,
           col_name = crate::c::INSERT_SENTINEL
       ));
@@ -103,7 +104,7 @@ fn insert_trigger_body(
         ));
     }
 
-    for col in table_info.non_pks {
+    for col in table_info.non_pks.iter() {
         trigger_components.push(format_insert_trigger_component(
             table_name,
             &pk_list,
@@ -161,10 +162,9 @@ fn create_update_trigger(
     let pk_where_list = crate::util::pk_where_list(pk_columns, Some("OLD."))?;
     let mut any_pk_differs = vec![];
     for c in pk_columns {
-        let name = unsafe { CStr::from_ptr(c.name).to_str()? };
         any_pk_differs.push(format!(
             "NEW.\"{col_name}\" IS NOT OLD.\"{col_name}\"",
-            col_name = crate::util::escape_ident(name)
+            col_name = crate::util::escape_ident(&c.name)
         ));
     }
     let any_pk_differs = any_pk_differs.join(" OR ");
@@ -172,7 +172,7 @@ fn create_update_trigger(
     // Changing a primary key to a new value is the same as deleting the row previously
     // identified by that primary key. TODO: share this code with `create_delete_trigger`
     for col in pk_columns {
-        let col_name = unsafe { CStr::from_ptr(col.name).to_str()? };
+        let col_name = &col.name;
         db.exec_safe(&format!(
             "CREATE TRIGGER IF NOT EXISTS \"{tbl_name}_{col_name}__crsql_utrig\"
           AFTER UPDATE OF \"{col_name}\" ON \"{tbl_name}\"

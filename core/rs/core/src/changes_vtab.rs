@@ -5,6 +5,7 @@ use crate::stmt_cache::{
     get_cache_key, get_cached_stmt, reset_cached_stmt, set_cached_stmt, CachedStmtType,
 };
 use crate::tableinfo::{crsql_ensure_table_infos_are_up_to_date, TableInfo};
+use alloc::boxed::Box;
 use alloc::format;
 use alloc::string::String;
 use alloc::vec::Vec;
@@ -290,16 +291,14 @@ unsafe fn changes_filter(
     }
 
     // nothing to fetch, no crrs exist.
-    if (*(*tab).pExtData).tableInfosLen == 0 {
+    let tbl_infos = mem::ManuallyDrop::new(Box::from_raw(
+        (*(*tab).pExtData).tableInfos as *mut Vec<TableInfo>,
+    ));
+    if tbl_infos.len() == 0 {
         return Ok(ResultCode::OK);
     }
 
-    let table_infos = mem::ManuallyDrop::new(Vec::from_raw_parts(
-        (*(*tab).pExtData).tableInfos as *mut TableInfo,
-        (*(*tab).pExtData).tableInfosLen as usize,
-        (*(*tab).pExtData).tableInfosCap as usize,
-    ));
-    let sql = changes_union_query(&table_infos, idx_str)?;
+    let sql = changes_union_query(&tbl_infos, idx_str)?;
 
     let stmt = db.prepare_v2(&sql)?;
     for (i, arg) in args.iter().enumerate() {
@@ -375,10 +374,8 @@ unsafe fn changes_next(
         .column_int64(ClockUnionColumn::RowId as i32);
     (*cursor).dbVersion = db_version;
 
-    let tbl_infos = mem::ManuallyDrop::new(Vec::from_raw_parts(
-        (*(*(*cursor).pTab).pExtData).tableInfos as *mut TableInfo,
-        (*(*(*cursor).pTab).pExtData).tableInfosLen as usize,
-        (*(*(*cursor).pTab).pExtData).tableInfosCap as usize,
+    let tbl_infos = mem::ManuallyDrop::new(Box::from_raw(
+        (*(*(*cursor).pTab).pExtData).tableInfos as *mut Vec<TableInfo>,
     ));
     // TODO: will this work given `insert_tbl` is null termed?
     let tbl_info_index = tbl_infos.iter().position(|x| x.tbl_name == tbl);

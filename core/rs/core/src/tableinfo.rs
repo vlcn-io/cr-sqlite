@@ -3,13 +3,16 @@ use crate::c::crsql_ExtData;
 use crate::c::crsql_fetchPragmaSchemaVersion;
 use crate::c::TABLE_INFO_SCHEMA_VERSION;
 use crate::util::Countable;
+use alloc::boxed::Box;
 use alloc::format;
 use alloc::string::String;
 use alloc::vec;
 use alloc::vec::Vec;
 use core::ffi::c_char;
 use core::ffi::c_int;
+use core::ffi::c_void;
 use core::mem;
+use core::mem::forget;
 use num_traits::ToPrimitive;
 use sqlite_nostd as sqlite;
 use sqlite_nostd::Connection;
@@ -36,12 +39,14 @@ pub struct ColumnInfo {
 
 #[no_mangle]
 pub extern "C" fn crsql_init_table_info_vec(ext_data: *mut crsql_ExtData) {
-    let vec = vec![];
-    let (ptr, len, cap) = vec.into_raw_parts();
+    let vec: Vec<TableInfo> = vec![];
+    unsafe { (*ext_data).tableInfos = Box::into_raw(Box::new(vec)) as *mut c_void }
+}
+
+#[no_mangle]
+pub extern "C" fn crsql_drop_table_info_vec(ext_data: *mut crsql_ExtData) {
     unsafe {
-        (*ext_data).tableInfos = ptr;
-        (*ext_data).tableInfosLen = len as i32;
-        (*ext_data).tableInfosCap = cap as i32;
+        drop(Box::from_raw((*ext_data).tableInfos as *mut Vec<TableInfo>));
     }
 }
 
@@ -58,27 +63,23 @@ pub extern "C" fn crsql_ensure_table_infos_are_up_to_date(
         return ResultCode::ERROR as c_int;
     }
 
-    let mut table_infos = unsafe {
-        mem::ManuallyDrop::new(Vec::from_raw_parts(
-            (*ext_data).tableInfos as *mut TableInfo,
-            (*ext_data).tableInfosLen as usize,
-            (*ext_data).tableInfosCap as usize,
-        ))
-    };
+    let mut table_infos = unsafe { Box::from_raw((*ext_data).tableInfos as *mut Vec<TableInfo>) };
 
     if schema_changed > 0 || table_infos.len() == 0 {
-        table_infos.clear();
         match pull_all_table_infos(db, ext_data, err) {
             Ok(new_table_infos) => {
-                table_infos.extend(new_table_infos.into_iter());
+                *table_infos = new_table_infos;
+                forget(table_infos);
                 return ResultCode::OK as c_int;
             }
             Err(e) => {
+                forget(table_infos);
                 return e as c_int;
             }
         }
     }
 
+    forget(table_infos);
     return ResultCode::OK as c_int;
 }
 
@@ -107,7 +108,11 @@ fn pull_all_table_infos(
 
     let mut ret = vec![];
     for name in clock_table_names {
-        ret.push(pull_table_info(db, &name, err)?)
+        ret.push(pull_table_info(
+            db,
+            &name[0..(name.len() - "__crsql_clock".len())],
+            err,
+        )?)
     }
 
     Ok(ret)

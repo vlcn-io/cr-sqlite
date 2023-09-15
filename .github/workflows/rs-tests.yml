@@ -37,7 +37,7 @@ jobs:
       - name: Integration Tests
         run: |
           cd core/rs/integration-check
-          cargo test
+          ./test.sh
 
       - name: Test Core
         run: |

@@ -35,7 +35,7 @@ jobs:
       - name: Integration Tests
         run: |
           cd core/rs/integration-check
-          cargo valgrind test
+          ./test-valgrind.sh
 
       - name: Test Core
         run: |

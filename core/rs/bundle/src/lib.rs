@@ -31,7 +31,7 @@ fn panic(_info: &PanicInfo) -> ! {
 #[lang = "eh_personality"]
 extern "C" fn eh_personality() {}
 
-#[cfg(all(not(target_family = "wasm"), not(feature = "test")))]
+#[cfg(target_family = "wasm")]
 #[no_mangle]
 pub fn __rust_alloc_error_handler(_: Layout) -> ! {
     core::intrinsics::abort()

@@ -7,6 +7,7 @@ use crate::stmt_cache::{
 use crate::tableinfo::{crsql_ensure_table_infos_are_up_to_date, TableInfo};
 use alloc::format;
 use alloc::string::String;
+use alloc::vec::Vec;
 use core::ffi::{c_char, c_int, CStr};
 use core::mem::{self, forget};
 use core::ptr::null_mut;
@@ -293,11 +294,12 @@ unsafe fn changes_filter(
         return Ok(ResultCode::OK);
     }
 
-    let table_infos = sqlite::args!(
-        (*(*tab).pExtData).tableInfosLen,
-        (*(*tab).pExtData).zpTableInfos
-    );
-    let sql = changes_union_query(table_infos, idx_str)?;
+    let table_infos = mem::ManuallyDrop::new(Vec::from_raw_parts(
+        (*(*tab).pExtData).tableInfos as *mut TableInfo,
+        (*(*tab).pExtData).tableInfosLen as usize,
+        (*(*tab).pExtData).tableInfosCap as usize,
+    ));
+    let sql = changes_union_query(&table_infos, idx_str)?;
 
     let stmt = db.prepare_v2(&sql)?;
     for (i, arg) in args.iter().enumerate() {
@@ -375,11 +377,11 @@ unsafe fn changes_next(
 
     let tbl_infos = mem::ManuallyDrop::new(Vec::from_raw_parts(
         (*(*(*cursor).pTab).pExtData).tableInfos as *mut TableInfo,
-        (*(*(*cursor).pTab).pExtData).tableInfosLen,
-        (*(*(*cursor).pTab).pExtData).tableInfosCap,
+        (*(*(*cursor).pTab).pExtData).tableInfosLen as usize,
+        (*(*(*cursor).pTab).pExtData).tableInfosCap as usize,
     ));
     // TODO: will this work given `insert_tbl` is null termed?
-    let tbl_info_index = tbl_infos.iter().position(|&x| x.tbl_name == tbl);
+    let tbl_info_index = tbl_infos.iter().position(|x| x.tbl_name == tbl);
 
     if tbl_info_index.is_none() {
         let err = CString::new(format!("could not find schema for table {}", tbl))?;
@@ -391,7 +393,7 @@ unsafe fn changes_next(
 
     let tbl_info = &tbl_infos[tbl_info_index];
     (*cursor).changesRowid = changes_rowid;
-    (*cursor).tblInfoIdx = tbl_info_index;
+    (*cursor).tblInfoIdx = tbl_info_index as i32;
 
     if tbl_info.pks.len() == 0 {
         let err = CString::new(format!("crr {} is missing primary keys", tbl))?;

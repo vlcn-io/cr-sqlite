@@ -1,7 +1,4 @@
-use core::{
-    ffi::{c_char, c_int, CStr},
-    mem::{self, ManuallyDrop},
-};
+use core::ffi::{c_char, c_int};
 
 use crate::{consts, tableinfo::TableInfo};
 use alloc::{ffi::CString, format};
@@ -201,7 +198,7 @@ pub fn create_clock_table(
     _err: *mut *mut c_char,
 ) -> Result<ResultCode, ResultCode> {
     let pk_list = crate::util::as_identifier_list(&table_info.pks, None)?;
-    let table_name = unsafe { CStr::from_ptr((*table_info).tblName).to_str() }?;
+    let table_name = &table_info.tbl_name;
 
     db.exec_safe(&format!(
         "CREATE TABLE IF NOT EXISTS \"{table_name}__crsql_clock\" (

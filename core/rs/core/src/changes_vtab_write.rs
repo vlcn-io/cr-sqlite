@@ -2,7 +2,7 @@ use alloc::ffi::CString;
 use alloc::format;
 use alloc::string::String;
 use alloc::vec::Vec;
-use core::ffi::{c_char, c_int, CStr};
+use core::ffi::{c_char, c_int};
 use core::mem::{self, forget};
 use core::ptr::null_mut;
 use core::slice;
@@ -221,10 +221,10 @@ fn set_winner_clock(
         }
     };
 
-    let stmt_key = get_cache_key(CachedStmtType::SetWinnerClock, tbl_name_str, None)?;
+    let stmt_key = get_cache_key(CachedStmtType::SetWinnerClock, &tbl_info.tbl_name, None)?;
 
     let set_stmt = get_cached_stmt_rt_wt(db, ext_data, stmt_key, || {
-        let pk_cols = sqlite::args!((*tbl_info).pksLen, (*tbl_info).pks);
+        let pk_cols = &tbl_info.pks;
         Ok(format!(
           "INSERT OR REPLACE INTO \"{table_name}__crsql_clock\"
             ({pk_ident_list}, __crsql_col_name, __crsql_col_version, __crsql_db_version, __crsql_seq, __crsql_site_id)
@@ -289,9 +289,9 @@ fn merge_sentinel_only_insert(
     remote_site_id: &[u8],
     remote_seq: sqlite::int64,
 ) -> Result<sqlite::int64, ResultCode> {
-    let stmt_key = get_cache_key(CachedStmtType::MergePkOnlyInsert, tbl_name_str, None)?;
+    let stmt_key = get_cache_key(CachedStmtType::MergePkOnlyInsert, &tbl_info.tbl_name, None)?;
     let merge_stmt = get_cached_stmt_rt_wt(db, ext_data, stmt_key, || {
-        let pk_cols = sqlite::args!((*tbl_info).pksLen, (*tbl_info).pks);
+        let pk_cols = &tbl_info.pks;
         Ok(format!(
             "INSERT OR IGNORE INTO \"{table_name}\" ({pk_idents}) VALUES ({pk_bindings})",
             table_name = crate::util::escape_ident(&tbl_info.tbl_name),
@@ -334,7 +334,7 @@ fn merge_sentinel_only_insert(
         zero_clocks_on_resurrect(
             db,
             ext_data,
-            tbl_name_str,
+            &tbl_info.tbl_name,
             tbl_info,
             unpacked_pks,
             remote_db_vsn,
@@ -405,7 +405,7 @@ unsafe fn merge_delete(
     let delete_stmt = get_cached_stmt_rt_wt(db, ext_data, stmt_key, || {
         Ok(format!(
             "DELETE FROM \"{table_name}\" WHERE {pk_where_list}",
-            table_name = crate::util::escape_ident(tbl_name_str),
+            table_name = crate::util::escape_ident(&tbl_info.tbl_name),
             pk_where_list = pk_where_list_from_tbl_info(tbl_info, None)?
         ))
     })?;
@@ -448,11 +448,15 @@ unsafe fn merge_delete(
 
     // Drop clocks _after_ setting the winner clock so we don't lose track of the max db_version!!
     // This must never come before `set_winner_clock`
-    let stmt_key = get_cache_key(CachedStmtType::MergeDeleteDropClocks, tbl_name_str, None)?;
+    let stmt_key = get_cache_key(
+        CachedStmtType::MergeDeleteDropClocks,
+        &tbl_info.tbl_name,
+        None,
+    )?;
     let drop_clocks_stmt = get_cached_stmt_rt_wt(db, ext_data, stmt_key, || {
         Ok(format!(
             "DELETE FROM \"{table_name}__crsql_clock\" WHERE {pk_where_list} AND __crsql_col_name IS NOT '{sentinel}'",
-            table_name = crate::util::escape_ident(tbl_name_str),
+            table_name = crate::util::escape_ident(&tbl_info.tbl_name),
             pk_where_list = pk_where_list_from_tbl_info(tbl_info, None)?,
             sentinel = crate::c::DELETE_SENTINEL
         ))
@@ -589,11 +593,11 @@ unsafe fn merge_insert(
     let insert_site_id = insert_site_id.blob();
     let tbl_infos = mem::ManuallyDrop::new(Vec::from_raw_parts(
         (*(*tab).pExtData).tableInfos as *mut TableInfo,
-        (*(*tab).pExtData).tableInfosLen,
-        (*(*tab).pExtData).tableInfosCap,
+        (*(*tab).pExtData).tableInfosLen as usize,
+        (*(*tab).pExtData).tableInfosCap as usize,
     ));
     // TODO: will this work given `insert_tbl` is null termed?
-    let tbl_info_index = tbl_infos.iter().position(|&x| x.tbl_name == insert_tbl);
+    let tbl_info_index = tbl_infos.iter().position(|x| x.tbl_name == insert_tbl);
 
     if tbl_info_index.is_none() {
         let err = CString::new(format!(
@@ -648,7 +652,7 @@ unsafe fn merge_insert(
             }
             Ok(inner_rowid) => {
                 (*(*tab).pExtData).rowsImpacted += 1;
-                *rowid = slab_rowid(tbl_info_index, inner_rowid);
+                *rowid = slab_rowid(tbl_info_index as i32, inner_rowid);
                 return Ok(ResultCode::OK);
             }
         }
@@ -686,7 +690,7 @@ unsafe fn merge_insert(
                 // a success & rowid of -1 means the merge was a no-op
                 if inner_rowid != -1 {
                     (*(*tab).pExtData).rowsImpacted += 1;
-                    *rowid = slab_rowid(tbl_info_index, inner_rowid);
+                    *rowid = slab_rowid(tbl_info_index as i32, inner_rowid);
                     return Ok(ResultCode::OK);
                 } else {
                     return Ok(ResultCode::OK);
@@ -746,7 +750,7 @@ unsafe fn merge_insert(
         Some(insert_col),
     )?;
     let merge_stmt = get_cached_stmt_rt_wt(db, (*tab).pExtData, stmt_key, || {
-        let pk_cols = sqlite::args!((*tbl_info).pksLen, (*tbl_info).pks);
+        let pk_cols = &tbl_info.pks;
         Ok(format!(
             "INSERT INTO \"{table_name}\" ({pk_list}, \"{col_name}\")
             VALUES ({pk_bind_list}, ?)
@@ -804,7 +808,7 @@ unsafe fn merge_insert(
         }
         Ok(inner_rowid) => {
             (*(*tab).pExtData).rowsImpacted += 1;
-            *rowid = slab_rowid(tbl_info_index, inner_rowid);
+            *rowid = slab_rowid(tbl_info_index as i32, inner_rowid);
             return Ok(ResultCode::OK);
         }
     }

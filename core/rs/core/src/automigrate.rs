@@ -9,7 +9,6 @@ use alloc::string::ToString;
 use alloc::vec;
 use alloc::vec::Vec;
 use core::ffi::{c_char, c_int};
-use core::mem;
 use core::slice;
 use sqlite::ColumnType;
 use sqlite_nostd as sqlite;

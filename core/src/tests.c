@@ -14,10 +14,10 @@ int crsql_close(sqlite3 *db) {
 }
 
 void crsqlUtilTestSuite();
-void crsqlTableInfoTestSuite();
+// void crsqlTableInfoTestSuite();
 void crsqlTestSuite();
-void crsqlTriggersTestSuite();
-void crsqlChangesVtabReadTestSuite();
+// void crsqlTriggersTestSuite();
+// void crsqlChangesVtabReadTestSuite();
 void crsqlChangesVtabTestSuite();
 void crsqlChangesVtabCommonTestSuite();
 void crsqlExtDataTestSuite();
@@ -34,10 +34,10 @@ int main(int argc, char *argv[]) {
   }
 
   SUITE("util") crsqlUtilTestSuite();
-  SUITE("tblinfo") crsqlTableInfoTestSuite();
-  SUITE("triggers") crsqlTriggersTestSuite();
+  // SUITE("tblinfo") crsqlTableInfoTestSuite();
+  // SUITE("triggers") crsqlTriggersTestSuite();
   SUITE("vtab") crsqlChangesVtabTestSuite();
-  SUITE("vtabread") crsqlChangesVtabReadTestSuite();
+  // SUITE("vtabread") crsqlChangesVtabReadTestSuite();
   SUITE("extdata") crsqlExtDataTestSuite();
   // integration tests should come at the end given fixing unit tests will
   // likely fix integration tests

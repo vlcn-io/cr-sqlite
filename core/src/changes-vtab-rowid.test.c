@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "consts.h"
 #include "crsqlite.h"
 
 int crsql_close(sqlite3 *db);

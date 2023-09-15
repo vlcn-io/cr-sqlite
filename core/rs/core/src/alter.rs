@@ -4,14 +4,14 @@ use core::ffi::{c_char, c_int, CStr};
 
 use alloc::format;
 use alloc::string::String;
-use core::slice;
+use alloc::vec::Vec;
+use core::mem;
 #[cfg(not(feature = "std"))]
 use num_traits::FromPrimitive;
-use sqlite_nostd as sqlite;
 use sqlite_nostd::{sqlite3, Connection, ResultCode};
 
 use crate::c::{crsql_ExtData, crsql_getDbVersion};
-use crate::tableinfo::crsql_ensure_table_infos_are_up_to_date;
+use crate::tableinfo::{crsql_ensure_table_infos_are_up_to_date, TableInfo};
 
 #[no_mangle]
 pub unsafe extern "C" fn crsql_compact_post_alter(
@@ -99,27 +99,29 @@ unsafe fn compact_post_alter(
             }
             return Err(ResultCode::ERROR);
         }
-        let table_info = crsql_findTableInfo(
-            (*ext_data).zpTableInfos,
-            (*ext_data).tableInfosLen,
-            tbl_name,
-        );
-        if table_info.is_null() {
+        let table_infos = mem::ManuallyDrop::new(Vec::from_raw_parts(
+            (*ext_data).tableInfos as *mut TableInfo,
+            (*ext_data).tableInfosLen as usize,
+            (*ext_data).tableInfosCap as usize,
+        ));
+        let table_info = table_infos.iter().find(|&x| x.tbl_name == tbl_name_str);
+        if table_info.is_none() {
             return Err(ResultCode::ERROR);
         }
+        // TODO: safe since we checked above but make more idiomatic
+        let table_info = table_info.unwrap();
 
         // for each pk col, append \"%w\".\"%w\" = \"%w__crsql_clock\".\"%w\"
         // to the where clause then close the statement.
-        let pk_cols = sqlite::args!((*table_info).pksLen, (*table_info).pks);
-        for (i, col) in pk_cols.iter().enumerate() {
+        for (i, col) in table_info.pks.iter().enumerate() {
             if i > 0 {
                 sql.push_str(" AND ");
             }
-            let col_name_str = CStr::from_ptr((*col).name).to_str()?;
+
             sql.push_str(&format!(
                 "\"{tbl_name}\".\"{col_name}\" = \"{tbl_name}__crsql_clock\".\"{col_name}\"",
                 tbl_name = tbl_name_str,
-                col_name = col_name_str,
+                col_name = &col.name,
             ));
         }
         sql.push_str(" LIMIT 1)");

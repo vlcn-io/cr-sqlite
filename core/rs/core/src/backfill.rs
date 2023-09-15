@@ -1,5 +1,6 @@
 use sqlite_nostd::{sqlite3, Connection, Destructor, ManagedStmt, ResultCode};
 extern crate alloc;
+use crate::tableinfo::ColumnInfo;
 use crate::util::get_dflt_value;
 use alloc::format;
 use alloc::string::String;
@@ -11,8 +12,8 @@ use alloc::{vec, vec::Vec};
 pub fn backfill_table(
     db: *mut sqlite3,
     table: &str,
-    pk_cols: Vec<&str>,
-    non_pk_cols: Vec<&str>,
+    pk_cols: &Vec<ColumnInfo>,
+    non_pk_cols: &Vec<ColumnInfo>,
     is_commit_alter: bool,
     no_tx: bool,
 ) -> Result<ResultCode, ResultCode> {
@@ -27,14 +28,14 @@ pub fn backfill_table(
         table = crate::util::escape_ident(table),
         pk_cols = pk_cols
             .iter()
-            .map(|f| format!("t1.\"{}\"", crate::util::escape_ident(f)))
+            .map(|f| format!("t1.\"{}\"", crate::util::escape_ident(&f.name)))
             .collect::<Vec<_>>()
             .join(", "),
         pk_where_conditions = pk_cols
             .iter()
             .map(|f| format!(
                 "t1.\"{col_name}\" IS t2.\"{col_name}\"",
-                col_name = crate::util::escape_ident(f),
+                col_name = crate::util::escape_ident(&f.name),
             ))
             .collect::<Vec<_>>()
             .join(" AND "),
@@ -43,7 +44,7 @@ pub fn backfill_table(
 
     let result = match stmt {
         Ok(stmt) => {
-            create_clock_rows_from_stmt(stmt, db, table, &pk_cols, &non_pk_cols, is_commit_alter)
+            create_clock_rows_from_stmt(stmt, db, table, pk_cols, non_pk_cols, is_commit_alter)
         }
         Err(e) => Err(e),
     };
@@ -56,7 +57,7 @@ pub fn backfill_table(
         return Err(e);
     }
 
-    if let Err(e) = backfill_missing_columns(db, table, &pk_cols, &non_pk_cols, is_commit_alter) {
+    if let Err(e) = backfill_missing_columns(db, table, pk_cols, non_pk_cols, is_commit_alter) {
         if !no_tx {
             db.exec_safe("ROLLBACK TO backfill")?;
         }
@@ -79,8 +80,8 @@ fn create_clock_rows_from_stmt(
     read_stmt: ManagedStmt,
     db: *mut sqlite3,
     table: &str,
-    pk_cols: &Vec<&str>,
-    non_pk_cols: &Vec<&str>,
+    pk_cols: &Vec<ColumnInfo>,
+    non_pk_cols: &Vec<ColumnInfo>,
     is_commit_alter: bool,
 ) -> Result<ResultCode, ResultCode> {
     // We do not grab nextdbversion on migration.
@@ -97,7 +98,7 @@ fn create_clock_rows_from_stmt(
         table = crate::util::escape_ident(table),
         pk_cols = pk_cols
             .iter()
-            .map(|f| format!("\"{}\"", crate::util::escape_ident(f)))
+            .map(|f| format!("\"{}\"", crate::util::escape_ident(&f.name)))
             .collect::<Vec<_>>()
             .join(", "),
         pk_values = pk_cols.iter().map(|_| "?").collect::<Vec<_>>().join(", "),
@@ -119,7 +120,7 @@ fn create_clock_rows_from_stmt(
         for col in non_pk_cols.iter() {
             // We even backfill default values since we can't differentiate between an explicit
             // reset to a default vs an implicit set to default on create. Do we? I don't think we do set defaults.
-            write_stmt.bind_text(pk_cols.len() as i32 + 1, col, Destructor::STATIC)?;
+            write_stmt.bind_text(pk_cols.len() as i32 + 1, &col.name, Destructor::STATIC)?;
             write_stmt.step()?;
             write_stmt.reset()?;
         }
@@ -147,12 +148,12 @@ fn create_clock_rows_from_stmt(
 fn backfill_missing_columns(
     db: *mut sqlite3,
     table: &str,
-    pk_cols: &Vec<&str>,
-    non_pk_cols: &Vec<&str>,
+    pk_cols: &Vec<ColumnInfo>,
+    non_pk_cols: &Vec<ColumnInfo>,
     is_commit_alter: bool,
 ) -> Result<ResultCode, ResultCode> {
     for non_pk_col in non_pk_cols {
-        fill_column(db, table, &pk_cols, non_pk_col, is_commit_alter)?;
+        fill_column(db, table, pk_cols, &non_pk_col, is_commit_alter)?;
     }
 
     Ok(ResultCode::OK)
@@ -163,14 +164,14 @@ fn backfill_missing_columns(
 fn fill_column(
     db: *mut sqlite3,
     table: &str,
-    pk_cols: &Vec<&str>,
-    non_pk_col: &str,
+    pk_cols: &Vec<ColumnInfo>,
+    non_pk_col: &ColumnInfo,
     is_commit_alter: bool,
 ) -> Result<ResultCode, ResultCode> {
     // Only fill rows for which
     // - a row does not exist for that pk combo _and_ the cid in the clock table.
     // - the value is not the default value for that column.
-    let dflt_value = get_dflt_value(db, table, non_pk_col)?;
+    let dflt_value = get_dflt_value(db, table, &non_pk_col.name)?;
     let sql = format!(
         "SELECT {pk_cols} FROM {table} as t1
           LEFT JOIN \"{table}__crsql_clock\" as t2 ON {pk_on_conditions} AND t2.__crsql_col_name = ?
@@ -178,28 +179,29 @@ fn fill_column(
         table = crate::util::escape_ident(table),
         pk_cols = pk_cols
             .iter()
-            .map(|f| format!("t1.\"{}\"", crate::util::escape_ident(f)))
+            .map(|f| format!("t1.\"{}\"", crate::util::escape_ident(&f.name)))
             .collect::<Vec<_>>()
             .join(", "),
         pk_on_conditions = pk_cols
             .iter()
             .map(|f| format!(
                 "t1.\"{}\" = t2.\"{}\"",
-                crate::util::escape_ident(f),
-                crate::util::escape_ident(f)
+                crate::util::escape_ident(&f.name),
+                crate::util::escape_ident(&f.name)
             ))
             .collect::<Vec<_>>()
             .join(" AND "),
-        first_pk = crate::util::escape_ident(pk_cols[0]),
+        first_pk = crate::util::escape_ident(&pk_cols[0].name),
         dflt_value_condition = if let Some(dflt) = dflt_value {
-            format!("AND t1.\"{}\" IS NOT {}", non_pk_col, dflt)
+            format!("AND t1.\"{}\" IS NOT {}", &non_pk_col.name, dflt)
         } else {
             String::from("")
         },
     );
     let read_stmt = db.prepare_v2(&sql)?;
-    read_stmt.bind_text(1, non_pk_col, Destructor::STATIC)?;
+    read_stmt.bind_text(1, &non_pk_col.name, Destructor::STATIC)?;
 
-    let non_pk_cols = vec![non_pk_col];
+    // TODO: rm clone?
+    let non_pk_cols = vec![non_pk_col.clone()];
     create_clock_rows_from_stmt(read_stmt, db, table, pk_cols, &non_pk_cols, is_commit_alter)
 }

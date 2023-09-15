@@ -5,7 +5,7 @@ use alloc::format;
 use alloc::string::String;
 use alloc::vec;
 use alloc::vec::Vec;
-use core::{ffi::CStr, str::Utf8Error};
+use core::str::Utf8Error;
 use sqlite::{sqlite3, ColumnType, Connection, ResultCode};
 use sqlite_nostd as sqlite;
 

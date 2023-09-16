@@ -7,7 +7,6 @@
 
 #include "consts.h"
 #include "rust.h"
-#include "util.h"
 
 #ifndef CHECK_OK
 #define CHECK_OK         \

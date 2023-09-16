@@ -42,6 +42,25 @@ pub fn get_dflt_value(
     return Ok(Some(String::from(stmt.column_text(0)?)));
 }
 
+pub fn get_db_version_union_query(tbl_names: &Vec<String>) -> String {
+    let unions_str = tbl_names
+        .iter()
+        .map(|tbl_name| {
+            format!(
+                "SELECT max(__crsql_db_version) as version FROM \"{}\"",
+                escape_ident(tbl_name),
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(" UNION ALL ");
+
+    return format!(
+        "SELECT max(version) as version FROM ({} UNION SELECT value as
+        version FROM crsql_master WHERE key = 'pre_compact_dbversion')",
+        unions_str
+    );
+}
+
 pub fn slab_rowid(idx: i32, rowid: sqlite::int64) -> sqlite::int64 {
     if idx < 0 {
         return -1;
@@ -174,5 +193,15 @@ mod tests {
         assert_eq!(foo_slab, 1);
         assert_eq!(bar_slab, 2 + crate::consts::ROWID_SLAB_SIZE);
         assert_eq!(baz_slab, 3 + crate::consts::ROWID_SLAB_SIZE * 2);
+    }
+
+    #[test]
+    fn test_get_db_version_union_query() {
+        let tbl_names = vec!["foo".to_string(), "bar".to_string(), "baz".to_string()];
+        let union = get_db_version_union_query(&tbl_names);
+        assert_eq!(
+            union,
+            "SELECT max(version) as version FROM (SELECT max(__crsql_db_version) as version FROM \"foo\" UNION ALL SELECT max(__crsql_db_version) as version FROM \"bar\" UNION ALL SELECT max(__crsql_db_version) as version FROM \"baz\" UNION SELECT value as\n        version FROM crsql_master WHERE key = 'pre_compact_dbversion')"
+        );
     }
 }

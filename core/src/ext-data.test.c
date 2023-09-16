@@ -213,7 +213,7 @@ static void testRecreateDbVersionStmt() {
   unsigned char *siteIdBuffer = sqlite3_malloc(SITE_ID_LEN * sizeof(char *));
   crsql_ExtData *pExtData = crsql_newExtData(db, siteIdBuffer);
 
-  rc = crsql_recreateDbVersionStmt(db, pExtData);
+  rc = crsql_recreate_db_version_stmt(db, pExtData);
 
   // there are no clock tables yet. nothing to create.
   assert(rc == -1);
@@ -222,12 +222,12 @@ static void testRecreateDbVersionStmt() {
   sqlite3_exec(db, "CREATE TABLE foo (a primary key, b);", 0, 0, 0);
   sqlite3_exec(db, "SELECT crsql_as_crr('foo')", 0, 0, 0);
 
-  rc = crsql_recreateDbVersionStmt(db, pExtData);
+  rc = crsql_recreate_db_version_stmt(db, pExtData);
   assert(rc == 0);
   assert(pExtData->pDbVersionStmt != 0);
 
   // recreating while a created statement exists isn't an error
-  rc = crsql_recreateDbVersionStmt(db, pExtData);
+  rc = crsql_recreate_db_version_stmt(db, pExtData);
   assert(rc == 0);
   assert(pExtData->pDbVersionStmt != 0);
 

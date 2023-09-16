@@ -11,7 +11,6 @@ SQLITE_EXTENSION_INIT1
 #include "consts.h"
 #include "ext-data.h"
 #include "rust.h"
-#include "util.h"
 
 // see
 // https://github.com/chromium/chromium/commit/579b3dd0ea41a40da8a61ab87a8b0bc39e158998

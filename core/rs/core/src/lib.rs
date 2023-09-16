@@ -15,6 +15,7 @@ mod compare_values;
 mod consts;
 mod create_cl_set_vtab;
 mod create_crr;
+mod ext_data;
 mod is_crr;
 mod pack_columns;
 mod stmt_cache;

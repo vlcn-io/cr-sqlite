@@ -80,6 +80,13 @@ int syncLeftToRight(sqlite3 *db1, sqlite3 *db2, sqlite3_int64 since) {
   return SQLITE_OK;
 }
 
+static char *crsql_strdup(const char *s) {
+  size_t l = strlen(s);
+  char *d = sqlite3_malloc(l + 1);
+  if (!d) return NULL;
+  return memcpy(d, s, l + 1);
+}
+
 static char *getQuotedSiteId(sqlite3 *db) {
   sqlite3_stmt *pStmt = 0;
   int rc = SQLITE_OK;

@@ -8,29 +8,6 @@
 #include "consts.h"
 #include "crsqlite.h"
 
-size_t crsql_strnlen(const char *s, size_t n) {
-  const char *p = memchr(s, 0, n);
-  return p ? p - s : n;
-}
-
-// TODO: I don't think we need these crsql_ specific ones anymore now that we've
-// set the allocator symbol in the WASM builds
-char *crsql_strndup(const char *s, size_t n) {
-  size_t l = crsql_strnlen(s, n);
-  char *d = sqlite3_malloc(l + 1);
-  if (!d) return NULL;
-  memcpy(d, s, l);
-  d[l] = 0;
-  return d;
-}
-
-char *crsql_strdup(const char *s) {
-  size_t l = strlen(s);
-  char *d = sqlite3_malloc(l + 1);
-  if (!d) return NULL;
-  return memcpy(d, s, l + 1);
-}
-
 static char *joinHelper(char **in, size_t inlen, size_t inpos, size_t accum) {
   if (inpos == inlen) {
     return strcpy((char *)sqlite3_malloc(accum + 1) + accum, "");
@@ -41,9 +18,6 @@ static char *joinHelper(char **in, size_t inlen, size_t inpos, size_t accum) {
   }
 }
 
-// DO NOT dupe the memory!
-const char *crsql_identity(const char *x) { return x; }
-
 /**
  * @brief Join an array of strings into a single string
  *
@@ -53,59 +27,6 @@ const char *crsql_identity(const char *x) { return x; }
  */
 char *crsql_join(char **in, size_t inlen) {
   return joinHelper(in, inlen, 0, 0);
-}
-
-void crsql_joinWith(char *dest, char **src, size_t srcLen, char delim) {
-  int j = 0;
-  for (size_t i = 0; i < srcLen; ++i) {
-    // copy mapped thing into ret at offset j.
-    strcpy(dest + j, src[i]);
-    // bump up j for next str.
-    j += strlen(src[i]);
-
-    // not the last element? then we need the separator
-    if (i < srcLen - 1) {
-      dest[j] = delim;
-      j += 1;
-    }
-  }
-}
-
-char *crsql_join2(char *(*map)(const char *), char **in, size_t len,
-                  char *delim) {
-  if (len == 0) {
-    return 0;
-  }
-
-  char **toJoin = sqlite3_malloc(len * sizeof(char *));
-  int resultLen = 0;
-  char *ret = 0;
-  for (size_t i = 0; i < len; ++i) {
-    toJoin[i] = map(in[i]);
-    resultLen += strlen(toJoin[i]);
-  }
-  resultLen += (len - 1) * strlen(delim);
-  ret = sqlite3_malloc((resultLen + 1) * sizeof(char));
-  ret[resultLen] = '\0';
-
-  int j = 0;
-  for (size_t i = 0; i < len; ++i) {
-    // copy mapped thing into ret at offset j.
-    strcpy(ret + j, toJoin[i]);
-    // bump up j for next str.
-    j += strlen(toJoin[i]);
-
-    // not the last element? then we need the separator
-    if (i < len - 1) {
-      strcpy(ret + j, delim);
-      j += strlen(delim);
-    }
-
-    sqlite3_free(toJoin[i]);
-  }
-  sqlite3_free(toJoin);
-
-  return ret;
 }
 
 /**
@@ -151,27 +72,4 @@ char *crsql_getDbVersionUnionQuery(int numRows, char **tableNames) {
       unionsStr);
   // %z frees unionsStr https://www.sqlite.org/printf.html#percentz
   return ret;
-}
-
-int crsql_getCount(sqlite3 *db, char *zSql) {
-  int rc = SQLITE_OK;
-  int count = 0;
-  sqlite3_stmt *pStmt = 0;
-
-  rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
-  if (rc != SQLITE_OK) {
-    sqlite3_finalize(pStmt);
-    return -1 * rc;
-  }
-
-  rc = sqlite3_step(pStmt);
-  if (rc != SQLITE_ROW) {
-    sqlite3_finalize(pStmt);
-    return -1 * rc;
-  }
-
-  count = sqlite3_column_int(pStmt, 0);
-  sqlite3_finalize(pStmt);
-
-  return count;
 }

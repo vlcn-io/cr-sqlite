@@ -6,7 +6,7 @@
 mod alter;
 mod automigrate;
 mod backfill;
-mod bootstrap;
+pub mod bootstrap;
 pub mod c;
 mod changes_vtab;
 mod changes_vtab_read;

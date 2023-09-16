@@ -11,7 +11,6 @@ use alloc::vec::Vec;
 use core::ffi::c_char;
 use core::ffi::c_int;
 use core::ffi::c_void;
-use core::mem;
 use core::mem::forget;
 use num_traits::ToPrimitive;
 use sqlite_nostd as sqlite;

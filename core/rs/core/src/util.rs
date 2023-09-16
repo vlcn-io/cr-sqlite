@@ -156,5 +156,23 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_slab_rowid() {}
+    fn test_slab_rowid() {
+        let foo_slab = slab_rowid(0, 1);
+        let bar_slab = slab_rowid(1, 2);
+        let baz_slab = slab_rowid(2, 3);
+
+        assert_eq!(foo_slab, 1);
+        assert_eq!(bar_slab, 2 + crate::consts::ROWID_SLAB_SIZE);
+        assert_eq!(baz_slab, 3 + crate::consts::ROWID_SLAB_SIZE * 2);
+        assert_eq!(slab_rowid(0, crate::consts::ROWID_SLAB_SIZE), 0);
+        assert_eq!(slab_rowid(0, crate::consts::ROWID_SLAB_SIZE + 1), 1);
+
+        let foo_slab = slab_rowid(0, crate::consts::ROWID_SLAB_SIZE + 1);
+        let bar_slab = slab_rowid(1, crate::consts::ROWID_SLAB_SIZE + 2);
+        let baz_slab = slab_rowid(2, crate::consts::ROWID_SLAB_SIZE * 2 + 3);
+
+        assert_eq!(foo_slab, 1);
+        assert_eq!(bar_slab, 2 + crate::consts::ROWID_SLAB_SIZE);
+        assert_eq!(baz_slab, 3 + crate::consts::ROWID_SLAB_SIZE * 2);
+    }
 }

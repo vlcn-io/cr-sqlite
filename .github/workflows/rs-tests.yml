@@ -37,7 +37,9 @@ jobs:
       - name: Integration Tests
         run: |
           cd core/rs/integration-check
-          ./test.sh
+          mv ../bundle/Cargo.toml ../bundle/Cargo.toml.bk
+          mv ../bundle/Cargo.toml.integration-test ../bundle/Cargo.toml
+          cargo test
 
       - name: Test Core
         run: |

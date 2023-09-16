@@ -8,7 +8,6 @@
 #include "crsqlite.h"
 #include "ext-data.h"
 #include "rust.h"
-#include "util.h"
 
 int crsql_changes_next(sqlite3_vtab_cursor *cur);
 

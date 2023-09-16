@@ -13,8 +13,6 @@ fn main() {
             "../../src/changes-vtab.c",
             "../../src/crsqlite.c",
             "../../src/ext-data.c",
-            "../../src/get-table.c",
-            "../../src/util.c",
         ])
         .include("../../src")
         .compile("crsqlite");

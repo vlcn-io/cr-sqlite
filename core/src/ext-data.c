@@ -1,8 +1,6 @@
 #include "ext-data.h"
 
 #include "consts.h"
-#include "get-table.h"
-#include "util.h"
 
 void crsql_init_stmt_cache(crsql_ExtData *pExtData);
 void crsql_clear_stmt_cache(crsql_ExtData *pExtData);
@@ -152,44 +150,6 @@ int crsql_fetchPragmaDataVersion(sqlite3 *db, crsql_ExtData *pExtData) {
   return 0;
 }
 
-int crsql_recreateDbVersionStmt(sqlite3 *db, crsql_ExtData *pExtData) {
-  char *zSql = 0;
-  char **rClockTableNames = 0;
-  int rNumRows = 0;
-  int rNumCols = 0;
-  int rc = SQLITE_OK;
-
-  sqlite3_finalize(pExtData->pDbVersionStmt);
-  pExtData->pDbVersionStmt = 0;
-
-  crsql_get_table(db, CLOCK_TABLES_SELECT, &rClockTableNames, &rNumRows,
-                  &rNumCols, 0);
-
-  if (rc != SQLITE_OK) {
-    crsql_free_table(rClockTableNames);
-    return rc;
-  }
-
-  if (rNumRows == 0) {
-    crsql_free_table(rClockTableNames);
-    return -1;
-  }
-
-  zSql = crsql_getDbVersionUnionQuery(rNumRows, rClockTableNames);
-  crsql_free_table(rClockTableNames);
-
-  rc = sqlite3_prepare_v3(db, zSql, -1, SQLITE_PREPARE_PERSISTENT,
-                          &(pExtData->pDbVersionStmt), 0);
-  sqlite3_free(zSql);
-
-  if (rc != SQLITE_OK) {
-    sqlite3_finalize(pExtData->pDbVersionStmt);
-    pExtData->pDbVersionStmt = 0;
-  }
-
-  return rc;
-}
-
 int crsql_fetchDbVersionFromStorage(sqlite3 *db, crsql_ExtData *pExtData,
                                     char **errmsg) {
   int rc = SQLITE_OK;
@@ -210,7 +170,7 @@ int crsql_fetchDbVersionFromStorage(sqlite3 *db, crsql_ExtData *pExtData,
   }
 
   if (bSchemaChanged > 0) {
-    rc = crsql_recreateDbVersionStmt(db, pExtData);
+    rc = crsql_recreate_db_version_stmt(db, pExtData);
     if (rc == -1) {
       // this means there are no clock tables / this is a clean db
       pExtData->dbVersion = MIN_POSSIBLE_DB_VERSION;

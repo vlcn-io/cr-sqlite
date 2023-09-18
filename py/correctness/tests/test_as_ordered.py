@@ -19,7 +19,7 @@ def test_first_insertion_prepend():
     c.commit()
 
     rows = c.execute("SELECT * FROM foo").fetchall()
-    assert (rows == [(1, 'a0', 'a')])
+    assert (rows == [(1, 'a ', 'a')])
 
 
 def test_first_insertion_append():
@@ -28,7 +28,7 @@ def test_first_insertion_append():
     c.commit()
 
     rows = c.execute("SELECT * FROM foo").fetchall()
-    assert (rows == [(1, 'a0', 'a')])
+    assert (rows == [(1, 'a ', 'a')])
 
 
 def test_middle_insertion():
@@ -39,7 +39,7 @@ def test_middle_insertion():
     c.commit()
 
     rows = c.execute("SELECT * FROM foo ORDER BY spot ASC").fetchall()
-    assert (rows == [(1, 'a0', 'list'), (2, 'a0V', 'list'), (3, 'a1', 'list')])
+    assert (rows == [(1, 'a ', 'list'), (2, 'a P', 'list'), (3, 'a!', 'list')])
 
 
 def test_front_insertion():
@@ -51,7 +51,7 @@ def test_front_insertion():
     c.commit()
 
     rows = c.execute("SELECT * FROM foo ORDER BY spot ASC").fetchall()
-    assert ([(1, 'Zz', 'list'), (2, 'a0', 'list'), (3, 'a1', 'list')] == rows)
+    assert ([(1, 'Z~', 'list'), (2, 'a ', 'list'), (3, 'a!', 'list')] == rows)
 
 
 def test_endinsertion():
@@ -63,7 +63,7 @@ def test_endinsertion():
     c.commit()
 
     rows = c.execute("SELECT * FROM foo ORDER BY spot ASC").fetchall()
-    assert (rows == [(1, 'a0', 'list'), (2, 'a1', 'list'), (3, 'a2', 'list')])
+    assert (rows == [(1, 'a ', 'list'), (2, 'a!', 'list'), (3, 'a"', 'list')])
 
 
 def test_view_first_insertion():
@@ -73,7 +73,7 @@ def test_view_first_insertion():
     c.commit()
 
     rows = c.execute("SELECT * FROM foo").fetchall()
-    assert (rows == [(1, 'a0', 'list')])
+    assert (rows == [(1, 'a ', 'list')])
 
 
 def test_view_move():
@@ -87,4 +87,4 @@ def test_view_move():
     c.execute("UPDATE foo_fractindex SET after_a = 1 WHERE a = 3")
     c.commit()
     rows = c.execute("SELECT * FROM foo ORDER BY spot ASC").fetchall()
-    assert (rows == [(1, 'a0', 'list'), (3, 'a0V', 'list'), (2, 'a1', 'list')])
+    assert (rows == [(1, 'a ', 'list'), (3, 'a P', 'list'), (2, 'a!', 'list')])

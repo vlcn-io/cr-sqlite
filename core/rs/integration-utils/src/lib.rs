@@ -1,3 +1,5 @@
+#![no_std]
+
 use core::ffi::c_char;
 use sqlite::{Connection, ManagedConnection, ResultCode};
 use sqlite_nostd as sqlite;

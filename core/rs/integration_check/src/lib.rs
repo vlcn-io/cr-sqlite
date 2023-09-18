@@ -1,18 +1,14 @@
 mod t;
 use colored::*;
+pub use crsql_bundle;
 use sqlite_nostd as sqlite;
-
-pub fn main() {
-    // sqlite::initialize().expect("initialize sqlite");
-    crsql_integration_check();
-    sqlite::shutdown();
-}
 
 /**
  * Tests in a main crate because ubuntu is seriously fucked
  * and can't find `sqlite3_malloc` when compiling it as integration tests.
  */
-fn crsql_integration_check() {
+#[no_mangle]
+pub extern "C" fn crsql_integration_check() {
     println!("Running {}", "auotmigrate".green());
     t::automigrate::run_suite().expect("automigrate suite");
     println!("Running {}", "backfill".green());

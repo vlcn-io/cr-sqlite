@@ -27,4 +27,5 @@ jobs:
       - name: Valgrind Test
         run: |
           cd core
-          make valgrind
+          make test
+          valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes dist/test

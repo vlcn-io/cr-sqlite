@@ -7,7 +7,7 @@ use sqlite_nostd as sqlite;
 // freeing data as we do some passing of destructors from rust to SQLite.
 // Complete property based tests for encode & decode exist in python.
 fn test_pack_columns() -> Result<(), ResultCode> {
-    let db = integration_utils::opendb()?;
+    let db = crate::opendb()?;
     db.db.exec_safe("CREATE TABLE foo (id PRIMARY KEY, x, y)")?;
     let insert_stmt = db.db.prepare_v2("INSERT INTO foo VALUES (?, ?, ?)")?;
     let blob: [u8; 3] = [1, 2, 3];
@@ -115,7 +115,7 @@ fn test_pack_columns() -> Result<(), ResultCode> {
 }
 
 fn test_unpack_columns() -> Result<(), ResultCode> {
-    let db = integration_utils::opendb().unwrap();
+    let db = crate::opendb().unwrap();
     db.db.exec_safe("CREATE TABLE foo (id PRIMARY KEY, x, y)")?;
     let insert_stmt = db.db.prepare_v2("INSERT INTO foo VALUES (?, ?, ?)")?;
     let blob: [u8; 3] = [1, 2, 3];

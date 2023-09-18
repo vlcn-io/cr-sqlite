@@ -12,7 +12,7 @@ Test:
 */
 
 fn create_crr_via_vtab() -> Result<(), ResultCode> {
-    let db = integration_utils::opendb()?;
+    let db = crate::opendb()?;
     let conn = &db.db;
 
     conn.exec_safe("CREATE VIRTUAL TABLE foo_schema USING CLSet (a primary key, b);")?;
@@ -25,7 +25,7 @@ fn create_crr_via_vtab() -> Result<(), ResultCode> {
 }
 
 fn destroy_crr_via_vtab() -> Result<(), ResultCode> {
-    let db = integration_utils::opendb()?;
+    let db = crate::opendb()?;
     let conn = &db.db;
 
     conn.exec_safe("CREATE VIRTUAL TABLE foo_schema USING CLSet (a primary key, b);")?;
@@ -38,7 +38,7 @@ fn destroy_crr_via_vtab() -> Result<(), ResultCode> {
 }
 
 fn create_invalid_crr() -> Result<(), ResultCode> {
-    let db = integration_utils::opendb()?;
+    let db = crate::opendb()?;
     let conn = &db.db;
 
     let result = conn.exec_safe("CREATE VIRTUAL TABLE foo_schema USING CLSet (a, b);");
@@ -52,7 +52,7 @@ fn create_invalid_crr() -> Result<(), ResultCode> {
 }
 
 fn create_if_not_exists() -> Result<(), ResultCode> {
-    let db = integration_utils::opendb()?;
+    let db = crate::opendb()?;
     let conn = &db.db;
 
     conn.exec_safe(

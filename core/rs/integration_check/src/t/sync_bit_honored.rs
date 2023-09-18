@@ -4,7 +4,7 @@ use sqlite_nostd as sqlite;
 
 // If sync bit is on, nothing gets written to clock tables for that connection.
 fn sync_bit_honored() -> Result<(), ResultCode> {
-    let db = integration_utils::opendb()?;
+    let db = crate::opendb()?;
     let conn = &db.db;
     conn.exec_safe("CREATE TABLE foo (a primary key, b);")?;
     conn.exec_safe("SELECT crsql_as_crr('foo');")?;

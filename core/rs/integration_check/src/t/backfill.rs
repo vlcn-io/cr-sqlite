@@ -6,7 +6,7 @@ use sqlite::{Connection, ResultCode};
 use sqlite_nostd as sqlite;
 
 fn new_empty_table() -> Result<(), ResultCode> {
-    let db = integration_utils::opendb()?;
+    let db = crate::opendb()?;
     // Just testing that we can execute these statements without error
     db.db
         .exec_safe("CREATE TABLE foo (id PRIMARY KEY, name);")?;
@@ -16,7 +16,7 @@ fn new_empty_table() -> Result<(), ResultCode> {
 }
 
 fn new_nonempty_table(apply_twice: bool) -> Result<(), ResultCode> {
-    let db = integration_utils::opendb()?;
+    let db = crate::opendb()?;
     db.db
         .exec_safe("CREATE TABLE foo (id PRIMARY KEY, name);")?;
     db.db
@@ -61,7 +61,7 @@ fn new_nonempty_table(apply_twice: bool) -> Result<(), ResultCode> {
 }
 
 fn reapplied_empty_table() -> Result<(), ResultCode> {
-    let db = integration_utils::opendb()?;
+    let db = crate::opendb()?;
     // Just testing that we can execute these statements without error
     db.db
         .exec_safe("CREATE TABLE foo (id PRIMARY KEY, name);")?;

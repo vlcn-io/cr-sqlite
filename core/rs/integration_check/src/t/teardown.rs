@@ -3,7 +3,7 @@ use sqlite::{Connection, ResultCode};
 use sqlite_nostd as sqlite;
 
 fn tear_down() -> Result<(), ResultCode> {
-    let db = integration_utils::opendb()?;
+    let db = crate::opendb()?;
     db.db.exec_safe("CREATE TABLE foo (a primary key, b);")?;
     db.db.exec_safe("SELECT crsql_as_crr('foo');")?;
     db.db.exec_safe("SELECT crsql_as_table('foo');")?;

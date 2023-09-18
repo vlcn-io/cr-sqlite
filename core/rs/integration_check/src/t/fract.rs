@@ -3,7 +3,7 @@ use sqlite::Connection;
 use sqlite_nostd as sqlite;
 
 fn sort_no_list_col() {
-    let w = integration_utils::opendb().expect("db opened");
+    let w = crate::opendb().expect("db opened");
     let db = &w.db;
 
     db.exec_safe("CREATE TABLE todo (id primary key, position)")

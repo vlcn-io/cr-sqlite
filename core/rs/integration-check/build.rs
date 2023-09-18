@@ -21,7 +21,6 @@ fn main() {
         .file("../../dist/sqlite3-extra.c")
         .include("../../src/sqlite/")
         .include("../../src")
-        .flag("-DSQLITE_CORE")
         .flag("-DSQLITE_EXTRA_INIT=core_init")
         .flag("-DSQLITE_OMIT_LOAD_EXTENSION=1")
         .flag("-DSQLITE_THREADSAFE=0")

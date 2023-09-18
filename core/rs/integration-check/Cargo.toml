@@ -21,3 +21,6 @@ lto = false
 
 [profile.dev]
 lto = false
+
+[build]
+rustflags = ["-C", "link-dead-code"]

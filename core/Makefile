@@ -57,6 +57,7 @@ endif
 prefix=./dist
 dbg_prefix=./dbg
 bundle=bundle_static
+valgrind: bundle = integration_check
 test: bundle = integration_check
 
 TARGET_LOADABLE=$(prefix)/crsqlite.$(LOADABLE_EXTENSION)

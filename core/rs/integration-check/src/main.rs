@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use std::ffi::c_void;
 
 extern crate crsql_bundle;

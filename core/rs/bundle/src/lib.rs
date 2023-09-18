@@ -11,7 +11,7 @@ use core::panic::PanicInfo;
 pub use crsql_core;
 use crsql_core::sqlite3_crsqlcore_init;
 use crsql_fractindex_core::sqlite3_crsqlfractionalindex_init;
-use sqlite_nostd as sqlite;
+pub use sqlite_nostd as sqlite;
 use sqlite_nostd::SQLite3Allocator;
 
 // This must be our allocator so we can transfer ownership of memory to SQLite and have SQLite free that memory for us.

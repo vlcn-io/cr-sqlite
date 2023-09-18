@@ -8,7 +8,7 @@ license = "Apache 2"
 
 [lib]
 name = "crsql_bundle"
-crate-type = ["staticlib"]
+crate-type = ["rlib"]
 
 # "cdylib" <-- only enable cdylib if loadable_extension is enabled
 

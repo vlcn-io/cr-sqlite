@@ -14,4 +14,4 @@ integration_utils = { path="../integration-utils" }
 cargo-valgrind = "2.1.0"
 
 [build-dependencies]
-cc = "1.0.79"
+cc = "1.0"

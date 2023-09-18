@@ -42,10 +42,16 @@ pub fn backfill_table(
     );
     let stmt = db.prepare_v2(&sql);
 
+    let non_pk_cols_refs = non_pk_cols.iter().collect::<Vec<_>>();
     let result = match stmt {
-        Ok(stmt) => {
-            create_clock_rows_from_stmt(stmt, db, table, pk_cols, non_pk_cols, is_commit_alter)
-        }
+        Ok(stmt) => create_clock_rows_from_stmt(
+            stmt,
+            db,
+            table,
+            pk_cols,
+            &non_pk_cols_refs,
+            is_commit_alter,
+        ),
         Err(e) => Err(e),
     };
 
@@ -81,7 +87,7 @@ fn create_clock_rows_from_stmt(
     db: *mut sqlite3,
     table: &str,
     pk_cols: &Vec<ColumnInfo>,
-    non_pk_cols: &Vec<ColumnInfo>,
+    non_pk_cols: &Vec<&ColumnInfo>,
     is_commit_alter: bool,
 ) -> Result<ResultCode, ResultCode> {
     // We do not grab nextdbversion on migration.
@@ -202,6 +208,6 @@ fn fill_column(
     read_stmt.bind_text(1, &non_pk_col.name, Destructor::STATIC)?;
 
     // TODO: rm clone?
-    let non_pk_cols = vec![non_pk_col.clone()];
+    let non_pk_cols = vec![non_pk_col];
     create_clock_rows_from_stmt(read_stmt, db, table, pk_cols, &non_pk_cols, is_commit_alter)
 }

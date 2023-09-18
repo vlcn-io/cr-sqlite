@@ -15,6 +15,7 @@ use core::mem::forget;
 use num_traits::ToPrimitive;
 use sqlite_nostd as sqlite;
 use sqlite_nostd::Connection;
+use sqlite_nostd::ManagedStmt;
 use sqlite_nostd::ResultCode;
 use sqlite_nostd::Stmt;
 use sqlite_nostd::StrRef;
@@ -23,16 +24,26 @@ pub struct TableInfo {
     pub tbl_name: String,
     pub pks: Vec<ColumnInfo>,
     pub non_pks: Vec<ColumnInfo>,
+
+    pub set_winner_clock_stmt: Option<ManagedStmt>,
+    pub get_local_cl_stmt: Option<ManagedStmt>,
+    pub get_col_version_stmt: Vec<ManagedStmt>,
+    pub merge_pk_only_insert_stmt: Option<ManagedStmt>,
+    pub merge_delete_stmt: Option<ManagedStmt>,
+    pub merge_delete_drop_clocks_stmt: Option<ManagedStmt>,
+    pub zero_clocks_on_resurrect_stmt: Option<ManagedStmt>,
     // put statement cache here, remove btreeset based cache.
 }
 
-#[derive(Clone)]
 pub struct ColumnInfo {
     pub cid: i32,
     pub name: String,
     // > 0 if it is a primary key columns
     // the value refers to the position in the `PRIMARY KEY (cols...)` statement
     pub pk: i32,
+    pub get_curr_value_stmt: Option<ManagedStmt>,
+    pub merge_insert_stmt: Option<ManagedStmt>,
+    pub row_patch_data_stmt: Option<ManagedStmt>,
 }
 
 #[no_mangle]
@@ -152,6 +163,9 @@ pub fn pull_table_info(
                     name: stmt.column_text(1)?.to_string(),
                     cid: stmt.column_int(0)?,
                     pk: stmt.column_int(2)?,
+                    get_curr_value_stmt: None,
+                    merge_insert_stmt: None,
+                    row_patch_data_stmt: None,
                 });
             }
 
@@ -174,6 +188,13 @@ pub fn pull_table_info(
         tbl_name: table.to_string(),
         pks,
         non_pks,
+        set_winner_clock_stmt: None,
+        get_local_cl_stmt: None,
+        get_col_version_stmt: vec![],
+        merge_pk_only_insert_stmt: None,
+        merge_delete_stmt: None,
+        merge_delete_drop_clocks_stmt: None,
+        zero_clocks_on_resurrect_stmt: None,
     });
 }
 

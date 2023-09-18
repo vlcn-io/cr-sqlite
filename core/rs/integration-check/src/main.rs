@@ -1,24 +1,5 @@
-<<<<<<< HEAD
-use std::env;
-use std::ffi::c_void;
-use std::ptr;
-
-extern crate crsql_bundle;
-
-extern "C" {
-    pub fn core_init(d: *mut c_char);
-}
-
-pub fn main() {
-    println!("Hello, world!");
-    let args: Vec<String> = env::args().collect();
-    if args.len() > 5 {
-        unsafe {
-            core_init(ptr::null_mut());
-        }
-    }
-=======
 mod t;
+use colored::*;
 use sqlite_nostd as sqlite;
 
 pub fn main() {
@@ -32,14 +13,22 @@ pub fn main() {
  * and can't find `sqlite3_malloc` when compiling it as integration tests.
  */
 fn crsql_integration_check() {
+    println!("Running {}", "auotmigrate".green());
     t::automigrate::run_suite().expect("automigrate suite");
+    println!("Running {}", "backfill".green());
     t::backfill::run_suite().expect("backfill suite");
+    println!("Running {}", "fract".green());
     t::fract::run_suite();
+    println!("Running {}", "pack_columns".green());
     t::pack_columns::run_suite().expect("pack columns suite");
+    println!("Running {}", "pk_only_tables".green());
     t::pk_only_tables::run_suite().expect("pk only tables suite");
+    println!("Running {}", "sync_bit_honored".green());
     t::sync_bit_honored::run_suite().expect("sync bit honored suite");
+    println!("Running {}", "tableinfo".green());
     t::tableinfo::run_suite();
+    println!("Running {}", "teardown".green());
     t::teardown::run_suite().expect("tear down suite");
+    println!("Running {}", "cl_set_vtab".green());
     t::test_cl_set_vtab::run_suite().expect("test cl set vtab suite");
->>>>>>> 861cc74c (run as a main crate)
 }

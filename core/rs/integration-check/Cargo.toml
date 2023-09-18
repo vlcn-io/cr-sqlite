@@ -12,18 +12,7 @@ sqlite_nostd = { path="../sqlite-rs-embedded/sqlite_nostd", features=["static", 
 crsql_bundle = { path="../bundle", features=["static", "omit_load_extension", "test"] }
 integration_utils = { path="../integration-utils" }
 cargo-valgrind = "2.1.0"
+colored = "2.0"
 
 [build-dependencies]
 cc = "1.0"
-<<<<<<< HEAD
-
-[profile.release]
-lto = false
-
-[profile.dev]
-lto = false
-
-[build]
-rustflags = ["-C", "link-dead-code"]
-=======
->>>>>>> 861cc74c (run as a main crate)

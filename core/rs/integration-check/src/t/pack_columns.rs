@@ -6,7 +6,7 @@ use sqlite_nostd as sqlite;
 // The rust test is mainly to check with valgrind and ensure we're correctly
 // freeing data as we do some passing of destructors from rust to SQLite.
 // Complete property based tests for encode & decode exist in python.
-fn pack_columns() -> Result<(), ResultCode> {
+fn test_pack_columns() -> Result<(), ResultCode> {
     let db = integration_utils::opendb()?;
     db.db.exec_safe("CREATE TABLE foo (id PRIMARY KEY, x, y)")?;
     let insert_stmt = db.db.prepare_v2("INSERT INTO foo VALUES (?, ?, ?)")?;
@@ -114,7 +114,7 @@ fn pack_columns() -> Result<(), ResultCode> {
     Ok(())
 }
 
-fn unpack_columns() -> Result<(), ResultCode> {
+fn test_unpack_columns() -> Result<(), ResultCode> {
     let db = integration_utils::opendb().unwrap();
     db.db.exec_safe("CREATE TABLE foo (id PRIMARY KEY, x, y)")?;
     let insert_stmt = db.db.prepare_v2("INSERT INTO foo VALUES (?, ?, ?)")?;
@@ -139,6 +139,6 @@ fn unpack_columns() -> Result<(), ResultCode> {
 }
 
 pub fn run_suite() -> Result<(), ResultCode> {
-    pack_columns()?;
-    unpack_columns()?;
+    test_pack_columns()?;
+    test_unpack_columns()
 }

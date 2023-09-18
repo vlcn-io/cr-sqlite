@@ -11,11 +11,7 @@ Test:
 -
 */
 
-fn create_crr_via_vtab() {
-    create_crr_via_vtab_impl().unwrap();
-}
-
-fn create_crr_via_vtab_impl() -> Result<(), ResultCode> {
+fn create_crr_via_vtab() -> Result<(), ResultCode> {
     let db = integration_utils::opendb()?;
     let conn = &db.db;
 
@@ -28,11 +24,7 @@ fn create_crr_via_vtab_impl() -> Result<(), ResultCode> {
     Ok(())
 }
 
-fn destroy_crr_via_vtab() {
-    destroy_crr_via_vtab_impl().unwrap();
-}
-
-fn destroy_crr_via_vtab_impl() -> Result<(), ResultCode> {
+fn destroy_crr_via_vtab() -> Result<(), ResultCode> {
     let db = integration_utils::opendb()?;
     let conn = &db.db;
 
@@ -45,11 +37,7 @@ fn destroy_crr_via_vtab_impl() -> Result<(), ResultCode> {
     Ok(())
 }
 
-fn create_invalid_crr() {
-    create_invalid_crr_impl().unwrap();
-}
-
-fn create_invalid_crr_impl() -> Result<(), ResultCode> {
+fn create_invalid_crr() -> Result<(), ResultCode> {
     let db = integration_utils::opendb()?;
     let conn = &db.db;
 
@@ -63,11 +51,7 @@ fn create_invalid_crr_impl() -> Result<(), ResultCode> {
     Ok(())
 }
 
-fn create_if_not_exists() {
-    create_if_not_exists_impl().unwrap();
-}
-
-fn create_if_not_exists_impl() -> Result<(), ResultCode> {
+fn create_if_not_exists() -> Result<(), ResultCode> {
     let db = integration_utils::opendb()?;
     let conn = &db.db;
 
@@ -97,3 +81,10 @@ fn create_if_not_exists_impl() -> Result<(), ResultCode> {
 // and auto-migrate tests for whole schema.
 // auto-migrate would...
 // - re-write `create vtab` things as `update foo set schema = ...` where those vtabs did not exist.
+
+pub fn run_suite() -> Result<(), ResultCode> {
+    create_crr_via_vtab()?;
+    destroy_crr_via_vtab()?;
+    create_invalid_crr()?;
+    create_if_not_exists()
+}

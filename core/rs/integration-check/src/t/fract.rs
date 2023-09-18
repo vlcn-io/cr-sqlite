@@ -18,6 +18,6 @@ fn sort_no_list_col() {
         .expect("repositioned id 5");
 }
 
-fn run_suite() {
+pub fn run_suite() {
     sort_no_list_col();
 }

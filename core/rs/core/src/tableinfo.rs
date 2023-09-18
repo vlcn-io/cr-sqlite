@@ -8,11 +8,14 @@ use alloc::format;
 use alloc::string::String;
 use alloc::vec;
 use alloc::vec::Vec;
+use core::cell::Ref;
+use core::cell::RefCell;
 use core::ffi::c_char;
 use core::ffi::c_int;
 use core::ffi::c_void;
 use core::mem::forget;
 use num_traits::ToPrimitive;
+use sqlite::sqlite3;
 use sqlite_nostd as sqlite;
 use sqlite_nostd::Connection;
 use sqlite_nostd::ManagedStmt;
@@ -25,14 +28,63 @@ pub struct TableInfo {
     pub pks: Vec<ColumnInfo>,
     pub non_pks: Vec<ColumnInfo>,
 
-    pub set_winner_clock_stmt: Option<ManagedStmt>,
-    pub get_local_cl_stmt: Option<ManagedStmt>,
-    pub get_col_version_stmt: Vec<ManagedStmt>,
-    pub merge_pk_only_insert_stmt: Option<ManagedStmt>,
-    pub merge_delete_stmt: Option<ManagedStmt>,
-    pub merge_delete_drop_clocks_stmt: Option<ManagedStmt>,
-    pub zero_clocks_on_resurrect_stmt: Option<ManagedStmt>,
+    set_winner_clock_stmt: RefCell<Option<ManagedStmt>>,
+    local_cl_stmt: Option<ManagedStmt>,
+    col_version_stmt: Vec<ManagedStmt>,
+    merge_pk_only_insert_stmt: Option<ManagedStmt>,
+    merge_delete_stmt: Option<ManagedStmt>,
+    merge_delete_drop_clocks_stmt: Option<ManagedStmt>,
+    zero_clocks_on_resurrect_stmt: Option<ManagedStmt>,
     // put statement cache here, remove btreeset based cache.
+}
+
+impl TableInfo {
+    pub fn get_set_winner_clock_stmt(
+        &self,
+        db: *mut sqlite3,
+    ) -> Result<Ref<Option<ManagedStmt>>, ResultCode> {
+        if self.set_winner_clock_stmt.try_borrow()?.is_none() {
+            let sql = format!(
+              "INSERT OR REPLACE INTO \"{table_name}__crsql_clock\"
+              ({pk_ident_list}, __crsql_col_name, __crsql_col_version, __crsql_db_version, __crsql_seq, __crsql_site_id)
+              VALUES (
+                {pk_bind_list},
+                ?,
+                ?,
+                crsql_next_db_version(?),
+                ?,
+                ?
+              ) RETURNING _rowid_",
+              table_name = crate::util::escape_ident(&self.tbl_name),
+              pk_ident_list = crate::util::as_identifier_list(&self.pks, None)?,
+              pk_bind_list = crate::util::binding_list(self.pks.len()),
+            );
+            let ret = db.prepare_v3(&sql, sqlite::PREPARE_PERSISTENT)?;
+            *self.set_winner_clock_stmt.borrow_mut() = Some(ret);
+        }
+        self.set_winner_clock_stmt.try_borrow()
+    }
+
+    // pub fn get_local_cl_stmt(&self, db: *mut sqlite3) -> Result<&ManagedStmt, ResultCode> {
+    //     match &self.local_cl_stmt {
+    //         Some(stmt) => Ok(stmt),
+    //         None => {
+    //             // prepare it
+    //             let sql = format!(
+    //               "SELECT COALESCE(
+    //                 (SELECT __crsql_col_version FROM \"{table_name}__crsql_clock\" WHERE {pk_where_list} AND __crsql_col_name = '{delete_sentinel}'),
+    //                 (SELECT 1 FROM \"{table_name}__crsql_clock\" WHERE {pk_where_list})
+    //               )",
+    //               table_name = crate::util::escape_ident(&self.tbl_name),
+    //               pk_where_list = crate::util::where_list(&self.pks, None)?,
+    //               delete_sentinel = crate::c::DELETE_SENTINEL,
+    //             );
+    //             let ret = db.prepare_v3(&sql, sqlite::PREPARE_PERSISTENT)?;
+    //             &self.local_cl_stmt.replace(ret);
+    //             return Ok(self.local_cl_stmt.as_ref().unwrap());
+    //         }
+    //     }
+    // }
 }
 
 pub struct ColumnInfo {
@@ -41,9 +93,9 @@ pub struct ColumnInfo {
     // > 0 if it is a primary key columns
     // the value refers to the position in the `PRIMARY KEY (cols...)` statement
     pub pk: i32,
-    pub get_curr_value_stmt: Option<ManagedStmt>,
-    pub merge_insert_stmt: Option<ManagedStmt>,
-    pub row_patch_data_stmt: Option<ManagedStmt>,
+    curr_value_stmt: Option<ManagedStmt>,
+    merge_insert_stmt: Option<ManagedStmt>,
+    row_patch_data_stmt: Option<ManagedStmt>,
 }
 
 #[no_mangle]
@@ -163,7 +215,7 @@ pub fn pull_table_info(
                     name: stmt.column_text(1)?.to_string(),
                     cid: stmt.column_int(0)?,
                     pk: stmt.column_int(2)?,
-                    get_curr_value_stmt: None,
+                    curr_value_stmt: None,
                     merge_insert_stmt: None,
                     row_patch_data_stmt: None,
                 });
@@ -188,9 +240,9 @@ pub fn pull_table_info(
         tbl_name: table.to_string(),
         pks,
         non_pks,
-        set_winner_clock_stmt: None,
-        get_local_cl_stmt: None,
-        get_col_version_stmt: vec![],
+        set_winner_clock_stmt: RefCell::new(None),
+        local_cl_stmt: None,
+        col_version_stmt: vec![],
         merge_pk_only_insert_stmt: None,
         merge_delete_stmt: None,
         merge_delete_drop_clocks_stmt: None,

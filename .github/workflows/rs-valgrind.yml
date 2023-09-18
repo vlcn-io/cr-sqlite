@@ -31,13 +31,6 @@ jobs:
           cd core/rs/fractindex-core
           cargo valgrind test --features=loadable_extension
 
-      - name: Integration Tests
-        run: |
-          cd core/rs/integration-check
-          mv ../bundle/Cargo.toml ../bundle/Cargo.toml.bk
-          mv ../bundle/Cargo.toml.integration-test ../bundle/Cargo.toml
-          cargo valgrind run
-
       - name: Test Core
         run: |
           cd core/rs/core

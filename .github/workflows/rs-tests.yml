@@ -35,11 +35,10 @@ jobs:
 
       - name: Integration Tests
         run: |
-          export RUSTFLAGS="-C link-dead-code"
           cd core/rs/integration-check
           mv ../bundle/Cargo.toml ../bundle/Cargo.toml.bk
           mv ../bundle/Cargo.toml.integration-test ../bundle/Cargo.toml
-          cargo test
+          cargo run
 
       - name: Test Core
         run: |

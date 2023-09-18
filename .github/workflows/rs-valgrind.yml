@@ -36,9 +36,9 @@ jobs:
           cd core/rs/integration-check
           mv ../bundle/Cargo.toml ../bundle/Cargo.toml.bk
           mv ../bundle/Cargo.toml.integration-test ../bundle/Cargo.toml
-          cargo test
+          cargo valgrind run
 
       - name: Test Core
         run: |
           cd core/rs/core
-          cargo test --features=loadable_extension
+          cargo valgrind test --features=loadable_extension

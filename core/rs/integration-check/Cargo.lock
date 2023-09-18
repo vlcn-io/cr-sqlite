@@ -197,7 +197,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "integration-check"
+name = "integration_check"
 version = "0.0.1"
 dependencies = [
  "cargo-valgrind",

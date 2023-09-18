@@ -20,28 +20,3 @@ impl Drop for CRConnection {
         }
     }
 }
-
-// macro_rules! wrap_fn {
-//     ( $name:ident, $body:expr ) => {
-
-//         fn $name() $body
-//     };
-// }
-
-#[macro_export]
-macro_rules! counter_setup {
-    ( $count:expr ) => {
-        use std::sync::atomic::{AtomicUsize, Ordering};
-        static COUNTER: AtomicUsize = AtomicUsize::new($count);
-
-        fn decrement_counter() {
-            if COUNTER.fetch_sub(1, Ordering::SeqCst) == 1 {
-                sqlite::shutdown();
-            }
-        }
-    };
-}
-
-// Macro to allow `afterAll` tear down once all tests complete
-// Works by bumping a static counter on each fn def
-// then by calling `afterAll` which checks the counter

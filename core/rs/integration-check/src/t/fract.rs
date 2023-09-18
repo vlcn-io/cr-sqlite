@@ -2,7 +2,6 @@ extern crate crsql_bundle;
 use sqlite::Connection;
 use sqlite_nostd as sqlite;
 
-#[test]
 fn sort_no_list_col() {
     let w = integration_utils::opendb().expect("db opened");
     let db = &w.db;
@@ -17,4 +16,8 @@ fn sort_no_list_col() {
     .expect("inserted initial values");
     db.exec_safe("UPDATE todo_fractindex SET after_id = 2 WHERE id = 5")
         .expect("repositioned id 5");
+}
+
+fn run_suite() {
+    sort_no_list_col();
 }

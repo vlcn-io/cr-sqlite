@@ -7,41 +7,6 @@ use sqlite_nostd as sqlite;
 
 integration_utils::counter_setup!(2);
 
-#[test]
-fn create_pkonlytable() {
-    // just expecting not to throw
-    create_pkonlytable_impl().unwrap();
-    decrement_counter();
-}
-
-#[test]
-fn insert_pkonly_row() {
-    insert_pkonly_row_impl().unwrap();
-    decrement_counter();
-}
-
-#[test]
-fn modify_pkonly_row() {
-    // inserts then updates then syncs the value of a pk column
-    // inserts, syncs, then updates then syncs
-    //
-    // repeat for single column keys and compound
-    // modify_pkonly_row_impl().unwrap()
-}
-
-#[test]
-/// Test a common configuration of a junction/edge table (with no edge data)
-/// to relate two relations.
-fn junction_table() {
-    // junction_table_impl().unwrap();
-}
-
-// https://discord.com/channels/989870439897653248/989870440585494530/1081084118680485938
-#[test]
-fn discord_report_1() {
-    discord_report_1_impl().unwrap();
-}
-
 fn sync_left_to_right(
     l: &dyn Connection,
     r: &dyn Connection,
@@ -110,14 +75,14 @@ fn setup_schema(db: &ManagedConnection) -> Result<ResultCode, ResultCode> {
     db.exec_safe("SELECT crsql_as_crr('foo');")
 }
 
-fn create_pkonlytable_impl() -> Result<(), ResultCode> {
+fn create_pkonlytable() -> Result<(), ResultCode> {
     let db_a = integration_utils::opendb()?;
 
     setup_schema(&db_a.db)?;
     Ok(())
 }
 
-fn insert_pkonly_row_impl() -> Result<(), ResultCode> {
+fn insert_pkonly_row() -> Result<(), ResultCode> {
     let db_a = integration_utils::opendb()?;
     let db_b = integration_utils::opendb()?;
 
@@ -149,7 +114,7 @@ fn insert_pkonly_row_impl() -> Result<(), ResultCode> {
     Ok(())
 }
 
-fn modify_pkonly_row_impl() -> Result<(), ResultCode> {
+fn modify_pkonly_row() -> Result<(), ResultCode> {
     let db_a = integration_utils::opendb()?;
     let db_b = integration_utils::opendb()?;
 
@@ -183,7 +148,7 @@ fn modify_pkonly_row_impl() -> Result<(), ResultCode> {
 // Current issue with this test is that we're not recording the actual
 // delete event on update of primary key. We're creating a synthetic one
 // on read from `changes` when the target row is missing.
-fn junction_table_impl() -> Result<(), ResultCode> {
+fn junction_table() -> Result<(), ResultCode> {
     let db_a = integration_utils::opendb()?;
     let db_b = integration_utils::opendb()?;
 
@@ -248,7 +213,8 @@ fn junction_table_impl() -> Result<(), ResultCode> {
     Ok(())
 }
 
-fn discord_report_1_impl() -> Result<(), ResultCode> {
+// https://discord.com/channels/989870439897653248/989870440585494530/1081084118680485938
+fn discord_report_1() -> Result<(), ResultCode> {
     let db_a = integration_utils::opendb()?;
     db_a.db
         .exec_safe("CREATE TABLE IF NOT EXISTS data (id NUMBER PRIMARY KEY);")?;
@@ -275,5 +241,14 @@ fn discord_report_1_impl() -> Result<(), ResultCode> {
 
     assert_eq!(stmt.step()?, ResultCode::DONE);
 
+    Ok(())
+}
+
+pub fn run_suite() -> Result<(), ResultCode> {
+    create_pkonlytable()?;
+    insert_pkonly_row()?;
+    modify_pkonly_row()?;
+    junction_table()?;
+    discord_report_1()?;
     Ok(())
 }

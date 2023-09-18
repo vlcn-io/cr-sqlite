@@ -7,9 +7,6 @@ use crsql_bundle::crsql_core::{self, tableinfo::TableInfo};
 use sqlite::Connection;
 use sqlite_nostd as sqlite;
 
-// janx hax to do an `afterAll` cleanup
-integration_utils::counter_setup!(4);
-
 fn make_err_ptr() -> *mut *mut c_char {
     let mut inner_ptr: *mut c_char = std::ptr::null_mut();
     let outer_ptr: *mut *mut c_char = &mut inner_ptr;
@@ -21,7 +18,6 @@ fn make_site() -> *mut c_char {
     inner_ptr
 }
 
-#[test]
 fn test_ensure_table_infos_are_up_to_date() {
     let db = integration_utils::opendb().expect("Opened DB");
     let c = &db.db;
@@ -111,11 +107,8 @@ fn test_ensure_table_infos_are_up_to_date() {
     unsafe {
         crsql_core::c::crsql_freeExtData(ext_data);
     };
-
-    decrement_counter();
 }
 
-#[test]
 fn test_pull_table_info() {
     let db = integration_utils::opendb().expect("Opened DB");
     let c = &db.db;
@@ -165,11 +158,8 @@ fn test_pull_table_info() {
     assert_eq!(tbl_info.non_pks[0].name, "a");
     assert_eq!(tbl_info.non_pks[0].cid, 0);
     assert_eq!(tbl_info.non_pks[0].pk, 0);
-
-    decrement_counter();
 }
 
-#[test]
 fn test_is_table_compatible() {
     let db = integration_utils::opendb().expect("Opened DB");
     let c = &db.db;
@@ -271,11 +261,8 @@ fn test_is_table_compatible() {
         crsql_core::tableinfo::is_table_compatible(raw_db, "atable2", make_err_ptr())
             .expect("checked if atable2 is compatible");
     assert_eq!(is_compatible, true);
-
-    decrement_counter();
 }
 
-#[test]
 fn test_create_clock_table_from_table_info() {
     let db = integration_utils::opendb().expect("Opened DB");
     let c = &db.db;
@@ -309,5 +296,11 @@ fn test_create_clock_table_from_table_info() {
         .expect("created clock table for boo");
 
     // todo: Check that clock tables have expected schema(s)
-    decrement_counter();
+}
+
+pub fn run_suite() {
+    test_ensure_table_infos_are_up_to_date();
+    test_pull_table_info();
+    test_is_table_compatible();
+    test_create_clock_table_from_table_info();
 }

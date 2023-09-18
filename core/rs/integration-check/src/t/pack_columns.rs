@@ -3,20 +3,10 @@ use crsql_bundle::crsql_core::ColumnValue;
 use sqlite::{Connection, ResultCode};
 use sqlite_nostd as sqlite;
 
-#[test]
-fn pack_columns_test() {
-    pack_columns_impl().unwrap();
-}
-
-#[test]
-fn unpack_columns_test() {
-    unpack_columns_impl().unwrap();
-}
-
 // The rust test is mainly to check with valgrind and ensure we're correctly
 // freeing data as we do some passing of destructors from rust to SQLite.
 // Complete property based tests for encode & decode exist in python.
-fn pack_columns_impl() -> Result<(), ResultCode> {
+fn pack_columns() -> Result<(), ResultCode> {
     let db = integration_utils::opendb()?;
     db.db.exec_safe("CREATE TABLE foo (id PRIMARY KEY, x, y)")?;
     let insert_stmt = db.db.prepare_v2("INSERT INTO foo VALUES (?, ?, ?)")?;
@@ -124,7 +114,7 @@ fn pack_columns_impl() -> Result<(), ResultCode> {
     Ok(())
 }
 
-fn unpack_columns_impl() -> Result<(), ResultCode> {
+fn unpack_columns() -> Result<(), ResultCode> {
     let db = integration_utils::opendb().unwrap();
     db.db.exec_safe("CREATE TABLE foo (id PRIMARY KEY, x, y)")?;
     let insert_stmt = db.db.prepare_v2("INSERT INTO foo VALUES (?, ?, ?)")?;
@@ -146,4 +136,9 @@ fn unpack_columns_impl() -> Result<(), ResultCode> {
     assert!(select_stmt.column_blob(0)? == blob);
 
     Ok(())
+}
+
+pub fn run_suite() -> Result<(), ResultCode> {
+    pack_columns()?;
+    unpack_columns()?;
 }

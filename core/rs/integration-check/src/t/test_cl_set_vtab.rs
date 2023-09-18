@@ -11,7 +11,6 @@ Test:
 -
 */
 
-#[test]
 fn create_crr_via_vtab() {
     create_crr_via_vtab_impl().unwrap();
 }
@@ -29,7 +28,6 @@ fn create_crr_via_vtab_impl() -> Result<(), ResultCode> {
     Ok(())
 }
 
-#[test]
 fn destroy_crr_via_vtab() {
     destroy_crr_via_vtab_impl().unwrap();
 }
@@ -47,7 +45,6 @@ fn destroy_crr_via_vtab_impl() -> Result<(), ResultCode> {
     Ok(())
 }
 
-#[test]
 fn create_invalid_crr() {
     create_invalid_crr_impl().unwrap();
 }
@@ -66,7 +63,6 @@ fn create_invalid_crr_impl() -> Result<(), ResultCode> {
     Ok(())
 }
 
-#[test]
 fn create_if_not_exists() {
     create_if_not_exists_impl().unwrap();
 }

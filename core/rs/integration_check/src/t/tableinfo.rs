@@ -20,7 +20,7 @@ fn make_site() -> *mut c_char {
 }
 
 fn test_ensure_table_infos_are_up_to_date() {
-    let db = integration_utils::opendb().expect("Opened DB");
+    let db = crate::opendb().expect("Opened DB");
     let c = &db.db;
     let raw_db = db.db.db;
     let err = make_err_ptr();
@@ -96,7 +96,7 @@ fn test_ensure_table_infos_are_up_to_date() {
 }
 
 fn test_pull_table_info() {
-    let db = integration_utils::opendb().expect("Opened DB");
+    let db = crate::opendb().expect("Opened DB");
     let c = &db.db;
     let raw_db = db.db.db;
     let err = make_err_ptr();
@@ -148,7 +148,7 @@ fn test_pull_table_info() {
 }
 
 fn test_is_table_compatible() {
-    let db = integration_utils::opendb().expect("Opened DB");
+    let db = crate::opendb().expect("Opened DB");
     let c = &db.db;
     let raw_db = db.db.db;
     let err = make_err_ptr();
@@ -249,7 +249,7 @@ fn test_is_table_compatible() {
 }
 
 fn test_create_clock_table_from_table_info() {
-    let db = integration_utils::opendb().expect("Opened DB");
+    let db = crate::opendb().expect("Opened DB");
     let c = &db.db;
     let raw_db = db.db.db;
     let err = make_err_ptr();

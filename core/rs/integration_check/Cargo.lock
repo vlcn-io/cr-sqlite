@@ -155,7 +155,6 @@ dependencies = [
  "cargo-valgrind",
  "cc",
  "crsql_bundle",
- "integration_utils",
  "libc-print",
  "sqlite_nostd",
 ]
@@ -206,13 +205,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5444c27eef6923071f7ebcc33e3444508466a76f7a2b93da00ed6e19f30c1ddb"
 dependencies = [
  "windows-sys",
-]
-
-[[package]]
-name = "integration_utils"
-version = "0.0.1"
-dependencies = [
- "sqlite_nostd",
 ]
 
 [[package]]

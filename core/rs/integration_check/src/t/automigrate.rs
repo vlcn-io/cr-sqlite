@@ -6,7 +6,7 @@ use sqlite::{Connection, ManagedConnection, ResultCode};
 use sqlite_nostd as sqlite;
 
 fn idempotent() {
-    let db = integration_utils::opendb().expect("db opened");
+    let db = crate::opendb().expect("db opened");
     let schema = "
       CREATE TABLE IF NOT EXISTS item (id integer primary key, data any) strict;
       CREATE TABLE IF NOT EXISTS container (id integer primary key, contained integer);
@@ -49,7 +49,7 @@ fn nullable() {}
 fn no_default_value() {}
 
 fn strut_schema() {
-    let db = integration_utils::opendb().expect("db opened");
+    let db = crate::opendb().expect("db opened");
     let stmt = db
         .db
         .prepare_v2(
@@ -354,7 +354,7 @@ primary key ("deck_id", "order")
 }
 
 fn empty_schema() -> Result<(), ResultCode> {
-    let db = integration_utils::opendb()?;
+    let db = crate::opendb()?;
     let stmt = db
         .db
         .prepare_v2("SELECT crsql_automigrate('', 'SELECT crsql_finalize();')")?;
@@ -364,7 +364,7 @@ fn empty_schema() -> Result<(), ResultCode> {
 }
 
 fn to_empty_from_something() -> Result<(), ResultCode> {
-    let db = integration_utils::opendb()?;
+    let db = crate::opendb()?;
     db.db.exec_safe("CREATE TABLE foo (a primary key, b);")?;
     db.db.exec_safe("CREATE TABLE bar (a, b, c);")?;
     db.db
@@ -379,7 +379,7 @@ fn to_empty_from_something() -> Result<(), ResultCode> {
 }
 
 fn to_something_from_empty() -> Result<(), ResultCode> {
-    let db = integration_utils::opendb()?;
+    let db = crate::opendb()?;
     let schema = "
         CREATE TABLE IF NOT EXISTS foo (a primary key, b);
         CREATE TABLE IF NOT EXISTS bar (a, b, c, primary key(a, b));
@@ -401,7 +401,7 @@ fn to_something_from_empty() -> Result<(), ResultCode> {
 fn add_col() -> Result<(), ResultCode> {
     // start with some table
     // move to a schema that adds a column to it
-    let db = integration_utils::opendb()?;
+    let db = crate::opendb()?;
     db.db
         .exec_safe("CREATE TABLE todo (id primary key, content text)")?;
     let schema = "
@@ -423,7 +423,7 @@ fn add_col() -> Result<(), ResultCode> {
 }
 
 fn remove_col() -> Result<(), ResultCode> {
-    let db = integration_utils::opendb()?;
+    let db = crate::opendb()?;
     db.db
         .exec_safe("CREATE TABLE todo (id primary key, content text, complete integer, list)")?;
 
@@ -451,7 +451,7 @@ fn remove_col() -> Result<(), ResultCode> {
 }
 
 fn remove_col_fract_table() {
-    let db = integration_utils::opendb().expect("db opened");
+    let db = crate::opendb().expect("db opened");
     db.db
         .exec_safe("CREATE TABLE todo (id primary key, content text, position, thing)")
         .expect("table made");
@@ -472,7 +472,7 @@ fn remove_col_fract_table() {
 }
 
 fn remove_index() -> Result<(), ResultCode> {
-    let db = integration_utils::opendb()?;
+    let db = crate::opendb()?;
     db.db.exec_safe(
         "
         CREATE TABLE foo (a primary key, b);
@@ -492,7 +492,7 @@ fn remove_index() -> Result<(), ResultCode> {
 }
 
 fn add_index() -> Result<(), ResultCode> {
-    let db = integration_utils::opendb()?;
+    let db = crate::opendb()?;
     db.db.exec_safe("CREATE TABLE foo(a primary key, b);")?;
     let schema = "
         CREATE TABLE IF NOT EXISTS foo(a primary key, b);
@@ -509,7 +509,7 @@ fn add_index() -> Result<(), ResultCode> {
 }
 
 fn change_index_to_unique() -> Result<(), ResultCode> {
-    let db = integration_utils::opendb()?;
+    let db = crate::opendb()?;
     db.db.exec_safe(
         "
         CREATE TABLE foo (a primary key, b);
@@ -531,7 +531,7 @@ fn change_index_to_unique() -> Result<(), ResultCode> {
 }
 
 fn remove_col_from_index() -> Result<(), ResultCode> {
-    let db = integration_utils::opendb()?;
+    let db = crate::opendb()?;
     db.db.exec_safe(
         "
         CREATE TABLE foo (a primary key, b, c);
@@ -554,7 +554,7 @@ fn remove_col_from_index() -> Result<(), ResultCode> {
 }
 
 fn add_col_to_index() -> Result<(), ResultCode> {
-    let db = integration_utils::opendb()?;
+    let db = crate::opendb()?;
     db.db.exec_safe(
         "
         CREATE TABLE foo (a primary key, b, c);
@@ -577,7 +577,7 @@ fn add_col_to_index() -> Result<(), ResultCode> {
 }
 
 fn rename_col() -> Result<(), ResultCode> {
-    let db = integration_utils::opendb()?;
+    let db = crate::opendb()?;
     db.db.exec_safe("CREATE TABLE foo (a primary key, b);")?;
     let schema = "
         CREATE TABLE IF NOT EXISTS foo (

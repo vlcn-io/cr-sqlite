@@ -3,6 +3,9 @@
 mod t;
 pub use crsql_bundle;
 use libc_print::std_name::println;
+
+use core::ffi::c_char;
+use sqlite::{Connection, ManagedConnection, ResultCode};
 use sqlite_nostd as sqlite;
 
 /**
@@ -29,4 +32,23 @@ pub extern "C" fn crsql_integration_check() {
     t::teardown::run_suite().expect("tear down suite");
     println!("Running cl_set_vtab");
     t::test_cl_set_vtab::run_suite().expect("test cl set vtab suite");
+}
+
+pub fn opendb() -> Result<CRConnection, ResultCode> {
+    let connection = sqlite::open(sqlite::strlit!(":memory:"))?;
+    // connection.enable_load_extension(true)?;
+    // connection.load_extension("../../dbg/crsqlite", None)?;
+    Ok(CRConnection { db: connection })
+}
+
+pub struct CRConnection {
+    pub db: ManagedConnection,
+}
+
+impl Drop for CRConnection {
+    fn drop(&mut self) {
+        if let Err(_) = self.db.exec_safe("SELECT crsql_finalize()") {
+            panic!("Failed to finalize cr sql statements");
+        }
+    }
 }

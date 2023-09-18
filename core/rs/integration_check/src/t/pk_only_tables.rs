@@ -74,15 +74,15 @@ fn setup_schema(db: &ManagedConnection) -> Result<ResultCode, ResultCode> {
 }
 
 fn create_pkonlytable() -> Result<(), ResultCode> {
-    let db_a = integration_utils::opendb()?;
+    let db_a = crate::opendb()?;
 
     setup_schema(&db_a.db)?;
     Ok(())
 }
 
 fn insert_pkonly_row() -> Result<(), ResultCode> {
-    let db_a = integration_utils::opendb()?;
-    let db_b = integration_utils::opendb()?;
+    let db_a = crate::opendb()?;
+    let db_b = crate::opendb()?;
 
     fn setup_schema(db: &ManagedConnection) -> Result<ResultCode, ResultCode> {
         db.exec_safe("CREATE TABLE foo (id INTEGER PRIMARY KEY);")?;
@@ -113,8 +113,8 @@ fn insert_pkonly_row() -> Result<(), ResultCode> {
 }
 
 fn modify_pkonly_row() -> Result<(), ResultCode> {
-    let db_a = integration_utils::opendb()?;
-    let db_b = integration_utils::opendb()?;
+    let db_a = crate::opendb()?;
+    let db_b = crate::opendb()?;
 
     fn setup_schema(db: &ManagedConnection) -> Result<ResultCode, ResultCode> {
         db.exec_safe("CREATE TABLE foo (id INTEGER PRIMARY KEY);")?;
@@ -147,8 +147,8 @@ fn modify_pkonly_row() -> Result<(), ResultCode> {
 // delete event on update of primary key. We're creating a synthetic one
 // on read from `changes` when the target row is missing.
 fn junction_table() -> Result<(), ResultCode> {
-    let db_a = integration_utils::opendb()?;
-    let db_b = integration_utils::opendb()?;
+    let db_a = crate::opendb()?;
+    let db_b = crate::opendb()?;
 
     fn setup_schema(db: &ManagedConnection) -> Result<ResultCode, ResultCode> {
         db.exec_safe("CREATE TABLE jx (id1, id2, PRIMARY KEY(id1, id2));")?;
@@ -205,7 +205,7 @@ fn junction_table() -> Result<(), ResultCode> {
 
 // https://discord.com/channels/989870439897653248/989870440585494530/1081084118680485938
 fn discord_report_1() -> Result<(), ResultCode> {
-    let db_a = integration_utils::opendb()?;
+    let db_a = crate::opendb()?;
     db_a.db
         .exec_safe("CREATE TABLE IF NOT EXISTS data (id NUMBER PRIMARY KEY);")?;
     db_a.db.exec_safe("SELECT crsql_as_crr('data')")?;

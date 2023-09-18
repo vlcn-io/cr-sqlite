@@ -26,13 +26,75 @@ pub struct TableInfo {
     pub non_pks: Vec<ColumnInfo>,
 
     pub set_winner_clock_stmt: Option<ManagedStmt>,
-    pub get_local_cl_stmt: Option<ManagedStmt>,
-    pub get_col_version_stmt: Vec<ManagedStmt>,
+    pub local_cl_stmt: Option<ManagedStmt>,
+    pub col_version_stmt: Vec<ManagedStmt>,
     pub merge_pk_only_insert_stmt: Option<ManagedStmt>,
     pub merge_delete_stmt: Option<ManagedStmt>,
     pub merge_delete_drop_clocks_stmt: Option<ManagedStmt>,
     pub zero_clocks_on_resurrect_stmt: Option<ManagedStmt>,
     // put statement cache here, remove btreeset based cache.
+}
+
+impl TableInfo {
+    pub fn get_set_winner_clock_stmt(&self) -> Option<CachedStmt> {
+        match &self.set_winner_clock_stmt {
+            Some(stmt) => Some(CachedStmt { stmt }),
+            None => None,
+        }
+    }
+
+    pub fn get_local_cl_stmt(&self) -> Option<CachedStmt> {
+        match &self.local_cl_stmt {
+            Some(stmt) => Some(CachedStmt { stmt }),
+            None => None,
+        }
+    }
+
+    pub fn get_col_version_stmt(&self, col: &ColumnInfo) -> Option<CachedStmt> {
+        match &self.col_version_stmt.get(col.cid as usize) {
+            Some(stmt) => Some(CachedStmt { stmt }),
+            None => None,
+        }
+    }
+
+    pub fn get_merge_pk_only_insert_stmt(&self) -> Option<CachedStmt> {
+        match &self.merge_pk_only_insert_stmt {
+            Some(stmt) => Some(CachedStmt { stmt }),
+            None => None,
+        }
+    }
+
+    pub fn get_merge_delete_stmt(&self) -> Option<CachedStmt> {
+        match &self.merge_delete_stmt {
+            Some(stmt) => Some(CachedStmt { stmt }),
+            None => None,
+        }
+    }
+
+    pub fn get_merge_delete_drop_clocks_stmt(&self) -> Option<CachedStmt> {
+        match &self.merge_delete_drop_clocks_stmt {
+            Some(stmt) => Some(CachedStmt { stmt }),
+            None => None,
+        }
+    }
+
+    pub fn get_zero_clocks_on_resurrect_stmt(&self) -> Option<CachedStmt> {
+        match &self.zero_clocks_on_resurrect_stmt {
+            Some(stmt) => Some(CachedStmt { stmt }),
+            None => None,
+        }
+    }
+}
+
+pub struct CachedStmt<'a> {
+    pub stmt: &'a ManagedStmt,
+}
+
+impl Drop for CachedStmt<'_> {
+    fn drop(&mut self) {
+        self.stmt.clear_bindings()?;
+        self.stmt.reset();
+    }
 }
 
 pub struct ColumnInfo {
@@ -41,9 +103,32 @@ pub struct ColumnInfo {
     // > 0 if it is a primary key columns
     // the value refers to the position in the `PRIMARY KEY (cols...)` statement
     pub pk: i32,
-    pub get_curr_value_stmt: Option<ManagedStmt>,
+    pub curr_value_stmt: Option<ManagedStmt>,
     pub merge_insert_stmt: Option<ManagedStmt>,
     pub row_patch_data_stmt: Option<ManagedStmt>,
+}
+
+impl ColumnInfo {
+    pub fn get_curr_value_stmt(&self) -> Option<CachedStmt> {
+        match &self.curr_value_stmt {
+            Some(stmt) => Some(CachedStmt { stmt }),
+            None => None,
+        }
+    }
+
+    pub fn merge_insert_stmt(&self) -> Option<CachedStmt> {
+        match &self.merge_insert_stmt {
+            Some(stmt) => Some(CachedStmt { stmt }),
+            None => None,
+        }
+    }
+
+    pub fn row_patch_data_stmt(&self) -> Option<CachedStmt> {
+        match &self.row_patch_data_stmt {
+            Some(stmt) => Some(CachedStmt { stmt }),
+            None => None,
+        }
+    }
 }
 
 #[no_mangle]
@@ -163,7 +248,7 @@ pub fn pull_table_info(
                     name: stmt.column_text(1)?.to_string(),
                     cid: stmt.column_int(0)?,
                     pk: stmt.column_int(2)?,
-                    get_curr_value_stmt: None,
+                    curr_value_stmt: None,
                     merge_insert_stmt: None,
                     row_patch_data_stmt: None,
                 });
@@ -189,8 +274,8 @@ pub fn pull_table_info(
         pks,
         non_pks,
         set_winner_clock_stmt: None,
-        get_local_cl_stmt: None,
-        get_col_version_stmt: vec![],
+        local_cl_stmt: None,
+        col_version_stmt: vec![],
         merge_pk_only_insert_stmt: None,
         merge_delete_stmt: None,
         merge_delete_drop_clocks_stmt: None,

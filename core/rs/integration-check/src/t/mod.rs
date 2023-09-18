@@ -3,7 +3,7 @@ pub mod backfill;
 pub mod fract;
 pub mod pack_columns;
 pub mod pk_only_tables;
-pub mod pk_updates;
+pub mod pk_update;
 pub mod sync_bit_honored;
 pub mod tableinfo;
 pub mod teardown;

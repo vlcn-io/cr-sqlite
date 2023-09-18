@@ -1,15 +1,11 @@
 [package]
-name = "integration_check"
+name = "integration-check"
 version = "0.0.1"
 edition = "2021"
 authors = ["Matt Wonlaw"]
 description = "rs integration check for crsqlite"
 keywords = ["sqlite"]
 license = "Apache-2.0"
-
-[lib]
-name = "integration_check"
-crate-type = ["staticlib"]
 
 [dependencies]
 sqlite_nostd = { path="../sqlite-rs-embedded/sqlite_nostd", features=["static", "omit_load_extension"] }
@@ -19,6 +15,7 @@ cargo-valgrind = "2.1.0"
 
 [build-dependencies]
 cc = "1.0"
+<<<<<<< HEAD
 
 [profile.release]
 lto = false
@@ -28,3 +25,5 @@ lto = false
 
 [build]
 rustflags = ["-C", "link-dead-code"]
+=======
+>>>>>>> 861cc74c (run as a main crate)

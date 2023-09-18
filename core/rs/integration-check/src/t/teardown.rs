@@ -16,6 +16,6 @@ fn tear_down() -> Result<(), ResultCode> {
     Ok(())
 }
 
-pub fn tear_down_suite() -> Result<(), ResultCode> {
+pub fn run_suite() -> Result<(), ResultCode> {
     tear_down()
 }

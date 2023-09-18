@@ -28,4 +28,4 @@ jobs:
         run: |
           cd core
           make test
-          valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes dist/test
+          valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes -s dist/test

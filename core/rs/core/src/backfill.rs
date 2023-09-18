@@ -207,7 +207,6 @@ fn fill_column(
     let read_stmt = db.prepare_v2(&sql)?;
     read_stmt.bind_text(1, &non_pk_col.name, Destructor::STATIC)?;
 
-    // TODO: rm clone?
     let non_pk_cols = vec![non_pk_col];
     create_clock_rows_from_stmt(read_stmt, db, table, pk_cols, &non_pk_cols, is_commit_alter)
 }

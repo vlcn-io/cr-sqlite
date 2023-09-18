@@ -37,7 +37,7 @@ jobs:
       - name: Windows rust toolchain
         if: runner.os == 'Windows'
         run: |
-          rm core/rs/bundle/rust-toolchain.toml
+          rm core/rs/bundle_static/rust-toolchain.toml
           rustup component add rust-src --toolchain nightly-2023-06-17-x86_64-pc-windows-gnu
           rustup default nightly-2023-06-17-x86_64-pc-windows-gnu
 

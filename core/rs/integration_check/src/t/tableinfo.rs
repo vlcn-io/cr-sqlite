@@ -1,14 +1,15 @@
-use std::{
-    ffi::{c_char, CString},
-    mem,
-};
-
+extern crate alloc;
+use alloc::boxed::Box;
+use alloc::ffi::CString;
+use alloc::string::ToString;
+use alloc::vec::Vec;
+use core::{ffi::c_char, mem};
 use crsql_bundle::crsql_core::{self, tableinfo::TableInfo};
 use sqlite::Connection;
 use sqlite_nostd as sqlite;
 
 fn make_err_ptr() -> *mut *mut c_char {
-    let mut inner_ptr: *mut c_char = std::ptr::null_mut();
+    let mut inner_ptr: *mut c_char = core::ptr::null_mut();
     let outer_ptr: *mut *mut c_char = &mut inner_ptr;
     outer_ptr
 }

@@ -149,6 +149,7 @@ endif
 
 $(rs_lib_dbg_static_cpy): FORCE $(dbg_prefix)
 	cd ./rs/$(bundle) && cargo rustc $(RS_TARGET) --features static,omit_load_extension $(rs_build_flags)
+	ls ./rs/$(bundle)/target/debug
 	cp $(rs_lib_dbg_static) $(rs_lib_dbg_static_cpy)
 
 $(rs_lib_static_cpy): FORCE $(prefix)

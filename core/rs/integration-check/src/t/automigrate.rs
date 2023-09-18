@@ -2,28 +2,6 @@ extern crate crsql_bundle;
 use sqlite::{Connection, ManagedConnection, ResultCode};
 use sqlite_nostd as sqlite;
 
-// TODO: auto-calculate starting number
-integration_utils::counter_setup!(26);
-
-#[test]
-fn empty_schema() {
-    empty_schema_impl().unwrap();
-    decrement_counter();
-}
-
-#[test]
-fn to_empty_from_something() {
-    to_empty_from_something_impl().unwrap();
-    decrement_counter();
-}
-
-#[test]
-fn to_something_from_empty() {
-    to_something_from_empty_impl().unwrap();
-    decrement_counter();
-}
-
-#[test]
 fn idempotent() {
     let db = integration_utils::opendb().expect("db opened");
     let schema = "
@@ -39,124 +17,34 @@ fn idempotent() {
     assert!(
         expect_indices(&db.db, "container", vec!["container_contained"]).expect("compared indices")
     );
-    // TODO: triggers!
-    decrement_counter();
 }
 
-#[test]
-fn add_col() {
-    add_col_impl().unwrap();
-    decrement_counter();
-}
+fn change_index_col_order() {}
 
-#[test]
-fn remove_col() {
-    remove_col_impl().unwrap();
-    decrement_counter();
-}
+fn add_many_cols() {}
 
-#[test]
-fn rename_col() {
-    rename_col_impl().unwrap();
-    decrement_counter();
-}
+fn remove_many_cols() {}
 
-#[test]
-fn remove_index() {
-    remove_index_impl().unwrap();
-    decrement_counter();
-}
+fn remove_indexed_cols() {}
 
-#[test]
-fn add_index() {
-    add_index_impl().unwrap();
-    decrement_counter();
-}
+fn add_crr() {}
 
-#[test]
-fn change_index_to_unique() {
-    change_index_to_unique_impl().unwrap();
-    decrement_counter();
-}
+fn add_table() {}
 
-#[test]
-fn remove_col_from_index() {
-    remove_col_from_index_impl().unwrap();
-    decrement_counter();
-}
+fn remove_table() {}
 
-#[test]
-fn add_col_to_index() {
-    add_col_to_index_impl().unwrap();
-    decrement_counter();
-}
+fn remove_crr() {}
 
-#[test]
-fn change_index_col_order() {
-    decrement_counter();
-}
+fn primary_key_change() {}
 
-#[test]
-fn add_many_cols() {
-    decrement_counter();
-}
+fn with_default_value() {}
 
-#[test]
-fn remove_many_cols() {
-    decrement_counter();
-}
+fn not_null() {}
 
-#[test]
-fn remove_indexed_cols() {
-    decrement_counter();
-}
+fn nullable() {}
 
-#[test]
-fn add_crr() {
-    decrement_counter();
-}
+fn no_default_value() {}
 
-#[test]
-fn add_table() {
-    decrement_counter();
-}
-
-#[test]
-fn remove_table() {
-    decrement_counter();
-}
-
-#[test]
-fn remove_crr() {
-    decrement_counter();
-}
-
-#[test]
-fn primary_key_change() {
-    decrement_counter();
-}
-
-#[test]
-fn with_default_value() {
-    decrement_counter();
-}
-
-#[test]
-fn not_null() {
-    decrement_counter();
-}
-
-#[test]
-fn nullable() {
-    decrement_counter();
-}
-
-#[test]
-fn no_default_value() {
-    decrement_counter();
-}
-
-#[test]
 fn strut_schema() {
     let db = integration_utils::opendb().expect("db opened");
     let stmt = db
@@ -460,11 +348,9 @@ primary key ("deck_id", "order")
         stmt.column_text(0).expect("completed"),
         "migration complete"
     );
-
-    decrement_counter();
 }
 
-fn empty_schema_impl() -> Result<(), ResultCode> {
+fn empty_schema() -> Result<(), ResultCode> {
     let db = integration_utils::opendb()?;
     let stmt = db
         .db
@@ -474,7 +360,7 @@ fn empty_schema_impl() -> Result<(), ResultCode> {
     Ok(())
 }
 
-fn to_empty_from_something_impl() -> Result<(), ResultCode> {
+fn to_empty_from_something() -> Result<(), ResultCode> {
     let db = integration_utils::opendb()?;
     db.db.exec_safe("CREATE TABLE foo (a primary key, b);")?;
     db.db.exec_safe("CREATE TABLE bar (a, b, c);")?;
@@ -489,7 +375,7 @@ fn to_empty_from_something_impl() -> Result<(), ResultCode> {
     Ok(())
 }
 
-fn to_something_from_empty_impl() -> Result<(), ResultCode> {
+fn to_something_from_empty() -> Result<(), ResultCode> {
     let db = integration_utils::opendb()?;
     let schema = "
         CREATE TABLE IF NOT EXISTS foo (a primary key, b);
@@ -509,7 +395,7 @@ fn to_something_from_empty_impl() -> Result<(), ResultCode> {
     Ok(())
 }
 
-fn add_col_impl() -> Result<(), ResultCode> {
+fn add_col() -> Result<(), ResultCode> {
     // start with some table
     // move to a schema that adds a column to it
     let db = integration_utils::opendb()?;
@@ -533,7 +419,7 @@ fn add_col_impl() -> Result<(), ResultCode> {
     Ok(())
 }
 
-fn remove_col_impl() -> Result<(), ResultCode> {
+fn remove_col() -> Result<(), ResultCode> {
     let db = integration_utils::opendb()?;
     db.db
         .exec_safe("CREATE TABLE todo (id primary key, content text, complete integer, list)")?;
@@ -561,7 +447,6 @@ fn remove_col_impl() -> Result<(), ResultCode> {
     Ok(())
 }
 
-#[test]
 fn remove_col_fract_table() {
     let db = integration_utils::opendb().expect("db opened");
     db.db
@@ -583,7 +468,7 @@ fn remove_col_fract_table() {
     assert!(expect_columns(&db.db, "todo", vec!["id", "content", "position"]).expect("matched"));
 }
 
-fn remove_index_impl() -> Result<(), ResultCode> {
+fn remove_index() -> Result<(), ResultCode> {
     let db = integration_utils::opendb()?;
     db.db.exec_safe(
         "
@@ -603,7 +488,7 @@ fn remove_index_impl() -> Result<(), ResultCode> {
     Ok(())
 }
 
-fn add_index_impl() -> Result<(), ResultCode> {
+fn add_index() -> Result<(), ResultCode> {
     let db = integration_utils::opendb()?;
     db.db.exec_safe("CREATE TABLE foo(a primary key, b);")?;
     let schema = "
@@ -620,7 +505,7 @@ fn add_index_impl() -> Result<(), ResultCode> {
     Ok(())
 }
 
-fn change_index_to_unique_impl() -> Result<(), ResultCode> {
+fn change_index_to_unique() -> Result<(), ResultCode> {
     let db = integration_utils::opendb()?;
     db.db.exec_safe(
         "
@@ -642,7 +527,7 @@ fn change_index_to_unique_impl() -> Result<(), ResultCode> {
     Ok(())
 }
 
-fn remove_col_from_index_impl() -> Result<(), ResultCode> {
+fn remove_col_from_index() -> Result<(), ResultCode> {
     let db = integration_utils::opendb()?;
     db.db.exec_safe(
         "
@@ -665,7 +550,7 @@ fn remove_col_from_index_impl() -> Result<(), ResultCode> {
     Ok(())
 }
 
-fn add_col_to_index_impl() -> Result<(), ResultCode> {
+fn add_col_to_index() -> Result<(), ResultCode> {
     let db = integration_utils::opendb()?;
     db.db.exec_safe(
         "
@@ -688,7 +573,7 @@ fn add_col_to_index_impl() -> Result<(), ResultCode> {
     Ok(())
 }
 
-fn rename_col_impl() -> Result<(), ResultCode> {
+fn rename_col() -> Result<(), ResultCode> {
     let db = integration_utils::opendb()?;
     db.db.exec_safe("CREATE TABLE foo (a primary key, b);")?;
     let schema = "
@@ -761,4 +646,34 @@ fn expect_indices(
     }
 
     Ok(len == expected.len())
+}
+
+pub fn run_suite() -> Result<(), ResultCode> {
+    empty_schema()?;
+    to_empty_from_something()?;
+    to_something_from_empty()?;
+    add_col()?;
+    remove_col()?;
+    rename_col()?;
+    remove_index()?;
+    add_index()?;
+    change_index_to_unique()?;
+    remove_col_from_index()?;
+    add_col_to_index()?;
+    idempotent();
+    change_index_col_order();
+    add_many_cols();
+    remove_many_cols();
+    remove_indexed_cols();
+    add_crr();
+    add_table();
+    remove_table();
+    remove_crr();
+    primary_key_change();
+    with_default_value();
+    not_null();
+    nullable();
+    no_default_value();
+    strut_schema();
+    Ok(())
 }

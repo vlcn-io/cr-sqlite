@@ -2,13 +2,8 @@ extern crate crsql_bundle;
 use sqlite::{Connection, ResultCode};
 use sqlite_nostd as sqlite;
 
-#[test]
-fn sync_bit_honored() {
-    sync_bit_honored_impl().unwrap();
-}
-
 // If sync bit is on, nothing gets written to clock tables for that connection.
-fn sync_bit_honored_impl() -> Result<(), ResultCode> {
+fn sync_bit_honored() -> Result<(), ResultCode> {
     let db = integration_utils::opendb()?;
     let conn = &db.db;
     conn.exec_safe("CREATE TABLE foo (a primary key, b);")?;
@@ -24,4 +19,8 @@ fn sync_bit_honored_impl() -> Result<(), ResultCode> {
     assert!(result == ResultCode::DONE);
 
     Ok(())
+}
+
+pub fn run_suite() -> Result<(), ResultCode> {
+    sync_bit_honored()
 }

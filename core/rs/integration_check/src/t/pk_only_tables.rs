@@ -180,15 +180,7 @@ fn junction_table() -> Result<(), ResultCode> {
         .prepare_v2("UPDATE jx SET id1 = 2 WHERE id1 = 1 AND id2 = 3")?
         .step()?;
 
-    println!("A before sync");
-    // print_changes(&db_a, None)?;
-
     sync_left_to_right(&db_b.db, &db_a.db, -1)?;
-
-    println!("B");
-    // print_changes(&db_b, None)?;
-    println!("A after sync");
-    // print_changes(&db_a, None)?;
 
     let stmt = db_a.db.prepare_v2("SELECT * FROM jx;")?;
     let result = stmt.step()?;

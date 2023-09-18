@@ -56,6 +56,8 @@ endif
 
 prefix=./dist
 dbg_prefix=./dbg
+bundle=bundle_static
+test: bundle = integration_check
 
 TARGET_LOADABLE=$(prefix)/crsqlite.$(LOADABLE_EXTENSION)
 TARGET_DBG_LOADABLE=$(dbg_prefix)/crsqlite.$(LOADABLE_EXTENSION)
@@ -86,7 +88,7 @@ clean:
 	rm -rf $(prefix)
 	rm -rf $(dbg_prefix)
 	cd rs/bundle && cargo clean
-
+	cd rs/integration_check && cargo clean
 
 FORMAT_FILES=$(ext_files) $(ext_headers) ./src/core_init.c
 format: $(FORMAT_FILES)
@@ -116,23 +118,23 @@ ubsan: clean $(TARGET_TEST)
 fuzz: $(TARGET_FUZZ)
 	$(prefix)/fuzz
 
-rs_lib_static = ./rs/bundle/target/release/libcrsql_bundle.a
-rs_lib_static_cpy = ./dist/libcrsql_bundle-static.a
+rs_lib_static = ./rs/$(bundle)/target/release/libcrsql_$(bundle).a
+rs_lib_static_cpy = ./dist/libcrsql_$(bundle)-static.a
 
-rs_lib_dbg_static = ./rs/bundle/target/debug/libcrsql_bundle.a
-rs_lib_dbg_static_cpy = ./dbg/libcrsql_bundle-dbg-static.a
+rs_lib_dbg_static = ./rs/$(bundle)/target/debug/libcrsql_$(bundle).a
+rs_lib_dbg_static_cpy = ./dbg/libcrsql_$(bundle)-dbg-static.a
 
-rs_lib_loadable = ./rs/bundle/target/release/libcrsql_bundle.a
-rs_lib_loadable_cpy = ./dist/libcrsql_bundle-loadable.a
+rs_lib_loadable = ./rs/$(bundle)/target/release/libcrsql_$(bundle).a
+rs_lib_loadable_cpy = ./dist/libcrsql_$(bundle)-loadable.a
 
-rs_lib_dbg_loadable = ./rs/bundle/target/debug/libcrsql_bundle.a
-rs_lib_dbg_loadable_cpy = ./dbg/libcrsql_bundle-dbg-loadable.a
+rs_lib_dbg_loadable = ./rs/$(bundle)/target/debug/libcrsql_$(bundle).a
+rs_lib_dbg_loadable_cpy = ./dbg/libcrsql_$(bundle)-dbg-loadable.a
 
 ifdef CI_MAYBE_TARGET
-	rs_lib_dbg_static = ./rs/bundle/target/$(CI_MAYBE_TARGET)/debug/libcrsql_bundle.a
-	rs_lib_loadable = ./rs/bundle/target/$(CI_MAYBE_TARGET)/release/libcrsql_bundle.a
-	rs_lib_dbg_loadable = ./rs/bundle/target/$(CI_MAYBE_TARGET)/debug/libcrsql_bundle.a
-	rs_lib_static = ./rs/bundle/target/$(CI_MAYBE_TARGET)/release/libcrsql_bundle.a
+	rs_lib_dbg_static = ./rs/$(bundle)/target/$(CI_MAYBE_TARGET)/debug/libcrsql_$(bundle).a
+	rs_lib_loadable = ./rs/$(bundle)/target/$(CI_MAYBE_TARGET)/release/libcrsql_$(bundle).a
+	rs_lib_dbg_loadable = ./rs/$(bundle)/target/$(CI_MAYBE_TARGET)/debug/libcrsql_$(bundle).a
+	rs_lib_static = ./rs/$(bundle)/target/$(CI_MAYBE_TARGET)/release/libcrsql_$(bundle).a
 	RS_TARGET = --target=$(CI_MAYBE_TARGET)
 	ifndef CI_GCC
 # clang has a different target triple than Rust for ios simuators
@@ -145,19 +147,19 @@ ifdef CI_MAYBE_TARGET
 endif
 
 $(rs_lib_dbg_static_cpy): FORCE $(dbg_prefix)
-	cd ./rs/bundle && cargo build $(RS_TARGET) --features static,omit_load_extension $(rs_build_flags)
+	cd ./rs/$(bundle) && cargo rustc $(RS_TARGET) --features static,omit_load_extension $(rs_build_flags)
 	cp $(rs_lib_dbg_static) $(rs_lib_dbg_static_cpy)
 
 $(rs_lib_static_cpy): FORCE $(prefix)
-	cd ./rs/bundle && cargo build $(RS_TARGET) --release --features static,omit_load_extension $(rs_build_flags)
+	cd ./rs/$(bundle) && cargo rustc $(RS_TARGET) --release --features static,omit_load_extension $(rs_build_flags)
 	cp $(rs_lib_static) $(rs_lib_static_cpy)
 
 $(rs_lib_loadable_cpy): FORCE $(prefix)
-	cd ./rs/bundle && cargo $(rs_ndk) build $(RS_TARGET) --release --features loadable_extension $(rs_build_flags)
+	cd ./rs/$(bundle) && cargo $(rs_ndk) build $(RS_TARGET) --release --features loadable_extension $(rs_build_flags)
 	cp $(rs_lib_loadable) $(rs_lib_loadable_cpy)
 
 $(rs_lib_dbg_loadable_cpy): FORCE $(dbg_prefix)
-	cd ./rs/bundle && cargo build $(RS_TARGET) --features loadable_extension $(rs_build_flags)
+	cd ./rs/$(bundle) && cargo rustc $(RS_TARGET) --features loadable_extension $(rs_build_flags)
 	cp $(rs_lib_dbg_loadable) $(rs_lib_dbg_loadable_cpy)
 
 # Build the loadable extension.
@@ -199,7 +201,7 @@ $(TARGET_STATIC): $(prefix) $(ext_files) $(rs_lib_static_cpy)
 	mkdir -p $(prefix)/temp
 	rm -f $(prefix)/temp/*
 	mv *.o $(prefix)/temp
-	cd $(prefix)/temp && ar -x ../libcrsql_bundle-static.a && ar -rc crsqlite.a *.o && mv crsqlite.a ../crsqlite-$(CI_MAYBE_TARGET).a
+	cd $(prefix)/temp && ar -x ../libcrsql_$(bundle)-static.a && ar -rc crsqlite.a *.o && mv crsqlite.a ../crsqlite-$(CI_MAYBE_TARGET).a
 
 # Build a normal SQLite CLI that does not include cr-sqlite.
 # cr-sqlite can be laoded in via the `.load` pragma.

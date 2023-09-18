@@ -154,9 +154,9 @@ version = "0.0.1"
 dependencies = [
  "cargo-valgrind",
  "cc",
- "colored",
  "crsql_bundle",
  "integration_utils",
+ "libc-print",
  "sqlite_nostd",
 ]
 
@@ -243,6 +243,15 @@ name = "libc"
 version = "0.2.148"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9cdc71e17332e86d2e1d38c1f99edcb6288ee11b815fb1a4b049eaa2114d369b"
+
+[[package]]
+name = "libc-print"
+version = "0.1.21"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "06cea5d58bd9ba4717bbf5c6c5bb11bb6e9e76685b7fff34039b80f50ce86c11"
+dependencies = [
+ "libc",
+]
 
 [[package]]
 name = "libloading"

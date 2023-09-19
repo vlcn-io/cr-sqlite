@@ -198,7 +198,7 @@ pub fn create_clock_table(
     _err: *mut *mut c_char,
 ) -> Result<ResultCode, ResultCode> {
     let pk_list = crate::util::as_identifier_list(&table_info.pks, None)?;
-    let table_name = &table_info.tbl_name;
+    let table_name = crate::util::escape_ident(&table_info.tbl_name);
 
     db.exec_safe(&format!(
         "CREATE TABLE IF NOT EXISTS \"{table_name}__crsql_clock\" (
@@ -211,12 +211,15 @@ pub fn create_clock_table(
       PRIMARY KEY ({pk_list}, __crsql_col_name)
     )",
         pk_list = pk_list,
-        table_name = crate::util::escape_ident(table_name)
+        table_name = table_name
     ))?;
 
     db.exec_safe(
       &format!(
         "CREATE INDEX IF NOT EXISTS \"{table_name}__crsql_clock_dbv_idx\" ON \"{table_name}__crsql_clock\" (\"__crsql_db_version\")",
-        table_name = crate::util::escape_ident(table_name),
-      ))
+        table_name = table_name
+      ))?;
+
+    db.exec_safe(&format!("CREATE TABLE IF NOT EXISTS \"{table_name}__crsql_pks\" (num INTEGER PRIMARY KEY, {pk_list})", table_name = table_name, pk_list = pk_list))?;
+    db.exec_safe(&format!("CREATE UNIQUE INDEX IF NOT EXISTS \"{table_name}__crsql_pks_pks\" ON \"{table_name}__crsql_pks\" ({pk_list})", table_name = table_name, pk_list = pk_list))
 }

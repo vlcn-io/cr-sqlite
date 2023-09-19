@@ -165,7 +165,8 @@ extern "C" fn destroy(vtab: *mut sqlite::vtab) -> c_int {
     let tab = unsafe { Box::from_raw(vtab.cast::<CLSetTab>()) };
     let ret = tab.db.exec_safe(&format!(
         "DROP TABLE \"{db_name}\".\"{table_name}\";
-        DROP TABLE \"{db_name}\".\"{table_name}__crsql_clock\";",
+        DROP TABLE \"{db_name}\".\"{table_name}__crsql_clock\";
+        DROP TABLE \"{db_name}\".\"{table_name}__crsql_pks\";",
         table_name = crate::util::escape_ident(&tab.base_table_name),
         db_name = crate::util::escape_ident(&tab.db_name)
     ));

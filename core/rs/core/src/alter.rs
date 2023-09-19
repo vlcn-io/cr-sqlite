@@ -66,10 +66,7 @@ unsafe fn compact_post_alter(
 
     if pk_diff > 0 {
         // drop the clock table so we can re-create it
-        db.exec_safe(&format!(
-            "DROP TABLE \"{table_name}__crsql_clock\"",
-            table_name = crate::util::escape_ident(tbl_name_str),
-        ))?;
+        crate::remove_crr_clock_table_if_exists(db, tbl_name_str)?;
     } else {
         // clock table is still relevant but needs compacting
         // in case columns were removed during the migration

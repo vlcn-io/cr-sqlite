@@ -18,24 +18,3 @@ Merge:
 Pull changes:
 
 1. Join pks via num
-
-# next db version optimization
-
-We currently nuke this on commit.
-
-We can keep a variable in ext data to represent it and only nuke / refresh it if the data change bit is set.
-
-The variable needs to be set on merge
-
-```ts
-crsql_next_db_version(arg?)
-
-// arg is optional. If present, we set the `pending next db version`
-function crsql_next_db_version(arg?) {
-  const ret = max(crsql_db_version() + 1, pExtData.pendingDbVersion, arg);
-  pExtData.pendingDbVersion = ret;
-  return ret;
-}
-```
-
-On commit, pending becomes actual.

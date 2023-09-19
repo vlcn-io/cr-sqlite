@@ -48,18 +48,12 @@ fn did_cid_win(
     col_version: sqlite::int64,
     errmsg: *mut *mut c_char,
 ) -> Result<bool, ResultCode> {
-    let stmt_key = get_cache_key(CachedStmtType::GetColVersion, insert_tbl, None)?;
-    let col_vrsn_stmt = get_cached_stmt_rt_wt(db, ext_data, stmt_key, || {
-        Ok(format!(
-        "SELECT __crsql_col_version FROM \"{table_name}__crsql_clock\" WHERE {pk_where_list} AND ? = __crsql_col_name",
-        table_name = crate::util::escape_ident(insert_tbl),
-        pk_where_list = pk_where_list_from_tbl_info(tbl_info, None)?,
-      ))
-    })?;
+    let col_vrsn_stmt_ref = tbl_info.get_col_version_stmt(db)?;
+    let col_vrsn_stmt = col_vrsn_stmt_ref.as_ref().ok_or(ResultCode::ERROR)?;
 
-    let bind_result = bind_package_to_stmt(col_vrsn_stmt, &unpacked_pks, 0);
+    let bind_result = bind_package_to_stmt(col_vrsn_stmt.stmt, &unpacked_pks, 0);
     if let Err(rc) = bind_result {
-        reset_cached_stmt(col_vrsn_stmt)?;
+        reset_cached_stmt(col_vrsn_stmt.stmt)?;
         return Err(rc);
     }
     if let Err(rc) = col_vrsn_stmt.bind_text(
@@ -67,14 +61,14 @@ fn did_cid_win(
         col_name,
         sqlite::Destructor::STATIC,
     ) {
-        reset_cached_stmt(col_vrsn_stmt)?;
+        reset_cached_stmt(col_vrsn_stmt.stmt)?;
         return Err(rc);
     }
 
     match col_vrsn_stmt.step() {
         Ok(ResultCode::ROW) => {
             let local_version = col_vrsn_stmt.column_int64(0);
-            reset_cached_stmt(col_vrsn_stmt)?;
+            reset_cached_stmt(col_vrsn_stmt.stmt)?;
             // causal lengths are the same. Fall back to original algorithm.
             if col_version > local_version {
                 return Ok(true);
@@ -83,13 +77,13 @@ fn did_cid_win(
             }
         }
         Ok(ResultCode::DONE) => {
-            reset_cached_stmt(col_vrsn_stmt)?;
+            reset_cached_stmt(col_vrsn_stmt.stmt)?;
             // no rows returned
             // of course the incoming change wins if there's nothing there locally.
             return Ok(true);
         }
         Ok(rc) | Err(rc) => {
-            reset_cached_stmt(col_vrsn_stmt)?;
+            reset_cached_stmt(col_vrsn_stmt.stmt)?;
             let err = CString::new("Bad return code when selecting local column version")?;
             unsafe { *errmsg = err.into_raw() };
             return Err(rc);
@@ -511,6 +505,7 @@ fn get_local_cl(
         }
     }
 }
+
 unsafe fn merge_insert(
     vtab: *mut sqlite::vtab,
     argc: c_int,

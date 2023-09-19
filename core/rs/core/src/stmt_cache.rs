@@ -21,7 +21,6 @@ use crate::tableinfo::TableInfo;
 // - start removing some unsafe code
 // - remove uthash and just use rust btreemap
 pub enum CachedStmtType {
-    GetColVersion = 2,
     // can we one day delete this and use site id for ties?
     // if we do, how does that impact the backup and restore story?
     // e.g., restoring a database snapshot on a new machine with a new siteid but
@@ -81,8 +80,7 @@ pub fn get_cache_key(
     col_name: Option<&str>,
 ) -> Result<String, ResultCode> {
     match stmt_type {
-        CachedStmtType::GetColVersion
-        | CachedStmtType::MergePkOnlyInsert
+        CachedStmtType::MergePkOnlyInsert
         | CachedStmtType::MergeDelete
         | CachedStmtType::ZeroClocksOnResurrect
         | CachedStmtType::MergeDeleteDropClocks => {

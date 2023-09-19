@@ -94,34 +94,27 @@ fn did_cid_win(
     // need to pull the current value and compare
     // we could compare on site_id if we can guarantee site_id is always provided.
     // would be slightly more performant..
-    let stmt_key = get_cache_key(CachedStmtType::GetCurrValue, insert_tbl, Some(col_name))?;
-    let col_val_stmt = get_cached_stmt_rt_wt(db, ext_data, stmt_key, || {
-        Ok(format!(
-            "SELECT \"{col_name}\" FROM \"{table_name}\" WHERE {pk_where_list}",
-            col_name = crate::util::escape_ident(col_name),
-            table_name = crate::util::escape_ident(insert_tbl),
-            pk_where_list = pk_where_list_from_tbl_info(tbl_info, None)?,
-        ))
-    })?;
+    let col_val_stmt_ref = tbl_info.get_col_value_stmt(db, col_name)?;
+    let col_val_stmt = col_val_stmt_ref.as_ref().ok_or(ResultCode::ERROR)?;
 
-    let bind_result = bind_package_to_stmt(col_val_stmt, &unpacked_pks, 0);
+    let bind_result = bind_package_to_stmt(col_val_stmt.stmt, &unpacked_pks, 0);
     if let Err(rc) = bind_result {
-        reset_cached_stmt(col_val_stmt)?;
+        reset_cached_stmt(col_val_stmt.stmt)?;
         return Err(rc);
     }
 
     let step_result = col_val_stmt.step();
     match step_result {
         Ok(ResultCode::ROW) => {
-            let local_value = col_val_stmt.column_value(0);
+            let local_value = col_val_stmt.column_value(0)?;
             let ret = crsql_compare_sqlite_values(insert_val, local_value);
-            reset_cached_stmt(col_val_stmt)?;
+            reset_cached_stmt(col_val_stmt.stmt)?;
             return Ok(ret > 0);
         }
         _ => {
             // ResultCode::DONE would happen if clock values exist but actual values are missing.
             // should we just allow the insert anyway?
-            reset_cached_stmt(col_val_stmt)?;
+            reset_cached_stmt(col_val_stmt.stmt)?;
             let err = CString::new(format!(
                 "could not find row to merge with for tbl {}",
                 insert_tbl

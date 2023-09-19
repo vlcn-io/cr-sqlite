@@ -39,6 +39,15 @@ pub struct TableInfo {
 }
 
 impl TableInfo {
+    fn find_non_pk_col(&self, col_name: &str) -> Result<&ColumnInfo, ResultCode> {
+        for col in &self.non_pks {
+            if col.name == col_name {
+                return Ok(col);
+            }
+        }
+        Err(ResultCode::ERROR)
+    }
+
     pub fn get_set_winner_clock_stmt(
         &self,
         db: *mut sqlite3,
@@ -102,6 +111,15 @@ impl TableInfo {
         Ok(self.col_version_stmt.try_borrow()?)
     }
 
+    pub fn get_col_value_stmt(
+        &self,
+        db: *mut sqlite3,
+        col_name: &str,
+    ) -> Result<Ref<Option<ManagedStmt>>, ResultCode> {
+        let col_info = self.find_non_pk_col(col_name)?;
+        col_info.get_curr_value_stmt(self, db)
+    }
+
     pub fn clear_stmts(&self) -> Result<ResultCode, ResultCode> {
         // finalize all stmts
         let mut stmt = self.set_winner_clock_stmt.try_borrow_mut()?;
@@ -110,6 +128,11 @@ impl TableInfo {
         stmt.take();
         let mut stmt = self.col_version_stmt.try_borrow_mut()?;
         stmt.take();
+
+        // primary key columns shouldn't have statements? right?
+        for col in &self.non_pks {
+            col.clear_stmts()?;
+        }
 
         Ok(ResultCode::OK)
     }
@@ -121,9 +144,36 @@ pub struct ColumnInfo {
     // > 0 if it is a primary key columns
     // the value refers to the position in the `PRIMARY KEY (cols...)` statement
     pub pk: i32,
-    curr_value_stmt: Option<ManagedStmt>,
+    curr_value_stmt: RefCell<Option<ManagedStmt>>,
     merge_insert_stmt: Option<ManagedStmt>,
     row_patch_data_stmt: Option<ManagedStmt>,
+}
+
+impl ColumnInfo {
+    fn get_curr_value_stmt(
+        &self,
+        tbl_info: &TableInfo,
+        db: *mut sqlite3,
+    ) -> Result<Ref<Option<ManagedStmt>>, ResultCode> {
+        if self.curr_value_stmt.try_borrow()?.is_none() {
+            let sql = format!(
+                "SELECT \"{col_name}\" FROM \"{table_name}\" WHERE {pk_where_list}",
+                col_name = crate::util::escape_ident(&self.name),
+                table_name = crate::util::escape_ident(&tbl_info.tbl_name),
+                pk_where_list = crate::util::where_list(&tbl_info.pks, None)?,
+            );
+            let ret = db.prepare_v3(&sql, sqlite::PREPARE_PERSISTENT)?;
+            *self.curr_value_stmt.try_borrow_mut()? = Some(ret);
+        }
+        Ok(self.curr_value_stmt.try_borrow()?)
+    }
+
+    pub fn clear_stmts(&self) -> Result<ResultCode, ResultCode> {
+        let mut stmt = self.curr_value_stmt.try_borrow_mut()?;
+        stmt.take();
+
+        Ok(ResultCode::OK)
+    }
 }
 
 #[no_mangle]
@@ -243,7 +293,7 @@ pub fn pull_table_info(
                     name: stmt.column_text(1)?.to_string(),
                     cid: stmt.column_int(0),
                     pk: stmt.column_int(2),
-                    curr_value_stmt: None,
+                    curr_value_stmt: RefCell::new(None),
                     merge_insert_stmt: None,
                     row_patch_data_stmt: None,
                 });

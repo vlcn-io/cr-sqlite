@@ -21,8 +21,6 @@ use crate::tableinfo::TableInfo;
 // - start removing some unsafe code
 // - remove uthash and just use rust btreemap
 pub enum CachedStmtType {
-    SetWinnerClock = 0,
-    GetLocalCl = 1,
     GetColVersion = 2,
     // can we one day delete this and use site id for ties?
     // if we do, how does that impact the backup and restore story?
@@ -83,9 +81,7 @@ pub fn get_cache_key(
     col_name: Option<&str>,
 ) -> Result<String, ResultCode> {
     match stmt_type {
-        CachedStmtType::SetWinnerClock
-        | CachedStmtType::GetLocalCl
-        | CachedStmtType::GetColVersion
+        CachedStmtType::GetColVersion
         | CachedStmtType::MergePkOnlyInsert
         | CachedStmtType::MergeDelete
         | CachedStmtType::ZeroClocksOnResurrect

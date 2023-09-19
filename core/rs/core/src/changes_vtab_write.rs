@@ -223,7 +223,6 @@ fn set_winner_clock(
     };
 
     let set_stmt_ref = tbl_info.get_set_winner_clock_stmt(db)?;
-    //?.as_ref();
     let set_stmt = set_stmt_ref.as_ref().ok_or(ResultCode::ERROR)?;
 
     let bind_result = bind_package_to_stmt(set_stmt.stmt, unpacked_pks, 0);
@@ -481,31 +480,17 @@ fn get_local_cl(
     tbl_info: &TableInfo,
     unpacked_pks: &Vec<ColumnValue>,
 ) -> Result<sqlite::int64, ResultCode> {
-    let stmt_key = get_cache_key(CachedStmtType::GetLocalCl, tbl_name, None)?;
+    let local_cl_stmt_ref = tbl_info.get_local_cl_stmt(db)?;
+    let local_cl_stmt = local_cl_stmt_ref.as_ref().ok_or(ResultCode::ERROR)?;
 
-    let local_cl_stmt = get_cached_stmt_rt_wt(db, ext_data, stmt_key, || {
-        // We do an optimization to not store unnecessary create records.
-        // If a create record for the rows does not exist, see if any record does
-        // if a record does, the causal length is implicitly 1
-        Ok(format!(
-        "SELECT COALESCE(
-          (SELECT __crsql_col_version FROM \"{table_name}__crsql_clock\" WHERE {pk_where_list} AND __crsql_col_name = '{delete_sentinel}'),
-          (SELECT 1 FROM \"{table_name}__crsql_clock\" WHERE {pk_where_list})
-        )",
-        table_name = crate::util::escape_ident(tbl_name),
-        pk_where_list = pk_where_list_from_tbl_info(tbl_info, None)?,
-        delete_sentinel = crate::c::DELETE_SENTINEL,
-      ))
-    })?;
-
-    let rc = bind_package_to_stmt(local_cl_stmt, unpacked_pks, 0);
+    let rc = bind_package_to_stmt(local_cl_stmt.stmt, unpacked_pks, 0);
     if let Err(rc) = rc {
-        reset_cached_stmt(local_cl_stmt)?;
+        reset_cached_stmt(local_cl_stmt.stmt)?;
         return Err(rc);
     }
-    let rc = bind_package_to_stmt(local_cl_stmt, unpacked_pks, unpacked_pks.len());
+    let rc = bind_package_to_stmt(local_cl_stmt.stmt, unpacked_pks, unpacked_pks.len());
     if let Err(rc) = rc {
-        reset_cached_stmt(local_cl_stmt)?;
+        reset_cached_stmt(local_cl_stmt.stmt)?;
         return Err(rc);
     }
 
@@ -513,15 +498,15 @@ fn get_local_cl(
     match step_result {
         Ok(ResultCode::ROW) => {
             let ret = local_cl_stmt.column_int64(0);
-            reset_cached_stmt(local_cl_stmt)?;
+            reset_cached_stmt(local_cl_stmt.stmt)?;
             Ok(ret)
         }
         Ok(ResultCode::DONE) => {
-            reset_cached_stmt(local_cl_stmt)?;
+            reset_cached_stmt(local_cl_stmt.stmt)?;
             Ok(0)
         }
         Ok(rc) | Err(rc) => {
-            reset_cached_stmt(local_cl_stmt)?;
+            reset_cached_stmt(local_cl_stmt.stmt)?;
             Err(rc)
         }
     }

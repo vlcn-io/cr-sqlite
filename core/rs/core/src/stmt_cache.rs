@@ -28,7 +28,6 @@ pub enum CachedStmtType {
     // If we track that "we've seen this restored node since the backup point with the old site_id"
     // then site_id comparisons could change merge results after restore for nodes that
     // have different "seen since" records for the old site_id.
-    MergePkOnlyInsert = 4,
     MergeDelete = 5,
     MergeInsert = 6,
     RowPatchData = 7,
@@ -79,8 +78,7 @@ pub fn get_cache_key(
     col_name: Option<&str>,
 ) -> Result<String, ResultCode> {
     match stmt_type {
-        CachedStmtType::MergePkOnlyInsert
-        | CachedStmtType::MergeDelete
+        CachedStmtType::MergeDelete
         | CachedStmtType::ZeroClocksOnResurrect
         | CachedStmtType::MergeDeleteDropClocks => {
             if col_name.is_some() {

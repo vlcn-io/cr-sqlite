@@ -24,7 +24,7 @@ pub fn get_dflt_value(
         return Err(ResultCode::DONE);
     }
 
-    let notnull = stmt.column_int(1)?;
+    let notnull = stmt.column_int(1);
     let dflt_column_type = stmt.column_type(0)?;
 
     // if the column is nullable and no default value is specified
@@ -163,10 +163,9 @@ pub trait Countable {
 
 impl Countable for *mut sqlite::sqlite3 {
     fn count(self, sql: &str) -> Result<i32, ResultCode> {
-        self.prepare_v2(sql).and_then(|stmt| {
-            stmt.step()?;
-            stmt.column_int(0)
-        })
+        let stmt = self.prepare_v2(sql)?;
+        stmt.step()?;
+        Ok(stmt.column_int(0))
     }
 }
 

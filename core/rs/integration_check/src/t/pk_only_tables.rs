@@ -105,7 +105,7 @@ fn insert_pkonly_row() -> Result<(), ResultCode> {
     let stmt = db_b.db.prepare_v2("SELECT * FROM foo;")?;
     let result = stmt.step()?;
     assert_eq!(result, ResultCode::ROW);
-    let id = stmt.column_int(0)?;
+    let id = stmt.column_int(0);
     assert_eq!(id, 1);
     let result = stmt.step()?;
     assert_eq!(result, ResultCode::DONE);
@@ -135,7 +135,7 @@ fn modify_pkonly_row() -> Result<(), ResultCode> {
     let stmt = db_b.db.prepare_v2("SELECT * FROM foo;")?;
     let result = stmt.step()?;
     assert_eq!(result, ResultCode::ROW);
-    let id = stmt.column_int(0)?;
+    let id = stmt.column_int(0);
     assert_eq!(id, 2);
     let result = stmt.step()?;
     assert_eq!(result, ResultCode::DONE);
@@ -169,8 +169,8 @@ fn junction_table() -> Result<(), ResultCode> {
     let stmt = db_b.db.prepare_v2("SELECT * FROM jx;")?;
     let result = stmt.step()?;
     assert_eq!(result, ResultCode::ROW);
-    let id1 = stmt.column_int(0)?;
-    let id2 = stmt.column_int(1)?;
+    let id1 = stmt.column_int(0);
+    let id2 = stmt.column_int(1);
     assert_eq!(id1, 1);
     assert_eq!(id2, 3);
     let result = stmt.step()?;
@@ -185,8 +185,8 @@ fn junction_table() -> Result<(), ResultCode> {
     let stmt = db_a.db.prepare_v2("SELECT * FROM jx;")?;
     let result = stmt.step()?;
     assert_eq!(result, ResultCode::ROW);
-    let id1 = stmt.column_int(0)?;
-    let id2 = stmt.column_int(1)?;
+    let id1 = stmt.column_int(0);
+    let id2 = stmt.column_int(1);
     assert_eq!(id1, 1);
     assert_eq!(id2, 3);
     let result = stmt.step()?;
@@ -224,9 +224,9 @@ fn discord_report_1() -> Result<(), ResultCode> {
     assert_eq!(cid, "-1");
     let val_type = stmt.column_type(3)?;
     assert_eq!(val_type, ColumnType::Null);
-    let col_version = stmt.column_int64(4)?;
+    let col_version = stmt.column_int64(4);
     assert_eq!(col_version, 1);
-    let db_version = stmt.column_int64(5)?;
+    let db_version = stmt.column_int64(5);
     assert_eq!(db_version, 1);
 
     assert_eq!(stmt.step()?, ResultCode::DONE);

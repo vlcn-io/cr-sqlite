@@ -129,7 +129,7 @@ fn test_unpack_columns() -> Result<(), ResultCode> {
         .db
         .prepare_v2("SELECT cell FROM crsql_unpack_columns WHERE package = (SELECT crsql_pack_columns(id, x, y) FROM foo)")?;
     select_stmt.step()?;
-    assert!(select_stmt.column_int(0)? == 12);
+    assert!(select_stmt.column_int(0) == 12);
     select_stmt.step()?;
     assert!(select_stmt.column_text(0)? == "str");
     select_stmt.step()?;

@@ -19,7 +19,7 @@ fn create_crr_via_vtab() -> Result<(), ResultCode> {
     conn.exec_safe("INSERT INTO foo VALUES (1, 2);")?;
     let stmt = conn.prepare_v2("SELECT count(*) FROM crsql_changes")?;
     stmt.step()?;
-    let count = stmt.column_int(0)?;
+    let count = stmt.column_int(0);
     assert_eq!(count, 1);
     Ok(())
 }
@@ -32,7 +32,7 @@ fn destroy_crr_via_vtab() -> Result<(), ResultCode> {
     conn.exec_safe("DROP TABLE foo_schema")?;
     let stmt = conn.prepare_v2("SELECT count(*) FROM sqlite_master WHERE name LIKE '%foo%'")?;
     stmt.step()?;
-    let count = stmt.column_int(0)?;
+    let count = stmt.column_int(0);
     assert_eq!(count, 0);
     Ok(())
 }
@@ -61,7 +61,7 @@ fn create_if_not_exists() -> Result<(), ResultCode> {
     conn.exec_safe("INSERT INTO foo VALUES (1, 2);")?;
     let stmt = conn.prepare_v2("SELECT count(*) FROM crsql_changes")?;
     stmt.step()?;
-    let count = stmt.column_int(0)?;
+    let count = stmt.column_int(0);
     assert_eq!(count, 1);
     drop(stmt);
     // second create is a no-op
@@ -70,7 +70,7 @@ fn create_if_not_exists() -> Result<(), ResultCode> {
     )?;
     let stmt = conn.prepare_v2("SELECT count(*) FROM crsql_changes")?;
     stmt.step()?;
-    let count = stmt.column_int(0)?;
+    let count = stmt.column_int(0);
     assert_eq!(count, 1);
     Ok(())
 }

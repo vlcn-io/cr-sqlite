@@ -222,30 +222,13 @@ fn set_winner_clock(
         }
     };
 
-    let stmt_key = get_cache_key(CachedStmtType::SetWinnerClock, &tbl_info.tbl_name, None)?;
+    let set_stmt_ref = tbl_info.get_set_winner_clock_stmt(db)?;
+    //?.as_ref();
+    let set_stmt = set_stmt_ref.as_ref().ok_or(ResultCode::ERROR)?;
 
-    let set_stmt = get_cached_stmt_rt_wt(db, ext_data, stmt_key, || {
-        let pk_cols = &tbl_info.pks;
-        Ok(format!(
-          "INSERT OR REPLACE INTO \"{table_name}__crsql_clock\"
-            ({pk_ident_list}, __crsql_col_name, __crsql_col_version, __crsql_db_version, __crsql_seq, __crsql_site_id)
-            VALUES (
-              {pk_bind_list},
-              ?,
-              ?,
-              crsql_next_db_version(?),
-              ?,
-              ?
-            ) RETURNING _rowid_",
-          table_name = crate::util::escape_ident(&tbl_info.tbl_name),
-          pk_ident_list = crate::util::as_identifier_list(pk_cols, None)?,
-          pk_bind_list = crate::util::binding_list(pk_cols.len()),
-        ))
-    })?;
-
-    let bind_result = bind_package_to_stmt(set_stmt, unpacked_pks, 0);
+    let bind_result = bind_package_to_stmt(set_stmt.stmt, unpacked_pks, 0);
     if let Err(rc) = bind_result {
-        reset_cached_stmt(set_stmt)?;
+        reset_cached_stmt(set_stmt.stmt)?;
         return Err(rc);
     }
     let bind_result = set_stmt
@@ -263,18 +246,18 @@ fn set_winner_clock(
         });
 
     if let Err(rc) = bind_result {
-        reset_cached_stmt(set_stmt)?;
+        reset_cached_stmt(set_stmt.stmt)?;
         return Err(rc);
     }
 
     match set_stmt.step() {
         Ok(ResultCode::ROW) => {
             let rowid = set_stmt.column_int64(0);
-            reset_cached_stmt(set_stmt)?;
+            reset_cached_stmt(set_stmt.stmt)?;
             Ok(rowid)
         }
         _ => {
-            reset_cached_stmt(set_stmt)?;
+            reset_cached_stmt(set_stmt.stmt)?;
             Err(ResultCode::ERROR)
         }
     }

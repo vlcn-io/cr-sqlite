@@ -60,7 +60,7 @@ unsafe fn compact_post_alter(
     ))?;
     stmt.step()?;
 
-    let pk_diff = stmt.column_int(0)?;
+    let pk_diff = stmt.column_int(0);
     // immediately drop stmt, otherwise clock table is considered locked.
     drop(stmt);
 

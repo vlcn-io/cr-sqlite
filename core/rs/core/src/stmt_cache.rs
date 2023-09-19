@@ -21,7 +21,6 @@ use crate::tableinfo::TableInfo;
 // - start removing some unsafe code
 // - remove uthash and just use rust btreemap
 pub enum CachedStmtType {
-    MergeInsert = 6,
     RowPatchData = 7,
 }
 
@@ -62,7 +61,7 @@ pub fn get_cache_key(
     col_name: Option<&str>,
 ) -> Result<String, ResultCode> {
     match stmt_type {
-        CachedStmtType::MergeInsert | CachedStmtType::RowPatchData => {
+        CachedStmtType::RowPatchData => {
             if let Some(col_name) = col_name {
                 Ok(format!(
                     "{stmt_type}_{tbl_name}_{col_name}",

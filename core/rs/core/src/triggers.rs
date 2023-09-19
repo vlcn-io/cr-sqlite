@@ -62,6 +62,9 @@ fn insert_trigger_body(
     if table_info.non_pks.len() == 0 {
         // a table that only has primary keys.
         // we'll need to record a create record in this case.
+        // we need to...
+        // 1. create a function to do all the things?
+        // 2. use last_insert_rowid... but if there were conflicts?
         trigger_components.push(format!(
             "INSERT INTO \"{table_name}__crsql_clock\" (
             {pk_list},

@@ -15,7 +15,7 @@ use crate::c::crsql_ExtData;
 use crate::c::{crsql_Changes_vtab, CrsqlChangesColumn};
 use crate::compare_values::crsql_compare_sqlite_values;
 use crate::pack_columns::bind_package_to_stmt;
-use crate::stmt_cache::{reset_cached_stmt, CachedStmtType};
+use crate::stmt_cache::reset_cached_stmt;
 use crate::tableinfo::{crsql_ensure_table_infos_are_up_to_date, TableInfo};
 use crate::util::{self, slab_rowid};
 use crate::{unpack_columns, ColumnValue};

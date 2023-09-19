@@ -67,16 +67,3 @@ pub fn changes_union_query(
       idx_str = idx_str,
     ));
 }
-
-pub fn row_patch_data_query(table_info: &TableInfo, col_name: &str) -> Option<String> {
-    if let Ok(where_list) = crate::util::where_list(&table_info.pks, None) {
-        return Some(format!(
-            "SELECT \"{col_name}\" FROM \"{table_name}\" WHERE {where_list}\0",
-            col_name = crate::util::escape_ident(col_name),
-            table_name = crate::util::escape_ident(&table_info.tbl_name),
-            where_list = where_list
-        ));
-    }
-
-    return None;
-}

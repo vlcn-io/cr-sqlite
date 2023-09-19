@@ -35,7 +35,7 @@ pub struct TableInfo {
     merge_delete_stmt: Option<ManagedStmt>,
     merge_delete_drop_clocks_stmt: Option<ManagedStmt>,
     zero_clocks_on_resurrect_stmt: Option<ManagedStmt>,
-    // put statement cache here, remove btreeset based cache.
+    // put statement cache here, remove btreemap based cache.
 }
 
 impl TableInfo {
@@ -60,9 +60,21 @@ impl TableInfo {
               pk_bind_list = crate::util::binding_list(self.pks.len()),
             );
             let ret = db.prepare_v3(&sql, sqlite::PREPARE_PERSISTENT)?;
-            *self.set_winner_clock_stmt.borrow_mut() = Some(ret);
+            *self.set_winner_clock_stmt.try_borrow_mut()? = Some(ret);
         }
-        self.set_winner_clock_stmt.try_borrow()
+        Ok(self.set_winner_clock_stmt.try_borrow()?)
+    }
+
+    pub fn clear_stmts(&self) -> Result<ResultCode, ResultCode> {
+        // finalize all stmts
+        match self.set_winner_clock_stmt.try_borrow_mut() {
+            Ok(mut stmt) => {
+                // stmt.take will cause the contents to be dropped which will finalize the stmt
+                stmt.take();
+                Ok(ResultCode::OK)
+            }
+            Err(_) => Err(ResultCode::ERROR),
+        }
     }
 
     // pub fn get_local_cl_stmt(&self, db: *mut sqlite3) -> Result<&ManagedStmt, ResultCode> {
@@ -193,7 +205,7 @@ pub fn pull_table_info(
     let sql = format!("SELECT count(*) FROM pragma_table_info('{table}')");
     let columns_len = match db.prepare_v2(&sql).and_then(|stmt| {
         stmt.step()?;
-        stmt.column_int(0)?.to_usize().ok_or(ResultCode::ERROR)
+        stmt.column_int(0).to_usize().ok_or(ResultCode::ERROR)
     }) {
         Ok(count) => count,
         Err(code) => {
@@ -213,8 +225,8 @@ pub fn pull_table_info(
             while stmt.step()? == ResultCode::ROW {
                 cols.push(ColumnInfo {
                     name: stmt.column_text(1)?.to_string(),
-                    cid: stmt.column_int(0)?,
-                    pk: stmt.column_int(2)?,
+                    cid: stmt.column_int(0),
+                    pk: stmt.column_int(2),
                     curr_value_stmt: None,
                     merge_insert_stmt: None,
                     row_patch_data_stmt: None,

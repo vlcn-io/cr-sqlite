@@ -143,7 +143,7 @@ fn maybe_update_db_inner(
             db.prepare_v2("SELECT value FROM crsql_master WHERE key = 'crsqlite_version'")?;
         let step_result = stmt.step()?;
         if step_result == ResultCode::ROW {
-            recorded_version = stmt.column_int(0)?;
+            recorded_version = stmt.column_int(0);
         }
     }
 

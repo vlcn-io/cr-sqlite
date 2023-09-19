@@ -1,6 +1,8 @@
 extern crate alloc;
+use alloc::vec::Vec;
 use core::ffi::c_void;
 use core::mem::forget;
+use core::mem::ManuallyDrop;
 use core::ptr::null_mut;
 
 use alloc::boxed::Box;
@@ -13,6 +15,7 @@ use sqlite_nostd as sqlite;
 use sqlite_nostd::ResultCode;
 
 use crate::c::crsql_ExtData;
+use crate::tableinfo::TableInfo;
 
 // port the stmt cache so we can
 // - start removing some unsafe code
@@ -65,6 +68,13 @@ pub extern "C" fn crsql_clear_stmt_cache(ext_data: *mut crsql_ExtData) {
     unsafe {
         (*ext_data).pStmtCache = null_mut();
     }
+
+    let tbl_infos =
+        unsafe { ManuallyDrop::new(Box::from_raw((*ext_data).tableInfos as *mut Vec<TableInfo>)) };
+    for tbl_info in tbl_infos.iter() {
+        tbl_info.clear_stmts();
+    }
+    // The new stuff --- finalize tbl info stmts
 }
 
 pub fn get_cache_key(

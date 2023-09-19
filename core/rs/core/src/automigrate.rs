@@ -277,7 +277,7 @@ fn add_columns(
 
     let mut processed_cols = 0;
     while stmt.step()? == ResultCode::ROW {
-        let is_pk = stmt.column_int(4)? == 1;
+        let is_pk = stmt.column_int(4) == 1;
 
         if is_pk {
             // We do not support adding PK columns to existing tables in auto-migration
@@ -286,7 +286,7 @@ fn add_columns(
 
         let name = stmt.column_text(0)?;
         let col_type = stmt.column_text(1)?;
-        let notnull = stmt.column_int(2)? == 1;
+        let notnull = stmt.column_int(2) == 1;
         let dflt_val = stmt.column_value(3)?;
 
         add_column(local_db, table, name, col_type, notnull, dflt_val)?;

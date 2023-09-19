@@ -30,10 +30,10 @@ fn new_nonempty_table(apply_twice: bool) -> Result<(), ResultCode> {
     let mut cnt = 0;
     while stmt.step()? == ResultCode::ROW {
         cnt = cnt + 1;
-        assert_eq!(stmt.column_int64(0)?, cnt); // pk
+        assert_eq!(stmt.column_int64(0), cnt); // pk
         assert_eq!(stmt.column_text(1)?, "name"); // col name
-        assert_eq!(stmt.column_int64(2)?, 1); // col version
-        assert_eq!(stmt.column_int64(3)?, 1); // db version
+        assert_eq!(stmt.column_int64(2), 1); // col version
+        assert_eq!(stmt.column_int64(3), 1); // db version
     }
     assert_eq!(cnt, 2);
 
@@ -53,8 +53,8 @@ fn new_nonempty_table(apply_twice: bool) -> Result<(), ResultCode> {
         }
         assert_eq!(stmt.column_text(0)?, "foo"); // table name
         assert_eq!(stmt.column_text(2)?, "name"); // col name
-        assert_eq!(stmt.column_int64(4)?, 1); // col version
-        assert_eq!(stmt.column_int64(5)?, 1); // db version
+        assert_eq!(stmt.column_int64(4), 1); // col version
+        assert_eq!(stmt.column_int64(5), 1); // db version
     }
     assert_eq!(cnt, 2);
     Ok(())

@@ -41,7 +41,6 @@ struct crsql_ExtData {
   sqlite3_stmt *pSetSiteIdOrdinalStmt;
   sqlite3_stmt *pSelectSiteIdOrdinalStmt;
   sqlite3_stmt *pSelectClockTablesStmt;
-  void *pStmtCache;
 };
 
 crsql_ExtData *crsql_newExtData(sqlite3 *db, unsigned char *siteIdBuffer);

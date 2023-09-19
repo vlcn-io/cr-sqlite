@@ -259,20 +259,12 @@ fn merge_sentinel_only_insert(
     remote_site_id: &[u8],
     remote_seq: sqlite::int64,
 ) -> Result<sqlite::int64, ResultCode> {
-    let stmt_key = get_cache_key(CachedStmtType::MergePkOnlyInsert, &tbl_info.tbl_name, None)?;
-    let merge_stmt = get_cached_stmt_rt_wt(db, ext_data, stmt_key, || {
-        let pk_cols = &tbl_info.pks;
-        Ok(format!(
-            "INSERT OR IGNORE INTO \"{table_name}\" ({pk_idents}) VALUES ({pk_bindings})",
-            table_name = crate::util::escape_ident(&tbl_info.tbl_name),
-            pk_idents = crate::util::as_identifier_list(pk_cols, None)?,
-            pk_bindings = crate::util::binding_list(pk_cols.len()),
-        ))
-    })?;
+    let merge_stmt_ref = tbl_info.get_merge_pk_only_insert_stmt(db)?;
+    let merge_stmt = merge_stmt_ref.as_ref().ok_or(ResultCode::ERROR)?;
 
-    let rc = bind_package_to_stmt(merge_stmt, unpacked_pks, 0);
+    let rc = bind_package_to_stmt(merge_stmt.stmt, unpacked_pks, 0);
     if let Err(rc) = rc {
-        reset_cached_stmt(merge_stmt)?;
+        reset_cached_stmt(merge_stmt.stmt)?;
         return Err(rc);
     }
     let rc = unsafe {
@@ -284,7 +276,7 @@ fn merge_sentinel_only_insert(
     };
 
     // TODO: report err?
-    let _ = reset_cached_stmt(merge_stmt);
+    let _ = reset_cached_stmt(merge_stmt.stmt);
 
     let sync_rc = unsafe {
         (*ext_data)

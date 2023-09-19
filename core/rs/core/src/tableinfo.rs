@@ -31,7 +31,7 @@ pub struct TableInfo {
     set_winner_clock_stmt: RefCell<Option<ManagedStmt>>,
     local_cl_stmt: RefCell<Option<ManagedStmt>>,
     col_version_stmt: RefCell<Option<ManagedStmt>>,
-    merge_pk_only_insert_stmt: Option<ManagedStmt>,
+    merge_pk_only_insert_stmt: RefCell<Option<ManagedStmt>>,
     merge_delete_stmt: Option<ManagedStmt>,
     merge_delete_drop_clocks_stmt: Option<ManagedStmt>,
     zero_clocks_on_resurrect_stmt: Option<ManagedStmt>,
@@ -111,6 +111,23 @@ impl TableInfo {
         Ok(self.col_version_stmt.try_borrow()?)
     }
 
+    pub fn get_merge_pk_only_insert_stmt(
+        &self,
+        db: *mut sqlite3,
+    ) -> Result<Ref<Option<ManagedStmt>>, ResultCode> {
+        if self.merge_pk_only_insert_stmt.try_borrow()?.is_none() {
+            let sql = format!(
+                "INSERT OR IGNORE INTO \"{table_name}\" ({pk_idents}) VALUES ({pk_bindings})",
+                table_name = crate::util::escape_ident(&self.tbl_name),
+                pk_idents = crate::util::as_identifier_list(&self.pks, None)?,
+                pk_bindings = crate::util::binding_list(self.pks.len()),
+            );
+            let ret = db.prepare_v3(&sql, sqlite::PREPARE_PERSISTENT)?;
+            *self.merge_pk_only_insert_stmt.try_borrow_mut()? = Some(ret);
+        }
+        Ok(self.merge_pk_only_insert_stmt.try_borrow()?)
+    }
+
     pub fn get_col_value_stmt(
         &self,
         db: *mut sqlite3,
@@ -127,6 +144,8 @@ impl TableInfo {
         let mut stmt = self.local_cl_stmt.try_borrow_mut()?;
         stmt.take();
         let mut stmt = self.col_version_stmt.try_borrow_mut()?;
+        stmt.take();
+        let mut stmt = self.merge_pk_only_insert_stmt.try_borrow_mut()?;
         stmt.take();
 
         // primary key columns shouldn't have statements? right?
@@ -321,7 +340,7 @@ pub fn pull_table_info(
         set_winner_clock_stmt: RefCell::new(None),
         local_cl_stmt: RefCell::new(None),
         col_version_stmt: RefCell::new(None),
-        merge_pk_only_insert_stmt: None,
+        merge_pk_only_insert_stmt: RefCell::new(None),
         merge_delete_stmt: None,
         merge_delete_drop_clocks_stmt: None,
         zero_clocks_on_resurrect_stmt: None,

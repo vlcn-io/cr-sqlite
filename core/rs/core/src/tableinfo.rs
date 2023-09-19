@@ -29,8 +29,8 @@ pub struct TableInfo {
     pub non_pks: Vec<ColumnInfo>,
 
     set_winner_clock_stmt: RefCell<Option<ManagedStmt>>,
-    local_cl_stmt: Option<ManagedStmt>,
-    col_version_stmt: Vec<ManagedStmt>,
+    local_cl_stmt: RefCell<Option<ManagedStmt>>,
+    col_version_stmt: Option<ManagedStmt>,
     merge_pk_only_insert_stmt: Option<ManagedStmt>,
     merge_delete_stmt: Option<ManagedStmt>,
     merge_delete_drop_clocks_stmt: Option<ManagedStmt>,
@@ -65,38 +65,36 @@ impl TableInfo {
         Ok(self.set_winner_clock_stmt.try_borrow()?)
     }
 
-    pub fn clear_stmts(&self) -> Result<ResultCode, ResultCode> {
-        // finalize all stmts
-        match self.set_winner_clock_stmt.try_borrow_mut() {
-            Ok(mut stmt) => {
-                // stmt.take will cause the contents to be dropped which will finalize the stmt
-                stmt.take();
-                Ok(ResultCode::OK)
-            }
-            Err(_) => Err(ResultCode::ERROR),
+    pub fn get_local_cl_stmt(
+        &self,
+        db: *mut sqlite3,
+    ) -> Result<Ref<Option<ManagedStmt>>, ResultCode> {
+        if self.local_cl_stmt.try_borrow()?.is_none() {
+            // prepare it
+            let sql = format!(
+              "SELECT COALESCE(
+                (SELECT __crsql_col_version FROM \"{table_name}__crsql_clock\" WHERE {pk_where_list} AND __crsql_col_name = '{delete_sentinel}'),
+                (SELECT 1 FROM \"{table_name}__crsql_clock\" WHERE {pk_where_list})
+              )",
+              table_name = crate::util::escape_ident(&self.tbl_name),
+              pk_where_list = crate::util::where_list(&self.pks, None)?,
+              delete_sentinel = crate::c::DELETE_SENTINEL,
+            );
+            let ret = db.prepare_v3(&sql, sqlite::PREPARE_PERSISTENT)?;
+            *self.local_cl_stmt.try_borrow_mut()? = Some(ret);
         }
+        Ok(self.local_cl_stmt.try_borrow()?)
     }
 
-    // pub fn get_local_cl_stmt(&self, db: *mut sqlite3) -> Result<&ManagedStmt, ResultCode> {
-    //     match &self.local_cl_stmt {
-    //         Some(stmt) => Ok(stmt),
-    //         None => {
-    //             // prepare it
-    //             let sql = format!(
-    //               "SELECT COALESCE(
-    //                 (SELECT __crsql_col_version FROM \"{table_name}__crsql_clock\" WHERE {pk_where_list} AND __crsql_col_name = '{delete_sentinel}'),
-    //                 (SELECT 1 FROM \"{table_name}__crsql_clock\" WHERE {pk_where_list})
-    //               )",
-    //               table_name = crate::util::escape_ident(&self.tbl_name),
-    //               pk_where_list = crate::util::where_list(&self.pks, None)?,
-    //               delete_sentinel = crate::c::DELETE_SENTINEL,
-    //             );
-    //             let ret = db.prepare_v3(&sql, sqlite::PREPARE_PERSISTENT)?;
-    //             &self.local_cl_stmt.replace(ret);
-    //             return Ok(self.local_cl_stmt.as_ref().unwrap());
-    //         }
-    //     }
-    // }
+    pub fn clear_stmts(&self) -> Result<ResultCode, ResultCode> {
+        // finalize all stmts
+        let mut stmt = self.set_winner_clock_stmt.try_borrow_mut()?;
+        stmt.take();
+        let mut stmt = self.local_cl_stmt.try_borrow_mut()?;
+        stmt.take();
+
+        Ok(ResultCode::OK)
+    }
 }
 
 pub struct ColumnInfo {
@@ -253,8 +251,8 @@ pub fn pull_table_info(
         pks,
         non_pks,
         set_winner_clock_stmt: RefCell::new(None),
-        local_cl_stmt: None,
-        col_version_stmt: vec![],
+        local_cl_stmt: RefCell::new(None),
+        col_version_stmt: None,
         merge_pk_only_insert_stmt: None,
         merge_delete_stmt: None,
         merge_delete_drop_clocks_stmt: None,

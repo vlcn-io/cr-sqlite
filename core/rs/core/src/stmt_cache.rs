@@ -28,7 +28,6 @@ pub enum CachedStmtType {
     // If we track that "we've seen this restored node since the backup point with the old site_id"
     // then site_id comparisons could change merge results after restore for nodes that
     // have different "seen since" records for the old site_id.
-    GetCurrValue = 3,
     MergePkOnlyInsert = 4,
     MergeDelete = 5,
     MergeInsert = 6,
@@ -94,9 +93,7 @@ pub fn get_cache_key(
                 tbl_name = tbl_name
             ))
         }
-        CachedStmtType::GetCurrValue
-        | CachedStmtType::MergeInsert
-        | CachedStmtType::RowPatchData => {
+        CachedStmtType::MergeInsert | CachedStmtType::RowPatchData => {
             if let Some(col_name) = col_name {
                 Ok(format!(
                     "{stmt_type}_{tbl_name}_{col_name}",

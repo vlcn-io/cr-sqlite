@@ -1,15 +1,12 @@
 extern crate alloc;
 use alloc::vec::Vec;
 use core::ffi::c_void;
-use core::mem::forget;
 use core::mem::ManuallyDrop;
 use core::ptr::null_mut;
 
 use alloc::boxed::Box;
 use alloc::collections::BTreeMap;
-use alloc::format;
 use alloc::string::String;
-use alloc::string::ToString;
 use sqlite::Stmt;
 use sqlite_nostd as sqlite;
 use sqlite_nostd::ResultCode;
@@ -43,7 +40,8 @@ pub extern "C" fn crsql_clear_stmt_cache(ext_data: *mut crsql_ExtData) {
     let tbl_infos =
         unsafe { ManuallyDrop::new(Box::from_raw((*ext_data).tableInfos as *mut Vec<TableInfo>)) };
     for tbl_info in tbl_infos.iter() {
-        tbl_info.clear_stmts();
+        // TODO: raise an error.
+        let _ = tbl_info.clear_stmts();
     }
     // The new stuff --- finalize tbl info stmts
 }

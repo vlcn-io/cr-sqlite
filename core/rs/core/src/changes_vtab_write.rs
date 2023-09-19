@@ -363,17 +363,11 @@ unsafe fn merge_delete(
     remote_site_id: &[u8],
     remote_seq: sqlite::int64,
 ) -> Result<sqlite::int64, ResultCode> {
-    let stmt_key = get_cache_key(CachedStmtType::MergeDelete, &tbl_info.tbl_name, None)?;
-    let delete_stmt = get_cached_stmt_rt_wt(db, ext_data, stmt_key, || {
-        Ok(format!(
-            "DELETE FROM \"{table_name}\" WHERE {pk_where_list}",
-            table_name = crate::util::escape_ident(&tbl_info.tbl_name),
-            pk_where_list = pk_where_list_from_tbl_info(tbl_info, None)?
-        ))
-    })?;
+    let delete_stmt_ref = tbl_info.get_merge_delete_stmt(db)?;
+    let delete_stmt = delete_stmt_ref.as_ref().ok_or(ResultCode::ERROR)?;
 
-    if let Err(rc) = bind_package_to_stmt(delete_stmt, unpacked_pks, 0) {
-        reset_cached_stmt(delete_stmt)?;
+    if let Err(rc) = bind_package_to_stmt(delete_stmt.stmt, unpacked_pks, 0) {
+        reset_cached_stmt(delete_stmt.stmt)?;
         return Err(rc);
     }
     let rc = (*ext_data)
@@ -382,7 +376,7 @@ unsafe fn merge_delete(
         .and_then(|_| (*ext_data).pSetSyncBitStmt.reset())
         .and_then(|_| delete_stmt.step());
 
-    reset_cached_stmt(delete_stmt)?;
+    reset_cached_stmt(delete_stmt.stmt)?;
 
     let sync_rc = (*ext_data)
         .pClearSyncBitStmt

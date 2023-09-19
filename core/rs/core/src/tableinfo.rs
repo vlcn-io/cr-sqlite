@@ -32,7 +32,7 @@ pub struct TableInfo {
     local_cl_stmt: RefCell<Option<ManagedStmt>>,
     col_version_stmt: RefCell<Option<ManagedStmt>>,
     merge_pk_only_insert_stmt: RefCell<Option<ManagedStmt>>,
-    merge_delete_stmt: Option<ManagedStmt>,
+    merge_delete_stmt: RefCell<Option<ManagedStmt>>,
     merge_delete_drop_clocks_stmt: Option<ManagedStmt>,
     zero_clocks_on_resurrect_stmt: Option<ManagedStmt>,
     // put statement cache here, remove btreemap based cache.
@@ -128,6 +128,22 @@ impl TableInfo {
         Ok(self.merge_pk_only_insert_stmt.try_borrow()?)
     }
 
+    pub fn get_merge_delete_stmt(
+        &self,
+        db: *mut sqlite3,
+    ) -> Result<Ref<Option<ManagedStmt>>, ResultCode> {
+        if self.merge_delete_stmt.try_borrow()?.is_none() {
+            let sql = format!(
+                "DELETE FROM \"{table_name}\" WHERE {pk_where_list}",
+                table_name = crate::util::escape_ident(&self.tbl_name),
+                pk_where_list = crate::util::where_list(&self.pks, None)?,
+            );
+            let ret = db.prepare_v3(&sql, sqlite::PREPARE_PERSISTENT)?;
+            *self.merge_delete_stmt.try_borrow_mut()? = Some(ret);
+        }
+        Ok(self.merge_delete_stmt.try_borrow()?)
+    }
+
     pub fn get_col_value_stmt(
         &self,
         db: *mut sqlite3,
@@ -146,6 +162,8 @@ impl TableInfo {
         let mut stmt = self.col_version_stmt.try_borrow_mut()?;
         stmt.take();
         let mut stmt = self.merge_pk_only_insert_stmt.try_borrow_mut()?;
+        stmt.take();
+        let mut stmt = self.merge_delete_stmt.try_borrow_mut()?;
         stmt.take();
 
         // primary key columns shouldn't have statements? right?
@@ -341,7 +359,7 @@ pub fn pull_table_info(
         local_cl_stmt: RefCell::new(None),
         col_version_stmt: RefCell::new(None),
         merge_pk_only_insert_stmt: RefCell::new(None),
-        merge_delete_stmt: None,
+        merge_delete_stmt: RefCell::new(None),
         merge_delete_drop_clocks_stmt: None,
         zero_clocks_on_resurrect_stmt: None,
     });

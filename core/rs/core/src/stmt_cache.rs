@@ -21,22 +21,8 @@ use crate::tableinfo::TableInfo;
 // - start removing some unsafe code
 // - remove uthash and just use rust btreemap
 pub enum CachedStmtType {
-    // can we one day delete this and use site id for ties?
-    // if we do, how does that impact the backup and restore story?
-    // e.g., restoring a database snapshot on a new machine with a new siteid but
-    // bootstrapped from a backup?
-    // If we track that "we've seen this restored node since the backup point with the old site_id"
-    // then site_id comparisons could change merge results after restore for nodes that
-    // have different "seen since" records for the old site_id.
     MergeInsert = 6,
     RowPatchData = 7,
-    // We zero clocks, rather than going to 1, because
-    // the current values should be totally ignored at all sites.
-    // This is because the current values would not exist had the current node
-    // processed the intervening delete.
-    // This also means that col_version is not always >= 1. A resurrected column,
-    // which missed a delete event, will have a 0 version.
-    ZeroClocksOnResurrect = 8,
 }
 
 #[no_mangle]
@@ -76,17 +62,6 @@ pub fn get_cache_key(
     col_name: Option<&str>,
 ) -> Result<String, ResultCode> {
     match stmt_type {
-        CachedStmtType::ZeroClocksOnResurrect => {
-            if col_name.is_some() {
-                // col name should not be specified for these cases
-                return Err(ResultCode::MISUSE);
-            }
-            Ok(format!(
-                "{stmt_type}_{tbl_name}",
-                stmt_type = (stmt_type as i32).to_string(),
-                tbl_name = tbl_name
-            ))
-        }
         CachedStmtType::MergeInsert | CachedStmtType::RowPatchData => {
             if let Some(col_name) = col_name {
                 Ok(format!(

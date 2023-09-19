@@ -1,13 +1,11 @@
 use alloc::boxed::Box;
 use alloc::ffi::CString;
 use alloc::format;
-use alloc::string::String;
 use alloc::vec::Vec;
 use core::ffi::{c_char, c_int};
-use core::mem::{self, forget};
-use core::ptr::null_mut;
+use core::mem;
 use core::slice;
-use sqlite::{Connection, Stmt};
+use sqlite::Stmt;
 use sqlite_nostd as sqlite;
 use sqlite_nostd::{sqlite3, ResultCode, Value};
 
@@ -17,15 +15,8 @@ use crate::compare_values::crsql_compare_sqlite_values;
 use crate::pack_columns::bind_package_to_stmt;
 use crate::stmt_cache::reset_cached_stmt;
 use crate::tableinfo::{crsql_ensure_table_infos_are_up_to_date, TableInfo};
-use crate::util::{self, slab_rowid};
+use crate::util::slab_rowid;
 use crate::{unpack_columns, ColumnValue};
-
-fn pk_where_list_from_tbl_info(
-    tbl_info: &TableInfo,
-    prefix: Option<&str>,
-) -> Result<String, core::str::Utf8Error> {
-    util::where_list(&tbl_info.pks, prefix)
-}
 
 /**
  * did_cid_win does not take into account the causal length.
@@ -37,7 +28,6 @@ fn pk_where_list_from_tbl_info(
  */
 fn did_cid_win(
     db: *mut sqlite3,
-    ext_data: *mut crsql_ExtData,
     insert_tbl: &str,
     tbl_info: &TableInfo,
     unpacked_pks: &Vec<ColumnValue>,
@@ -263,14 +253,7 @@ fn merge_sentinel_only_insert(
     }
 
     if let Ok(_) = rc {
-        zero_clocks_on_resurrect(
-            db,
-            ext_data,
-            &tbl_info.tbl_name,
-            tbl_info,
-            unpacked_pks,
-            remote_db_vsn,
-        )?;
+        zero_clocks_on_resurrect(db, tbl_info, unpacked_pks, remote_db_vsn)?;
         return set_winner_clock(
             db,
             ext_data,
@@ -289,8 +272,6 @@ fn merge_sentinel_only_insert(
 
 fn zero_clocks_on_resurrect(
     db: *mut sqlite3,
-    ext_data: *mut crsql_ExtData,
-    table_name: &str,
     tbl_info: &TableInfo,
     unpacked_pks: &Vec<ColumnValue>,
     insert_db_vrsn: sqlite::int64,
@@ -400,8 +381,6 @@ pub unsafe extern "C" fn crsql_merge_insert(
 
 fn get_local_cl(
     db: *mut sqlite::sqlite3,
-    ext_data: *mut crsql_ExtData,
-    tbl_name: &str,
     tbl_info: &TableInfo,
     unpacked_pks: &Vec<ColumnValue>,
 ) -> Result<sqlite::int64, ResultCode> {
@@ -505,7 +484,7 @@ unsafe fn merge_insert(
 
     let tbl_info = &tbl_infos[tbl_info_index];
     let unpacked_pks = unpack_columns(insert_pks.blob())?;
-    let local_cl = get_local_cl(db, (*tab).pExtData, insert_tbl, &tbl_info, &unpacked_pks)?;
+    let local_cl = get_local_cl(db, &tbl_info, &unpacked_pks)?;
 
     // We can ignore all updates from older causal lengths.
     // They won't win at anything.
@@ -619,7 +598,6 @@ unsafe fn merge_insert(
         || !row_exists_locally
         || did_cid_win(
             db,
-            (*tab).pExtData,
             insert_tbl,
             &tbl_info,
             &unpacked_pks,

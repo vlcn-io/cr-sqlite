@@ -2,7 +2,6 @@
 
 #include "consts.h"
 
-void crsql_init_stmt_cache(crsql_ExtData *pExtData);
 void crsql_clear_stmt_cache(crsql_ExtData *pExtData);
 void crsql_init_table_info_vec(crsql_ExtData *pExtData);
 void crsql_drop_table_info_vec(crsql_ExtData *pExtData);
@@ -50,8 +49,6 @@ crsql_ExtData *crsql_newExtData(sqlite3 *db, unsigned char *siteIdBuffer) {
   pExtData->pDbVersionStmt = 0;
   pExtData->tableInfos = 0;
   pExtData->rowsImpacted = 0;
-  pExtData->pStmtCache = 0;
-  crsql_init_stmt_cache(pExtData);
   crsql_init_table_info_vec(pExtData);
 
   int pv = crsql_fetchPragmaDataVersion(db, pExtData);

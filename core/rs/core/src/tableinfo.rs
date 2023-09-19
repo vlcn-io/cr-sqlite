@@ -192,6 +192,15 @@ impl TableInfo {
         col_info.get_curr_value_stmt(self, db)
     }
 
+    pub fn get_merge_insert_stmt(
+        &self,
+        db: *mut sqlite3,
+        col_name: &str,
+    ) -> Result<Ref<Option<ManagedStmt>>, ResultCode> {
+        let col_info = self.find_non_pk_col(col_name)?;
+        col_info.get_merge_insert_stmt(self, db)
+    }
+
     pub fn clear_stmts(&self) -> Result<ResultCode, ResultCode> {
         // finalize all stmts
         let mut stmt = self.set_winner_clock_stmt.try_borrow_mut()?;
@@ -232,7 +241,7 @@ pub struct ColumnInfo {
     // then site_id comparisons could change merge results after restore for nodes that
     // have different "seen since" records for the old site_id.
     curr_value_stmt: RefCell<Option<ManagedStmt>>,
-    merge_insert_stmt: Option<ManagedStmt>,
+    merge_insert_stmt: RefCell<Option<ManagedStmt>>,
     row_patch_data_stmt: Option<ManagedStmt>,
 }
 
@@ -255,8 +264,32 @@ impl ColumnInfo {
         Ok(self.curr_value_stmt.try_borrow()?)
     }
 
+    fn get_merge_insert_stmt(
+        &self,
+        tbl_info: &TableInfo,
+        db: *mut sqlite3,
+    ) -> Result<Ref<Option<ManagedStmt>>, ResultCode> {
+        if self.merge_insert_stmt.try_borrow()?.is_none() {
+            let sql = format!(
+                "INSERT INTO \"{table_name}\" ({pk_list}, \"{col_name}\")
+                VALUES ({pk_bind_list}, ?)
+                ON CONFLICT DO UPDATE
+                SET \"{col_name}\" = ?",
+                table_name = crate::util::escape_ident(&tbl_info.tbl_name),
+                pk_list = crate::util::as_identifier_list(&tbl_info.pks, None)?,
+                col_name = crate::util::escape_ident(&self.name),
+                pk_bind_list = crate::util::binding_list(tbl_info.pks.len()),
+            );
+            let ret = db.prepare_v3(&sql, sqlite::PREPARE_PERSISTENT)?;
+            *self.merge_insert_stmt.try_borrow_mut()? = Some(ret);
+        }
+        Ok(self.merge_insert_stmt.try_borrow()?)
+    }
+
     pub fn clear_stmts(&self) -> Result<ResultCode, ResultCode> {
         let mut stmt = self.curr_value_stmt.try_borrow_mut()?;
+        stmt.take();
+        let mut stmt = self.merge_insert_stmt.try_borrow_mut()?;
         stmt.take();
 
         Ok(ResultCode::OK)
@@ -381,7 +414,7 @@ pub fn pull_table_info(
                     cid: stmt.column_int(0),
                     pk: stmt.column_int(2),
                     curr_value_stmt: RefCell::new(None),
-                    merge_insert_stmt: None,
+                    merge_insert_stmt: RefCell::new(None),
                     row_patch_data_stmt: None,
                 });
             }

@@ -15,9 +15,7 @@ use crate::c::crsql_ExtData;
 use crate::c::{crsql_Changes_vtab, CrsqlChangesColumn};
 use crate::compare_values::crsql_compare_sqlite_values;
 use crate::pack_columns::bind_package_to_stmt;
-use crate::stmt_cache::{
-    get_cache_key, get_cached_stmt, reset_cached_stmt, set_cached_stmt, CachedStmtType,
-};
+use crate::stmt_cache::{reset_cached_stmt, CachedStmtType};
 use crate::tableinfo::{crsql_ensure_table_infos_are_up_to_date, TableInfo};
 use crate::util::{self, slab_rowid};
 use crate::{unpack_columns, ColumnValue};
@@ -123,34 +121,6 @@ fn did_cid_win(
             return Err(ResultCode::ERROR);
         }
     }
-}
-
-fn get_cached_stmt_rt_wt<F>(
-    db: *mut sqlite::sqlite3,
-    ext_data: *mut crsql_ExtData,
-    key: String,
-    query_builder: F,
-) -> Result<*mut sqlite::stmt, ResultCode>
-where
-    F: Fn() -> Result<String, core::str::Utf8Error>,
-{
-    let mut ret = if let Some(stmt) = get_cached_stmt(ext_data, &key) {
-        stmt
-    } else {
-        null_mut()
-    };
-    if ret.is_null() {
-        let sql = query_builder()?;
-        if let Ok(stmt) = db.prepare_v3(&sql, sqlite::PREPARE_PERSISTENT) {
-            set_cached_stmt(ext_data, key, stmt.stmt);
-            ret = stmt.stmt;
-            forget(stmt);
-        } else {
-            return Err(ResultCode::ERROR);
-        }
-    }
-
-    Ok(ret)
 }
 
 fn set_winner_clock(
@@ -666,31 +636,14 @@ unsafe fn merge_insert(
     }
 
     // TODO: this is all almost identical between all three merge cases!
-    let stmt_key = get_cache_key(
-        CachedStmtType::MergeInsert,
-        // This is currently safe since these are c strings under the hood
-        insert_tbl,
-        Some(insert_col),
-    )?;
-    let merge_stmt = get_cached_stmt_rt_wt(db, (*tab).pExtData, stmt_key, || {
-        let pk_cols = &tbl_info.pks;
-        Ok(format!(
-            "INSERT INTO \"{table_name}\" ({pk_list}, \"{col_name}\")
-            VALUES ({pk_bind_list}, ?)
-            ON CONFLICT DO UPDATE
-            SET \"{col_name}\" = ?",
-            table_name = crate::util::escape_ident(insert_tbl),
-            pk_list = crate::util::as_identifier_list(pk_cols, None)?,
-            col_name = crate::util::escape_ident(insert_col),
-            pk_bind_list = crate::util::binding_list(pk_cols.len()),
-        ))
-    })?;
+    let merge_stmt_ref = tbl_info.get_merge_insert_stmt(db, insert_col)?;
+    let merge_stmt = merge_stmt_ref.as_ref().ok_or(ResultCode::ERROR)?;
 
-    let bind_result = bind_package_to_stmt(merge_stmt, &unpacked_pks, 0)
+    let bind_result = bind_package_to_stmt(merge_stmt.stmt, &unpacked_pks, 0)
         .and_then(|_| merge_stmt.bind_value(unpacked_pks.len() as i32 + 1, insert_val))
         .and_then(|_| merge_stmt.bind_value(unpacked_pks.len() as i32 + 2, insert_val));
     if let Err(rc) = bind_result {
-        reset_cached_stmt(merge_stmt)?;
+        reset_cached_stmt(merge_stmt.stmt)?;
         return Err(rc);
     }
 
@@ -700,7 +653,7 @@ unsafe fn merge_insert(
         .and_then(|_| (*(*tab).pExtData).pSetSyncBitStmt.reset())
         .and_then(|_| merge_stmt.step());
 
-    reset_cached_stmt(merge_stmt)?;
+    reset_cached_stmt(merge_stmt.stmt)?;
 
     let sync_rc = (*(*tab).pExtData)
         .pClearSyncBitStmt

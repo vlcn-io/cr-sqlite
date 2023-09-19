@@ -59,8 +59,8 @@ impl TableInfo {
     ) -> Result<Ref<Option<ManagedStmt>>, ResultCode> {
         if self.set_winner_clock_stmt.try_borrow()?.is_none() {
             let sql = format!(
-              "INSERT OR REPLACE INTO \"{table_name}__crsql_clock\"
-              ({pk_ident_list}, __crsql_col_name, __crsql_col_version, __crsql_db_version, __crsql_seq, __crsql_site_id)
+                "INSERT OR REPLACE INTO \"{table_name}__crsql_clock\"
+              ({pk_ident_list}, col_name, col_version, db_version, seq, site_id)
               VALUES (
                 {pk_bind_list},
                 ?,
@@ -69,9 +69,9 @@ impl TableInfo {
                 ?,
                 ?
               ) RETURNING _rowid_",
-              table_name = crate::util::escape_ident(&self.tbl_name),
-              pk_ident_list = crate::util::as_identifier_list(&self.pks, None)?,
-              pk_bind_list = crate::util::binding_list(self.pks.len()),
+                table_name = crate::util::escape_ident(&self.tbl_name),
+                pk_ident_list = crate::util::as_identifier_list(&self.pks, None)?,
+                pk_bind_list = crate::util::binding_list(self.pks.len()),
             );
             let ret = db.prepare_v3(&sql, sqlite::PREPARE_PERSISTENT)?;
             *self.set_winner_clock_stmt.try_borrow_mut()? = Some(ret);
@@ -87,7 +87,7 @@ impl TableInfo {
             // prepare it
             let sql = format!(
               "SELECT COALESCE(
-                (SELECT __crsql_col_version FROM \"{table_name}__crsql_clock\" WHERE {pk_where_list} AND __crsql_col_name = '{delete_sentinel}'),
+                (SELECT col_version FROM \"{table_name}__crsql_clock\" WHERE {pk_where_list} AND col_name = '{delete_sentinel}'),
                 (SELECT 1 FROM \"{table_name}__crsql_clock\" WHERE {pk_where_list})
               )",
               table_name = crate::util::escape_ident(&self.tbl_name),
@@ -106,7 +106,7 @@ impl TableInfo {
     ) -> Result<Ref<Option<ManagedStmt>>, ResultCode> {
         if self.col_version_stmt.try_borrow()?.is_none() {
             let sql = format!(
-              "SELECT __crsql_col_version FROM \"{table_name}__crsql_clock\" WHERE {pk_where_list} AND ? = __crsql_col_name",
+              "SELECT col_version FROM \"{table_name}__crsql_clock\" WHERE {pk_where_list} AND ? = col_name",
               table_name = crate::util::escape_ident(&self.tbl_name),
               pk_where_list = crate::util::where_list(&self.pks, None)?,
             );
@@ -155,7 +155,7 @@ impl TableInfo {
     ) -> Result<Ref<Option<ManagedStmt>>, ResultCode> {
         if self.merge_delete_drop_clocks_stmt.try_borrow()?.is_none() {
             let sql = format!(
-              "DELETE FROM \"{table_name}__crsql_clock\" WHERE {pk_where_list} AND __crsql_col_name IS NOT '{sentinel}'",
+              "DELETE FROM \"{table_name}__crsql_clock\" WHERE {pk_where_list} AND col_name IS NOT '{sentinel}'",
               table_name = crate::util::escape_ident(&self.tbl_name),
               pk_where_list = crate::util::where_list(&self.pks, None)?,
               sentinel = crate::c::DELETE_SENTINEL
@@ -172,7 +172,7 @@ impl TableInfo {
     ) -> Result<Ref<Option<ManagedStmt>>, ResultCode> {
         if self.zero_clocks_on_resurrect_stmt.try_borrow()?.is_none() {
             let sql = format!(
-              "UPDATE \"{table_name}__crsql_clock\" SET __crsql_col_version = 0, __crsql_db_version = crsql_next_db_version(?) WHERE {pk_where_list} AND __crsql_col_name IS NOT '{sentinel}'",
+              "UPDATE \"{table_name}__crsql_clock\" SET col_version = 0, db_version = crsql_next_db_version(?) WHERE {pk_where_list} AND col_name IS NOT '{sentinel}'",
               table_name = crate::util::escape_ident(&self.tbl_name),
               pk_where_list = crate::util::where_list(&self.pks, None)?,
               sentinel = crate::c::INSERT_SENTINEL

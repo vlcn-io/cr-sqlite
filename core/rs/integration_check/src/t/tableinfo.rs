@@ -32,11 +32,11 @@ fn test_ensure_table_infos_are_up_to_date() {
     c.exec_safe(
         "CREATE TABLE foo__crsql_clock (
       id,
-      __crsql_col_name,
-      __crsql_col_version,
-      __crsql_db_version,
-      __crsql_site_id,
-      __crsql_seq
+      col_name,
+      col_version,
+      db_version,
+      site_id,
+      seq
     )",
     )
     .expect("made foo clock");
@@ -64,11 +64,11 @@ fn test_ensure_table_infos_are_up_to_date() {
     c.exec_safe(
         "CREATE TABLE boo__crsql_clock (
       id,
-      __crsql_col_name,
-      __crsql_col_version,
-      __crsql_db_version,
-      __crsql_site_id,
-      __crsql_seq
+      col_name,
+      col_version,
+      db_version,
+      site_id,
+      seq
     )",
     )
     .expect("made boo clock");

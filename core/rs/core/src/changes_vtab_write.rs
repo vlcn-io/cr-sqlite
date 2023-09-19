@@ -404,31 +404,20 @@ unsafe fn merge_delete(
 
     // Drop clocks _after_ setting the winner clock so we don't lose track of the max db_version!!
     // This must never come before `set_winner_clock`
-    let stmt_key = get_cache_key(
-        CachedStmtType::MergeDeleteDropClocks,
-        &tbl_info.tbl_name,
-        None,
-    )?;
-    let drop_clocks_stmt = get_cached_stmt_rt_wt(db, ext_data, stmt_key, || {
-        Ok(format!(
-            "DELETE FROM \"{table_name}__crsql_clock\" WHERE {pk_where_list} AND __crsql_col_name IS NOT '{sentinel}'",
-            table_name = crate::util::escape_ident(&tbl_info.tbl_name),
-            pk_where_list = pk_where_list_from_tbl_info(tbl_info, None)?,
-            sentinel = crate::c::DELETE_SENTINEL
-        ))
-    })?;
+    let drop_clocks_stmt_ref = tbl_info.get_merge_delete_drop_clocks_stmt(db)?;
+    let drop_clocks_stmt = drop_clocks_stmt_ref.as_ref().ok_or(ResultCode::ERROR)?;
 
-    if let Err(rc) = bind_package_to_stmt(drop_clocks_stmt, unpacked_pks, 0) {
-        reset_cached_stmt(drop_clocks_stmt)?;
+    if let Err(rc) = bind_package_to_stmt(drop_clocks_stmt.stmt, unpacked_pks, 0) {
+        reset_cached_stmt(drop_clocks_stmt.stmt)?;
         return Err(rc);
     }
 
     if let Err(rc) = drop_clocks_stmt.step() {
-        reset_cached_stmt(drop_clocks_stmt)?;
+        reset_cached_stmt(drop_clocks_stmt.stmt)?;
         return Err(rc);
     }
 
-    reset_cached_stmt(drop_clocks_stmt)?;
+    reset_cached_stmt(drop_clocks_stmt.stmt)?;
 
     return Ok(ret);
 }

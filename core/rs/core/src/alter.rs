@@ -54,7 +54,7 @@ unsafe fn compact_post_alter(
           WHERE pk > 0 AND name NOT IN
             (SELECT name FROM pragma_table_info('{table_name}__crsql_clock') WHERE pk > 0)
           UNION SELECT name FROM pragma_table_info('{table_name}__crsql_clock') WHERE pk > 0 AND name NOT IN 
-            (SELECT name FROM pragma_table_info('{table_name}') WHERE pk > 0) AND name != '__crsql_col_name'
+            (SELECT name FROM pragma_table_info('{table_name}') WHERE pk > 0) AND name != 'col_name'
         );",
         table_name = crate::util::escape_ident_as_value(tbl_name_str),
     ))?;
@@ -73,7 +73,7 @@ unsafe fn compact_post_alter(
 
         // First delete entries that no longer have a column
         let sql = format!(
-            "DELETE FROM \"{tbl_name_ident}__crsql_clock\" WHERE \"__crsql_col_name\" NOT IN (
+            "DELETE FROM \"{tbl_name_ident}__crsql_clock\" WHERE \"col_name\" NOT IN (
               SELECT name FROM pragma_table_info('{tbl_name_val}') UNION SELECT '{cl_sentinel}'
             )",
             tbl_name_ident = crate::util::escape_ident(tbl_name_str),
@@ -85,7 +85,7 @@ unsafe fn compact_post_alter(
         // Next delete entries that no longer have a row
         let mut sql = String::from(
             format!(
-              "DELETE FROM \"{tbl_name}__crsql_clock\" WHERE (__crsql_col_name != '-1' OR (__crsql_col_name = '-1' AND __crsql_col_version % 2 != 0)) AND NOT EXISTS (SELECT 1 FROM \"{tbl_name}\" WHERE ",
+              "DELETE FROM \"{tbl_name}__crsql_clock\" WHERE (col_name != '-1' OR (col_name = '-1' AND col_version % 2 != 0)) AND NOT EXISTS (SELECT 1 FROM \"{tbl_name}\" WHERE ",
               tbl_name = crate::util::escape_ident(tbl_name_str),
             ),
         );

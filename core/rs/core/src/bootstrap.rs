@@ -200,15 +200,17 @@ pub fn create_clock_table(
     let pk_list = crate::util::as_identifier_list(&table_info.pks, None)?;
     let table_name = crate::util::escape_ident(&table_info.tbl_name);
 
+    // key INTEGER,
+    // PRIMARY KEY (key, col_name)
     db.exec_safe(&format!(
         "CREATE TABLE IF NOT EXISTS \"{table_name}__crsql_clock\" (
-      key INTEGER,
+      {pk_list},
       col_name TEXT NOT NULL,
       col_version INT NOT NULL,
       db_version INT NOT NULL,
       site_id INT,
       seq INT NOT NULL,
-      PRIMARY KEY (key, col_name)
+      PRIMARY KEY ({pk_list}, col_name)
     )",
         pk_list = pk_list,
         table_name = table_name

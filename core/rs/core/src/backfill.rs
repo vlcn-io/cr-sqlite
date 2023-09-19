@@ -99,7 +99,7 @@ fn create_clock_rows_from_stmt(
     // to determine if rows should resurrect on a future insertion event provided by a peer.
     let sql = format!(
         "INSERT OR IGNORE INTO \"{table}__crsql_clock\"
-          ({pk_cols}, __crsql_col_name, __crsql_col_version, __crsql_db_version, __crsql_seq) VALUES
+          ({pk_cols}, col_name, col_version, db_version, seq) VALUES
           ({pk_values}, ?, 1, {dbversion_getter}, crsql_increment_and_get_seq())",
         table = crate::util::escape_ident(table),
         pk_cols = pk_cols
@@ -180,7 +180,7 @@ fn fill_column(
     let dflt_value = get_dflt_value(db, table, &non_pk_col.name)?;
     let sql = format!(
         "SELECT {pk_cols} FROM {table} as t1
-          LEFT JOIN \"{table}__crsql_clock\" as t2 ON {pk_on_conditions} AND t2.__crsql_col_name = ?
+          LEFT JOIN \"{table}__crsql_clock\" as t2 ON {pk_on_conditions} AND t2.col_name = ?
           WHERE t2.\"{first_pk}\" IS NULL {dflt_value_condition}",
         table = crate::util::escape_ident(table),
         pk_cols = pk_cols

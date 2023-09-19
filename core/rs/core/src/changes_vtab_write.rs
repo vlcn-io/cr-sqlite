@@ -172,7 +172,30 @@ fn set_winner_clock(
     let set_stmt_ref = tbl_info.get_set_winner_clock_stmt(db)?;
     let set_stmt = set_stmt_ref.as_ref().ok_or(ResultCode::ERROR)?;
 
+<<<<<<< HEAD
     let bind_result = bind_package_to_stmt(set_stmt.stmt, unpacked_pks, 0);
+=======
+    let set_stmt = get_cached_stmt_rt_wt(db, ext_data, stmt_key, || {
+        let pk_cols = sqlite::args!((*tbl_info).pksLen, (*tbl_info).pks);
+        Ok(format!(
+            "INSERT OR REPLACE INTO \"{table_name}__crsql_clock\"
+            ({pk_ident_list}, col_name, col_version, db_version, seq, site_id)
+            VALUES (
+              {pk_bind_list},
+              ?,
+              ?,
+              crsql_next_db_version(?),
+              ?,
+              ?
+            ) RETURNING _rowid_",
+            table_name = crate::util::escape_ident(tbl_name_str),
+            pk_ident_list = crate::util::as_identifier_list(pk_cols, None)?,
+            pk_bind_list = crate::util::binding_list(pk_cols.len()),
+        ))
+    })?;
+
+    let bind_result = bind_package_to_stmt(set_stmt, unpacked_pks, 0);
+>>>>>>> 91781657 (remove __crsql_ prefix from clock table columns)
     if let Err(rc) = bind_result {
         reset_cached_stmt(set_stmt.stmt)?;
         return Err(rc);
@@ -276,8 +299,20 @@ fn zero_clocks_on_resurrect(
     unpacked_pks: &Vec<ColumnValue>,
     insert_db_vrsn: sqlite::int64,
 ) -> Result<ResultCode, ResultCode> {
+<<<<<<< HEAD
     let zero_stmt_ref = tbl_info.get_zero_clocks_on_resurrect_stmt(db)?;
     let zero_stmt = zero_stmt_ref.as_ref().ok_or(ResultCode::ERROR)?;
+=======
+    let stmt_key = get_cache_key(CachedStmtType::ZeroClocksOnResurrect, table_name, None)?;
+    let zero_stmt = get_cached_stmt_rt_wt(db, ext_data, stmt_key, || {
+        Ok(format!(
+            "UPDATE \"{table_name}__crsql_clock\" SET col_version = 0, db_version = crsql_next_db_version(?) WHERE {pk_where_list} AND col_name IS NOT '{sentinel}'",
+            table_name = crate::util::escape_ident(table_name),
+            pk_where_list = pk_where_list_from_tbl_info(tbl_info, None)?,
+            sentinel = crate::c::INSERT_SENTINEL
+        ))
+    })?;
+>>>>>>> 91781657 (remove __crsql_ prefix from clock table columns)
 
     if let Err(rc) = zero_stmt.bind_int64(1, insert_db_vrsn) {
         reset_cached_stmt(zero_stmt.stmt)?;
@@ -348,8 +383,20 @@ unsafe fn merge_delete(
 
     // Drop clocks _after_ setting the winner clock so we don't lose track of the max db_version!!
     // This must never come before `set_winner_clock`
+<<<<<<< HEAD
     let drop_clocks_stmt_ref = tbl_info.get_merge_delete_drop_clocks_stmt(db)?;
     let drop_clocks_stmt = drop_clocks_stmt_ref.as_ref().ok_or(ResultCode::ERROR)?;
+=======
+    let stmt_key = get_cache_key(CachedStmtType::MergeDeleteDropClocks, tbl_name_str, None)?;
+    let drop_clocks_stmt = get_cached_stmt_rt_wt(db, ext_data, stmt_key, || {
+        Ok(format!(
+            "DELETE FROM \"{table_name}__crsql_clock\" WHERE {pk_where_list} AND col_name IS NOT '{sentinel}'",
+            table_name = crate::util::escape_ident(tbl_name_str),
+            pk_where_list = pk_where_list_from_tbl_info(tbl_info, None)?,
+            sentinel = crate::c::DELETE_SENTINEL
+        ))
+    })?;
+>>>>>>> 91781657 (remove __crsql_ prefix from clock table columns)
 
     if let Err(rc) = bind_package_to_stmt(drop_clocks_stmt.stmt, unpacked_pks, 0) {
         reset_cached_stmt(drop_clocks_stmt.stmt)?;
@@ -387,7 +434,26 @@ fn get_local_cl(
     let local_cl_stmt_ref = tbl_info.get_local_cl_stmt(db)?;
     let local_cl_stmt = local_cl_stmt_ref.as_ref().ok_or(ResultCode::ERROR)?;
 
+<<<<<<< HEAD
     let rc = bind_package_to_stmt(local_cl_stmt.stmt, unpacked_pks, 0);
+=======
+    let local_cl_stmt = get_cached_stmt_rt_wt(db, ext_data, stmt_key, || {
+        // We do an optimization to not store unnecessary create records.
+        // If a create record for the rows does not exist, see if any record does
+        // if a record does, the causal length is implicitly 1
+        Ok(format!(
+        "SELECT COALESCE(
+          (SELECT col_version FROM \"{table_name}__crsql_clock\" WHERE {pk_where_list} AND col_name = '{delete_sentinel}'),
+          (SELECT 1 FROM \"{table_name}__crsql_clock\" WHERE {pk_where_list})
+        )",
+        table_name = crate::util::escape_ident(tbl_name),
+        pk_where_list = pk_where_list_from_tbl_info(tbl_info, None)?,
+        delete_sentinel = crate::c::DELETE_SENTINEL,
+      ))
+    })?;
+
+    let rc = bind_package_to_stmt(local_cl_stmt, unpacked_pks, 0);
+>>>>>>> 91781657 (remove __crsql_ prefix from clock table columns)
     if let Err(rc) = rc {
         reset_cached_stmt(local_cl_stmt.stmt)?;
         return Err(rc);

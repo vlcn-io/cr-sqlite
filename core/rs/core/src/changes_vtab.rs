@@ -1,9 +1,7 @@
 extern crate alloc;
 use crate::alloc::string::ToString;
 use crate::changes_vtab_write::crsql_merge_insert;
-use crate::stmt_cache::{
-    get_cache_key, get_cached_stmt, reset_cached_stmt, set_cached_stmt, CachedStmtType,
-};
+use crate::stmt_cache::reset_cached_stmt;
 use crate::tableinfo::{crsql_ensure_table_infos_are_up_to_date, TableInfo};
 use alloc::boxed::Box;
 use alloc::format;
@@ -24,7 +22,7 @@ use sqlite_nostd::ResultCode;
 use crate::c::{
     crsql_Changes_cursor, crsql_Changes_vtab, ChangeRowType, ClockUnionColumn, CrsqlChangesColumn,
 };
-use crate::changes_vtab_read::{changes_union_query, row_patch_data_query};
+use crate::changes_vtab_read::changes_union_query;
 use crate::pack_columns::bind_package_to_stmt;
 use crate::unpack_columns;
 
@@ -408,49 +406,25 @@ unsafe fn changes_next(
         (*cursor).rowType = ChangeRowType::Update as c_int;
     }
 
-    let stmt_key = get_cache_key(CachedStmtType::RowPatchData, tbl, Some(cid))?;
-    let mut row_stmt = if let Some(stmt) = get_cached_stmt((*(*cursor).pTab).pExtData, &stmt_key) {
-        stmt
-    } else {
-        null_mut()
-    };
-
-    if row_stmt.is_null() {
-        let sql = row_patch_data_query(&tbl_info, cid);
-        if let Some(sql) = sql {
-            let stmt = (*(*cursor).pTab)
-                .db
-                .prepare_v3(&sql, sqlite::PREPARE_PERSISTENT)?;
-            // the cache takes ownership of stmt and stmt_key
-            set_cached_stmt((*(*cursor).pTab).pExtData, stmt_key, stmt.stmt);
-            row_stmt = stmt.stmt;
-            forget(stmt);
-        } else {
-            let err = CString::new(format!(
-                "could not generate row data fetch query for {}",
-                tbl
-            ))?;
-            (*vtab).zErrMsg = err.into_raw();
-            return Err(ResultCode::ERROR);
-        }
-    }
+    let row_stmt_ref = tbl_info.get_row_patch_data_stmt((*(*cursor).pTab).db, cid)?;
+    let row_stmt = row_stmt_ref.as_ref().ok_or(ResultCode::ERROR)?;
 
     let packed_pks = pks.blob();
     let unpacked_pks = unpack_columns(packed_pks)?;
-    bind_package_to_stmt(row_stmt, &unpacked_pks, 0)?;
+    bind_package_to_stmt(row_stmt.stmt, &unpacked_pks, 0)?;
 
     match row_stmt.step() {
         Ok(ResultCode::DONE) => {
-            reset_cached_stmt(row_stmt)?;
+            reset_cached_stmt(row_stmt.stmt)?;
         }
         Ok(_) => {}
         Err(rc) => {
-            reset_cached_stmt(row_stmt)?;
+            reset_cached_stmt(row_stmt.stmt)?;
             return Err(rc);
         }
     }
 
-    (*cursor).pRowStmt = row_stmt;
+    (*cursor).pRowStmt = row_stmt.stmt;
     Ok(ResultCode::OK)
 }
 

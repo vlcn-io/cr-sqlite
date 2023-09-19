@@ -201,6 +201,15 @@ impl TableInfo {
         col_info.get_merge_insert_stmt(self, db)
     }
 
+    pub fn get_row_patch_data_stmt(
+        &self,
+        db: *mut sqlite3,
+        col_name: &str,
+    ) -> Result<Ref<Option<ManagedStmt>>, ResultCode> {
+        let col_info = self.find_non_pk_col(col_name)?;
+        col_info.get_row_patch_data_stmt(self, db)
+    }
+
     pub fn clear_stmts(&self) -> Result<ResultCode, ResultCode> {
         // finalize all stmts
         let mut stmt = self.set_winner_clock_stmt.try_borrow_mut()?;
@@ -242,7 +251,7 @@ pub struct ColumnInfo {
     // have different "seen since" records for the old site_id.
     curr_value_stmt: RefCell<Option<ManagedStmt>>,
     merge_insert_stmt: RefCell<Option<ManagedStmt>>,
-    row_patch_data_stmt: Option<ManagedStmt>,
+    row_patch_data_stmt: RefCell<Option<ManagedStmt>>,
 }
 
 impl ColumnInfo {
@@ -286,10 +295,30 @@ impl ColumnInfo {
         Ok(self.merge_insert_stmt.try_borrow()?)
     }
 
+    fn get_row_patch_data_stmt(
+        &self,
+        tbl_info: &TableInfo,
+        db: *mut sqlite3,
+    ) -> Result<Ref<Option<ManagedStmt>>, ResultCode> {
+        if self.row_patch_data_stmt.try_borrow()?.is_none() {
+            let sql = format!(
+                "SELECT \"{col_name}\" FROM \"{table_name}\" WHERE {where_list}\0",
+                col_name = crate::util::escape_ident(&self.name),
+                table_name = crate::util::escape_ident(&tbl_info.tbl_name),
+                where_list = crate::util::where_list(&tbl_info.pks, None)?
+            );
+            let ret = db.prepare_v3(&sql, sqlite::PREPARE_PERSISTENT)?;
+            *self.row_patch_data_stmt.try_borrow_mut()? = Some(ret);
+        }
+        Ok(self.row_patch_data_stmt.try_borrow()?)
+    }
+
     pub fn clear_stmts(&self) -> Result<ResultCode, ResultCode> {
         let mut stmt = self.curr_value_stmt.try_borrow_mut()?;
         stmt.take();
         let mut stmt = self.merge_insert_stmt.try_borrow_mut()?;
+        stmt.take();
+        let mut stmt = self.row_patch_data_stmt.try_borrow_mut()?;
         stmt.take();
 
         Ok(ResultCode::OK)
@@ -415,7 +444,7 @@ pub fn pull_table_info(
                     pk: stmt.column_int(2),
                     curr_value_stmt: RefCell::new(None),
                     merge_insert_stmt: RefCell::new(None),
-                    row_patch_data_stmt: None,
+                    row_patch_data_stmt: RefCell::new(None),
                 });
             }
 

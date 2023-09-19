@@ -325,32 +325,25 @@ fn zero_clocks_on_resurrect(
     unpacked_pks: &Vec<ColumnValue>,
     insert_db_vrsn: sqlite::int64,
 ) -> Result<ResultCode, ResultCode> {
-    let stmt_key = get_cache_key(CachedStmtType::ZeroClocksOnResurrect, table_name, None)?;
-    let zero_stmt = get_cached_stmt_rt_wt(db, ext_data, stmt_key, || {
-        Ok(format!(
-            "UPDATE \"{table_name}__crsql_clock\" SET __crsql_col_version = 0, __crsql_db_version = crsql_next_db_version(?) WHERE {pk_where_list} AND __crsql_col_name IS NOT '{sentinel}'",
-            table_name = crate::util::escape_ident(table_name),
-            pk_where_list = pk_where_list_from_tbl_info(tbl_info, None)?,
-            sentinel = crate::c::INSERT_SENTINEL
-        ))
-    })?;
+    let zero_stmt_ref = tbl_info.get_zero_clocks_on_resurrect_stmt(db)?;
+    let zero_stmt = zero_stmt_ref.as_ref().ok_or(ResultCode::ERROR)?;
 
     if let Err(rc) = zero_stmt.bind_int64(1, insert_db_vrsn) {
-        reset_cached_stmt(zero_stmt)?;
+        reset_cached_stmt(zero_stmt.stmt)?;
         return Err(rc);
     }
 
-    if let Err(rc) = bind_package_to_stmt(zero_stmt, unpacked_pks, 1) {
-        reset_cached_stmt(zero_stmt)?;
+    if let Err(rc) = bind_package_to_stmt(zero_stmt.stmt, unpacked_pks, 1) {
+        reset_cached_stmt(zero_stmt.stmt)?;
         return Err(rc);
     }
 
     if let Err(rc) = zero_stmt.step() {
-        reset_cached_stmt(zero_stmt)?;
+        reset_cached_stmt(zero_stmt.stmt)?;
         return Err(rc);
     }
 
-    reset_cached_stmt(zero_stmt)
+    reset_cached_stmt(zero_stmt.stmt)
 }
 
 unsafe fn merge_delete(

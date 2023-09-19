@@ -34,8 +34,13 @@ pub struct TableInfo {
     merge_pk_only_insert_stmt: RefCell<Option<ManagedStmt>>,
     merge_delete_stmt: RefCell<Option<ManagedStmt>>,
     merge_delete_drop_clocks_stmt: RefCell<Option<ManagedStmt>>,
-    zero_clocks_on_resurrect_stmt: Option<ManagedStmt>,
-    // put statement cache here, remove btreemap based cache.
+    // We zero clocks, rather than going to 1, because
+    // the current values should be totally ignored at all sites.
+    // This is because the current values would not exist had the current node
+    // processed the intervening delete.
+    // This also means that col_version is not always >= 1. A resurrected column,
+    // which missed a delete event, will have a 0 version.
+    zero_clocks_on_resurrect_stmt: RefCell<Option<ManagedStmt>>,
 }
 
 impl TableInfo {
@@ -161,6 +166,23 @@ impl TableInfo {
         Ok(self.merge_delete_drop_clocks_stmt.try_borrow()?)
     }
 
+    pub fn get_zero_clocks_on_resurrect_stmt(
+        &self,
+        db: *mut sqlite3,
+    ) -> Result<Ref<Option<ManagedStmt>>, ResultCode> {
+        if self.zero_clocks_on_resurrect_stmt.try_borrow()?.is_none() {
+            let sql = format!(
+              "UPDATE \"{table_name}__crsql_clock\" SET __crsql_col_version = 0, __crsql_db_version = crsql_next_db_version(?) WHERE {pk_where_list} AND __crsql_col_name IS NOT '{sentinel}'",
+              table_name = crate::util::escape_ident(&self.tbl_name),
+              pk_where_list = crate::util::where_list(&self.pks, None)?,
+              sentinel = crate::c::INSERT_SENTINEL
+            );
+            let ret = db.prepare_v3(&sql, sqlite::PREPARE_PERSISTENT)?;
+            *self.zero_clocks_on_resurrect_stmt.try_borrow_mut()? = Some(ret);
+        }
+        Ok(self.zero_clocks_on_resurrect_stmt.try_borrow()?)
+    }
+
     pub fn get_col_value_stmt(
         &self,
         db: *mut sqlite3,
@@ -184,6 +206,8 @@ impl TableInfo {
         stmt.take();
         let mut stmt = self.merge_delete_drop_clocks_stmt.try_borrow_mut()?;
         stmt.take();
+        let mut stmt = self.zero_clocks_on_resurrect_stmt.try_borrow_mut()?;
+        stmt.take();
 
         // primary key columns shouldn't have statements? right?
         for col in &self.non_pks {
@@ -200,6 +224,13 @@ pub struct ColumnInfo {
     // > 0 if it is a primary key columns
     // the value refers to the position in the `PRIMARY KEY (cols...)` statement
     pub pk: i32,
+    // can we one day delete this and use site id for ties?
+    // if we do, how does that impact the backup and restore story?
+    // e.g., restoring a database snapshot on a new machine with a new siteid but
+    // bootstrapped from a backup?
+    // If we track that "we've seen this restored node since the backup point with the old site_id"
+    // then site_id comparisons could change merge results after restore for nodes that
+    // have different "seen since" records for the old site_id.
     curr_value_stmt: RefCell<Option<ManagedStmt>>,
     merge_insert_stmt: Option<ManagedStmt>,
     row_patch_data_stmt: Option<ManagedStmt>,
@@ -380,7 +411,7 @@ pub fn pull_table_info(
         merge_pk_only_insert_stmt: RefCell::new(None),
         merge_delete_stmt: RefCell::new(None),
         merge_delete_drop_clocks_stmt: RefCell::new(None),
-        zero_clocks_on_resurrect_stmt: None,
+        zero_clocks_on_resurrect_stmt: RefCell::new(None),
     });
 }
 

@@ -47,6 +47,11 @@ pub extern "C" fn crsql_next_db_version(
     }
 }
 
+/**
+ * Given this needs to do a pragma check, invoke it as little as possible.
+ * TODO: We could optimize to only do a pragma check once per transaction.
+ * Need to save some bit that states we checked the pragma already and reset on tx commit or rollback.
+ */
 pub fn next_db_version(
     db: *mut sqlite3,
     ext_data: *mut crsql_ExtData,

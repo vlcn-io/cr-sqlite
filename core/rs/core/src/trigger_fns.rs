@@ -10,7 +10,7 @@ use alloc::vec::Vec;
 use sqlite::{sqlite3, value, Context, ResultCode, Value};
 use sqlite_nostd as sqlite;
 
-use crate::c::crsql_getDbVersion;
+use crate::stmt_cache::reset_cached_stmt;
 use crate::{c::crsql_ExtData, tableinfo::TableInfo};
 
 #[no_mangle]
@@ -97,39 +97,75 @@ fn after_update(
     non_pks_new: &[*mut value],
     non_pks_old: &[*mut value],
 ) -> Result<ResultCode, String> {
-    let seq = increment_and_get_seq();
-    let err_msg = crate::util::make_err_ptr();
-
-    // getDbVersion actually fills ext_data with the db version. TODO: rename it!
-    let rc = unsafe { crsql_getDbVersion(db, ext_data, err_msg) };
-    if rc != ResultCode::OK as c_int {
-        return Err(crate::util::get_err_msg(err_msg));
-    }
-    crate::util::drop_err_ptr(err_msg);
-
-    let current_db_version = unsafe { (*ext_data).dbVersion };
-    let seq = unsafe {
+    let next_db_version = crate::db_version::next_db_version(db, ext_data, None)?;
+    let next_seq = unsafe {
         (*ext_data).seq += 1;
         (*ext_data).seq
     };
 
-    // Check if any PK value changed
-    // If so,
-    // 1. insert or update a sentinel for the old thing
-    // 2. delete all the non senintels
+    // Changing a primary key column to a new value is the same thing as deleting the row
+    // previously identified by the primary key.
     if crate::compare_values::any_value_changed(pks_new, pks_old)? {
-        // insert_or_update_sentinel(tbl_info, pks_old)?;
-        // delete_non_sentinels();
+        after_update__insert_or_update_sentinel(db, tbl_info, pks_old, next_db_version, next_seq)?;
+        after_update__delete_non_sentinels();
     }
 
     Ok(ResultCode::OK)
 }
 
-fn insert_or_update_sentinel(db: *mut sqlite3, tbl_info: &TableInfo, pks: &[*mut value]) {
-    let insert_or_update_sentinel_stmt_ref = tbl_info.get_insert_or_update_sentinel_stmt(db)?;
+#[allow(non_snake_case)]
+fn after_update__insert_or_update_sentinel(
+    db: *mut sqlite3,
+    tbl_info: &TableInfo,
+    pks: &[*mut value],
+    db_version: i64,
+    seq: i32,
+) -> Result<ResultCode, String> {
+    let insert_or_update_sentinel_stmt_ref = tbl_info
+        .get_insert_or_update_sentinel_stmt(db)
+        .or_else(|e| Err("failed to get insert_or_update_sentinel_stmt"))?;
     let insert_or_update_sentinel_stmt = insert_or_update_sentinel_stmt_ref
         .as_ref()
-        .ok_or(ResultCode::ERROR)?;
+        .ok_or("Failed to deref sentinel stmt")?;
+    for (i, pk) in pks.iter().enumerate() {
+        insert_or_update_sentinel_stmt
+            .bind_value(i as i32 + 1, *pk)
+            .or_else(|e| Err("failed to bind pks to insert_or_update_sentinel_stmt"))?;
+    }
+    insert_or_update_sentinel_stmt
+        .bind_int64(pks.len() as i32 + 1, db_version)
+        .or_else(|e| Err("failed to bind db_version to insert_or_update_sentinel_stmt"))?;
+    insert_or_update_sentinel_stmt
+        .bind_int(pks.len() as i32 + 2, seq)
+        .or_else(|e| Err("failed to bind seq to insert_or_update_sentinel_stmt"))?;
+    insert_or_update_sentinel_stmt
+        .bind_int64(pks.len() as i32 + 3, db_version)
+        .or_else(|e| Err("failed to bind db_version to insert_or_update_sentinel_stmt"))?;
+    insert_or_update_sentinel_stmt
+        .bind_int(pks.len() as i32 + 4, seq)
+        .or_else(|e| Err("failed to bind seq to insert_or_update_sentinel_stmt"))?;
+
+    match insert_or_update_sentinel_stmt.step() {
+        Ok(ResultCode::DONE) => {
+            reset_cached_stmt(insert_or_update_sentinel_stmt.stmt)
+                .or_else(|e| Err("unable to reset cached insert_or_update_sentinel_stmt"))?;
+            Ok(ResultCode::OK)
+        }
+        Ok(code) | Err(code) => {
+            reset_cached_stmt(insert_or_update_sentinel_stmt.stmt)
+                .or_else(|e| Err("unable to reset cached insert_or_update_sentinel_stmt"))?;
+            Err(format!(
+                "unexpected result code from insert_or_update_sentinel_stmt.step: {}",
+                code
+            ))
+        }
+    }
+}
+
+// TODO: in the future we can keep sentinel information in the lookaside
+#[allow(non_snake_case)]
+fn after_update__delete_non_sentinels() -> Result<ResultCode, String> {
+    Ok(ResultCode::OK)
 }
 
 #[cfg(test)]

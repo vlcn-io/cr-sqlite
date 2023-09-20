@@ -28,6 +28,7 @@ pub struct TableInfo {
     pub pks: Vec<ColumnInfo>,
     pub non_pks: Vec<ColumnInfo>,
 
+    // For merges --
     set_winner_clock_stmt: RefCell<Option<ManagedStmt>>,
     local_cl_stmt: RefCell<Option<ManagedStmt>>,
     col_version_stmt: RefCell<Option<ManagedStmt>>,
@@ -41,6 +42,9 @@ pub struct TableInfo {
     // This also means that col_version is not always >= 1. A resurrected column,
     // which missed a delete event, will have a 0 version.
     zero_clocks_on_resurrect_stmt: RefCell<Option<ManagedStmt>>,
+
+    // For local writes --
+    insert_or_update_sentinal_stmt: RefCell<Option<ManagedStmt>>,
 }
 
 impl TableInfo {
@@ -183,6 +187,42 @@ impl TableInfo {
         Ok(self.zero_clocks_on_resurrect_stmt.try_borrow()?)
     }
 
+    pub fn get_insert_or_update_sentinel_stmt(
+        &self,
+        db: *mut sqlite3,
+    ) -> Result<Ref<Option<ManagedStmt>>, ResultCode> {
+        if self.insert_or_update_sentinal_stmt.try_borrow()?.is_none() {
+            let sql = format!(
+                "INSERT INTO \"{table_name}__crsql_clock\" (
+            {pk_list},
+            __crsql_col_name,
+            __crsql_col_version,
+            __crsql_db_version,
+            __crsql_seq,
+            __crsql_site_id
+          ) SELECT
+            {pk_bind_slots},
+            '{sentinel}',
+            2,
+            ?,
+            ?,
+            NULL WHERE true
+          ON CONFLICT DO UPDATE SET
+            __crsql_col_version = 1 + __crsql_col_version,
+            __crsql_db_version = ?,
+            __crsql_seq = ?,
+            __crsql_site_id = NULL",
+                table_name = crate::util::escape_ident(&self.tbl_name),
+                pk_list = crate::util::as_identifier_list(&self.pks, None)?,
+                pk_bind_slots = crate::util::binding_list(self.pks.len()),
+                sentinel = crate::c::DELETE_SENTINEL,
+            );
+            let ret = db.prepare_v3(&sql, sqlite::PREPARE_PERSISTENT)?;
+            *self.insert_or_update_sentinal_stmt.try_borrow_mut()? = Some(ret);
+        }
+        Ok(self.insert_or_update_sentinal_stmt.try_borrow()?)
+    }
+
     pub fn get_col_value_stmt(
         &self,
         db: *mut sqlite3,
@@ -225,6 +265,8 @@ impl TableInfo {
         let mut stmt = self.merge_delete_drop_clocks_stmt.try_borrow_mut()?;
         stmt.take();
         let mut stmt = self.zero_clocks_on_resurrect_stmt.try_borrow_mut()?;
+        stmt.take();
+        let mut stmt = self.insert_or_update_sentinal_stmt.try_borrow_mut()?;
         stmt.take();
 
         // primary key columns shouldn't have statements? right?
@@ -485,6 +527,7 @@ pub fn pull_table_info(
         merge_delete_stmt: RefCell::new(None),
         merge_delete_drop_clocks_stmt: RefCell::new(None),
         zero_clocks_on_resurrect_stmt: RefCell::new(None),
+        insert_or_update_sentinal_stmt: RefCell::new(None),
     });
 }
 

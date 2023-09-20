@@ -39,6 +39,7 @@ mod tableinfo;
 mod teardown;
 #[cfg(feature = "test")]
 pub mod test_exports;
+mod trigger_fns;
 mod triggers;
 mod unpack_columns_vtab;
 mod util;

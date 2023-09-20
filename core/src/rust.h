@@ -10,7 +10,6 @@
 // These are those definitions.
 
 int crsql_is_crr(sqlite3 *db, const char *tblName);
-int crsql_compare_sqlite_values(const sqlite3_value *l, const sqlite3_value *r);
 int crsql_remove_crr_triggers_if_exist(sqlite3 *db, const char *tblName);
 
 int crsql_init_site_id(sqlite3 *db, unsigned char *ret);

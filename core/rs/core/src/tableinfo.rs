@@ -496,17 +496,29 @@ pub fn is_table_compatible(
     }
 
     // Must have a primary key
-    if db.count(&format!(
+    let valid_pks = db.count(&format!(
         // pragma_index_list does not include primary keys that alias rowid...
         // hence why we cannot use
         // `select * from pragma_index_list where origin = pk`
         "SELECT count(*) FROM pragma_table_info('{table}')
-        WHERE \"pk\" > 0"
-    ))? == 0
+        WHERE \"pk\" > 0 AND \"notnull\" > 0"
+    ))?;
+    if valid_pks == 0 {
+        err.set(&format!(
+            "Table {table} has no primary key or primary key is nullable. \
+            CRRs must have a non nullable primary key"
+        ));
+        return Ok(false);
+    }
+
+    // All primary keys have to be non-nullable
+    if db.count(&format!(
+        "SELECT count(*) FROM pragma_table_info('{table}') WHERE \"pk\" > 0"
+    ))? != valid_pks
     {
         err.set(&format!(
-            "Table {table} has no primary key. \
-            CRRs must have a primary key"
+            "Table {table} has composite primary key part of which is nullable. \
+            CRRs must have a non nullable primary key"
         ));
         return Ok(false);
     }

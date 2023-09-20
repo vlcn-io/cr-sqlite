@@ -9,10 +9,20 @@ use crsql_bundle::test_exports::tableinfo::TableInfo;
 use sqlite::Connection;
 use sqlite_nostd as sqlite;
 
+// Unfortunate circumstance that we still have some C code that requires this argument
 fn make_err_ptr() -> *mut *mut c_char {
-    let mut inner_ptr: *mut c_char = core::ptr::null_mut();
-    let outer_ptr: *mut *mut c_char = &mut inner_ptr;
-    outer_ptr
+    let boxed = Box::new(core::ptr::null_mut() as *mut c_char);
+    return Box::into_raw(boxed);
+}
+
+fn drop_err_ptr(err: *mut *mut c_char) {
+    unsafe {
+        let ptr = Box::from_raw(err);
+        if ptr.is_null() {
+            return;
+        }
+        let _ = CString::from_raw(*ptr);
+    }
 }
 
 fn make_site() -> *mut c_char {
@@ -88,6 +98,7 @@ fn test_ensure_table_infos_are_up_to_date() {
         .expect("dropped boo");
 
     test_exports::tableinfo::crsql_ensure_table_infos_are_up_to_date(raw_db, ext_data, err);
+    drop_err_ptr(err);
 
     assert_eq!(table_infos.len(), 0);
 
@@ -148,6 +159,7 @@ fn test_pull_table_info() {
     assert_eq!(tbl_info.non_pks[0].name, "a");
     assert_eq!(tbl_info.non_pks[0].cid, 0);
     assert_eq!(tbl_info.non_pks[0].pk, 0);
+    drop_err_ptr(err);
 }
 
 fn test_is_table_compatible() {
@@ -263,6 +275,7 @@ fn test_is_table_compatible() {
     let is_compatible = test_exports::tableinfo::is_table_compatible(raw_db, "atable2", err)
         .expect("checked if atable2 is compatible");
     assert_eq!(is_compatible, true);
+    drop_err_ptr(err);
 }
 
 fn test_create_clock_table_from_table_info() {
@@ -298,6 +311,7 @@ fn test_create_clock_table_from_table_info() {
     test_exports::bootstrap::create_clock_table(raw_db, &boo_tbl_info, err)
         .expect("created clock table for boo");
 
+    drop_err_ptr(err);
     // todo: Check that clock tables have expected schema(s)
 }
 

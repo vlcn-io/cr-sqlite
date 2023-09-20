@@ -17,9 +17,6 @@ jobs:
           - os: ubuntu-latest
             artifact_name: crsqlite.so
             asset_name: crsqlite-linux-x86_64.so
-          - os: windows-latest
-            artifact_name: crsqlite.dll
-            asset_name: crsqlite-windows-x86_64.dll
           - os: macos-latest
             artifact_name: crsqlite.dylib
             asset_name: crsqlite-darwin-x86_64.dylib
@@ -33,13 +30,6 @@ jobs:
         uses: xom9ikk/dotenv@v2
         with:
           path: ./
-
-      - name: Windows rust toolchain
-        if: runner.os == 'Windows'
-        run: |
-          rm core/rs/bundle_static/rust-toolchain.toml
-          rustup component add rust-src --toolchain nightly-2023-06-17-x86_64-pc-windows-gnu
-          rustup default nightly-2023-06-17-x86_64-pc-windows-gnu
 
       - name: Build
         run: |
@@ -129,6 +119,74 @@ jobs:
         run: |
           cd core
           export CI_MAYBE_TARGET="aarch64-unknown-linux-gnu" && export CI_GCC="aarch64-linux-gnu-gcc" && make loadable
+
+      - name: Upload binaries to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: core/dist/${{ matrix.artifact_name }}
+          asset_name: ${{ matrix.asset_name }}
+          tag: ${{ github.ref }}
+
+  prebuild-windows-x86_64:
+    name: Prebuild for Windows x86_64
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact_name: crsqlite.dll
+            asset_name: crsqlite-win-x86_64.dll
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+
+      - name: Rust Nightly
+        run: |
+          rm core/rs/bundle_static/rust-toolchain.toml
+          rustup component add rust-src --toolchain nightly-2023-06-17-x86_64-pc-windows-gnu
+          rustup default nightly-2023-06-17-x86_64-pc-windows-gnu
+
+      - name: Build
+        run: |
+          cd core
+          export CI_MAYBE_TARGET="x86_64-pc-windows-gnu" && export CI_GCC="x86_64-w64-mingw32-gcc" && make loadable
+
+      - name: Upload binaries to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: core/dist/${{ matrix.artifact_name }}
+          asset_name: ${{ matrix.asset_name }}
+          tag: ${{ github.ref }}
+
+  prebuild-windows-i686:
+    name: Prebuild for Windows i686
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact_name: crsqlite.dll
+            asset_name: crsqlite-win-i686.dll
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+
+      - name: Rust Nightly
+        run: |
+          rm core/rs/bundle_static/rust-toolchain.toml
+          rustup component add rust-src --toolchain nightly-2023-06-17-i686-pc-windows-gnu
+          rustup default nightly-2023-06-17-i686-pc-windows-gnu
+
+      - name: Build
+        run: |
+          cd core
+          export CI_MAYBE_TARGET="i686-pc-windows-gnu" && export CI_GCC="i686-w64-mingw32-gcc" && make loadable
 
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2

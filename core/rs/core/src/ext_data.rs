@@ -20,7 +20,7 @@ pub extern "C" fn crsql_recreate_db_version_stmt(
     }
 }
 
-fn recreate_db_version_stmt(
+pub fn recreate_db_version_stmt(
     db: *mut sqlite3,
     ext_data: *mut crsql_ExtData,
 ) -> Result<ResultCode, ResultCode> {

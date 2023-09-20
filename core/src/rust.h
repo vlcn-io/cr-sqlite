@@ -23,5 +23,8 @@ int crsql_create_crr(sqlite3 *db, const char *schemaName, const char *tblName,
 int crsql_ensure_table_infos_are_up_to_date(sqlite3 *db,
                                             crsql_ExtData *pExtData,
                                             char **err);
-
+int crsql_fill_db_version_if_needed(sqlite3 *db, crsql_ExtData *pExtData,
+                                    char **errmsg);
+int crsql_next_db_version(sqlite3 *db, crsql_ExtData *pExtData,
+                          sqlite3_int64 mergingVersion, char **errmsg);
 #endif

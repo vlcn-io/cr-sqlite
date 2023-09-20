@@ -32,6 +32,8 @@ pub extern "C" fn crsql_integration_check() {
     t::teardown::run_suite().expect("tear down suite");
     println!("Running cl_set_vtab");
     t::test_cl_set_vtab::run_suite().expect("test cl set vtab suite");
+    println!("Running db_version");
+    t::test_db_version::run_suite().expect("test db version suite");
 }
 
 pub fn opendb() -> Result<CRConnection, ResultCode> {

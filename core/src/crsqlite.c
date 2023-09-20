@@ -45,7 +45,7 @@ static void dbVersionFunc(sqlite3_context *context, int argc,
   char *errmsg = 0;
   crsql_ExtData *pExtData = (crsql_ExtData *)sqlite3_user_data(context);
   sqlite3 *db = sqlite3_context_db_handle(context);
-  int rc = crsql_getDbVersion(db, pExtData, &errmsg);
+  int rc = crsql_fill_db_version_if_needed(db, pExtData, &errmsg);
   if (rc != SQLITE_OK) {
     sqlite3_result_error(context, errmsg, -1);
     sqlite3_free(errmsg);
@@ -70,31 +70,18 @@ static void nextDbVersionFunc(sqlite3_context *context, int argc,
   char *errmsg = 0;
   crsql_ExtData *pExtData = (crsql_ExtData *)sqlite3_user_data(context);
   sqlite3 *db = sqlite3_context_db_handle(context);
-  // "getDbVersion" is really just filling the cached db version value if
-  // invalid
-  int rc = crsql_getDbVersion(db, pExtData, &errmsg);
-  if (rc != SQLITE_OK) {
-    sqlite3_result_error(context, errmsg, -1);
-    sqlite3_free(errmsg);
-    return;
-  }
-
   sqlite3_int64 providedVersion = 0;
   if (argc == 1) {
     providedVersion = sqlite3_value_int64(argv[0]);
   }
 
-  // now return max of:
-  // dbVersion + 1, pendingDbVersion, arg (if there is one)
-  // and set pendingDbVersion to that max
-  sqlite3_int64 ret = pExtData->dbVersion + 1;
-  if (ret < pExtData->pendingDbVersion) {
-    ret = pExtData->pendingDbVersion;
+  sqlite3_int64 ret =
+      crsql_next_db_version(db, pExtData, providedVersion, &errmsg);
+  if (ret < 0) {
+    sqlite3_result_error(context, errmsg, -1);
+    sqlite3_free(errmsg);
+    return;
   }
-  if (ret < providedVersion) {
-    ret = providedVersion;
-  }
-  pExtData->pendingDbVersion = ret;
 
   sqlite3_result_int64(context, ret);
 }

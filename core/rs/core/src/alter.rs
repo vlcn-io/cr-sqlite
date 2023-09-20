@@ -8,9 +8,10 @@ use core::ffi::{c_char, c_int, CStr};
 use core::mem;
 #[cfg(not(feature = "std"))]
 use num_traits::FromPrimitive;
-use sqlite_nostd::{sqlite3, Connection, ResultCode};
+use sqlite_nostd::{sqlite3, Connection, ResultCode, StrRef};
 
-use crate::c::{crsql_ExtData, crsql_getDbVersion};
+use crate::c::crsql_ExtData;
+use crate::db_version::fill_db_version_if_needed;
 use crate::tableinfo::{crsql_ensure_table_infos_are_up_to_date, TableInfo};
 
 #[no_mangle]
@@ -32,13 +33,10 @@ unsafe fn compact_post_alter(
     errmsg: *mut *mut c_char,
 ) -> Result<ResultCode, ResultCode> {
     let tbl_name_str = CStr::from_ptr(tbl_name).to_str()?;
-    let c_rc = crsql_getDbVersion(db, ext_data, errmsg);
-    if c_rc != ResultCode::OK as c_int {
-        if let Some(rc) = ResultCode::from_i32(c_rc) {
-            return Err(rc);
-        }
-        return Err(ResultCode::ERROR);
-    }
+    fill_db_version_if_needed(db, ext_data).or_else(|msg| {
+        errmsg.set(&msg);
+        Err(ResultCode::ERROR)
+    })?;
     let current_db_version = (*ext_data).dbVersion;
 
     // If primary key columns change (in the schema)

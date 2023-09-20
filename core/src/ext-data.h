@@ -49,9 +49,6 @@ int crsql_fetchPragmaSchemaVersion(sqlite3 *db, crsql_ExtData *pExtData,
                                    int which);
 int crsql_fetchPragmaDataVersion(sqlite3 *db, crsql_ExtData *pExtData);
 int crsql_recreate_db_version_stmt(sqlite3 *db, crsql_ExtData *pExtData);
-int crsql_fetchDbVersionFromStorage(sqlite3 *db, crsql_ExtData *pExtData,
-                                    char **errmsg);
-int crsql_getDbVersion(sqlite3 *db, crsql_ExtData *pExtData, char **errmsg);
 void crsql_finalize(crsql_ExtData *pExtData);
 
 #endif

@@ -21,6 +21,10 @@ mod compare_values;
 mod consts;
 mod create_cl_set_vtab;
 mod create_crr;
+#[cfg(feature = "test")]
+pub mod db_version;
+#[cfg(not(feature = "test"))]
+mod db_version;
 mod ext_data;
 mod is_crr;
 #[cfg(feature = "test")]

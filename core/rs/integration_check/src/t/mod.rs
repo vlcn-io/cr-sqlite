@@ -8,3 +8,4 @@ pub mod sync_bit_honored;
 pub mod tableinfo;
 pub mod teardown;
 pub mod test_cl_set_vtab;
+pub mod test_db_version;

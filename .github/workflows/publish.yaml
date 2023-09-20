@@ -143,6 +143,11 @@ jobs:
         with:
           submodules: true
 
+      - name: install mingw
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y mingw-w64
+
       - name: Rust Nightly
         run: |
           rm core/rs/bundle_static/rust-toolchain.toml
@@ -177,6 +182,11 @@ jobs:
       - uses: actions/checkout@v3
         with:
           submodules: true
+
+      - name: install mingw
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y mingw-w64
 
       - name: Rust Nightly
         run: |

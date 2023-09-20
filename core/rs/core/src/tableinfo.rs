@@ -44,7 +44,8 @@ pub struct TableInfo {
     zero_clocks_on_resurrect_stmt: RefCell<Option<ManagedStmt>>,
 
     // For local writes --
-    insert_or_update_sentinal_stmt: RefCell<Option<ManagedStmt>>,
+    mark_locally_deleted_stmt: RefCell<Option<ManagedStmt>>,
+    // delete_non_sentinel_rows_stmt: RefCell<Vec<ManagedStmt>>,
 }
 
 impl TableInfo {
@@ -187,11 +188,11 @@ impl TableInfo {
         Ok(self.zero_clocks_on_resurrect_stmt.try_borrow()?)
     }
 
-    pub fn get_insert_or_update_sentinel_stmt(
+    pub fn get_mark_locally_deleted_stmt(
         &self,
         db: *mut sqlite3,
     ) -> Result<Ref<Option<ManagedStmt>>, ResultCode> {
-        if self.insert_or_update_sentinal_stmt.try_borrow()?.is_none() {
+        if self.mark_locally_deleted_stmt.try_borrow()?.is_none() {
             let sql = format!(
                 "INSERT INTO \"{table_name}__crsql_clock\" (
             {pk_list},
@@ -218,9 +219,9 @@ impl TableInfo {
                 sentinel = crate::c::DELETE_SENTINEL,
             );
             let ret = db.prepare_v3(&sql, sqlite::PREPARE_PERSISTENT)?;
-            *self.insert_or_update_sentinal_stmt.try_borrow_mut()? = Some(ret);
+            *self.mark_locally_deleted_stmt.try_borrow_mut()? = Some(ret);
         }
-        Ok(self.insert_or_update_sentinal_stmt.try_borrow()?)
+        Ok(self.mark_locally_deleted_stmt.try_borrow()?)
     }
 
     pub fn get_col_value_stmt(
@@ -266,7 +267,7 @@ impl TableInfo {
         stmt.take();
         let mut stmt = self.zero_clocks_on_resurrect_stmt.try_borrow_mut()?;
         stmt.take();
-        let mut stmt = self.insert_or_update_sentinal_stmt.try_borrow_mut()?;
+        let mut stmt = self.mark_locally_deleted_stmt.try_borrow_mut()?;
         stmt.take();
 
         // primary key columns shouldn't have statements? right?
@@ -527,7 +528,7 @@ pub fn pull_table_info(
         merge_delete_stmt: RefCell::new(None),
         merge_delete_drop_clocks_stmt: RefCell::new(None),
         zero_clocks_on_resurrect_stmt: RefCell::new(None),
-        insert_or_update_sentinal_stmt: RefCell::new(None),
+        mark_locally_deleted_stmt: RefCell::new(None),
     });
 }
 

@@ -121,41 +121,34 @@ fn after_update__insert_or_update_sentinel(
     db_version: i64,
     seq: i32,
 ) -> Result<ResultCode, String> {
-    let insert_or_update_sentinel_stmt_ref = tbl_info
-        .get_insert_or_update_sentinel_stmt(db)
-        .or_else(|e| Err("failed to get insert_or_update_sentinel_stmt"))?;
-    let insert_or_update_sentinel_stmt = insert_or_update_sentinel_stmt_ref
+    let mark_locally_deleted_stmt_ref = tbl_info
+        .get_mark_locally_deleted_stmt(db)
+        .or_else(|e| Err("failed to get mark_locally_deleted_stmt"))?;
+    let mark_locally_deleted_stmt = mark_locally_deleted_stmt_ref
         .as_ref()
         .ok_or("Failed to deref sentinel stmt")?;
     for (i, pk) in pks.iter().enumerate() {
-        insert_or_update_sentinel_stmt
+        mark_locally_deleted_stmt
             .bind_value(i as i32 + 1, *pk)
-            .or_else(|e| Err("failed to bind pks to insert_or_update_sentinel_stmt"))?;
+            .or_else(|e| Err("failed to bind pks to mark_locally_deleted_stmt"))?;
     }
-    insert_or_update_sentinel_stmt
+    match mark_locally_deleted_stmt
         .bind_int64(pks.len() as i32 + 1, db_version)
-        .or_else(|e| Err("failed to bind db_version to insert_or_update_sentinel_stmt"))?;
-    insert_or_update_sentinel_stmt
-        .bind_int(pks.len() as i32 + 2, seq)
-        .or_else(|e| Err("failed to bind seq to insert_or_update_sentinel_stmt"))?;
-    insert_or_update_sentinel_stmt
-        .bind_int64(pks.len() as i32 + 3, db_version)
-        .or_else(|e| Err("failed to bind db_version to insert_or_update_sentinel_stmt"))?;
-    insert_or_update_sentinel_stmt
-        .bind_int(pks.len() as i32 + 4, seq)
-        .or_else(|e| Err("failed to bind seq to insert_or_update_sentinel_stmt"))?;
-
-    match insert_or_update_sentinel_stmt.step() {
+        .and_then(|_| mark_locally_deleted_stmt.bind_int(pks.len() as i32 + 2, seq))
+        .and_then(|_| mark_locally_deleted_stmt.bind_int64(pks.len() as i32 + 3, db_version))
+        .and_then(|_| mark_locally_deleted_stmt.bind_int(pks.len() as i32 + 4, seq))
+        .and_then(|_| mark_locally_deleted_stmt.step())
+    {
         Ok(ResultCode::DONE) => {
-            reset_cached_stmt(insert_or_update_sentinel_stmt.stmt)
-                .or_else(|e| Err("unable to reset cached insert_or_update_sentinel_stmt"))?;
+            reset_cached_stmt(mark_locally_deleted_stmt.stmt)
+                .or_else(|e| Err("unable to reset cached mark_locally_deleted_stmt"))?;
             Ok(ResultCode::OK)
         }
         Ok(code) | Err(code) => {
-            reset_cached_stmt(insert_or_update_sentinel_stmt.stmt)
-                .or_else(|e| Err("unable to reset cached insert_or_update_sentinel_stmt"))?;
+            reset_cached_stmt(mark_locally_deleted_stmt.stmt)
+                .or_else(|e| Err("unable to reset cached mark_locally_deleted_stmt"))?;
             Err(format!(
-                "unexpected result code from insert_or_update_sentinel_stmt.step: {}",
+                "unexpected result code from mark_locally_deleted_stmt.step: {}",
                 code
             ))
         }

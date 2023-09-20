@@ -18,7 +18,7 @@ def test_sync():
     db2 = connect(":memory:")
 
     def setup(db):
-        db.execute("create table hoot (a, b primary key, c)")
+        db.execute("create table hoot (a, b primary key not null, c)")
         db.execute("select crsql_as_crr('hoot')")
         db.commit()
 

@@ -84,7 +84,7 @@ def test_delta_sync(all_scripts):
     def open_db(i):
         conn = connect(":memory:")
         conn.execute(
-            "CREATE TABLE item (id PRIMARY KEY, width INTEGER, height INTEGER, name TEXT, description TEXT, weight INTEGER)")
+            "CREATE TABLE item (id PRIMARY KEY NOT NULL, width INTEGER, height INTEGER, name TEXT, description TEXT, weight INTEGER)")
         conn.execute("SELECT crsql_as_crr('item')")
         conn.commit()
         return (i, conn, dict())

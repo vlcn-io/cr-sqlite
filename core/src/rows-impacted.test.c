@@ -11,7 +11,8 @@ static sqlite3 *createDb() {
   int rc = SQLITE_OK;
   sqlite3 *db;
   rc = sqlite3_open(":memory:", &db);
-  rc += sqlite3_exec(db, "CREATE TABLE foo (a primary key, b)", 0, 0, 0);
+  rc +=
+      sqlite3_exec(db, "CREATE TABLE foo (a primary key not null, b)", 0, 0, 0);
   rc += sqlite3_exec(db, "SELECT crsql_as_crr('foo')", 0, 0, 0);
   assert(rc == SQLITE_OK);
   return db;

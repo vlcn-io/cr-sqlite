@@ -15,7 +15,7 @@ fn create_crr_via_vtab() -> Result<(), ResultCode> {
     let db = crate::opendb()?;
     let conn = &db.db;
 
-    conn.exec_safe("CREATE VIRTUAL TABLE foo_schema USING CLSet (a primary key, b);")?;
+    conn.exec_safe("CREATE VIRTUAL TABLE foo_schema USING CLSet (a primary key not null, b);")?;
     conn.exec_safe("INSERT INTO foo VALUES (1, 2);")?;
     let stmt = conn.prepare_v2("SELECT count(*) FROM crsql_changes")?;
     stmt.step()?;
@@ -28,7 +28,7 @@ fn destroy_crr_via_vtab() -> Result<(), ResultCode> {
     let db = crate::opendb()?;
     let conn = &db.db;
 
-    conn.exec_safe("CREATE VIRTUAL TABLE foo_schema USING CLSet (a primary key, b);")?;
+    conn.exec_safe("CREATE VIRTUAL TABLE foo_schema USING CLSet (a primary key not null, b);")?;
     conn.exec_safe("DROP TABLE foo_schema")?;
     let stmt = conn.prepare_v2("SELECT count(*) FROM sqlite_master WHERE name LIKE '%foo%'")?;
     stmt.step()?;
@@ -46,7 +46,7 @@ fn create_invalid_crr() -> Result<(), ResultCode> {
     let msg = conn.errmsg().unwrap();
     assert_eq!(
         msg,
-        "Table foo has no primary key. CRRs must have a primary key"
+        "Table foo has no primary key or primary key is nullable. CRRs must have a non nullable primary key"
     );
     Ok(())
 }
@@ -56,7 +56,7 @@ fn create_if_not_exists() -> Result<(), ResultCode> {
     let conn = &db.db;
 
     conn.exec_safe(
-        "CREATE VIRTUAL TABLE IF NOT EXISTS foo_schema USING CLSet (a primary key, b);",
+        "CREATE VIRTUAL TABLE IF NOT EXISTS foo_schema USING CLSet (a primary key not null, b);",
     )?;
     conn.exec_safe("INSERT INTO foo VALUES (1, 2);")?;
     let stmt = conn.prepare_v2("SELECT count(*) FROM crsql_changes")?;
@@ -66,7 +66,7 @@ fn create_if_not_exists() -> Result<(), ResultCode> {
     drop(stmt);
     // second create is a no-op
     conn.exec_safe(
-        "CREATE VIRTUAL TABLE IF NOT EXISTS foo_schema USING CLSet (a primary key, b);",
+        "CREATE VIRTUAL TABLE IF NOT EXISTS foo_schema USING CLSet (a primary key not null, b);",
     )?;
     let stmt = conn.prepare_v2("SELECT count(*) FROM crsql_changes")?;
     stmt.step()?;

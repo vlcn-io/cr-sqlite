@@ -4,7 +4,7 @@ from pprint import pprint
 
 def setup_db():
     c = connect(":memory:")
-    c.execute("CREATE TABLE item (id PRIMARY KEY, x INTEGER, y INTEGER, desc TEXT)")
+    c.execute("CREATE TABLE item (id PRIMARY KEY NOT NULL, x INTEGER, y INTEGER, desc TEXT)")
     c.execute("SELECT crsql_as_crr('item')")
     c.commit()
 

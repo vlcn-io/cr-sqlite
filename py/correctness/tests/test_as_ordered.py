@@ -6,7 +6,7 @@ def make_simple_schema():
     c = connect(":memory:")
     # O... so the type must be `ANY` for the orderable column for our triggers and the like to work...
     # we could cast the whatever to an int...
-    c.execute("CREATE TABLE foo (a INTEGER PRIMARY KEY, spot TEXT, list)")
+    c.execute("CREATE TABLE foo (a INTEGER PRIMARY KEY NOT NULL, spot TEXT, list)")
     c.execute("SELECT crsql_as_crr('foo')")
     c.execute("SELECT crsql_fract_as_ordered('foo', 'spot', 'list')")
     c.commit()

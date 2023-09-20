@@ -13,7 +13,7 @@ def test_min_on_init():
 
 def test_increments_on_modification():
     c = connect(":memory:")
-    c.execute("create table foo (id primary key, a)")
+    c.execute("create table foo (id primary key not null, a)")
     c.execute("select crsql_as_crr('foo')")
     c.execute("insert into foo values (1, 2)")
     c.execute("commit")
@@ -39,7 +39,7 @@ def test_db_version_restored_from_disk():
     assert c.execute("SELECT crsql_db_version()").fetchone()[0] == min_db_v
 
     # close and re-open to check that we work with empty clock tables
-    c.execute("create table foo (id primary key, a)")
+    c.execute("create table foo (id primary key not null, a)")
     c.execute("select crsql_as_crr('foo')")
     c.close()
     c = connect(dbfile)
@@ -62,7 +62,7 @@ def test_db_version_restored_from_disk():
 def test_each_tx_gets_a_version():
     c = connect(":memory:")
 
-    c.execute("create table foo (id primary key, a)")
+    c.execute("create table foo (id primary key not null, a)")
     c.execute("select crsql_as_crr('foo')")
     c.execute("insert into foo values (1, 2)")
     c.execute("insert into foo values (2, 2)")
@@ -80,7 +80,7 @@ def test_each_tx_gets_a_version():
 def test_rollback_does_not_move_db_version():
     c = connect(":memory:")
 
-    c.execute("create table foo (id primary key, a)")
+    c.execute("create table foo (id primary key not null, a)")
     c.execute("select crsql_as_crr('foo')")
 
     c.execute("insert into foo values (1, 2)")

@@ -26,7 +26,7 @@ pub extern "C" fn crsql_integration_check() {
     t::pk_only_tables::run_suite().expect("pk only tables suite");
     println!("Running sync_bit_honored");
     t::sync_bit_honored::run_suite().expect("sync bit honored suite");
-    println!("Running run_suite");
+    println!("Running tableinfo");
     t::tableinfo::run_suite();
     println!("Running tear_down");
     t::teardown::run_suite().expect("tear down suite");

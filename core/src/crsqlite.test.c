@@ -104,7 +104,8 @@ static char *getQuotedSiteId(sqlite3 *db) {
 
 static int createSimpleSchema(sqlite3 *db, char **err) {
   int rc = SQLITE_OK;
-  rc += sqlite3_exec(db, "create table foo (a primary key, b);", 0, 0, err);
+  rc += sqlite3_exec(db, "create table foo (a primary key not null, b);", 0, 0,
+                     err);
   rc += sqlite3_exec(db, "select crsql_as_crr('foo');", 0, 0, err);
 
   return rc;
@@ -284,7 +285,8 @@ static void testSelectChangesAfterChangingColumnName() {
   sqlite3_stmt *pStmt = 0;
   rc = sqlite3_open(":memory:", &db);
 
-  rc += sqlite3_exec(db, "CREATE TABLE foo(a primary key, b);", 0, 0, 0);
+  rc +=
+      sqlite3_exec(db, "CREATE TABLE foo(a primary key not null, b);", 0, 0, 0);
   rc += sqlite3_exec(db, "SELECT crsql_as_crr('foo')", 0, 0, 0);
   assert(rc == SQLITE_OK);
 
@@ -369,10 +371,10 @@ static void testSelectChangesAfterChangingColumnName() {
 //   rc = sqlite3_open(":memory:", &db1);
 //   rc += sqlite3_open(":memory:", &db2);
 
-//   rc += sqlite3_exec(db1, "CREATE TABLE foo(a primary key, b);", 0, 0, 0);
-//   rc += sqlite3_exec(db1, "SELECT crsql_as_crr('foo')", 0, 0, 0);
-//   rc += sqlite3_exec(db2, "CREATE TABLE foo(a primary key, c);", 0, 0, 0);
-//   rc += sqlite3_exec(db2, "SELECT crsql_as_crr('foo')", 0, 0, 0);
+//   rc += sqlite3_exec(db1, "CREATE TABLE foo(a primary key not null, b);", 0,
+//   0, 0); rc += sqlite3_exec(db1, "SELECT crsql_as_crr('foo')", 0, 0, 0); rc
+//   += sqlite3_exec(db2, "CREATE TABLE foo(a primary key not null, c);", 0, 0,
+//   0); rc += sqlite3_exec(db2, "SELECT crsql_as_crr('foo')", 0, 0, 0);
 //   assert(rc == SQLITE_OK);
 
 //   rc += sqlite3_exec(db1, "INSERT INTO foo VALUES (1, 2);", 0, 0, 0);
@@ -451,9 +453,11 @@ static void testLamportCondition() {
   rc += sqlite3_open(":memory:", &db2);
 
   rc += sqlite3_exec(
-      db1, "CREATE TABLE \"hoot\" (\"a\", \"b\" primary key, \"c\")", 0, 0, 0);
+      db1, "CREATE TABLE \"hoot\" (\"a\", \"b\" primary key not null, \"c\")",
+      0, 0, 0);
   rc += sqlite3_exec(
-      db2, "CREATE TABLE \"hoot\" (\"a\", \"b\" primary key, \"c\")", 0, 0, 0);
+      db2, "CREATE TABLE \"hoot\" (\"a\", \"b\" primary key not null, \"c\")",
+      0, 0, 0);
   rc += sqlite3_exec(db1, "SELECT crsql_as_crr('hoot');", 0, 0, 0);
   rc += sqlite3_exec(db2, "SELECT crsql_as_crr('hoot');", 0, 0, 0);
   assert(rc == SQLITE_OK);
@@ -508,9 +512,11 @@ static void noopsDoNotMoveClocks() {
   rc += sqlite3_open(":memory:", &db2);
 
   rc += sqlite3_exec(
-      db1, "CREATE TABLE \"hoot\" (\"a\", \"b\" primary key, \"c\")", 0, 0, 0);
+      db1, "CREATE TABLE \"hoot\" (\"a\", \"b\" primary key not null, \"c\")",
+      0, 0, 0);
   rc += sqlite3_exec(
-      db2, "CREATE TABLE \"hoot\" (\"a\", \"b\" primary key, \"c\")", 0, 0, 0);
+      db2, "CREATE TABLE \"hoot\" (\"a\", \"b\" primary key not null, \"c\")",
+      0, 0, 0);
   rc += sqlite3_exec(db1, "SELECT crsql_as_crr('hoot');", 0, 0, 0);
   rc += sqlite3_exec(db2, "SELECT crsql_as_crr('hoot');", 0, 0, 0);
   assert(rc == SQLITE_OK);
@@ -558,8 +564,8 @@ static void testPullingOnlyLocalChanges() {
   int rc = SQLITE_OK;
 
   rc = sqlite3_open(":memory:", &db);
-  rc +=
-      sqlite3_exec(db, "CREATE TABLE node (id primary key, content)", 0, 0, 0);
+  rc += sqlite3_exec(db, "CREATE TABLE node (id primary key not null, content)",
+                     0, 0, 0);
   rc += sqlite3_exec(db, "SELECT crsql_as_crr('node')", 0, 0, 0);
   rc += sqlite3_exec(db, "INSERT INTO node VALUES (1, 'some str')", 0, 0, 0);
   rc += sqlite3_exec(db, "INSERT INTO node VALUES (2, 'other str')", 0, 0, 0);

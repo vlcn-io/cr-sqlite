@@ -69,7 +69,7 @@ fn sync_left_to_right(
 // }
 
 fn setup_schema(db: &ManagedConnection) -> Result<ResultCode, ResultCode> {
-    db.exec_safe("CREATE TABLE foo (id INTEGER PRIMARY KEY);")?;
+    db.exec_safe("CREATE TABLE foo (id INTEGER PRIMARY KEY NOT NULL);")?;
     db.exec_safe("SELECT crsql_as_crr('foo');")
 }
 
@@ -85,7 +85,7 @@ fn insert_pkonly_row() -> Result<(), ResultCode> {
     let db_b = crate::opendb()?;
 
     fn setup_schema(db: &ManagedConnection) -> Result<ResultCode, ResultCode> {
-        db.exec_safe("CREATE TABLE foo (id INTEGER PRIMARY KEY);")?;
+        db.exec_safe("CREATE TABLE foo (id INTEGER PRIMARY KEY NOT NULL);")?;
         db.exec_safe("SELECT crsql_as_crr('foo');")
     }
 
@@ -117,7 +117,7 @@ fn modify_pkonly_row() -> Result<(), ResultCode> {
     let db_b = crate::opendb()?;
 
     fn setup_schema(db: &ManagedConnection) -> Result<ResultCode, ResultCode> {
-        db.exec_safe("CREATE TABLE foo (id INTEGER PRIMARY KEY);")?;
+        db.exec_safe("CREATE TABLE foo (id INTEGER PRIMARY KEY NOT NULL);")?;
         db.exec_safe("SELECT crsql_as_crr('foo');")
     }
 
@@ -151,7 +151,7 @@ fn junction_table() -> Result<(), ResultCode> {
     let db_b = crate::opendb()?;
 
     fn setup_schema(db: &ManagedConnection) -> Result<ResultCode, ResultCode> {
-        db.exec_safe("CREATE TABLE jx (id1, id2, PRIMARY KEY(id1, id2));")?;
+        db.exec_safe("CREATE TABLE jx (id1 NOT NULL, id2 NOT NULL, PRIMARY KEY(id1, id2));")?;
         db.exec_safe("SELECT crsql_as_crr('jx');")
     }
 
@@ -207,7 +207,7 @@ fn junction_table() -> Result<(), ResultCode> {
 fn discord_report_1() -> Result<(), ResultCode> {
     let db_a = crate::opendb()?;
     db_a.db
-        .exec_safe("CREATE TABLE IF NOT EXISTS data (id NUMBER PRIMARY KEY);")?;
+        .exec_safe("CREATE TABLE IF NOT EXISTS data (id NUMBER PRIMARY KEY NOT NULL);")?;
     db_a.db.exec_safe("SELECT crsql_as_crr('data')")?;
     db_a.db
         .exec_safe("INSERT INTO data VALUES (42) ON CONFLICT DO NOTHING;")?;

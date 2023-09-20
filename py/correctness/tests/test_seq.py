@@ -12,7 +12,7 @@ def sync_left_to_right(l, r):
 
 def test_increments_by_one_in_tx():
     c = connect(":memory:")
-    c.execute("create table foo (id primary key, a)")
+    c.execute("create table foo (id primary key not null, a)")
     c.execute("select crsql_as_crr('foo')")
     c.commit()
 
@@ -26,7 +26,7 @@ def test_increments_by_one_in_tx():
 
 def test_resets_on_every_tx():
     c = connect(":memory:")
-    c.execute("create table foo (id primary key, a)")
+    c.execute("create table foo (id primary key not null, a)")
     c.execute("select crsql_as_crr('foo')")
     c.commit()
 
@@ -48,12 +48,12 @@ def test_resets_on_every_tx():
 def test_preserved_on_merge():
     # the order we insert changes into crsql_changes should be the order they come back out when using seq
     c = connect(":memory:")
-    c.execute("create table foo (id primary key, a)")
+    c.execute("create table foo (id primary key not null, a)")
     c.execute("select crsql_as_crr('foo')")
     c.commit()
 
     c2 = connect(":memory:")
-    c2.execute("create table foo (id primary key, a)")
+    c2.execute("create table foo (id primary key not null, a)")
     c2.execute("select crsql_as_crr('foo')")
     c2.commit()
 
@@ -77,7 +77,7 @@ def test_incr_by_one():
     # update
     # delete
     c = connect(":memory:")
-    c.execute("create table foo (a primary key, b, c, d)")
+    c.execute("create table foo (a primary key not null, b, c, d)")
     c.execute("select crsql_as_crr('foo')")
     c.commit()
 
@@ -114,7 +114,7 @@ def test_incr_by_one():
     rows = c.execute("SELECT seq FROM crsql_changes").fetchall()
     assert (rows == [(0,), (1,), (2,)])
 
-    c.execute("create table bar (a primary key, b);")
+    c.execute("create table bar (a primary key not null, b);")
     c.execute("select crsql_as_crr('bar')")
     c.commit()
 
@@ -132,7 +132,7 @@ def test_incr_by_one():
 
     # test update of pk vals with col vals
 
-    c.execute("CREATE TABLE baz (a primary key)")
+    c.execute("CREATE TABLE baz (a primary key not null)")
     c.execute("SELECT crsql_as_crr('baz')")
     c.commit()
     c.execute("INSERT INTO baz VALUES (1)")
@@ -161,7 +161,7 @@ def test_incr_by_one():
 # This tests to ensure seq values are still assigned as expected.
 def test_seq_when_re_inserting():
     c = connect(":memory:")
-    c.execute("create table foo (a primary key, b)")
+    c.execute("create table foo (a primary key not null, b)")
     c.execute("select crsql_as_crr('foo')")
     c.commit()
 
@@ -189,7 +189,7 @@ def test_seq_when_re_inserting():
 # against the row that was re-inserted
 def test_seq_when_updating_after_reinsert():
     c = connect(":memory:")
-    c.execute("create table foo (a primary key, b)")
+    c.execute("create table foo (a primary key not null, b)")
     c.execute("select crsql_as_crr('foo')")
     c.commit()
 
@@ -213,7 +213,7 @@ def test_seq_when_updating_after_reinsert():
 # rather than a local insert.
 def test_seq_when_resinserting_from_merge():
     c = connect(":memory:")
-    c.execute("create table foo (a primary key, b)")
+    c.execute("create table foo (a primary key not null, b)")
     c.execute("select crsql_as_crr('foo')")
     c.commit()
 
@@ -226,7 +226,7 @@ def test_seq_when_resinserting_from_merge():
     c.commit()
 
     c2 = connect(":memory:")
-    c2.execute("create table foo (a primary key, b)")
+    c2.execute("create table foo (a primary key not null, b)")
     c2.execute("select crsql_as_crr('foo')")
     c2.commit()
 

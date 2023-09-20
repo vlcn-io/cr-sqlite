@@ -5,7 +5,7 @@ from pprint import pprint
 def test_c1_c2_c3_c4_c6_c7_crr_values():
     c = connect(":memory:")
     init_version = c.execute("SELECT crsql_db_version()").fetchone()[0]
-    c.execute("create table foo (id primary key, a)")
+    c.execute("create table foo (id primary key not null, a)")
     c.execute("select crsql_as_crr('foo')")
 
     c.execute("insert into foo values(1, 2)")

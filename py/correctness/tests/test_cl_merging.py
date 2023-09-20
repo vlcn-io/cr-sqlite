@@ -22,7 +22,7 @@ import uuid
 
 def make_simple_schema():
     c = connect(":memory:")
-    c.execute("CREATE TABLE foo (a INTEGER PRIMARY KEY, b INTEGER) STRICT;")
+    c.execute("CREATE TABLE foo (a INTEGER PRIMARY KEY NOT NULL, b INTEGER) STRICT;")
     c.execute("SELECT crsql_as_crr('foo')")
     c.commit()
     return c
@@ -30,7 +30,7 @@ def make_simple_schema():
 
 def make_pko_schema():
     c = connect(":memory:")
-    c.execute("CREATE TABLE foo (a INTEGER PRIMARY KEY) STRICT;")
+    c.execute("CREATE TABLE foo (a INTEGER PRIMARY KEY NOT NULL) STRICT;")
     c.execute("SELECT crsql_as_crr('foo')")
     c.commit()
     return c
@@ -672,7 +672,7 @@ def run_step(conn, step):
 
 def create_hypothesis_schema(c):
     c.execute(
-        "CREATE TABLE item (id PRIMARY KEY, width INTEGER, height INTEGER, name TEXT, description TEXT, weight INTEGER)")
+        "CREATE TABLE item (id PRIMARY KEY NOT NULL, width INTEGER, height INTEGER, name TEXT, description TEXT, weight INTEGER)")
     c.execute("SELECT crsql_as_crr('item')")
 
 
@@ -924,7 +924,7 @@ def test_discord_report_corrosion():
 
     def make_schema():
         c = connect(":memory:")
-        c.execute("CREATE TABLE foo (a primary key, b, c, d, e)")
+        c.execute("CREATE TABLE foo (a primary key not null, b, c, d, e)")
         c.execute("SELECT crsql_as_crr('foo')")
         c.commit()
         return c

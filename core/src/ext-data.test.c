@@ -219,7 +219,7 @@ static void testRecreateDbVersionStmt() {
   assert(rc == -1);
   assert(pExtData->pDbVersionStmt == 0);
 
-  sqlite3_exec(db, "CREATE TABLE foo (a primary key, b);", 0, 0, 0);
+  sqlite3_exec(db, "CREATE TABLE foo (a primary key not null, b);", 0, 0, 0);
   sqlite3_exec(db, "SELECT crsql_as_crr('foo')", 0, 0, 0);
 
   rc = crsql_recreate_db_version_stmt(db, pExtData);
@@ -260,7 +260,7 @@ static void fetchDbVersionFromStorage() {
   assert(rc == SQLITE_OK);
 
   // create some schemas
-  sqlite3_exec(db, "CREATE TABLE foo (a primary key, b);", 0, 0, 0);
+  sqlite3_exec(db, "CREATE TABLE foo (a primary key not null, b);", 0, 0, 0);
   sqlite3_exec(db, "SELECT crsql_as_crr('foo')", 0, 0, 0);
   // still v0 since no rows are inserted
   rc = crsql_fetchDbVersionFromStorage(db, pExtData, &errmsg);
@@ -273,7 +273,7 @@ static void fetchDbVersionFromStorage() {
   assert(pExtData->dbVersion == 1);
   assert(rc == SQLITE_OK);
 
-  sqlite3_exec(db, "CREATE TABLE bar (a primary key, b);", 0, 0, 0);
+  sqlite3_exec(db, "CREATE TABLE bar (a primary key not null, b);", 0, 0, 0);
   sqlite3_exec(db, "SELECT crsql_as_crr('bar')", 0, 0, 0);
   sqlite3_exec(db, "INSERT INTO bar VALUES (1, 2)", 0, 0, 0);
   // we catch the schema change and get a version from the new table

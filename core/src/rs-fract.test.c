@@ -12,10 +12,11 @@ static void testAsOrdered() {
   int rc;
 
   rc = sqlite3_open(":memory:", &db);
-  rc += sqlite3_exec(db,
-                     "CREATE TABLE todo (id primary key, list_id, ordering, "
-                     "content, complete);",
-                     0, 0, 0);
+  rc += sqlite3_exec(
+      db,
+      "CREATE TABLE todo (id primary key not null, list_id, ordering, "
+      "content, complete);",
+      0, 0, 0);
   rc += sqlite3_exec(
       db, "CREATE INDEX todo_list_id_ordering ON todo (list_id, ordering);", 0,
       0, 0);

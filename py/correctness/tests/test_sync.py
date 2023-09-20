@@ -27,10 +27,10 @@ def sync_left_to_right(l, r, since):
 
 
 def create_schema(c):
-    c.execute("CREATE TABLE \"user\" (id primary key, name)")
-    c.execute("CREATE TABLE deck (id primary key, owner_id, title)")
-    c.execute("CREATE TABLE slide (id primary key, deck_id, \"order\")")
-    c.execute("CREATE TABLE component (id primary key, type, slide_id, content)")
+    c.execute("CREATE TABLE \"user\" (id primary key not null, name)")
+    c.execute("CREATE TABLE deck (id primary key not null, owner_id, title)")
+    c.execute("CREATE TABLE slide (id primary key not null, deck_id, \"order\")")
+    c.execute("CREATE TABLE component (id primary key not null, type, slide_id, content)")
 
     c.execute("select crsql_as_crr('user')")
     c.execute("select crsql_as_crr('deck')")
@@ -158,7 +158,7 @@ def test_delete():
 def test_merging_on_defaults():
     def create_db1():
         db1 = connect(":memory:")
-        db1.execute("CREATE TABLE foo (a PRIMARY KEY, b DEFAULT 0);")
+        db1.execute("CREATE TABLE foo (a PRIMARY KEY NOT NULL, b DEFAULT 0);")
         db1.execute("INSERT INTO foo (a) VALUES (1);")
         db1.execute("SELECT crsql_as_crr('foo');")
         db1.commit()
@@ -166,7 +166,7 @@ def test_merging_on_defaults():
 
     def create_db2():
         db2 = connect(":memory:")
-        db2.execute("CREATE TABLE foo (a PRIMARY KEY, b DEFAULT 0);")
+        db2.execute("CREATE TABLE foo (a PRIMARY KEY NOT NULL, b DEFAULT 0);")
         db2.execute("INSERT INTO foo VALUES (1, 2);")
         db2.execute("SELECT crsql_as_crr('foo');")
         db2.commit()
@@ -214,13 +214,13 @@ def test_merging_on_defaults():
 def test_merging_larger_backfilled_default():
     def create_dbs():
         db1 = connect(":memory:")
-        db1.execute("CREATE TABLE foo (a PRIMARY KEY, b DEFAULT 4);")
+        db1.execute("CREATE TABLE foo (a PRIMARY KEY NOT NULL, b DEFAULT 4);")
         db1.execute("INSERT INTO foo (a) VALUES (1);")
         db1.execute("SELECT crsql_as_crr('foo');")
         db1.commit()
 
         db2 = connect(":memory:")
-        db2.execute("CREATE TABLE foo (a PRIMARY KEY, b DEFAULT 4);")
+        db2.execute("CREATE TABLE foo (a PRIMARY KEY NOT NULL, b DEFAULT 4);")
         db2.execute("SELECT crsql_as_crr('foo');")
         db2.commit()
 
@@ -247,7 +247,7 @@ def test_merging_larger():
 # post compaction.
 def test_db_version_moves_as_expected_post_alter():
     db = connect(":memory:")
-    db.execute("CREATE TABLE foo (a PRIMARY KEY, b);")
+    db.execute("CREATE TABLE foo (a PRIMARY KEY NOT NULL, b);")
     db.execute("SELECT crsql_as_crr('foo');")
     db.commit()
 
@@ -282,7 +282,7 @@ def test_db_version_moves_as_expected_post_alter():
 def test_merging_on_defaults2():
     def create_db1():
         db1 = connect(":memory:")
-        db1.execute("CREATE TABLE foo (a PRIMARY KEY, b DEFAULT 4);")
+        db1.execute("CREATE TABLE foo (a PRIMARY KEY NOT NULL, b DEFAULT 4);")
         db1.execute("SELECT crsql_as_crr('foo');")
         db1.commit()
 
@@ -299,7 +299,7 @@ def test_merging_on_defaults2():
 
     def create_db2():
         db2 = connect(":memory:")
-        db2.execute("CREATE TABLE foo (a PRIMARY KEY, b DEFAULT 4);")
+        db2.execute("CREATE TABLE foo (a PRIMARY KEY NOT NULL, b DEFAULT 4);")
         db2.execute("SELECT crsql_as_crr('foo');")
         db2.commit()
 
@@ -341,7 +341,7 @@ def test_merging_on_defaults2():
 
 def create_basic_db():
     db = connect(":memory:")
-    db.execute("CREATE TABLE foo (a PRIMARY KEY, b);")
+    db.execute("CREATE TABLE foo (a PRIMARY KEY NOT NULL, b);")
     db.execute("SELECT crsql_as_crr('foo');")
     db.commit()
     return db

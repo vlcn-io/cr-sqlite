@@ -27,7 +27,7 @@ fn test_ensure_table_infos_are_up_to_date() {
 
     // manually create some clock tables w/o using the extension
     // pull table info and ensure it is what we expect
-    c.exec_safe("CREATE TABLE foo (a PRIMARY KEY, b);")
+    c.exec_safe("CREATE TABLE foo (a PRIMARY KEY NOT NULL, b);")
         .expect("made foo");
     c.exec_safe(
         "CREATE TABLE foo__crsql_clock (
@@ -59,7 +59,7 @@ fn test_ensure_table_infos_are_up_to_date() {
     assert_eq!(table_infos.len(), 1);
     assert_eq!(table_infos[0].tbl_name, "bar");
 
-    c.exec_safe("CREATE TABLE boo (a PRIMARY KEY, b);")
+    c.exec_safe("CREATE TABLE boo (a PRIMARY KEY NOT NULL, b);")
         .expect("made boo");
     c.exec_safe(
         "CREATE TABLE boo__crsql_clock (
@@ -105,8 +105,10 @@ fn test_pull_table_info() {
     // pks and non pks split
     // cids filled
 
-    c.exec_safe("CREATE TABLE foo (a INTEGER PRIMARY KEY, b TEXT NOT NULL, c NUMBER, d FLOAT, e);")
-        .expect("made foo");
+    c.exec_safe(
+        "CREATE TABLE foo (a INTEGER PRIMARY KEY NOT NULL, b TEXT NOT NULL, c NUMBER, d FLOAT, e);",
+    )
+    .expect("made foo");
 
     let tbl_info = crsql_core::tableinfo::pull_table_info(raw_db, "foo", err)
         .expect("pulled table info for foo");
@@ -124,7 +126,7 @@ fn test_pull_table_info() {
     assert_eq!(tbl_info.non_pks[3].name, "e");
     assert_eq!(tbl_info.non_pks[3].cid, 4);
 
-    c.exec_safe("CREATE TABLE boo (a INTEGER, b TEXT NOT NULL, c NUMBER, d FLOAT, e, PRIMARY KEY(b, c, d, e));")
+    c.exec_safe("CREATE TABLE boo (a INTEGER, b TEXT NOT NULL, c NUMBER NOT NULL, d FLOAT NOT NULL, e NOT NULL, PRIMARY KEY(b, c, d, e));")
         .expect("made boo");
     let tbl_info = crsql_core::tableinfo::pull_table_info(raw_db, "boo", err)
         .expect("pulled table info for boo");
@@ -162,14 +164,28 @@ fn test_is_table_compatible() {
     assert_eq!(is_compatible, false);
 
     // pks
-    c.exec_safe("CREATE TABLE bar (a PRIMARY KEY);")
+    c.exec_safe("CREATE TABLE bar (a PRIMARY KEY NOT NULL);")
         .expect("made bar");
     let is_compatible = crsql_core::tableinfo::is_table_compatible(raw_db, "bar", err)
         .expect("checked if bar is compatible");
     assert_eq!(is_compatible, true);
 
+    // nullable pks
+    c.exec_safe("CREATE TABLE bal (a PRIMARY KEY);")
+        .expect("made bal");
+    let is_compatible = crsql_core::tableinfo::is_table_compatible(raw_db, "bal", err)
+        .expect("checked if bal is compatible");
+    assert_eq!(is_compatible, false);
+
+    // nullable composite pks
+    c.exec_safe("CREATE TABLE baf (a NOT NULL, b, PRIMARY KEY(a, b));")
+        .expect("made baf");
+    let is_compatible = crsql_core::tableinfo::is_table_compatible(raw_db, "baf", err)
+        .expect("checked if baf is compatible");
+    assert_eq!(is_compatible, false);
+
     // pks + other non unique indices
-    c.exec_safe("CREATE TABLE baz (a PRIMARY KEY, b);")
+    c.exec_safe("CREATE TABLE baz (a PRIMARY KEY NOT NULL, b);")
         .expect("made baz");
     c.exec_safe("CREATE INDEX bar_i ON baz (b);")
         .expect("made index");
@@ -178,7 +194,7 @@ fn test_is_table_compatible() {
     assert_eq!(is_compatible, true);
 
     // pks + other unique indices
-    c.exec_safe("CREATE TABLE booz (a PRIMARY KEY, b);")
+    c.exec_safe("CREATE TABLE booz (a PRIMARY KEY NOT NULL, b);")
         .expect("made booz");
     c.exec_safe("CREATE UNIQUE INDEX booz_b ON booz (b);")
         .expect("made index");
@@ -187,21 +203,21 @@ fn test_is_table_compatible() {
     assert_eq!(is_compatible, false);
 
     // not null and no dflt
-    c.exec_safe("CREATE TABLE buzz (a PRIMARY KEY, b NOT NULL);")
+    c.exec_safe("CREATE TABLE buzz (a PRIMARY KEY NOT NULL, b NOT NULL);")
         .expect("made buzz");
     let is_compatible = crsql_core::tableinfo::is_table_compatible(raw_db, "buzz", err)
         .expect("checked if buzz is compatible");
     assert_eq!(is_compatible, false);
 
     // not null and dflt
-    c.exec_safe("CREATE TABLE boom (a PRIMARY KEY, b NOT NULL DEFAULT 1);")
+    c.exec_safe("CREATE TABLE boom (a PRIMARY KEY NOT NULL, b NOT NULL DEFAULT 1);")
         .expect("made boom");
     let is_compatible = crsql_core::tableinfo::is_table_compatible(raw_db, "boom", err)
         .expect("checked if boom is compatible");
     assert_eq!(is_compatible, true);
 
     // fk constraint
-    c.exec_safe("CREATE TABLE zoom (a PRIMARY KEY, b, FOREIGN KEY(b) REFERENCES foo(a));")
+    c.exec_safe("CREATE TABLE zoom (a PRIMARY KEY NOT NULL, b, FOREIGN KEY(b) REFERENCES foo(a));")
         .expect("made zoom");
     let is_compatible = crsql_core::tableinfo::is_table_compatible(raw_db, "zoom", err)
         .expect("checked if zoom is compatible");
@@ -215,20 +231,20 @@ fn test_is_table_compatible() {
     assert_eq!(is_compatible, true);
 
     // no autoincrement
-    c.exec_safe("CREATE TABLE woom (a integer primary key autoincrement);")
+    c.exec_safe("CREATE TABLE woom (a integer primary key autoincrement not null);")
         .expect("made woom");
     let is_compatible = crsql_core::tableinfo::is_table_compatible(raw_db, "woom", err)
         .expect("checked if woom is compatible");
     assert_eq!(is_compatible, false);
 
     // aliased rowid
-    c.exec_safe("CREATE TABLE loom (a integer primary key);")
+    c.exec_safe("CREATE TABLE loom (a integer primary key not null);")
         .expect("made loom");
     let is_compatible = crsql_core::tableinfo::is_table_compatible(raw_db, "loom", err)
         .expect("checked if loom is compatible");
     assert_eq!(is_compatible, true);
 
-    c.exec_safe("CREATE TABLE atable2 (\"id\" TEXT PRIMARY KEY, x TEXT) STRICT;")
+    c.exec_safe("CREATE TABLE atable2 (\"id\" TEXT PRIMARY KEY NOT NULL, x TEXT) STRICT;")
         .expect("made atable2");
     let is_compatible = crsql_core::tableinfo::is_table_compatible(raw_db, "atable2", err)
         .expect("checked if atable2 is compatible");
@@ -236,8 +252,8 @@ fn test_is_table_compatible() {
 
     c.exec_safe(
         "CREATE TABLE ydoc (\
-        doc_id TEXT,\
-        yhash BLOB,\
+        doc_id TEXT NOT NULL,\
+        yhash BLOB NOT NULL,\
         yval BLOB,\
         primary key (doc_id, yhash)\
       ) STRICT;",
@@ -254,13 +270,13 @@ fn test_create_clock_table_from_table_info() {
     let raw_db = db.db.db;
     let err = make_err_ptr();
 
-    c.exec_safe("CREATE TABLE foo (a, b, primary key (a, b));")
+    c.exec_safe("CREATE TABLE foo (a not null, b not null, primary key (a, b));")
         .expect("made foo");
-    c.exec_safe("CREATE TABLE bar (a primary key);")
+    c.exec_safe("CREATE TABLE bar (a primary key not null);")
         .expect("made bar");
-    c.exec_safe("CREATE TABLE baz (a primary key, b);")
+    c.exec_safe("CREATE TABLE baz (a primary key not null, b);")
         .expect("made baz");
-    c.exec_safe("CREATE TABLE boo (a primary key, b, c);")
+    c.exec_safe("CREATE TABLE boo (a primary key not null, b, c);")
         .expect("made boo");
 
     let foo_tbl_info = crsql_core::tableinfo::pull_table_info(raw_db, "foo", err)

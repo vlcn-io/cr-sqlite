@@ -8,7 +8,7 @@ use sqlite_nostd as sqlite;
 fn idempotent() {
     let db = crate::opendb().expect("db opened");
     let schema = "
-      CREATE TABLE IF NOT EXISTS item (id integer primary key, data any) strict;
+      CREATE TABLE IF NOT EXISTS item (id integer primary key not null, data any) strict;
       CREATE TABLE IF NOT EXISTS container (id integer primary key, contained integer);
       CREATE INDEX IF NOT EXISTS container_contained ON container (contained);
       SELECT crsql_as_crr('item');
@@ -61,7 +61,7 @@ SELECT crsql_automigrate(?, 'SELECT crsql_finalize();')"#,
         1,
         r#"
 CREATE TABLE IF NOT EXISTS "deck" (
-"id" INTEGER primary key,
+"id" INTEGER primary key not null,
 "title",
 "created",
 "modified",
@@ -70,7 +70,7 @@ CREATE TABLE IF NOT EXISTS "deck" (
 );
 
 CREATE TABLE IF NOT EXISTS "slide" (
-"id" INTEGER primary key,
+"id" INTEGER primary key not null,
 "deck_id",
 "order",
 "created",
@@ -83,7 +83,7 @@ CREATE TABLE IF NOT EXISTS "slide" (
 CREATE INDEX IF NOT EXISTS "slide_deck_id" ON "slide" ("deck_id", "order");
 
 CREATE TABLE IF NOT EXISTS "text_component" (
-"id" INTEGER primary key,
+"id" INTEGER primary key not null,
 "slide_id",
 "text",
 "styles",
@@ -91,12 +91,12 @@ CREATE TABLE IF NOT EXISTS "text_component" (
 "y"
 );
 
-CREATE TABLE IF NOT EXISTS "embed_component" ("id" primary key, "slide_id", "src", "x", "y");
+CREATE TABLE IF NOT EXISTS "embed_component" ("id" primary key not null, "slide_id", "src", "x", "y");
 
 CREATE INDEX IF NOT EXISTS "embed_component_slide_id" ON "embed_component" ("slide_id");
 
 CREATE TABLE IF NOT EXISTS "shape_component" (
-"id" INTEGER primary key,
+"id" INTEGER primary key not null,
 "slide_id",
 "type",
 "props",
@@ -106,18 +106,18 @@ CREATE TABLE IF NOT EXISTS "shape_component" (
 
 CREATE INDEX IF NOT EXISTS "shape_component_slide_id" ON "shape_component" ("slide_id");
 
-CREATE TABLE IF NOT EXISTS "line_component" ("id" primary key, "slide_id", "props");
+CREATE TABLE IF NOT EXISTS "line_component" ("id" primary key not null, "slide_id", "props");
 
 CREATE INDEX IF NOT EXISTS "line_component_slide_id" ON "line_component" ("slide_id");
 
-CREATE TABLE IF NOT EXISTS "line_point" ("id" primary key, "line_id", "x", "y");
+CREATE TABLE IF NOT EXISTS "line_point" ("id" primary key not null, "line_id", "x", "y");
 
 CREATE INDEX IF NOT EXISTS "line_point_line_id" ON "line_point" ("line_id");
 
 CREATE INDEX IF NOT EXISTS "text_component_slide_id" ON "text_component" ("slide_id");
 
 CREATE TABLE IF NOT EXISTS "theme" (
-"id" INTEGER primary key,
+"id" INTEGER primary key not null,
 "name",
 "bg_colorset",
 "fg_colorset",
@@ -127,14 +127,14 @@ CREATE TABLE IF NOT EXISTS "theme" (
 );
 
 CREATE TABLE IF NOT EXISTS "recent_color" (
-"color" INTEGER primary key,
+"color" INTEGER primary key not null,
 "last_used",
 "first_used",
 "theme_id"
 );
 
 CREATE TABLE IF NOT EXISTS "presenter" (
-"name" primary key,
+"name" primary key not null,
 "available_transitions",
 "picked_transition"
 );
@@ -162,29 +162,29 @@ SELECT crsql_as_crr('recent_color');
 SELECT crsql_as_crr('presenter');
 
 CREATE TABLE IF NOT EXISTS "selected_slide" (
-"deck_id",
-"slide_id",
+"deck_id" not null,
+"slide_id" not null,
 primary key ("deck_id", "slide_id")
 );
 
 CREATE TABLE IF NOT EXISTS "selected_component" (
-"slide_id",
-"component_id",
+"slide_id" not null,
+"component_id" not null,
 "component_type",
 primary key ("slide_id", "component_id")
 );
 
 CREATE TABLE IF NOT EXISTS "undo_stack" (
-"deck_id",
+"deck_id" not null,
 "operation",
-"order",
+"order" not null,
 primary key ("deck_id", "order")
 );
 
 CREATE TABLE IF NOT EXISTS "redo_stack" (
-"deck_id",
+"deck_id" not null,
 "operation",
-"order",
+"order" not null,
 primary key ("deck_id", "order")
 );"#,
         sqlite::Destructor::STATIC,
@@ -214,7 +214,7 @@ SELECT crsql_automigrate(?, 'SELECT crsql_finalize();')"#,
       1,
       r#"
 CREATE TABLE IF NOT EXISTS "deck" (
-"id" INTEGER primary key,
+"id" INTEGER primary key not null,
 "title",
 "created",
 "modified",
@@ -223,7 +223,7 @@ CREATE TABLE IF NOT EXISTS "deck" (
 );
 
 CREATE TABLE IF NOT EXISTS "slide" (
-"id" INTEGER primary key,
+"id" INTEGER primary key not null,
 "deck_id",
 "order",
 "created",
@@ -236,7 +236,7 @@ CREATE TABLE IF NOT EXISTS "slide" (
 CREATE INDEX IF NOT EXISTS "slide_deck_id" ON "slide" ("deck_id", "order");
 
 CREATE TABLE IF NOT EXISTS "text_component" (
-"id" INTEGER primary key,
+"id" INTEGER primary key not null,
 "slide_id",
 "text",
 "styles",
@@ -246,12 +246,12 @@ CREATE TABLE IF NOT EXISTS "text_component" (
 "height"
 );
 
-CREATE TABLE IF NOT EXISTS "embed_component" ("id" primary key, "slide_id", "src", "x", "y", "width", "height");
+CREATE TABLE IF NOT EXISTS "embed_component" ("id" primary key not null, "slide_id", "src", "x", "y", "width", "height");
 
 CREATE INDEX IF NOT EXISTS "embed_component_slide_id" ON "embed_component" ("slide_id");
 
 CREATE TABLE IF NOT EXISTS "shape_component" (
-"id" INTEGER primary key,
+"id" INTEGER primary key not null,
 "slide_id",
 "type",
 "props",
@@ -263,18 +263,18 @@ CREATE TABLE IF NOT EXISTS "shape_component" (
 
 CREATE INDEX IF NOT EXISTS "shape_component_slide_id" ON "shape_component" ("slide_id");
 
-CREATE TABLE IF NOT EXISTS "line_component" ("id" primary key, "slide_id", "props");
+CREATE TABLE IF NOT EXISTS "line_component" ("id" primary key not null, "slide_id", "props");
 
 CREATE INDEX IF NOT EXISTS "line_component_slide_id" ON "line_component" ("slide_id");
 
-CREATE TABLE IF NOT EXISTS "line_point" ("id" primary key, "line_id", "x", "y");
+CREATE TABLE IF NOT EXISTS "line_point" ("id" primary key not null, "line_id", "x", "y");
 
 CREATE INDEX IF NOT EXISTS "line_point_line_id" ON "line_point" ("line_id");
 
 CREATE INDEX IF NOT EXISTS "text_component_slide_id" ON "text_component" ("slide_id");
 
 CREATE TABLE IF NOT EXISTS "theme" (
-"id" INTEGER primary key,
+"id" INTEGER primary key not null,
 "name",
 "bg_colorset",
 "fg_colorset",
@@ -284,14 +284,14 @@ CREATE TABLE IF NOT EXISTS "theme" (
 );
 
 CREATE TABLE IF NOT EXISTS "recent_color" (
-"color" INTEGER primary key,
+"color" INTEGER primary key not null,
 "last_used",
 "first_used",
 "theme_id"
 );
 
 CREATE TABLE IF NOT EXISTS "presenter" (
-"name" primary key,
+"name" primary key not null,
 "available_transitions",
 "picked_transition"
 );
@@ -319,29 +319,29 @@ SELECT crsql_as_crr('recent_color');
 SELECT crsql_as_crr('presenter');
 
 CREATE TABLE IF NOT EXISTS "selected_slide" (
-"deck_id",
-"slide_id",
+"deck_id" not null,
+"slide_id" not null,
 primary key ("deck_id", "slide_id")
 );
 
 CREATE TABLE IF NOT EXISTS "selected_component" (
-"slide_id",
-"component_id",
+"slide_id" not null,
+"component_id" not null,
 "component_type",
 primary key ("slide_id", "component_id")
 );
 
 CREATE TABLE IF NOT EXISTS "undo_stack" (
-"deck_id",
+"deck_id" not null,
 "operation",
-"order",
+"order" not null,
 primary key ("deck_id", "order")
 );
 
 CREATE TABLE IF NOT EXISTS "redo_stack" (
-"deck_id",
+"deck_id" not null,
 "operation",
-"order",
+"order" not null,
 primary key ("deck_id", "order")
 );"#,
       sqlite::Destructor::STATIC,
@@ -368,7 +368,7 @@ fn to_empty_from_something() -> Result<(), ResultCode> {
     db.db.exec_safe("CREATE TABLE foo (a primary key, b);")?;
     db.db.exec_safe("CREATE TABLE bar (a, b, c);")?;
     db.db
-        .exec_safe("CREATE TABLE item (id1, id2, x, primary key (id1, id2));")?;
+        .exec_safe("CREATE TABLE item (id1 not null, id2 not null, x, primary key (id1, id2));")?;
     db.db.exec_safe("SELECT crsql_as_crr('item')")?;
     db.db
         .exec_safe("SELECT crsql_automigrate('', 'SELECT crsql_finalize();')")?;
@@ -382,7 +382,7 @@ fn to_something_from_empty() -> Result<(), ResultCode> {
     let db = crate::opendb()?;
     let schema = "
         CREATE TABLE IF NOT EXISTS foo (a primary key, b);
-        CREATE TABLE IF NOT EXISTS bar (a, b, c, primary key(a, b));
+        CREATE TABLE IF NOT EXISTS bar (a not null, b not null, c, primary key(a, b));
         SELECT crsql_as_crr('bar');
         CREATE INDEX IF NOT EXISTS foo_b ON foo (b);
     ";
@@ -453,7 +453,7 @@ fn remove_col() -> Result<(), ResultCode> {
 fn remove_col_fract_table() {
     let db = crate::opendb().expect("db opened");
     db.db
-        .exec_safe("CREATE TABLE todo (id primary key, content text, position, thing)")
+        .exec_safe("CREATE TABLE todo (id primary key not null, content text, position, thing)")
         .expect("table made");
     db.db
         .exec_safe("SELECT crsql_fract_as_ordered('todo', 'position');")

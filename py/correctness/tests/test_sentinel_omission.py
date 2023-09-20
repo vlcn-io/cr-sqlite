@@ -13,9 +13,9 @@ def sync_left_to_right(l, r, since):
 
 def make_simple_schema():
     c = connect(":memory:")
-    c.execute("CREATE TABLE test (id INTEGER PRIMARY KEY, [text] TEXT);")
+    c.execute("CREATE TABLE test (id INTEGER PRIMARY KEY NOT NULL, [text] TEXT);")
     c.execute("SELECT crsql_as_crr('test')")
-    c.execute("CREATE TABLE test2 (id INTEGER PRIMARY KEY, [text] TEXT);")
+    c.execute("CREATE TABLE test2 (id INTEGER PRIMARY KEY NOT NULL, [text] TEXT);")
     c.execute("SELECT crsql_as_crr('test2')")
     c.commit()
     return c

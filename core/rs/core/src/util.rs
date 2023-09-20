@@ -1,10 +1,10 @@
 extern crate alloc;
 
 use crate::{alloc::string::ToString, tableinfo::ColumnInfo};
-use alloc::format;
 use alloc::string::String;
 use alloc::vec;
 use alloc::vec::Vec;
+use alloc::{ffi::CString, format};
 use core::str::Utf8Error;
 use sqlite::{sqlite3, ColumnType, Connection, ResultCode};
 use sqlite_nostd as sqlite;
@@ -40,6 +40,36 @@ pub fn get_dflt_value(
     }
 
     return Ok(Some(String::from(stmt.column_text(0)?)));
+}
+
+// We unfortunately still interface with some C APIs that expect this sort of
+// error message passing.
+pub fn make_err_ptr() -> *mut *mut c_char {
+    let boxed = Box::new(core::ptr::null_mut() as *mut c_char);
+    return Box::into_raw(boxed);
+}
+
+pub fn drop_err_ptr(err: *mut *mut c_char) {
+    unsafe {
+        let ptr = Box::from_raw(err);
+        if ptr.is_null() {
+            return;
+        }
+        let _ = CString::from_raw(*ptr);
+    }
+}
+
+/**
+ * Extracts the err message and frees the pointer!
+ */
+pub fn get_err_msg(err: *mut *mut c_char) -> Option<String> {
+    unsafe {
+        let ptr = Box::from_raw(err);
+        if ptr.is_null() {
+            return None;
+        }
+        CString::from_raw(*ptr).into_string().ok()
+    }
 }
 
 pub fn get_db_version_union_query(tbl_names: &Vec<String>) -> String {

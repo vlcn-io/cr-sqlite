@@ -97,8 +97,22 @@ fn after_update(
     non_pks_new: &[*mut value],
     non_pks_old: &[*mut value],
 ) -> Result<ResultCode, String> {
-  let seq = increment_and_get_seq();
-  let db_version = crsql_getDbVersion(db, ext_data, err_msg)
+    let seq = increment_and_get_seq();
+    let err_msg = crate::util::make_err_ptr();
+
+    // getDbVersion actually fills ext_data with the db version. TODO: rename it!
+    let rc = unsafe { crsql_getDbVersion(db, ext_data, err_msg) };
+    if rc != ResultCode::OK as c_int {
+        return Err(crate::util::get_err_msg(err_msg));
+    }
+    crate::util::drop_err_ptr(err_msg);
+
+    let current_db_version = unsafe { (*ext_data).dbVersion };
+    let seq = unsafe {
+        (*ext_data).seq += 1;
+        (*ext_data).seq
+    };
+
     // Check if any PK value changed
     // If so,
     // 1. insert or update a sentinel for the old thing

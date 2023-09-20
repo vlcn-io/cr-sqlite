@@ -92,8 +92,8 @@ Usage looks like:
 .load crsqlite
 .mode qbox
 -- create tables as normal
-create table foo (a primary key, b);
-create table baz (a primary key, b, c, d);
+create table foo (a primary key not null, b);
+create table baz (a primary key not null, b, c, d);
 
 -- update those tables to be crrs / crdts
 select crsql_as_crr('foo');
@@ -180,7 +180,7 @@ Example table definition:
 
 ```sql
 CREATE CLSet post (
- id INTEGER PRIMARY KEY,
+ id INTEGER PRIMARY KEY NOT NULL,
  views COUNTER,
  content PERITEXT,
  owner_id LWW INTEGER

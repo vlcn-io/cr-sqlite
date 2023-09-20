@@ -6,8 +6,14 @@
 mod alter;
 mod automigrate;
 mod backfill;
+#[cfg(feature = "test")]
 pub mod bootstrap;
+#[cfg(not(feature = "test"))]
+mod bootstrap;
+#[cfg(feature = "test")]
 pub mod c;
+#[cfg(not(feature = "test"))]
+mod c;
 mod changes_vtab;
 mod changes_vtab_read;
 mod changes_vtab_write;
@@ -17,29 +23,34 @@ mod create_cl_set_vtab;
 mod create_crr;
 mod ext_data;
 mod is_crr;
+#[cfg(feature = "test")]
+pub mod pack_columns;
+#[cfg(not(feature = "test"))]
 mod pack_columns;
 mod stmt_cache;
+#[cfg(feature = "test")]
 pub mod tableinfo;
+#[cfg(not(feature = "test"))]
+mod tableinfo;
 mod teardown;
+#[cfg(feature = "test")]
+pub mod test_exports;
 mod triggers;
 mod unpack_columns_vtab;
 mod util;
 
 use core::{ffi::c_char, slice};
 extern crate alloc;
-pub use automigrate::*;
-pub use backfill::*;
+use automigrate::*;
+use backfill::*;
 use core::ffi::{c_int, CStr};
 use create_crr::create_crr;
-pub use is_crr::*;
-use pack_columns::crsql_pack_columns;
-pub use pack_columns::unpack_columns;
-pub use pack_columns::ColumnValue;
+use is_crr::*;
 use sqlite::ResultCode;
 use sqlite_nostd as sqlite;
 use sqlite_nostd::{Connection, Context, Value};
 use tableinfo::is_table_compatible;
-pub use teardown::*;
+use teardown::*;
 
 pub extern "C" fn crsql_as_table(
     ctx: *mut sqlite::context,
@@ -103,7 +114,7 @@ pub extern "C" fn sqlite3_crsqlcore_init(
             -1,
             sqlite::UTF8,
             None,
-            Some(crsql_pack_columns),
+            Some(pack_columns::crsql_pack_columns),
             None,
             None,
             None,

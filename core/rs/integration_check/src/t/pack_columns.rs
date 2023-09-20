@@ -1,5 +1,5 @@
-use crsql_bundle::crsql_core::unpack_columns;
-use crsql_bundle::crsql_core::ColumnValue;
+use crsql_bundle::test_exports::pack_columns::unpack_columns;
+use crsql_bundle::test_exports::pack_columns::ColumnValue;
 use sqlite::{Connection, ResultCode};
 use sqlite_nostd as sqlite;
 

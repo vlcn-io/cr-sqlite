@@ -13,7 +13,7 @@ crate-type = ["staticlib"]
 
 [dependencies]
 sqlite_nostd = { path="../sqlite-rs-embedded/sqlite_nostd", features=["static", "omit_load_extension"] }
-crsql_bundle = { path="../bundle", features=["static", "omit_load_extension"] }
+crsql_bundle = { path="../bundle", features=["static", "omit_load_extension", "test"] }
 cargo-valgrind = "2.1.0"
 libc-print = "0.1.21"
 

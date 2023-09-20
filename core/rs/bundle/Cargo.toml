@@ -24,7 +24,7 @@ panic = "abort"
 panic = "abort"
 
 [features]
-test = []
+test = ["crsql_core/test"]
 loadable_extension = [
   "sqlite_nostd/loadable_extension",
   "crsql_fractindex_core/loadable_extension",

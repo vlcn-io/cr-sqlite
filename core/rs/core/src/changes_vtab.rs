@@ -24,7 +24,7 @@ use crate::c::{
 };
 use crate::changes_vtab_read::changes_union_query;
 use crate::pack_columns::bind_package_to_stmt;
-use crate::unpack_columns;
+use crate::pack_columns::unpack_columns;
 
 fn changes_crsr_finalize(crsr: *mut crsql_Changes_cursor) -> c_int {
     // Assign pointers to null after freeing

@@ -1,10 +1,10 @@
 extern crate alloc;
 
 use crate::{alloc::string::ToString, tableinfo::ColumnInfo};
+use alloc::format;
 use alloc::string::String;
 use alloc::vec;
 use alloc::vec::Vec;
-use alloc::{ffi::CString, format};
 use core::str::Utf8Error;
 use sqlite::{sqlite3, ColumnType, Connection, ResultCode};
 use sqlite_nostd as sqlite;

@@ -95,13 +95,11 @@ pub fn fetch_db_version_from_storage(
     ext_data: *mut crsql_ExtData,
 ) -> Result<ResultCode, String> {
     unsafe {
-        let mut schema_changed = 0;
-        if (*ext_data).pDbVersionStmt == ptr::null_mut() {
-            schema_changed = 1;
+        let schema_changed = if (*ext_data).pDbVersionStmt == ptr::null_mut() {
+            1 as c_int
         } else {
-            schema_changed =
-                crsql_fetchPragmaSchemaVersion(db, ext_data, DB_VERSION_SCHEMA_VERSION);
-        }
+            crsql_fetchPragmaSchemaVersion(db, ext_data, DB_VERSION_SCHEMA_VERSION)
+        };
 
         if schema_changed < 0 {
             return Err("failed to fetch the pragma schema version".to_string());

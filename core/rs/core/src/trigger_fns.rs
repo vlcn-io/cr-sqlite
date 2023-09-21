@@ -113,7 +113,13 @@ fn after_update(
         // Record a create of the row identified by the new primary keys
         // if no rows were moved.
         if db.changes64() > 0 {
-            after_update__mark_new_pk_row_created(db, tbl_info);
+            after_update__mark_new_pk_row_created(
+                db,
+                tbl_info,
+                pks_new,
+                next_db_version,
+                next_seq,
+            )?;
         }
     }
 
@@ -182,8 +188,29 @@ fn after_update__move_non_sentinels(
 fn after_update__mark_new_pk_row_created(
     db: *mut sqlite3,
     tbl_info: &TableInfo,
+    pks_new: &[*mut value],
+    db_version: i64,
+    seq: i32,
 ) -> Result<ResultCode, String> {
-    Ok(ResultCode::OK)
+    let mark_locally_created_stmt_ref = tbl_info
+        .get_mark_locally_created_stmt(db)
+        .or_else(|_e| Err("failed to get mark_locally_created_stmt"))?;
+    let mark_locally_created_stmt = mark_locally_created_stmt_ref
+        .as_ref()
+        .ok_or("Failed to deref sentinel stmt")?;
+
+    for (i, pk) in pks_new.iter().enumerate() {
+        mark_locally_created_stmt
+            .bind_value(i as i32 + 1, *pk)
+            .or_else(|_e| Err("failed to bind pks to mark_locally_created_stmt"))?;
+    }
+    mark_locally_created_stmt
+        .bind_int64(pks_new.len() as i32 + 1, db_version)
+        .and_then(|_| mark_locally_created_stmt.bind_int(pks_new.len() as i32 + 2, seq))
+        .and_then(|_| mark_locally_created_stmt.bind_int64(pks_new.len() as i32 + 3, db_version))
+        .and_then(|_| mark_locally_created_stmt.bind_int(pks_new.len() as i32 + 4, seq))
+        .or_else(|_| Err("failed binding to mark_locally_created_stmt"))?;
+    step_trigger_stmt(mark_locally_created_stmt)
 }
 
 fn step_trigger_stmt(stmt: &ManagedStmt) -> Result<ResultCode, String> {

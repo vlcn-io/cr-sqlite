@@ -5,8 +5,8 @@ use alloc::boxed::Box;
 use alloc::format;
 use alloc::slice;
 use alloc::string::String;
-use alloc::vec;
 use alloc::vec::Vec;
+use sqlite::ManagedStmt;
 use sqlite::{sqlite3, value, Context, ResultCode, Value};
 use sqlite_nostd as sqlite;
 
@@ -106,15 +106,22 @@ fn after_update(
     // Changing a primary key column to a new value is the same thing as deleting the row
     // previously identified by the primary key.
     if crate::compare_values::any_value_changed(pks_new, pks_old)? {
-        after_update__insert_or_update_sentinel(db, tbl_info, pks_old, next_db_version, next_seq)?;
-        after_update__delete_non_sentinels();
+        // Record the delete of the row identified by the old primary keys
+        after_update__mark_old_pk_row_deleted(db, tbl_info, pks_old, next_db_version, next_seq)?;
+        after_update__move_non_sentinels(db, tbl_info, pks_old)?;
+        // Record a create of the row identified by the new primary keys
+        // Technically we don't need to do this given our sentinel optimization?
+        // Actually we do because the update could be _only_ a pk change with no
+        // corresponding col value changes. Wait.. don't we need to run through
+        // and create records for all those then?
+        // after_update__mark_new_pk_row_created(db);
     }
 
     Ok(ResultCode::OK)
 }
 
 #[allow(non_snake_case)]
-fn after_update__insert_or_update_sentinel(
+fn after_update__mark_old_pk_row_deleted(
     db: *mut sqlite3,
     tbl_info: &TableInfo,
     pks: &[*mut value],
@@ -123,42 +130,62 @@ fn after_update__insert_or_update_sentinel(
 ) -> Result<ResultCode, String> {
     let mark_locally_deleted_stmt_ref = tbl_info
         .get_mark_locally_deleted_stmt(db)
-        .or_else(|e| Err("failed to get mark_locally_deleted_stmt"))?;
+        .or_else(|_e| Err("failed to get mark_locally_deleted_stmt"))?;
     let mark_locally_deleted_stmt = mark_locally_deleted_stmt_ref
         .as_ref()
         .ok_or("Failed to deref sentinel stmt")?;
     for (i, pk) in pks.iter().enumerate() {
         mark_locally_deleted_stmt
             .bind_value(i as i32 + 1, *pk)
-            .or_else(|e| Err("failed to bind pks to mark_locally_deleted_stmt"))?;
+            .or_else(|_e| Err("failed to bind pks to mark_locally_deleted_stmt"))?;
     }
-    match mark_locally_deleted_stmt
+    mark_locally_deleted_stmt
         .bind_int64(pks.len() as i32 + 1, db_version)
         .and_then(|_| mark_locally_deleted_stmt.bind_int(pks.len() as i32 + 2, seq))
         .and_then(|_| mark_locally_deleted_stmt.bind_int64(pks.len() as i32 + 3, db_version))
         .and_then(|_| mark_locally_deleted_stmt.bind_int(pks.len() as i32 + 4, seq))
-        .and_then(|_| mark_locally_deleted_stmt.step())
-    {
-        Ok(ResultCode::DONE) => {
-            reset_cached_stmt(mark_locally_deleted_stmt.stmt)
-                .or_else(|e| Err("unable to reset cached mark_locally_deleted_stmt"))?;
-            Ok(ResultCode::OK)
-        }
-        Ok(code) | Err(code) => {
-            reset_cached_stmt(mark_locally_deleted_stmt.stmt)
-                .or_else(|e| Err("unable to reset cached mark_locally_deleted_stmt"))?;
-            Err(format!(
-                "unexpected result code from mark_locally_deleted_stmt.step: {}",
-                code
-            ))
-        }
-    }
+        .or_else(|_| Err("failed binding to mark locally deleted stmt"))?;
+    step_trigger_stmt(mark_locally_deleted_stmt)
 }
 
 // TODO: in the future we can keep sentinel information in the lookaside
 #[allow(non_snake_case)]
-fn after_update__delete_non_sentinels() -> Result<ResultCode, String> {
-    Ok(ResultCode::OK)
+fn after_update__move_non_sentinels(
+    db: *mut sqlite3,
+    tbl_info: &TableInfo,
+    pks: &[*mut value],
+) -> Result<ResultCode, String> {
+    let delete_non_sentinels_stmt_ref = tbl_info
+        .get_delete_non_sentinels_stmt(db)
+        .or_else(|_| Err("failed to get delete_non_sentinels_stmt"))?;
+    let delete_non_sentinels_stmt = delete_non_sentinels_stmt_ref
+        .as_ref()
+        .ok_or("Failed to deref delete_non_sentinels_stmt")?;
+
+    for (i, pk) in pks.iter().enumerate() {
+        delete_non_sentinels_stmt
+            .bind_value(i as i32 + 1, *pk)
+            .or_else(|_| Err("failed to bind pks to delete_non_sentinels_stmt"))?;
+    }
+    step_trigger_stmt(delete_non_sentinels_stmt)
+}
+
+fn step_trigger_stmt(stmt: &ManagedStmt) -> Result<ResultCode, String> {
+    match stmt.step() {
+        Ok(ResultCode::DONE) => {
+            reset_cached_stmt(stmt.stmt)
+                .or_else(|_e| Err("unable to reset cached trigger stmt"))?;
+            Ok(ResultCode::OK)
+        }
+        Ok(code) | Err(code) => {
+            reset_cached_stmt(stmt.stmt)
+                .or_else(|_e| Err("unable to reset cached trigger stmt"))?;
+            Err(format!(
+                "unexpected result code from tigger_stmt.step: {}",
+                code
+            ))
+        }
+    }
 }
 
 #[cfg(test)]

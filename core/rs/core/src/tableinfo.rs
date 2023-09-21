@@ -45,7 +45,7 @@ pub struct TableInfo {
 
     // For local writes --
     mark_locally_deleted_stmt: RefCell<Option<ManagedStmt>>,
-    // delete_non_sentinel_rows_stmt: RefCell<Vec<ManagedStmt>>,
+    delete_non_sentinels_stmt: RefCell<Option<ManagedStmt>>,
 }
 
 impl TableInfo {
@@ -224,6 +224,23 @@ impl TableInfo {
         Ok(self.mark_locally_deleted_stmt.try_borrow()?)
     }
 
+    pub fn get_delete_non_sentinels_stmt(
+        &self,
+        db: *mut sqlite3,
+    ) -> Result<Ref<Option<ManagedStmt>>, ResultCode> {
+        if self.delete_non_sentinels_stmt.try_borrow()?.is_none() {
+            let sql = format!(
+              "DELETE FROM \"{}__crsql_clock\" WHERE {where_list} AND __crsql_col_name != '{sentinel}'",
+              crate::util::escape_ident(&self.tbl_name),
+              where_list = crate::util::where_list(&self.pks, None)?,
+              sentinel = crate::c::DELETE_SENTINEL,
+            );
+            let ret = db.prepare_v3(&sql, sqlite::PREPARE_PERSISTENT)?;
+            *self.delete_non_sentinels_stmt.try_borrow_mut()? = Some(ret);
+        }
+        Ok(self.delete_non_sentinels_stmt.try_borrow()?)
+    }
+
     pub fn get_col_value_stmt(
         &self,
         db: *mut sqlite3,
@@ -268,6 +285,8 @@ impl TableInfo {
         let mut stmt = self.zero_clocks_on_resurrect_stmt.try_borrow_mut()?;
         stmt.take();
         let mut stmt = self.mark_locally_deleted_stmt.try_borrow_mut()?;
+        stmt.take();
+        let mut stmt = self.delete_non_sentinels_stmt.try_borrow_mut()?;
         stmt.take();
 
         // primary key columns shouldn't have statements? right?
@@ -528,7 +547,9 @@ pub fn pull_table_info(
         merge_delete_stmt: RefCell::new(None),
         merge_delete_drop_clocks_stmt: RefCell::new(None),
         zero_clocks_on_resurrect_stmt: RefCell::new(None),
+
         mark_locally_deleted_stmt: RefCell::new(None),
+        delete_non_sentinels_stmt: RefCell::new(None),
     });
 }
 

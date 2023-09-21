@@ -6,6 +6,7 @@ use alloc::format;
 use alloc::slice;
 use alloc::string::String;
 use alloc::vec::Vec;
+use sqlite::Connection;
 use sqlite::ManagedStmt;
 use sqlite::{sqlite3, value, Context, ResultCode, Value};
 use sqlite_nostd as sqlite;
@@ -110,11 +111,10 @@ fn after_update(
         after_update__mark_old_pk_row_deleted(db, tbl_info, pks_old, next_db_version, next_seq)?;
         after_update__move_non_sentinels(db, tbl_info, pks_new, pks_old)?;
         // Record a create of the row identified by the new primary keys
-        // Technically we don't need to do this given our sentinel optimization?
-        // Actually we do because the update could be _only_ a pk change with no
-        // corresponding col value changes. Wait.. don't we need to run through
-        // and create records for all those then?
-        // after_update__mark_new_pk_row_created(db);
+        // if no rows were moved.
+        if db.changes64() > 0 {
+            after_update__mark_new_pk_row_created(db, tbl_info);
+        }
     }
 
     Ok(ResultCode::OK)
@@ -176,6 +176,14 @@ fn after_update__move_non_sentinels(
             .or_else(|_| Err("failed to bind pks to move_non_sentinels_stmt"))?;
     }
     step_trigger_stmt(move_non_sentinels_stmt)
+}
+
+#[allow(non_snake_case)]
+fn after_update__mark_new_pk_row_created(
+    db: *mut sqlite3,
+    tbl_info: &TableInfo,
+) -> Result<ResultCode, String> {
+    Ok(ResultCode::OK)
 }
 
 fn step_trigger_stmt(stmt: &ManagedStmt) -> Result<ResultCode, String> {

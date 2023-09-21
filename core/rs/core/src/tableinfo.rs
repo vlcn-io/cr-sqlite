@@ -45,7 +45,7 @@ pub struct TableInfo {
 
     // For local writes --
     mark_locally_deleted_stmt: RefCell<Option<ManagedStmt>>,
-    delete_non_sentinels_stmt: RefCell<Option<ManagedStmt>>,
+    move_non_sentinels_stmt: RefCell<Option<ManagedStmt>>,
 }
 
 impl TableInfo {
@@ -224,21 +224,22 @@ impl TableInfo {
         Ok(self.mark_locally_deleted_stmt.try_borrow()?)
     }
 
-    pub fn get_delete_non_sentinels_stmt(
+    pub fn get_move_non_sentinels_stmt(
         &self,
         db: *mut sqlite3,
     ) -> Result<Ref<Option<ManagedStmt>>, ResultCode> {
-        if self.delete_non_sentinels_stmt.try_borrow()?.is_none() {
+        if self.move_non_sentinels_stmt.try_borrow()?.is_none() {
             let sql = format!(
-              "DELETE FROM \"{}__crsql_clock\" WHERE {where_list} AND __crsql_col_name != '{sentinel}'",
+              "UPDATE \"{}__crsql_clock\" SET {set_list} WHERE {where_list} AND __crsql_col_name != '{sentinel}'",
               crate::util::escape_ident(&self.tbl_name),
+              set_list = crate::util::set_list(&self.non_pks),
               where_list = crate::util::where_list(&self.pks, None)?,
               sentinel = crate::c::DELETE_SENTINEL,
             );
             let ret = db.prepare_v3(&sql, sqlite::PREPARE_PERSISTENT)?;
-            *self.delete_non_sentinels_stmt.try_borrow_mut()? = Some(ret);
+            *self.move_non_sentinels_stmt.try_borrow_mut()? = Some(ret);
         }
-        Ok(self.delete_non_sentinels_stmt.try_borrow()?)
+        Ok(self.move_non_sentinels_stmt.try_borrow()?)
     }
 
     pub fn get_col_value_stmt(
@@ -286,7 +287,7 @@ impl TableInfo {
         stmt.take();
         let mut stmt = self.mark_locally_deleted_stmt.try_borrow_mut()?;
         stmt.take();
-        let mut stmt = self.delete_non_sentinels_stmt.try_borrow_mut()?;
+        let mut stmt = self.move_non_sentinels_stmt.try_borrow_mut()?;
         stmt.take();
 
         // primary key columns shouldn't have statements? right?
@@ -549,7 +550,7 @@ pub fn pull_table_info(
         zero_clocks_on_resurrect_stmt: RefCell::new(None),
 
         mark_locally_deleted_stmt: RefCell::new(None),
-        delete_non_sentinels_stmt: RefCell::new(None),
+        move_non_sentinels_stmt: RefCell::new(None),
     });
 }
 

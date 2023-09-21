@@ -108,7 +108,7 @@ fn after_update(
     if crate::compare_values::any_value_changed(pks_new, pks_old)? {
         // Record the delete of the row identified by the old primary keys
         after_update__mark_old_pk_row_deleted(db, tbl_info, pks_old, next_db_version, next_seq)?;
-        after_update__move_non_sentinels(db, tbl_info, pks_old)?;
+        after_update__move_non_sentinels(db, tbl_info, pks_new, pks_old)?;
         // Record a create of the row identified by the new primary keys
         // Technically we don't need to do this given our sentinel optimization?
         // Actually we do because the update could be _only_ a pk change with no
@@ -153,21 +153,29 @@ fn after_update__mark_old_pk_row_deleted(
 fn after_update__move_non_sentinels(
     db: *mut sqlite3,
     tbl_info: &TableInfo,
-    pks: &[*mut value],
+    pks_new: &[*mut value],
+    pks_old: &[*mut value],
 ) -> Result<ResultCode, String> {
-    let delete_non_sentinels_stmt_ref = tbl_info
-        .get_delete_non_sentinels_stmt(db)
-        .or_else(|_| Err("failed to get delete_non_sentinels_stmt"))?;
-    let delete_non_sentinels_stmt = delete_non_sentinels_stmt_ref
+    let move_non_sentinels_stmt_ref = tbl_info
+        .get_move_non_sentinels_stmt(db)
+        .or_else(|_| Err("failed to get move_non_sentinels_stmt"))?;
+    let move_non_sentinels_stmt = move_non_sentinels_stmt_ref
         .as_ref()
-        .ok_or("Failed to deref delete_non_sentinels_stmt")?;
+        .ok_or("Failed to deref move_non_sentinels_stmt")?;
 
-    for (i, pk) in pks.iter().enumerate() {
-        delete_non_sentinels_stmt
+    // set things to new pk values
+    for (i, pk) in pks_new.iter().enumerate() {
+        move_non_sentinels_stmt
             .bind_value(i as i32 + 1, *pk)
-            .or_else(|_| Err("failed to bind pks to delete_non_sentinels_stmt"))?;
+            .or_else(|_| Err("failed to bind pks to move_non_sentinels_stmt"))?;
     }
-    step_trigger_stmt(delete_non_sentinels_stmt)
+    // where they have the old pk values
+    for (i, pk) in pks_old.iter().enumerate() {
+        move_non_sentinels_stmt
+            .bind_value((i + 1 + pks_new.len()) as i32, *pk)
+            .or_else(|_| Err("failed to bind pks to move_non_sentinels_stmt"))?;
+    }
+    step_trigger_stmt(move_non_sentinels_stmt)
 }
 
 fn step_trigger_stmt(stmt: &ManagedStmt) -> Result<ResultCode, String> {

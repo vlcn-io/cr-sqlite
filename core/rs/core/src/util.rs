@@ -122,6 +122,15 @@ pub fn binding_list(num_slots: usize) -> String {
         .join(", ")
 }
 
+pub fn set_list(columns: &Vec<ColumnInfo>) -> String {
+    // for each column, add a `col_name = ?` statement
+    columns
+        .iter()
+        .map(|c| format!("\"{col_name}\" = ?", col_name = escape_ident(&c.name)))
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
 pub fn as_identifier_list(
     columns: &Vec<ColumnInfo>,
     prefix: Option<&str>,

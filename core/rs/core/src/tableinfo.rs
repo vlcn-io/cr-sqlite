@@ -46,6 +46,7 @@ pub struct TableInfo {
     // For local writes --
     mark_locally_deleted_stmt: RefCell<Option<ManagedStmt>>,
     move_non_sentinels_stmt: RefCell<Option<ManagedStmt>>,
+    mark_locally_created_stmt: RefCell<Option<ManagedStmt>>,
 }
 
 impl TableInfo {
@@ -242,6 +243,41 @@ impl TableInfo {
         Ok(self.move_non_sentinels_stmt.try_borrow()?)
     }
 
+    pub fn get_mark_locally_created_stmt(
+        &self,
+        db: *mut sqlite3,
+    ) -> Result<Ref<Option<ManagedStmt>>, ResultCode> {
+        // if self.move_non_sentinels_stmt
+        if self.mark_locally_created_stmt.try_borrow()?.is_none() {
+            let sql = format!(
+            "INSERT INTO \"{table_name}__crsql_clock\" (
+              {pk_list},
+              __crsql_col_name,
+              __crsql_col_version,
+              __crsql_db_version,
+              __crsql_seq,
+              __crsql_site_id
+            ) SELECT
+              {pk_bind_slots},
+              '{sentinel}',
+              1,
+              ?,
+              ?,
+              NULL WHERE true
+              ON CONFLICT DO UPDATE SET
+                __crsql_col_version = CASE __crsql_col_version % 2 WHEN 0 THEN __crsql_col_version + 1 ELSE __crsql_col_version + 2 END,
+                __crsql_db_version = ?,
+                __crsql_seq = ?,
+                __crsql_site_id = NULL",
+            table_name = crate::util::escape_ident(&self.tbl_name),
+            pk_list = crate::util::as_identifier_list(&self.pks, None)?,
+            pk_bind_slots = crate::util::binding_list(self.pks.len()),
+            sentinel = crate::c::INSERT_SENTINEL,
+          );
+        }
+        Ok(self.mark_locally_created_stmt.try_borrow()?)
+    }
+
     pub fn get_col_value_stmt(
         &self,
         db: *mut sqlite3,
@@ -288,6 +324,8 @@ impl TableInfo {
         let mut stmt = self.mark_locally_deleted_stmt.try_borrow_mut()?;
         stmt.take();
         let mut stmt = self.move_non_sentinels_stmt.try_borrow_mut()?;
+        stmt.take();
+        let mut stmt = self.mark_locally_created_stmt.try_borrow_mut()?;
         stmt.take();
 
         // primary key columns shouldn't have statements? right?
@@ -551,6 +589,7 @@ pub fn pull_table_info(
 
         mark_locally_deleted_stmt: RefCell::new(None),
         move_non_sentinels_stmt: RefCell::new(None),
+        mark_locally_created_stmt: RefCell::new(None),
     });
 }
 

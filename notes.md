@@ -1,3 +1,11 @@
+# db-version
+
+db version as col version for tx preservation on merge.
+
+Each `col_version` is currently incremented independently. We can instead set it to the current `db_version` to ensure that all values set in the same transaction can also all win together when merging.
+
+This isn't guaranteed since the peer being merged into could be way ahead in db_version overall but have some records behind in db_version.
+
 # pk-lookup
 
 - New table

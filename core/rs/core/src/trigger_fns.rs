@@ -123,6 +123,23 @@ fn after_update(
         }
     }
 
+    // now for each non_pk_col we need to do an insert
+    // where new is not old
+    // ln 268 in triggers.rs
+    // note that triggers will pass us cols in table-info order
+    // when any non_pk is different, run the statement
+    for ((new, old), info) in non_pks_new
+        .iter()
+        .zip(non_pks_old.iter())
+        .zip(tbl_info.non_pks.iter())
+    {
+        if crsql_compare_sqlite_values(new, old) != 0 {
+            // we had a difference in new and old values
+            // we need to track crdt metadata
+            after_update__mark_locally_updated()?;
+        }
+    }
+
     Ok(ResultCode::OK)
 }
 
@@ -211,6 +228,15 @@ fn after_update__mark_new_pk_row_created(
         .and_then(|_| mark_locally_created_stmt.bind_int(pks_new.len() as i32 + 4, seq))
         .or_else(|_| Err("failed binding to mark_locally_created_stmt"))?;
     step_trigger_stmt(mark_locally_created_stmt)
+}
+
+#[allow(non_snake_case)]
+fn after_update__mark_locally_updated() -> Result<ResultCode, String> {
+    /*
+    let mark_locally_updated_stmt_ref = info
+                  .get_mark_locally_updated_stmt(db)
+                  .or_else(|_e| Err("failed to get mark_locally_updated_stmt"))?;
+     */
 }
 
 fn step_trigger_stmt(stmt: &ManagedStmt) -> Result<ResultCode, String> {

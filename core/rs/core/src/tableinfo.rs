@@ -364,6 +364,8 @@ impl TableInfo {
         stmt.take();
         let mut stmt = self.mark_locally_created_stmt.try_borrow_mut()?;
         stmt.take();
+        let mut stmt = self.mark_locally_updated_stmt.try_borrow_mut()?;
+        stmt.take();
 
         // primary key columns shouldn't have statements? right?
         for col in &self.non_pks {
@@ -371,6 +373,13 @@ impl TableInfo {
         }
 
         Ok(ResultCode::OK)
+    }
+}
+
+impl Drop for TableInfo {
+    fn drop(&mut self) {
+        // we'll leak rather than panic
+        let _ = self.clear_stmts();
     }
 }
 
@@ -460,6 +469,13 @@ impl ColumnInfo {
         stmt.take();
 
         Ok(ResultCode::OK)
+    }
+}
+
+impl Drop for ColumnInfo {
+    fn drop(&mut self) {
+        // we'll leak rather than panic
+        let _ = self.clear_stmts();
     }
 }
 

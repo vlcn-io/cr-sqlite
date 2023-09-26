@@ -27,6 +27,7 @@ pub mod db_version;
 mod db_version;
 mod ext_data;
 mod is_crr;
+mod local_writes;
 #[cfg(feature = "test")]
 pub mod pack_columns;
 #[cfg(not(feature = "test"))]
@@ -39,7 +40,6 @@ mod tableinfo;
 mod teardown;
 #[cfg(feature = "test")]
 pub mod test_exports;
-mod trigger_fns;
 mod triggers;
 mod unpack_columns_vtab;
 mod util;

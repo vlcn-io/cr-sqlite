@@ -11,7 +11,9 @@ use sqlite::ManagedStmt;
 use sqlite::{sqlite3, value, Context, ResultCode, Value};
 use sqlite_nostd as sqlite;
 
+use crate::compare_values::crsql_compare_sqlite_values;
 use crate::stmt_cache::reset_cached_stmt;
+use crate::tableinfo::ColumnInfo;
 use crate::{c::crsql_ExtData, tableinfo::TableInfo};
 
 #[no_mangle]
@@ -128,15 +130,22 @@ fn after_update(
     // ln 268 in triggers.rs
     // note that triggers will pass us cols in table-info order
     // when any non_pk is different, run the statement
-    for ((new, old), info) in non_pks_new
+    for ((new, old), col_info) in non_pks_new
         .iter()
         .zip(non_pks_old.iter())
         .zip(tbl_info.non_pks.iter())
     {
-        if crsql_compare_sqlite_values(new, old) != 0 {
+        if crsql_compare_sqlite_values(*new, *old) != 0 {
             // we had a difference in new and old values
             // we need to track crdt metadata
-            after_update__mark_locally_updated()?;
+            after_update__mark_locally_updated(
+                db,
+                tbl_info,
+                pks_new,
+                col_info,
+                next_db_version,
+                next_seq,
+            )?;
         }
     }
 
@@ -231,12 +240,38 @@ fn after_update__mark_new_pk_row_created(
 }
 
 #[allow(non_snake_case)]
-fn after_update__mark_locally_updated() -> Result<ResultCode, String> {
-    /*
-    let mark_locally_updated_stmt_ref = info
-                  .get_mark_locally_updated_stmt(db)
-                  .or_else(|_e| Err("failed to get mark_locally_updated_stmt"))?;
-     */
+fn after_update__mark_locally_updated(
+    db: *mut sqlite3,
+    tbl_info: &TableInfo,
+    pks_new: &[*mut value],
+    col_info: &ColumnInfo,
+    db_version: i64,
+    seq: i32,
+) -> Result<ResultCode, String> {
+    let mark_locally_updated_stmt_ref = tbl_info
+        .get_mark_locally_updated_stmt(db)
+        .or_else(|_e| Err("failed to get mark_locally_updated_stmt"))?;
+    let mark_locally_updated_stmt = mark_locally_updated_stmt_ref
+        .as_ref()
+        .ok_or("Failed to deref sentinel stmt")?;
+
+    for (i, pk) in pks_new.iter().enumerate() {
+        mark_locally_updated_stmt
+            .bind_value(i as i32 + 1, *pk)
+            .or_else(|_e| Err("failed to bind pks to mark_locally_updated_stmt"))?;
+    }
+    mark_locally_updated_stmt
+        .bind_text(
+            pks_new.len() as i32 + 1,
+            &col_info.name,
+            sqlite::Destructor::STATIC,
+        )
+        .and_then(|_| mark_locally_updated_stmt.bind_int64(pks_new.len() as i32 + 2, db_version))
+        .and_then(|_| mark_locally_updated_stmt.bind_int(pks_new.len() as i32 + 3, seq))
+        .and_then(|_| mark_locally_updated_stmt.bind_int64(pks_new.len() as i32 + 4, db_version))
+        .and_then(|_| mark_locally_updated_stmt.bind_int(pks_new.len() as i32 + 5, seq))
+        .or_else(|_| Err("failed binding to mark_locally_updated_stmt"))?;
+    step_trigger_stmt(mark_locally_updated_stmt)
 }
 
 fn step_trigger_stmt(stmt: &ManagedStmt) -> Result<ResultCode, String> {

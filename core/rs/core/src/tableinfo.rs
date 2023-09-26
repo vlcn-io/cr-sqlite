@@ -232,9 +232,9 @@ impl TableInfo {
     ) -> Result<Ref<Option<ManagedStmt>>, ResultCode> {
         if self.move_non_sentinels_stmt.try_borrow()?.is_none() {
             let sql = format!(
-              "UPDATE \"{}__crsql_clock\" SET {set_list} WHERE {where_list} AND __crsql_col_name != '{sentinel}'",
+              "UPDATE OR REPLACE \"{}__crsql_clock\" SET {set_list} WHERE {where_list} AND __crsql_col_name != '{sentinel}'",
               crate::util::escape_ident(&self.tbl_name),
-              set_list = crate::util::set_list(&self.non_pks),
+              set_list = crate::util::set_list(&self.pks),
               where_list = crate::util::where_list(&self.pks, None)?,
               sentinel = crate::c::DELETE_SENTINEL,
             );

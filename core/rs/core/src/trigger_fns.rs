@@ -119,21 +119,14 @@ fn after_update(
     if crate::compare_values::any_value_changed(pks_new, pks_old)? {
         // Record the delete of the row identified by the old primary keys
         after_update__mark_old_pk_row_deleted(db, tbl_info, pks_old, next_db_version, next_seq)?;
-        if tbl_info.non_pks.len() > 0 {
-            after_update__move_non_sentinels(db, tbl_info, pks_new, pks_old)?;
-        }
+        after_update__move_non_sentinels(db, tbl_info, pks_new, pks_old)?;
         // Record a create of the row identified by the new primary keys
         // if no rows were moved. This is related to the optimization to not save
         // sentinels unless required.
-        if db.changes64() > 0 || tbl_info.non_pks.len() == 0 {
-            after_update__mark_new_pk_row_created(
-                db,
-                tbl_info,
-                pks_new,
-                next_db_version,
-                next_seq,
-            )?;
-        }
+        // if db.changes64() == 0 { <-- an optimization if we can get to it. we'd need to know to increment causal length.
+        // so we can get to this when CL is stored in the lookaside.
+        after_update__mark_new_pk_row_created(db, tbl_info, pks_new, next_db_version, next_seq)?;
+        // }
     }
 
     // now for each non_pk_col we need to do an insert
@@ -286,12 +279,12 @@ fn step_trigger_stmt(stmt: &ManagedStmt) -> Result<ResultCode, String> {
     match stmt.step() {
         Ok(ResultCode::DONE) => {
             reset_cached_stmt(stmt.stmt)
-                .or_else(|_e| Err("unable to reset cached trigger stmt"))?;
+                .or_else(|_e| Err("done -- unable to reset cached trigger stmt"))?;
             Ok(ResultCode::OK)
         }
         Ok(code) | Err(code) => {
             reset_cached_stmt(stmt.stmt)
-                .or_else(|_e| Err("unable to reset cached trigger stmt"))?;
+                .or_else(|_e| Err("error -- unable to reset cached trigger stmt"))?;
             Err(format!(
                 "unexpected result code from tigger_stmt.step: {}",
                 code

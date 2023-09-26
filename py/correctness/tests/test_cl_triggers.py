@@ -272,7 +272,7 @@ def test_change_primary_key_to_previously_existing():
     # pk 1 was deleted so has a CL of 2
     # pk 2 was resurrected so has a CL of 3
     assert (changes == [(b'\x01\t\x02', 'b', 3),
-            (b'\x01\t\x02', '-1', 3), (b'\x01\t\x01', '-1', 2)])
+            (b'\x01\t\x01', '-1', 2), (b'\x01\t\x02', '-1', 3)])
 
     #  try changing to and away from 1 again to ensure we aren't stuck at 2
 

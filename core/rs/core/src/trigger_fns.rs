@@ -119,11 +119,13 @@ fn after_update(
     if crate::compare_values::any_value_changed(pks_new, pks_old)? {
         // Record the delete of the row identified by the old primary keys
         after_update__mark_old_pk_row_deleted(db, tbl_info, pks_old, next_db_version, next_seq)?;
-        after_update__move_non_sentinels(db, tbl_info, pks_new, pks_old)?;
+        if tbl_info.non_pks.len() > 0 {
+            after_update__move_non_sentinels(db, tbl_info, pks_new, pks_old)?;
+        }
         // Record a create of the row identified by the new primary keys
         // if no rows were moved. This is related to the optimization to not save
         // sentinels unless required.
-        if db.changes64() > 0 {
+        if db.changes64() > 0 || tbl_info.non_pks.len() == 0 {
             after_update__mark_new_pk_row_created(
                 db,
                 tbl_info,

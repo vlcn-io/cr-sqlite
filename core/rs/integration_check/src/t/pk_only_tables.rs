@@ -5,29 +5,30 @@ use sqlite::ManagedConnection;
 use sqlite::{Connection, ResultCode};
 use sqlite_nostd as sqlite;
 
-fn sync_left_to_right(
-    l: &dyn Connection,
-    r: &dyn Connection,
-    since: sqlite::int64,
-) -> Result<ResultCode, ResultCode> {
-    let siteid_stmt = r.prepare_v2("SELECT crsql_site_id()")?;
-    siteid_stmt.step()?;
-    let siteid = siteid_stmt.column_blob(0)?;
+fn sync_left_to_right(l: &dyn Connection, r: &dyn Connection, since: sqlite::int64) {
+    let siteid_stmt = r.prepare_v2("SELECT crsql_site_id()").expect("prepared");
+    siteid_stmt.step().expect("stepped");
+    let siteid = siteid_stmt.column_blob(0).expect("got site id");
 
-    let stmt_l =
-        l.prepare_v2("SELECT * FROM crsql_changes WHERE db_version > ? AND site_id IS NOT ?")?;
-    stmt_l.bind_int64(1, since)?;
-    stmt_l.bind_blob(2, siteid, Destructor::STATIC)?;
+    let stmt_l = l
+        .prepare_v2("SELECT * FROM crsql_changes WHERE db_version > ? AND site_id IS NOT ?")
+        .expect("prepared select changes");
+    stmt_l.bind_int64(1, since).expect("bound db version");
+    stmt_l
+        .bind_blob(2, siteid, Destructor::STATIC)
+        .expect("bound site id");
 
-    while stmt_l.step()? == ResultCode::ROW {
-        let stmt_r =
-            r.prepare_v2("INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")?;
+    while stmt_l.step().expect("pulled change set") == ResultCode::ROW {
+        let stmt_r = r
+            .prepare_v2("INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
+            .expect("prepared insert changes");
         for x in 0..9 {
-            stmt_r.bind_value(x + 1, stmt_l.column_value(x)?)?;
+            stmt_r
+                .bind_value(x + 1, stmt_l.column_value(x).expect("got changeset value"))
+                .expect("bound value");
         }
-        stmt_r.step()?;
+        stmt_r.step().expect("inserted change");
     }
-    Ok(ResultCode::OK)
 }
 
 // fn print_changes(
@@ -68,72 +69,95 @@ fn sync_left_to_right(
 //     Ok(sqlite::ResultCode::OK)
 // }
 
-fn setup_schema(db: &ManagedConnection) -> Result<ResultCode, ResultCode> {
-    db.exec_safe("CREATE TABLE foo (id INTEGER PRIMARY KEY NOT NULL);")?;
+fn setup_schema(db: &ManagedConnection) {
+    db.exec_safe("CREATE TABLE foo (id INTEGER PRIMARY KEY NOT NULL);")
+        .expect("created foo");
     db.exec_safe("SELECT crsql_as_crr('foo');")
+        .expect("converted to crr");
 }
 
 fn create_pkonlytable() -> Result<(), ResultCode> {
     let db_a = crate::opendb()?;
 
-    setup_schema(&db_a.db)?;
+    setup_schema(&db_a.db);
     Ok(())
 }
 
-fn insert_pkonly_row() -> Result<(), ResultCode> {
-    let db_a = crate::opendb()?;
-    let db_b = crate::opendb()?;
+fn insert_pkonly_row() {
+    let db_a = crate::opendb().expect("open db a");
+    let db_b = crate::opendb().expect("open db b");
 
-    fn setup_schema(db: &ManagedConnection) -> Result<ResultCode, ResultCode> {
-        db.exec_safe("CREATE TABLE foo (id INTEGER PRIMARY KEY NOT NULL);")?;
+    fn setup_schema(db: &ManagedConnection) {
+        db.exec_safe("CREATE TABLE foo (id INTEGER PRIMARY KEY NOT NULL);")
+            .expect("created foo");
         db.exec_safe("SELECT crsql_as_crr('foo');")
+            .expect("upgraded to crr");
     }
 
-    setup_schema(&db_a.db)?;
-    setup_schema(&db_b.db)?;
+    setup_schema(&db_a.db);
+    setup_schema(&db_b.db);
 
-    let stmt = db_a.db.prepare_v2("INSERT INTO foo (id) VALUES (?);")?;
-    stmt.bind_int(1, 1)?;
-    stmt.step()?;
+    let stmt = db_a
+        .db
+        .prepare_v2("INSERT INTO foo (id) VALUES (?);")
+        .expect("prepared insert to foo");
+    stmt.bind_int(1, 1).expect("bound values");
+    stmt.step().expect("inserted");
 
-    let stmt = db_a.db.prepare_v2("SELECT * FROM crsql_changes;")?;
-    let result = stmt.step()?;
+    let stmt = db_a
+        .db
+        .prepare_v2("SELECT * FROM crsql_changes;")
+        .expect("prepared select changes");
+    let result = stmt.step().expect("stepped");
     assert_eq!(result, ResultCode::ROW);
 
-    sync_left_to_right(&db_a.db, &db_b.db, -1)?;
+    sync_left_to_right(&db_a.db, &db_b.db, -1);
 
-    let stmt = db_b.db.prepare_v2("SELECT * FROM foo;")?;
-    let result = stmt.step()?;
+    let stmt = db_b
+        .db
+        .prepare_v2("SELECT * FROM foo;")
+        .expect("prepared select foo");
+    let result = stmt.step().expect("stepped");
     assert_eq!(result, ResultCode::ROW);
     let id = stmt.column_int(0);
     assert_eq!(id, 1);
-    let result = stmt.step()?;
+    let result = stmt.step().expect("stepped");
     assert_eq!(result, ResultCode::DONE);
-    Ok(())
 }
 
 fn modify_pkonly_row() -> Result<(), ResultCode> {
-    let db_a = crate::opendb()?;
-    let db_b = crate::opendb()?;
+    let db_a = crate::opendb().expect("open db a");
+    let db_b = crate::opendb().expect("open db b");
 
-    fn setup_schema(db: &ManagedConnection) -> Result<ResultCode, ResultCode> {
-        db.exec_safe("CREATE TABLE foo (id INTEGER PRIMARY KEY NOT NULL);")?;
+    fn setup_schema(db: &ManagedConnection) {
+        db.exec_safe("CREATE TABLE foo (id INTEGER PRIMARY KEY NOT NULL);")
+            .expect("create foo");
         db.exec_safe("SELECT crsql_as_crr('foo');")
+            .expect("upgrade foo");
     }
 
-    setup_schema(&db_a.db)?;
-    setup_schema(&db_b.db)?;
+    setup_schema(&db_a.db);
+    setup_schema(&db_b.db);
 
-    let stmt = db_a.db.prepare_v2("INSERT INTO foo (id) VALUES (1);")?;
-    stmt.step()?;
+    let stmt = db_a
+        .db
+        .prepare_v2("INSERT INTO foo (id) VALUES (1);")
+        .expect("prepare insert to foo");
+    stmt.step().expect("step insert to foo");
 
-    let stmt = db_a.db.prepare_v2("UPDATE foo SET id = 2 WHERE id = 1;")?;
-    stmt.step()?;
+    let stmt = db_a
+        .db
+        .prepare_v2("UPDATE foo SET id = 2 WHERE id = 1;")
+        .expect("prepare set to foo");
+    stmt.step().expect("step update to foo");
 
-    sync_left_to_right(&db_a.db, &db_b.db, -1)?;
+    sync_left_to_right(&db_a.db, &db_b.db, -1);
 
-    let stmt = db_b.db.prepare_v2("SELECT * FROM foo;")?;
-    let result = stmt.step()?;
+    let stmt = db_b
+        .db
+        .prepare_v2("SELECT * FROM foo;")
+        .expect("prepare select all from foo");
+    let result = stmt.step().expect("step select all from foo");
     assert_eq!(result, ResultCode::ROW);
     let id = stmt.column_int(0);
     assert_eq!(id, 2);
@@ -155,8 +179,8 @@ fn junction_table() -> Result<(), ResultCode> {
         db.exec_safe("SELECT crsql_as_crr('jx');")
     }
 
-    setup_schema(&db_a.db)?;
-    setup_schema(&db_b.db)?;
+    setup_schema(&db_a.db).expect("created schema");
+    setup_schema(&db_b.db).expect("created schema");
 
     db_a.db
         .prepare_v2("INSERT INTO jx VALUES (1, 2);")?
@@ -165,7 +189,7 @@ fn junction_table() -> Result<(), ResultCode> {
         .prepare_v2("UPDATE jx SET id2 = 3 WHERE id1 = 1 AND id2 = 2")?
         .step()?;
 
-    sync_left_to_right(&db_a.db, &db_b.db, -1)?;
+    sync_left_to_right(&db_a.db, &db_b.db, -1);
     let stmt = db_b.db.prepare_v2("SELECT * FROM jx;")?;
     let result = stmt.step()?;
     assert_eq!(result, ResultCode::ROW);
@@ -180,7 +204,7 @@ fn junction_table() -> Result<(), ResultCode> {
         .prepare_v2("UPDATE jx SET id1 = 2 WHERE id1 = 1 AND id2 = 3")?
         .step()?;
 
-    sync_left_to_right(&db_b.db, &db_a.db, -1)?;
+    sync_left_to_right(&db_b.db, &db_a.db, -1);
 
     let stmt = db_a.db.prepare_v2("SELECT * FROM jx;")?;
     let result = stmt.step()?;
@@ -234,12 +258,11 @@ fn discord_report_1() -> Result<(), ResultCode> {
     Ok(())
 }
 
-pub fn run_suite() -> Result<(), ResultCode> {
-    create_pkonlytable()?;
-    insert_pkonly_row()?;
-    modify_pkonly_row()?;
+pub fn run_suite() {
+    create_pkonlytable().expect("created pk only table");
+    insert_pkonly_row();
+    modify_pkonly_row().expect("modified pk only row");
     // TODO: get this test working.
     // junction_table()?;
-    discord_report_1()?;
-    Ok(())
+    discord_report_1().expect("ran discord report");
 }

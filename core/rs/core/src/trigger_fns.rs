@@ -1,3 +1,4 @@
+use core::ffi::c_char;
 use core::ffi::c_int;
 use core::mem::ManuallyDrop;
 
@@ -13,6 +14,7 @@ use sqlite_nostd as sqlite;
 
 use crate::compare_values::crsql_compare_sqlite_values;
 use crate::stmt_cache::reset_cached_stmt;
+use crate::tableinfo::crsql_ensure_table_infos_are_up_to_date;
 use crate::tableinfo::ColumnInfo;
 use crate::{c::crsql_ExtData, tableinfo::TableInfo};
 
@@ -21,23 +23,29 @@ pub unsafe extern "C" fn crsql_after_update(
     ctx: *mut sqlite::context,
     argc: c_int,
     argv: *mut *mut sqlite::value,
-) -> c_int {
+) {
     if argc < 1 {
         ctx.result_error("expected at least 1 argument");
-        return ResultCode::ERROR as c_int;
+        return;
     }
 
     let values = sqlite::args!(argc, argv);
     let ext_data = sqlite::user_data(ctx) as *mut crsql_ExtData;
+    let mut inner_err: *mut c_char = core::ptr::null_mut();
+    let outer_err: *mut *mut c_char = &mut inner_err;
+
+    // TODO: check err. if err, return err
+    crsql_ensure_table_infos_are_up_to_date(ctx.db_handle(), ext_data, outer_err);
+
     let table_infos =
         ManuallyDrop::new(Box::from_raw((*ext_data).tableInfos as *mut Vec<TableInfo>));
 
     let table_name = values[0].text();
-    let table_info = match table_infos.iter().find(|t| t.tbl_name == table_name) {
+    let table_info = match table_infos.iter().find(|t| &(t.tbl_name) == table_name) {
         Some(t) => t,
         None => {
             ctx.result_error(&format!("table {} not found", table_name));
-            return ResultCode::ERROR as c_int;
+            return;
         }
     };
 
@@ -48,7 +56,7 @@ pub unsafe extern "C" fn crsql_after_update(
             }
             Err(msg) => {
                 ctx.result_error(&msg);
-                return ResultCode::ERROR as c_int;
+                return;
             }
         };
 
@@ -61,12 +69,12 @@ pub unsafe extern "C" fn crsql_after_update(
         non_pks_new,
         non_pks_old,
     ) {
-        Ok(code) => code as c_int,
+        Ok(code) => ctx.result_int64(1),
         Err(msg) => {
             ctx.result_error(&msg);
-            ResultCode::ERROR as c_int
         }
     }
+    return;
 }
 
 fn partition_values<T>(
@@ -113,7 +121,8 @@ fn after_update(
         after_update__mark_old_pk_row_deleted(db, tbl_info, pks_old, next_db_version, next_seq)?;
         after_update__move_non_sentinels(db, tbl_info, pks_new, pks_old)?;
         // Record a create of the row identified by the new primary keys
-        // if no rows were moved.
+        // if no rows were moved. This is related to the optimization to not save
+        // sentinels unless required.
         if db.changes64() > 0 {
             after_update__mark_new_pk_row_created(
                 db,
@@ -126,10 +135,7 @@ fn after_update(
     }
 
     // now for each non_pk_col we need to do an insert
-    // where new is not old
-    // ln 268 in triggers.rs
-    // note that triggers will pass us cols in table-info order
-    // when any non_pk is different, run the statement
+    // where new value is not old value
     for ((new, old), col_info) in non_pks_new
         .iter()
         .zip(non_pks_old.iter())

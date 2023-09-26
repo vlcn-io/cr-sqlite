@@ -324,6 +324,12 @@ fn test_create_clock_table_from_table_info() {
     // todo: Check that clock tables have expected schema(s)
 }
 
+fn test_leak_condition() {
+    // updating table infos prepares stements
+    // re-pulling table infos should finalize those statements
+    // we do not use `Drop` given we cannot return error conditions from `Drop`
+}
+
 pub fn run_suite() {
     test_ensure_table_infos_are_up_to_date();
     test_pull_table_info();

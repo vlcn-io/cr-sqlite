@@ -65,6 +65,9 @@ fn test_ensure_table_infos_are_up_to_date() {
     // we're going to change table infos so we can check that it does not get filled again since no schema changes happened
     table_infos[0].tbl_name = "bar".to_string();
 
+    unsafe {
+        (*ext_data).updatedTableInfosThisTx = 0;
+    }
     test_exports::tableinfo::crsql_ensure_table_infos_are_up_to_date(raw_db, ext_data, err);
 
     assert_eq!(table_infos.len(), 1);
@@ -84,6 +87,9 @@ fn test_ensure_table_infos_are_up_to_date() {
     )
     .expect("made boo clock");
 
+    unsafe {
+        (*ext_data).updatedTableInfosThisTx = 0;
+    }
     test_exports::tableinfo::crsql_ensure_table_infos_are_up_to_date(raw_db, ext_data, err);
 
     assert_eq!(table_infos.len(), 2);
@@ -97,6 +103,9 @@ fn test_ensure_table_infos_are_up_to_date() {
     c.exec_safe("DROP TABLE foo__crsql_clock")
         .expect("dropped boo");
 
+    unsafe {
+        (*ext_data).updatedTableInfosThisTx = 0;
+    }
     test_exports::tableinfo::crsql_ensure_table_infos_are_up_to_date(raw_db, ext_data, err);
     drop_err_ptr(err);
 

@@ -21,6 +21,7 @@ struct crsql_ExtData {
   // if that transaction were to commit at the time this value is checked.
   sqlite3_int64 pendingDbVersion;
   int pragmaSchemaVersion;
+  int updatedTableInfosThisTx;
 
   // we need another schema version number that tracks when we checked it
   // for zpTableInfos.

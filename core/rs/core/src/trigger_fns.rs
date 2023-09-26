@@ -109,22 +109,27 @@ fn after_update(
     non_pks_old: &[*mut value],
 ) -> Result<ResultCode, String> {
     let next_db_version = crate::db_version::next_db_version(db, ext_data, None)?;
-    let next_seq = unsafe {
-        (*ext_data).seq += 1;
-        (*ext_data).seq
-    };
 
     // Changing a primary key column to a new value is the same thing as deleting the row
     // previously identified by the primary key.
     if crate::compare_values::any_value_changed(pks_new, pks_old)? {
+        let next_seq = unsafe {
+            (*ext_data).seq += 1;
+            (*ext_data).seq - 1
+        };
         // Record the delete of the row identified by the old primary keys
         after_update__mark_old_pk_row_deleted(db, tbl_info, pks_old, next_db_version, next_seq)?;
+        // TODO: each non sentinel needs a unique seq on the move?
         after_update__move_non_sentinels(db, tbl_info, pks_new, pks_old)?;
         // Record a create of the row identified by the new primary keys
         // if no rows were moved. This is related to the optimization to not save
         // sentinels unless required.
         // if db.changes64() == 0 { <-- an optimization if we can get to it. we'd need to know to increment causal length.
         // so we can get to this when CL is stored in the lookaside.
+        let next_seq = unsafe {
+            (*ext_data).seq += 1;
+            (*ext_data).seq - 1
+        };
         after_update__mark_new_pk_row_created(db, tbl_info, pks_new, next_db_version, next_seq)?;
         // }
     }
@@ -137,6 +142,10 @@ fn after_update(
         .zip(tbl_info.non_pks.iter())
     {
         if crsql_compare_sqlite_values(*new, *old) != 0 {
+            let next_seq = unsafe {
+                (*ext_data).seq += 1;
+                (*ext_data).seq - 1
+            };
             // we had a difference in new and old values
             // we need to track crdt metadata
             after_update__mark_locally_updated(

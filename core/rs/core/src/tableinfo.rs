@@ -28,6 +28,15 @@ pub struct TableInfo {
     pub pks: Vec<ColumnInfo>,
     pub non_pks: Vec<ColumnInfo>,
 
+    // Lookaside --
+    // insert returning?
+    // select?
+    // insert or ignore returning followed by select?
+    // or selecet first?
+    select_key_stmt: RefCell<Option<ManagedStmt>>,
+    insert_key_stmt: RefCell<Option<ManagedStmt>>,
+    insert_or_ignore_returning_key_stmt: RefCell<Option<ManagedStmt>>,
+
     // For merges --
     set_winner_clock_stmt: RefCell<Option<ManagedStmt>>,
     local_cl_stmt: RefCell<Option<ManagedStmt>>,
@@ -394,6 +403,12 @@ impl TableInfo {
         stmt.take();
         let mut stmt = self.maybe_mark_locally_reinserted_stmt.try_borrow_mut()?;
         stmt.take();
+        let mut stmt = self.insert_key_stmt.try_borrow_mut()?;
+        stmt.take();
+        let mut stmt = self.insert_or_ignore_returning_key_stmt.try_borrow_mut()?;
+        stmt.take();
+        let mut stmt = self.select_key_stmt.try_borrow_mut()?;
+        stmt.take();
 
         // primary key columns shouldn't have statements? right?
         for col in &self.non_pks {
@@ -663,6 +678,11 @@ pub fn pull_table_info(
         set_winner_clock_stmt: RefCell::new(None),
         local_cl_stmt: RefCell::new(None),
         col_version_stmt: RefCell::new(None),
+
+        select_key_stmt: RefCell::new(None),
+        insert_key_stmt: RefCell::new(None),
+        insert_or_ignore_returning_key_stmt: RefCell::new(None),
+
         merge_pk_only_insert_stmt: RefCell::new(None),
         merge_delete_stmt: RefCell::new(None),
         merge_delete_drop_clocks_stmt: RefCell::new(None),

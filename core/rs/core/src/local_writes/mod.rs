@@ -16,6 +16,7 @@ use sqlite_nostd::ResultCode;
 
 use crate::tableinfo::{crsql_ensure_table_infos_are_up_to_date, ColumnInfo, TableInfo};
 
+mod after_delete;
 mod after_insert;
 mod after_update;
 

@@ -484,6 +484,10 @@ unsafe fn merge_insert(
 
     let tbl_info = &tbl_infos[tbl_info_index];
     let unpacked_pks = unpack_columns(insert_pks.blob())?;
+
+    // Get or create key as the first thing we do.
+    // We'll need the key for all operations.
+
     let local_cl = get_local_cl(db, &tbl_info, &unpacked_pks)?;
 
     // We can ignore all updates from older causal lengths.

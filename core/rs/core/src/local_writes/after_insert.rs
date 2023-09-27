@@ -8,6 +8,8 @@ use sqlite_nostd as sqlite;
 use crate::db_version;
 use crate::{c::crsql_ExtData, tableinfo::TableInfo};
 
+use super::bump_seq;
+
 #[no_mangle]
 pub unsafe extern "C" fn crsql_after_insert(
     ctx: *mut sqlite::context,
@@ -27,10 +29,7 @@ fn after_insert(
 ) -> Result<ResultCode, String> {
     let db_version = crate::db_version::next_db_version(db, ext_data, None)?;
     if tbl_info.non_pks.len() == 0 {
-        let seq = unsafe {
-            (*ext_data).seq += 1;
-            (*ext_data).seq - 1
-        };
+        let seq = bump_seq(ext_data);
         // just a sentinel record
         return super::mark_new_pk_row_created(db, tbl_info, pks_new, db_version, seq);
     } else {
@@ -41,10 +40,7 @@ fn after_insert(
 
     // now for each column, create the column record
     for col in tbl_info.non_pks.iter() {
-        let seq = unsafe {
-            (*ext_data).seq += 1;
-            (*ext_data).seq - 1
-        };
+        let seq = bump_seq(ext_data);
         // super::mark_new_column_row_created(db, tbl_info, col, val, db_version, seq)?;
     }
     Ok(ResultCode::OK)

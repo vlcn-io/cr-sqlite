@@ -70,6 +70,61 @@ impl TableInfo {
         Err(ResultCode::ERROR)
     }
 
+    // TODO: macro-ify all these
+    pub fn get_select_key_stmt(
+        &self,
+        db: *mut sqlite3,
+    ) -> Result<Ref<Option<ManagedStmt>>, ResultCode> {
+        if self.select_key_stmt.try_borrow()?.is_none() {
+            let sql = format!(
+                "SELECT __crsql_key FROM \"{table_name}__crsql_pks\" WHERE {pk_where_list}",
+                table_name = crate::util::escape_ident(&self.tbl_name),
+                pk_where_list = crate::util::where_list(&self.pks, None)?,
+            );
+            let ret = db.prepare_v3(&sql, sqlite::PREPARE_PERSISTENT)?;
+            *self.select_key_stmt.try_borrow_mut()? = Some(ret);
+        }
+        Ok(self.select_key_stmt.try_borrow()?)
+    }
+
+    pub fn get_insert_key_stmt(
+        &self,
+        db: *mut sqlite3,
+    ) -> Result<Ref<Option<ManagedStmt>>, ResultCode> {
+        if self.insert_key_stmt.try_borrow()?.is_none() {
+            let sql = format!(
+                "INSERT INTO \"{table_name}__crsql_pks\" ({pk_list}) VALUES ({pk_bindings})",
+                table_name = crate::util::escape_ident(&self.tbl_name),
+                pk_list = crate::util::as_identifier_list(&self.pks, None)?,
+                pk_bindings = crate::util::binding_list(self.pks.len()),
+            );
+            let ret = db.prepare_v3(&sql, sqlite::PREPARE_PERSISTENT)?;
+            *self.insert_key_stmt.try_borrow_mut()? = Some(ret);
+        }
+        Ok(self.insert_key_stmt.try_borrow()?)
+    }
+
+    pub fn get_insert_or_ignore_returning_key_stmt(
+        &self,
+        db: *mut sqlite3,
+    ) -> Result<Ref<Option<ManagedStmt>>, ResultCode> {
+        if self
+            .insert_or_ignore_returning_key_stmt
+            .try_borrow()?
+            .is_none()
+        {
+            let sql = format!(
+                "INSERT OR IGNORE INTO \"{table_name}__crsql_pks\" ({pk_list}) VALUES ({pk_bindings}) RETURNING __crsql_key",
+                table_name = crate::util::escape_ident(&self.tbl_name),
+                pk_list = crate::util::as_identifier_list(&self.pks, None)?,
+                pk_bindings = crate::util::binding_list(self.pks.len()),
+            );
+            let ret = db.prepare_v3(&sql, sqlite::PREPARE_PERSISTENT)?;
+            *self.insert_or_ignore_returning_key_stmt.try_borrow_mut()? = Some(ret);
+        }
+        Ok(self.insert_or_ignore_returning_key_stmt.try_borrow()?)
+    }
+
     pub fn get_set_winner_clock_stmt(
         &self,
         db: *mut sqlite3,

@@ -486,7 +486,8 @@ unsafe fn merge_insert(
     let unpacked_pks = unpack_columns(insert_pks.blob())?;
 
     // Get or create key as the first thing we do.
-    // We'll need the key for all operations.
+    // We'll need the key for all later operations.
+    let key = tbl_info.get_or_create_key(db, &unpacked_pks)?;
 
     let local_cl = get_local_cl(db, &tbl_info, &unpacked_pks)?;
 

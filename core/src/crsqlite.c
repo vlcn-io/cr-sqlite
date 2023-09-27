@@ -412,6 +412,11 @@ __declspec(dllexport)
                                  SQLITE_UTF8 | SQLITE_INNOCUOUS, pExtData,
                                  crsql_after_insert, 0, 0);
   }
+  if (rc == SQLITE_OK) {
+    rc = sqlite3_create_function(db, "crsql_after_delete", -1,
+                                 SQLITE_UTF8 | SQLITE_INNOCUOUS, pExtData,
+                                 crsql_after_delete, 0, 0);
+  }
 
   if (rc == SQLITE_OK) {
     rc = sqlite3_create_function(db, "crsql_rows_impacted", 0,

@@ -84,39 +84,15 @@ fn create_delete_trigger(
 ) -> Result<ResultCode, ResultCode> {
     let table_name = &table_info.tbl_name;
     let pk_columns = &table_info.pks;
-    let pk_list = crate::util::as_identifier_list(pk_columns, None)?;
     let pk_old_list = crate::util::as_identifier_list(pk_columns, Some("OLD."))?;
-    let pk_where_list = crate::util::pk_where_list(pk_columns, Some("OLD."))?;
 
     let create_trigger_sql = format!(
         "CREATE TRIGGER IF NOT EXISTS \"{table_name}__crsql_dtrig\"
     AFTER DELETE ON \"{table_name}\" WHEN crsql_internal_sync_bit() = 0
     BEGIN
-      INSERT INTO \"{table_name}__crsql_clock\" (
-        {pk_list},
-        __crsql_col_name,
-        __crsql_col_version,
-        __crsql_db_version,
-        __crsql_seq,
-        __crsql_site_id
-      ) SELECT
-        {pk_old_list},
-        '{sentinel}',
-        2,
-        crsql_next_db_version(),
-        crsql_increment_and_get_seq(),
-        NULL WHERE true
-      ON CONFLICT DO UPDATE SET
-        __crsql_col_version = 1 + __crsql_col_version,
-        __crsql_db_version = crsql_next_db_version(),
-        __crsql_seq = crsql_get_seq() - 1,
-        __crsql_site_id = NULL;
-      DELETE FROM \"{table_name}__crsql_clock\"
-        WHERE {pk_where_list} AND __crsql_col_name != '{sentinel}';
+      VALUES (crsql_after_delete('{}', {pk_old_list}));
     END;",
         table_name = crate::util::escape_ident(table_name),
-        sentinel = crate::c::DELETE_SENTINEL,
-        pk_where_list = pk_where_list,
         pk_old_list = pk_old_list
     );
 

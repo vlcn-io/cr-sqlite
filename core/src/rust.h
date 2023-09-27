@@ -31,4 +31,6 @@ void crsql_after_update(sqlite3_context *context, int argc,
                         sqlite3_value **argv);
 void crsql_after_insert(sqlite3_context *context, int argc,
                         sqlite3_value **argv);
+void crsql_after_delete(sqlite3_context *context, int argc,
+                        sqlite3_value **argv);
 #endif

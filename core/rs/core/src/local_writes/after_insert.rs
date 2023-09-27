@@ -24,20 +24,28 @@ fn after_insert(
     ext_data: *mut crsql_ExtData,
     tbl_info: &TableInfo,
     pks_new: &[*mut value],
-    non_pks_new: &[*mut value],
 ) -> Result<ResultCode, String> {
     let db_version = crate::db_version::next_db_version(db, ext_data, None)?;
-    if non_pks_new.len() == 0 {
+    if tbl_info.non_pks.len() == 0 {
         let seq = unsafe {
             (*ext_data).seq += 1;
             (*ext_data).seq - 1
         };
         // just a sentinel record
-        super::mark_new_pk_row_created(db, tbl_info, pks_new, db_version, seq)
+        return super::mark_new_pk_row_created(db, tbl_info, pks_new, db_version, seq);
     } else {
         // update the create record if it exists
-        Ok(ResultCode::OK)
+        // update_create_record_if_exists();
+        return Ok(ResultCode::OK);
     }
 
     // now for each column, create the column record
+    for col in tbl_info.non_pks.iter() {
+        let seq = unsafe {
+            (*ext_data).seq += 1;
+            (*ext_data).seq - 1
+        };
+        // super::mark_new_column_row_created(db, tbl_info, col, val, db_version, seq)?;
+    }
+    Ok(ResultCode::OK)
 }

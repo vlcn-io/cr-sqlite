@@ -23,7 +23,7 @@ def test_insert_site_id():
 
     # Ordinal value, not site id, is in the clock table
     ord = a.execute(
-        "SELECT __crsql_site_id FROM foo__crsql_clock").fetchone()[0]
+        "SELECT site_id FROM foo__crsql_clock").fetchone()[0]
     assert (ord == 1)
     # site id is in the site id table for that given ordinal
     assert (

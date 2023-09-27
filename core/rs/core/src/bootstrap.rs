@@ -203,12 +203,12 @@ pub fn create_clock_table(
     db.exec_safe(&format!(
         "CREATE TABLE IF NOT EXISTS \"{table_name}__crsql_clock\" (
       {pk_list},
-      __crsql_col_name TEXT NOT NULL,
-      __crsql_col_version INT NOT NULL,
-      __crsql_db_version INT NOT NULL,
-      __crsql_site_id INT,
-      __crsql_seq INT NOT NULL,
-      PRIMARY KEY ({pk_list}, __crsql_col_name)
+      col_name TEXT NOT NULL,
+      col_version INT NOT NULL,
+      db_version INT NOT NULL,
+      site_id INT,
+      seq INT NOT NULL,
+      PRIMARY KEY ({pk_list}, col_name)
     )",
         pk_list = pk_list,
         table_name = crate::util::escape_ident(table_name)
@@ -216,7 +216,7 @@ pub fn create_clock_table(
 
     db.exec_safe(
       &format!(
-        "CREATE INDEX IF NOT EXISTS \"{table_name}__crsql_clock_dbv_idx\" ON \"{table_name}__crsql_clock\" (\"__crsql_db_version\")",
+        "CREATE INDEX IF NOT EXISTS \"{table_name}__crsql_clock_dbv_idx\" ON \"{table_name}__crsql_clock\" (\"db_version\")",
         table_name = crate::util::escape_ident(table_name),
       ))?;
     db.exec_safe(&format!("CREATE TABLE IF NOT EXISTS \"{table_name}__crsql_pks\" (__crsql_key INTEGER PRIMARY KEY, {pk_list})", table_name = table_name, pk_list = pk_list))?;

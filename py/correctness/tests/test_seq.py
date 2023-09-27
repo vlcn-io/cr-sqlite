@@ -20,7 +20,7 @@ def test_increments_by_one_in_tx():
     c.execute("INSERT INTO foo VALUES (2, 3)")
     c.commit()
 
-    rows = c.execute("SELECT __crsql_seq FROM foo__crsql_clock").fetchall()
+    rows = c.execute("SELECT seq FROM foo__crsql_clock").fetchall()
     assert (rows == [(0,), (1,)])
 
 
@@ -34,14 +34,14 @@ def test_resets_on_every_tx():
     c.execute("INSERT INTO foo VALUES (2, 3)")
     c.commit()
 
-    rows = c.execute("SELECT __crsql_seq FROM foo__crsql_clock").fetchall()
+    rows = c.execute("SELECT seq FROM foo__crsql_clock").fetchall()
     assert (rows == [(0,), (1,)])
 
     c.execute("INSERT INTO foo VALUES (3, 4)")
     c.execute("INSERT INTO foo VALUES (5, 6)")
     c.commit()
 
-    rows = c.execute("SELECT __crsql_seq FROM foo__crsql_clock").fetchall()
+    rows = c.execute("SELECT seq FROM foo__crsql_clock").fetchall()
     assert (rows == [(0,), (1,), (0,), (1,)])
 
 
@@ -127,7 +127,7 @@ def test_incr_by_one():
     c.commit()
 
     rows = c.execute(
-        "SELECT __crsql_db_version, __crsql_seq FROM bar__crsql_clock ORDER BY __crsql_db_version ASC").fetchall()
+        "SELECT db_version, seq FROM bar__crsql_clock ORDER BY db_version ASC").fetchall()
     assert (rows == [(6, 0), (6, 1)])
 
     # test update of pk vals with col vals
@@ -139,14 +139,14 @@ def test_incr_by_one():
     c.execute("INSERT INTO baz VALUES (2)")
     c.commit()
 
-    rows = c.execute("SELECT __crsql_seq FROM baz__crsql_clock").fetchall()
+    rows = c.execute("SELECT seq FROM baz__crsql_clock").fetchall()
     assert (rows == [(0,), (1,)])
 
     c.execute("UPDATE baz SET a = 11 WHERE a = 1")
     c.execute("UPDATE baz SET a = 22 WHERE a = 2")
     c.commit()
     rows = c.execute(
-        "SELECT __crsql_seq FROM baz__crsql_clock ORDER BY __crsql_db_version, __crsql_seq ASC").fetchall()
+        "SELECT seq FROM baz__crsql_clock ORDER BY db_version, seq ASC").fetchall()
     assert (rows == [(0,), (1,), (2,), (3,)])
 
     # c.execute("DELETE FROM baz")
@@ -271,5 +271,5 @@ def test_seq_when_resinserting_from_merge():
 #     c1.commit()
 #     c2.commit()
 
-#     rows = c1.execute("SELECT __crsql_seq FROM foo__crsql_clock").fetchall()
+#     rows = c1.execute("SELECT seq FROM foo__crsql_clock").fetchall()
 #     pprint(rows)

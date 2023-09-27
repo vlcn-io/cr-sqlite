@@ -6,7 +6,6 @@ use sqlite::{sqlite3, value, Context, ResultCode};
 use sqlite_nostd as sqlite;
 
 use crate::compare_values::crsql_compare_sqlite_values;
-use crate::tableinfo::ColumnInfo;
 use crate::{c::crsql_ExtData, tableinfo::TableInfo};
 
 use super::trigger_fn_preamble;

@@ -6,7 +6,6 @@ use sqlite::Context;
 use sqlite::ResultCode;
 use sqlite_nostd as sqlite;
 
-use crate::db_version;
 use crate::{c::crsql_ExtData, tableinfo::TableInfo};
 
 use super::bump_seq;

@@ -1,10 +1,8 @@
 extern crate alloc;
 use alloc::format;
-use alloc::string::String;
-use alloc::vec;
 use sqlite::Connection;
 
-use core::{ffi::c_char, str::Utf8Error};
+use core::ffi::c_char;
 
 use sqlite::{sqlite3, ResultCode};
 use sqlite_nostd as sqlite;
@@ -90,7 +88,7 @@ fn create_delete_trigger(
         "CREATE TRIGGER IF NOT EXISTS \"{table_name}__crsql_dtrig\"
     AFTER DELETE ON \"{table_name}\" WHEN crsql_internal_sync_bit() = 0
     BEGIN
-      VALUES (crsql_after_delete('{}', {pk_old_list}));
+      VALUES (crsql_after_delete('{table_name}', {pk_old_list}));
     END;",
         table_name = crate::util::escape_ident(table_name),
         pk_old_list = pk_old_list

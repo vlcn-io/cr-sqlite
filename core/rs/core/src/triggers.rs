@@ -30,7 +30,7 @@ fn create_insert_trigger(
         "CREATE TRIGGER IF NOT EXISTS \"{table_name}__crsql_itrig\"
       AFTER INSERT ON \"{table_name}\" WHEN crsql_internal_sync_bit() = 0
       BEGIN
-        SELECT crsql_after_insert('{table_name}', {pk_new_list});
+        VALUES (crsql_after_insert('{table_name}', {pk_new_list}));
       END;",
         table_name = crate::util::escape_ident_as_value(&table_info.tbl_name),
         pk_new_list = crate::util::as_identifier_list(&table_info.pks, Some("NEW."))?
@@ -52,14 +52,14 @@ fn create_update_trigger(
 
     let trigger_body = if non_pk_columns.is_empty() {
         format!(
-            "SELECT crsql_after_update('{table_name}', {pk_new_list}, {pk_old_list})",
+            "VALUES (crsql_after_update('{table_name}', {pk_new_list}, {pk_old_list}))",
             table_name = crate::util::escape_ident_as_value(table_name),
             pk_new_list = pk_new_list,
             pk_old_list = pk_old_list,
         )
     } else {
         format!(
-        "SELECT crsql_after_update('{table_name}', {pk_new_list}, {pk_old_list}, {non_pk_new_list}, {non_pk_old_list})",
+        "VALUES (crsql_after_update('{table_name}', {pk_new_list}, {pk_old_list}, {non_pk_new_list}, {non_pk_old_list}))",
         table_name = crate::util::escape_ident_as_value(table_name),
         pk_new_list = pk_new_list,
         pk_old_list = pk_old_list,

@@ -70,29 +70,6 @@ pub fn slab_rowid(idx: i32, rowid: sqlite::int64) -> sqlite::int64 {
     return (idx as i64) * crate::consts::ROWID_SLAB_SIZE + modulo;
 }
 
-pub fn pk_where_list(
-    columns: &Vec<ColumnInfo>,
-    rhs_prefix: Option<&str>,
-) -> Result<String, Utf8Error> {
-    let mut result = vec![];
-    for c in columns {
-        let name = &c.name;
-        result.push(if let Some(prefix) = rhs_prefix {
-            format!(
-                "\"{col_name}\" IS {prefix}\"{col_name}\"",
-                prefix = prefix,
-                col_name = crate::util::escape_ident(name)
-            )
-        } else {
-            format!(
-                "\"{col_name}\" = \"{col_name}\"",
-                col_name = crate::util::escape_ident(name)
-            )
-        })
-    }
-    Ok(result.join(" AND "))
-}
-
 pub fn where_list(columns: &Vec<ColumnInfo>, prefix: Option<&str>) -> Result<String, Utf8Error> {
     let mut result = vec![];
     for c in columns {

@@ -19,7 +19,7 @@ use crate::tableinfo::{crsql_ensure_table_infos_are_up_to_date, TableInfo};
 mod after_insert;
 mod after_update;
 
-pub fn trigger_fn_preamble<F>(
+fn trigger_fn_preamble<F>(
     ctx: *mut sqlite::context,
     argc: c_int,
     argv: *mut *mut sqlite::value,
@@ -102,4 +102,11 @@ fn mark_new_pk_row_created(
         .and_then(|_| mark_locally_created_stmt.bind_int(pks_new.len() as i32 + 4, seq))
         .or_else(|_| Err("failed binding to mark_locally_created_stmt"))?;
     step_trigger_stmt(mark_locally_created_stmt)
+}
+
+fn bump_seq(ext_data: *mut crsql_ExtData) -> c_int {
+    unsafe {
+        (*ext_data).seq += 1;
+        (*ext_data).seq - 1
+    }
 }

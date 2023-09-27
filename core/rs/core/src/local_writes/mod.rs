@@ -14,7 +14,7 @@ use sqlite::{value, Context, ManagedStmt, Value};
 use sqlite_nostd as sqlite;
 use sqlite_nostd::ResultCode;
 
-use crate::tableinfo::{crsql_ensure_table_infos_are_up_to_date, TableInfo};
+use crate::tableinfo::{crsql_ensure_table_infos_are_up_to_date, ColumnInfo, TableInfo};
 
 mod after_insert;
 mod after_update;
@@ -109,4 +109,39 @@ fn bump_seq(ext_data: *mut crsql_ExtData) -> c_int {
         (*ext_data).seq += 1;
         (*ext_data).seq - 1
     }
+}
+
+#[allow(non_snake_case)]
+fn mark_locally_updated(
+    db: *mut sqlite3,
+    tbl_info: &TableInfo,
+    pks_new: &[*mut value],
+    col_info: &ColumnInfo,
+    db_version: i64,
+    seq: i32,
+) -> Result<ResultCode, String> {
+    let mark_locally_updated_stmt_ref = tbl_info
+        .get_mark_locally_updated_stmt(db)
+        .or_else(|_e| Err("failed to get mark_locally_updated_stmt"))?;
+    let mark_locally_updated_stmt = mark_locally_updated_stmt_ref
+        .as_ref()
+        .ok_or("Failed to deref sentinel stmt")?;
+
+    for (i, pk) in pks_new.iter().enumerate() {
+        mark_locally_updated_stmt
+            .bind_value(i as i32 + 1, *pk)
+            .or_else(|_e| Err("failed to bind pks to mark_locally_updated_stmt"))?;
+    }
+    mark_locally_updated_stmt
+        .bind_text(
+            pks_new.len() as i32 + 1,
+            &col_info.name,
+            sqlite::Destructor::STATIC,
+        )
+        .and_then(|_| mark_locally_updated_stmt.bind_int64(pks_new.len() as i32 + 2, db_version))
+        .and_then(|_| mark_locally_updated_stmt.bind_int(pks_new.len() as i32 + 3, seq))
+        .and_then(|_| mark_locally_updated_stmt.bind_int64(pks_new.len() as i32 + 4, db_version))
+        .and_then(|_| mark_locally_updated_stmt.bind_int(pks_new.len() as i32 + 5, seq))
+        .or_else(|_| Err("failed binding to mark_locally_updated_stmt"))?;
+    step_trigger_stmt(mark_locally_updated_stmt)
 }

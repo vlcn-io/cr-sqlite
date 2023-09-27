@@ -1,19 +1,11 @@
-use core::ffi::c_char;
 use core::ffi::c_int;
-use core::mem::ManuallyDrop;
 
-use alloc::boxed::Box;
 use alloc::format;
-use alloc::slice;
 use alloc::string::String;
-use alloc::vec::Vec;
-use sqlite::ManagedStmt;
-use sqlite::{sqlite3, value, Context, ResultCode, Value};
+use sqlite::{sqlite3, value, Context, ResultCode};
 use sqlite_nostd as sqlite;
 
 use crate::compare_values::crsql_compare_sqlite_values;
-use crate::stmt_cache::reset_cached_stmt;
-use crate::tableinfo::crsql_ensure_table_infos_are_up_to_date;
 use crate::tableinfo::ColumnInfo;
 use crate::{c::crsql_ExtData, tableinfo::TableInfo};
 
@@ -42,7 +34,7 @@ pub unsafe extern "C" fn crsql_after_update(
 
     match result {
         Ok(_) => {
-            ctx.result_int64(1);
+            ctx.result_int64(0);
         }
         Err(msg) => {
             ctx.result_error(&msg);
@@ -112,7 +104,7 @@ fn after_update(
             let next_seq = super::bump_seq(ext_data);
             // we had a difference in new and old values
             // we need to track crdt metadata
-            after_update__mark_locally_updated(
+            super::mark_locally_updated(
                 db,
                 tbl_info,
                 pks_new,
@@ -182,41 +174,6 @@ fn after_update__move_non_sentinels(
             .or_else(|_| Err("failed to bind pks to move_non_sentinels_stmt"))?;
     }
     super::step_trigger_stmt(move_non_sentinels_stmt)
-}
-
-#[allow(non_snake_case)]
-fn after_update__mark_locally_updated(
-    db: *mut sqlite3,
-    tbl_info: &TableInfo,
-    pks_new: &[*mut value],
-    col_info: &ColumnInfo,
-    db_version: i64,
-    seq: i32,
-) -> Result<ResultCode, String> {
-    let mark_locally_updated_stmt_ref = tbl_info
-        .get_mark_locally_updated_stmt(db)
-        .or_else(|_e| Err("failed to get mark_locally_updated_stmt"))?;
-    let mark_locally_updated_stmt = mark_locally_updated_stmt_ref
-        .as_ref()
-        .ok_or("Failed to deref sentinel stmt")?;
-
-    for (i, pk) in pks_new.iter().enumerate() {
-        mark_locally_updated_stmt
-            .bind_value(i as i32 + 1, *pk)
-            .or_else(|_e| Err("failed to bind pks to mark_locally_updated_stmt"))?;
-    }
-    mark_locally_updated_stmt
-        .bind_text(
-            pks_new.len() as i32 + 1,
-            &col_info.name,
-            sqlite::Destructor::STATIC,
-        )
-        .and_then(|_| mark_locally_updated_stmt.bind_int64(pks_new.len() as i32 + 2, db_version))
-        .and_then(|_| mark_locally_updated_stmt.bind_int(pks_new.len() as i32 + 3, seq))
-        .and_then(|_| mark_locally_updated_stmt.bind_int64(pks_new.len() as i32 + 4, db_version))
-        .and_then(|_| mark_locally_updated_stmt.bind_int(pks_new.len() as i32 + 5, seq))
-        .or_else(|_| Err("failed binding to mark_locally_updated_stmt"))?;
-    super::step_trigger_stmt(mark_locally_updated_stmt)
 }
 
 #[cfg(test)]

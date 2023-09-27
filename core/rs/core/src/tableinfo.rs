@@ -48,6 +48,7 @@ pub struct TableInfo {
     move_non_sentinels_stmt: RefCell<Option<ManagedStmt>>,
     mark_locally_created_stmt: RefCell<Option<ManagedStmt>>,
     mark_locally_updated_stmt: RefCell<Option<ManagedStmt>>,
+    maybe_mark_locally_reinserted_stmt: RefCell<Option<ManagedStmt>>,
 }
 
 impl TableInfo {
@@ -315,6 +316,31 @@ impl TableInfo {
         Ok(self.mark_locally_updated_stmt.try_borrow()?)
     }
 
+    pub fn get_maybe_mark_locally_reinserted_stmt(
+        &self,
+        db: *mut sqlite3,
+    ) -> Result<Ref<Option<ManagedStmt>>, ResultCode> {
+        if self
+            .maybe_mark_locally_reinserted_stmt
+            .try_borrow()?
+            .is_none()
+        {
+            let sql = format!(
+              "UPDATE \"{table_name}__crsql_clock\" SET
+                __crsql_col_version = CASE __crsql_col_version % 2 WHEN 0 THEN __crsql_col_version + 1 ELSE __crsql_col_version + 2 END,
+                __crsql_db_version = ?,
+                __crsql_seq = ?,
+                __crsql_site_id = NULL
+              WHERE {where_list} AND __crsql_col_name = ?",
+              table_name = crate::util::escape_ident(&self.tbl_name),
+              where_list = crate::util::where_list(&self.pks, None)?,
+            );
+            let ret = db.prepare_v3(&sql, sqlite::PREPARE_PERSISTENT)?;
+            *self.maybe_mark_locally_reinserted_stmt.try_borrow_mut()? = Some(ret);
+        }
+        Ok(self.maybe_mark_locally_reinserted_stmt.try_borrow()?)
+    }
+
     pub fn get_col_value_stmt(
         &self,
         db: *mut sqlite3,
@@ -365,6 +391,8 @@ impl TableInfo {
         let mut stmt = self.mark_locally_created_stmt.try_borrow_mut()?;
         stmt.take();
         let mut stmt = self.mark_locally_updated_stmt.try_borrow_mut()?;
+        stmt.take();
+        let mut stmt = self.maybe_mark_locally_reinserted_stmt.try_borrow_mut()?;
         stmt.take();
 
         // primary key columns shouldn't have statements? right?
@@ -644,6 +672,7 @@ pub fn pull_table_info(
         move_non_sentinels_stmt: RefCell::new(None),
         mark_locally_created_stmt: RefCell::new(None),
         mark_locally_updated_stmt: RefCell::new(None),
+        maybe_mark_locally_reinserted_stmt: RefCell::new(None),
     });
 }
 

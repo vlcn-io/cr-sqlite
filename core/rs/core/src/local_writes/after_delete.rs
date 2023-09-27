@@ -41,5 +41,40 @@ fn after_delete(
     tbl_info: &TableInfo,
     pks_old: &[*mut value],
 ) -> Result<ResultCode, String> {
-    Ok(ResultCode::OK)
+    let db_version = crate::db_version::next_db_version(db, ext_data, None)?;
+    let seq = bump_seq(ext_data);
+
+    let mark_locally_deleted_stmt_ref = tbl_info
+        .get_mark_locally_deleted_stmt(db)
+        .or_else(|_e| Err("failed to get mark_locally_deleted_stmt"))?;
+    let mark_locally_deleted_stmt = mark_locally_deleted_stmt_ref
+        .as_ref()
+        .ok_or("Failed to deref sentinel stmt")?;
+    for (i, pk) in pks_old.iter().enumerate() {
+        mark_locally_deleted_stmt
+            .bind_value(i as i32 + 1, *pk)
+            .or_else(|_e| Err("failed to bind pks to mark_locally_deleted_stmt"))?;
+    }
+    mark_locally_deleted_stmt
+        .bind_int64(pks_old.len() as i32 + 1, db_version)
+        .and_then(|_| mark_locally_deleted_stmt.bind_int(pks_old.len() as i32 + 2, seq))
+        .and_then(|_| mark_locally_deleted_stmt.bind_int64(pks_old.len() as i32 + 3, db_version))
+        .and_then(|_| mark_locally_deleted_stmt.bind_int(pks_old.len() as i32 + 4, seq))
+        .or_else(|_| Err("failed binding to mark locally deleted stmt"))?;
+    super::step_trigger_stmt(mark_locally_deleted_stmt)?;
+
+    // now actually delete the row metadata
+    let drop_clocks_stmt_ref = tbl_info
+        .get_merge_delete_drop_clocks_stmt(db)
+        .or_else(|_e| Err("failed to get mark_locally_deleted_stmt"))?;
+    let drop_clocks_stmt = drop_clocks_stmt_ref
+        .as_ref()
+        .ok_or("Failed to deref sentinel stmt")?;
+
+    for (i, pk) in pks_old.iter().enumerate() {
+        drop_clocks_stmt
+            .bind_value(i as i32 + 1, *pk)
+            .or_else(|_e| Err("failed to bind pks to mark_locally_deleted_stmt"))?;
+    }
+    super::step_trigger_stmt(drop_clocks_stmt)
 }

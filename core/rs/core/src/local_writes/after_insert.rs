@@ -47,9 +47,8 @@ fn after_insert(
         // just a sentinel record
         return super::mark_new_pk_row_created(db, tbl_info, pks_new, db_version, seq);
     } else {
-        let seq = bump_seq(ext_data);
         // update the create record if it exists
-        update_create_record_if_exists(db, tbl_info, pks_new, db_version, seq)?;
+        update_create_record_if_exists(db, tbl_info, pks_new, db_version)?;
     }
 
     // now for each non-pk column, create or update the column record
@@ -65,7 +64,6 @@ fn update_create_record_if_exists(
     tbl_info: &TableInfo,
     pks_new: &[*mut value],
     db_version: i64,
-    seq: i32,
 ) -> Result<ResultCode, String> {
     let update_create_record_stmt_ref = tbl_info
         .get_maybe_mark_locally_reinserted_stmt(db)
@@ -76,18 +74,17 @@ fn update_create_record_if_exists(
 
     update_create_record_stmt
         .bind_int64(1, db_version)
-        .and_then(|_| update_create_record_stmt.bind_int(2, seq))
         .or_else(|_e| Err("failed binding to update_create_record_stmt"))?;
 
     for (i, pk) in pks_new.iter().enumerate() {
         update_create_record_stmt
-            .bind_value(i as i32 + 3, *pk)
+            .bind_value(i as i32 + 2, *pk)
             .or_else(|_e| Err("failed to bind pks to update_create_record_stmt"))?;
     }
 
     update_create_record_stmt
         .bind_text(
-            pks_new.len() as i32 + 3,
+            pks_new.len() as i32 + 2,
             crate::c::INSERT_SENTINEL,
             sqlite::Destructor::STATIC,
         )

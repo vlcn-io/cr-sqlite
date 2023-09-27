@@ -103,7 +103,7 @@ fn after_update(
             (*ext_data).seq += 1;
             (*ext_data).seq - 1
         };
-        after_update__mark_new_pk_row_created(db, tbl_info, pks_new, next_db_version, next_seq)?;
+        super::mark_new_pk_row_created(db, tbl_info, pks_new, next_db_version, next_seq)?;
         // }
     }
 
@@ -160,7 +160,7 @@ fn after_update__mark_old_pk_row_deleted(
         .and_then(|_| mark_locally_deleted_stmt.bind_int64(pks.len() as i32 + 3, db_version))
         .and_then(|_| mark_locally_deleted_stmt.bind_int(pks.len() as i32 + 4, seq))
         .or_else(|_| Err("failed binding to mark locally deleted stmt"))?;
-    step_trigger_stmt(mark_locally_deleted_stmt)
+    super::step_trigger_stmt(mark_locally_deleted_stmt)
 }
 
 // TODO: in the future we can keep sentinel information in the lookaside
@@ -190,36 +190,7 @@ fn after_update__move_non_sentinels(
             .bind_value((i + 1 + pks_new.len()) as i32, *pk)
             .or_else(|_| Err("failed to bind pks to move_non_sentinels_stmt"))?;
     }
-    step_trigger_stmt(move_non_sentinels_stmt)
-}
-
-#[allow(non_snake_case)]
-fn after_update__mark_new_pk_row_created(
-    db: *mut sqlite3,
-    tbl_info: &TableInfo,
-    pks_new: &[*mut value],
-    db_version: i64,
-    seq: i32,
-) -> Result<ResultCode, String> {
-    let mark_locally_created_stmt_ref = tbl_info
-        .get_mark_locally_created_stmt(db)
-        .or_else(|_e| Err("failed to get mark_locally_created_stmt"))?;
-    let mark_locally_created_stmt = mark_locally_created_stmt_ref
-        .as_ref()
-        .ok_or("Failed to deref sentinel stmt")?;
-
-    for (i, pk) in pks_new.iter().enumerate() {
-        mark_locally_created_stmt
-            .bind_value(i as i32 + 1, *pk)
-            .or_else(|_e| Err("failed to bind pks to mark_locally_created_stmt"))?;
-    }
-    mark_locally_created_stmt
-        .bind_int64(pks_new.len() as i32 + 1, db_version)
-        .and_then(|_| mark_locally_created_stmt.bind_int(pks_new.len() as i32 + 2, seq))
-        .and_then(|_| mark_locally_created_stmt.bind_int64(pks_new.len() as i32 + 3, db_version))
-        .and_then(|_| mark_locally_created_stmt.bind_int(pks_new.len() as i32 + 4, seq))
-        .or_else(|_| Err("failed binding to mark_locally_created_stmt"))?;
-    step_trigger_stmt(mark_locally_created_stmt)
+    super::step_trigger_stmt(move_non_sentinels_stmt)
 }
 
 #[allow(non_snake_case)]
@@ -254,25 +225,7 @@ fn after_update__mark_locally_updated(
         .and_then(|_| mark_locally_updated_stmt.bind_int64(pks_new.len() as i32 + 4, db_version))
         .and_then(|_| mark_locally_updated_stmt.bind_int(pks_new.len() as i32 + 5, seq))
         .or_else(|_| Err("failed binding to mark_locally_updated_stmt"))?;
-    step_trigger_stmt(mark_locally_updated_stmt)
-}
-
-fn step_trigger_stmt(stmt: &ManagedStmt) -> Result<ResultCode, String> {
-    match stmt.step() {
-        Ok(ResultCode::DONE) => {
-            reset_cached_stmt(stmt.stmt)
-                .or_else(|_e| Err("done -- unable to reset cached trigger stmt"))?;
-            Ok(ResultCode::OK)
-        }
-        Ok(code) | Err(code) => {
-            reset_cached_stmt(stmt.stmt)
-                .or_else(|_e| Err("error -- unable to reset cached trigger stmt"))?;
-            Err(format!(
-                "unexpected result code from tigger_stmt.step: {}",
-                code
-            ))
-        }
-    }
+    super::step_trigger_stmt(mark_locally_updated_stmt)
 }
 
 #[cfg(test)]

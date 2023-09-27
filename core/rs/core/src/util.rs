@@ -47,7 +47,7 @@ pub fn get_db_version_union_query(tbl_names: &Vec<String>) -> String {
         .iter()
         .map(|tbl_name| {
             format!(
-                "SELECT max(__crsql_db_version) as version FROM \"{}\"",
+                "SELECT max(db_version) as version FROM \"{}\"",
                 escape_ident(tbl_name),
             )
         })
@@ -186,7 +186,7 @@ mod tests {
         let union = get_db_version_union_query(&tbl_names);
         assert_eq!(
             union,
-            "SELECT max(version) as version FROM (SELECT max(__crsql_db_version) as version FROM \"foo\" UNION ALL SELECT max(__crsql_db_version) as version FROM \"bar\" UNION ALL SELECT max(__crsql_db_version) as version FROM \"baz\" UNION SELECT value as\n        version FROM crsql_master WHERE key = 'pre_compact_dbversion')"
+            "SELECT max(version) as version FROM (SELECT max(db_version) as version FROM \"foo\" UNION ALL SELECT max(db_version) as version FROM \"bar\" UNION ALL SELECT max(db_version) as version FROM \"baz\" UNION SELECT value as\n        version FROM crsql_master WHERE key = 'pre_compact_dbversion')"
         );
     }
 }

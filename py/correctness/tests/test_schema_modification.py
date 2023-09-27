@@ -5,7 +5,7 @@ import pytest
 changes_query = "SELECT [table], [pk], [cid], [val] FROM crsql_changes"
 changes_with_versions_query = "SELECT [table], [pk], [cid], [val], [db_version], [col_version] FROM crsql_changes"
 full_changes_query = "SELECT [table], [pk], [cid], [val], [db_version], [col_version], [site_id] FROM crsql_changes"
-clock_query = "SELECT rowid, __crsql_col_version, __crsql_db_version, __crsql_col_name, __crsql_site_id FROM todo__crsql_clock"
+clock_query = "SELECT rowid, col_version, db_version, col_name, site_id FROM todo__crsql_clock"
 
 
 def test_c1_4_no_primary_keys():
@@ -25,7 +25,7 @@ def test_c1_3_quoted_identifiers():
     c.execute("select crsql_as_crr('baz')")
 
     def check_clock(t): return c.execute(
-        "SELECT rowid, __crsql_col_version, __crsql_db_version, __crsql_col_name, __crsql_site_id FROM {t}__crsql_clock".format(t=t)).fetchall()
+        "SELECT rowid, col_version, db_version, col_name, site_id FROM {t}__crsql_clock".format(t=t)).fetchall()
 
     check_clock("foo")
     check_clock("bar")
@@ -37,7 +37,8 @@ def test_c1_c5_compound_primary_key():
     c.execute("create table foo (a not null, b not null, c, primary key (a, b))")
     c.execute("select crsql_as_crr('foo')")
 
-    c.execute("SELECT a, b, __crsql_col_version, __crsql_col_name, __crsql_db_version, __crsql_site_id FROM foo__crsql_clock").fetchall()
+    c.execute(
+        "SELECT a, b, col_version, col_name, db_version, site_id FROM foo__crsql_clock").fetchall()
     # with pytest.raises(Exception) as e_info:
     # c.execute("SELECT a__crsql_v FROM foo__crsql_crr").fetchall()
 
@@ -46,7 +47,8 @@ def test_c1_6_single_primary_key():
     c = connect(":memory:")
     c.execute("create table foo (a not null, b, c, primary key (a))")
     c.execute("select crsql_as_crr('foo')")
-    c.execute("SELECT a, __crsql_col_version, __crsql_col_name, __crsql_db_version, __crsql_site_id FROM foo__crsql_clock").fetchall()
+    c.execute(
+        "SELECT a, col_version, col_name, db_version, site_id FROM foo__crsql_clock").fetchall()
 
 
 def test_c2_create_index():
@@ -192,7 +194,8 @@ def test_delete_sentinels_not_lost():
 
 def test_pk_only_sentinels():
     c = connect(":memory:")
-    c.execute("CREATE TABLE assoc (id1 NOT NULL, id2 NOT NULL, PRIMARY KEY (id1, id2));")
+    c.execute(
+        "CREATE TABLE assoc (id1 NOT NULL, id2 NOT NULL, PRIMARY KEY (id1, id2));")
     c.execute("SELECT crsql_as_crr('assoc');")
     c.execute("INSERT INTO assoc VALUES (1, 2);")
     c.commit()
@@ -365,7 +368,7 @@ def test_add_col_through_12step():
 
     c.execute("SELECT crsql_begin_alter('foo');")
     c.execute(
-         "CREATE TABLE new_foo(id PRIMARY KEY NOT NULL, name TEXT DEFAULT NULL, age INTEGER DEFAULT NULL);")
+        "CREATE TABLE new_foo(id PRIMARY KEY NOT NULL, name TEXT DEFAULT NULL, age INTEGER DEFAULT NULL);")
     # copy over old data
     c.execute("INSERT INTO new_foo (id, name) SELECT id, name FROM foo;")
     c.execute("INSERT INTO new_foo (id, name, age) VALUES (22, 'baz', 33);")

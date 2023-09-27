@@ -31,15 +31,15 @@ fn crsql_changes_query_for_table(table_info: &TableInfo) -> Result<String, Resul
         "SELECT
           '{table_name_val}' as tbl,
           crsql_pack_columns({pk_list}) as pks,
-          t1.__crsql_col_name as cid,
-          t1.__crsql_col_version as col_vrsn,
-          t1.__crsql_db_version as db_vrsn,
+          t1.col_name as cid,
+          t1.col_version as col_vrsn,
+          t1.db_version as db_vrsn,
           t3.site_id as site_id,
           t1._rowid_,
-          t1.__crsql_seq as seq,
-          COALESCE(t2.__crsql_col_version, 1) as cl
+          t1.seq as seq,
+          COALESCE(t2.col_version, 1) as cl
       FROM \"{table_name_ident}__crsql_clock\" AS t1 LEFT JOIN \"{table_name_ident}__crsql_clock\" AS t2 ON
-      {self_join} AND t2.__crsql_col_name = '{sentinel}' LEFT JOIN crsql_site_id as t3 ON t1.__crsql_site_id = t3.ordinal",
+      {self_join} AND t2.col_name = '{sentinel}' LEFT JOIN crsql_site_id as t3 ON t1.site_id = t3.ordinal",
         table_name_val = crate::util::escape_ident_as_value(&table_info.tbl_name),
         pk_list = pk_list,
         table_name_ident = crate::util::escape_ident(&table_info.tbl_name),

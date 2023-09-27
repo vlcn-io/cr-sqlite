@@ -42,6 +42,9 @@ fn after_delete(
 ) -> Result<ResultCode, String> {
     let db_version = crate::db_version::next_db_version(db, ext_data, None)?;
     let seq = bump_seq(ext_data);
+    let key = tbl_info
+        .get_or_create_key_via_raw_values(db, pks_old)
+        .or_else(|_| Err("failed geteting or creating lookaside key"))?;
 
     let mark_locally_deleted_stmt_ref = tbl_info
         .get_mark_locally_deleted_stmt(db)

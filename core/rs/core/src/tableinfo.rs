@@ -19,6 +19,7 @@ use core::ffi::c_void;
 use core::mem::forget;
 use num_traits::ToPrimitive;
 use sqlite::sqlite3;
+use sqlite::value;
 use sqlite_nostd as sqlite;
 use sqlite_nostd::Connection;
 use sqlite_nostd::ManagedStmt;
@@ -101,6 +102,36 @@ impl TableInfo {
         }
     }
 
+    pub fn get_or_create_key_via_raw_values(
+        &self,
+        db: *mut sqlite3,
+        pks: &[*mut value],
+    ) -> Result<sqlite::int64, ResultCode> {
+        let stmt_ref = self.get_select_key_stmt(db)?;
+        let stmt = stmt_ref.as_ref().ok_or(ResultCode::ERROR)?;
+        for (i, pk) in pks.iter().enumerate() {
+            stmt.bind_value(i as i32 + 1, *pk)?;
+        }
+        match stmt.step() {
+            Ok(ResultCode::DONE) => {
+                // create it
+                reset_cached_stmt(stmt.stmt)?;
+                let ret = self.create_key_via_raw_values(db, pks)?;
+                return Ok(ret);
+            }
+            Ok(ResultCode::ROW) => {
+                // return it
+                let ret = stmt.column_int64(0);
+                reset_cached_stmt(stmt.stmt)?;
+                return Ok(ret);
+            }
+            Ok(rc) | Err(rc) => {
+                reset_cached_stmt(stmt.stmt)?;
+                return Err(rc);
+            }
+        }
+    }
+
     fn create_key(
         &self,
         db: *mut sqlite3,
@@ -109,6 +140,30 @@ impl TableInfo {
         let stmt_ref = self.get_insert_key_stmt(db)?;
         let stmt = stmt_ref.as_ref().ok_or(ResultCode::ERROR)?;
         bind_package_to_stmt(stmt.stmt, pks, 0)?;
+        match stmt.step() {
+            Ok(ResultCode::ROW) => {
+                // return it
+                let ret = stmt.column_int64(0);
+                reset_cached_stmt(stmt.stmt)?;
+                return Ok(ret);
+            }
+            Ok(rc) | Err(rc) => {
+                reset_cached_stmt(stmt.stmt)?;
+                return Err(rc);
+            }
+        }
+    }
+
+    fn create_key_via_raw_values(
+        &self,
+        db: *mut sqlite3,
+        pks: &[*mut value],
+    ) -> Result<sqlite::int64, ResultCode> {
+        let stmt_ref = self.get_insert_key_stmt(db)?;
+        let stmt = stmt_ref.as_ref().ok_or(ResultCode::ERROR)?;
+        for (i, pk) in pks.iter().enumerate() {
+            stmt.bind_value(i as i32 + 1, *pk)?;
+        }
         match stmt.step() {
             Ok(ResultCode::ROW) => {
                 // return it

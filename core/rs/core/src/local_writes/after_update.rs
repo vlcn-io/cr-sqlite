@@ -73,6 +73,12 @@ fn after_update(
     non_pks_old: &[*mut value],
 ) -> Result<ResultCode, String> {
     let next_db_version = crate::db_version::next_db_version(db, ext_data, None)?;
+    let new_key = tbl_info
+        .get_or_create_key_via_raw_values(db, pks_new)
+        .or_else(|_| Err("failed geteting or creating lookaside key"))?;
+    let old_key = tbl_info
+        .get_or_create_key_via_raw_values(db, pks_old)
+        .or_else(|_| Err("failed geteting or creating lookaside key"))?;
 
     // Changing a primary key column to a new value is the same thing as deleting the row
     // previously identified by the primary key.

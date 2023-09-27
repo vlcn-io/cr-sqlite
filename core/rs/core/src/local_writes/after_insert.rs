@@ -41,6 +41,9 @@ fn after_insert(
     pks_new: &[*mut value],
 ) -> Result<ResultCode, String> {
     let db_version = crate::db_version::next_db_version(db, ext_data, None)?;
+    let key = tbl_info
+        .get_or_create_key_via_raw_values(db, pks_new)
+        .or_else(|_| Err("failed geteting or creating lookaside key"))?;
     if tbl_info.non_pks.len() == 0 {
         let seq = bump_seq(ext_data);
         // just a sentinel record

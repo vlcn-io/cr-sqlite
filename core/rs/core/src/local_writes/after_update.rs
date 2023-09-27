@@ -7,7 +7,6 @@ use alloc::format;
 use alloc::slice;
 use alloc::string::String;
 use alloc::vec::Vec;
-use sqlite::Connection;
 use sqlite::ManagedStmt;
 use sqlite::{sqlite3, value, Context, ResultCode, Value};
 use sqlite_nostd as sqlite;
@@ -18,63 +17,37 @@ use crate::tableinfo::crsql_ensure_table_infos_are_up_to_date;
 use crate::tableinfo::ColumnInfo;
 use crate::{c::crsql_ExtData, tableinfo::TableInfo};
 
+use super::trigger_fn_preamble;
+
 #[no_mangle]
 pub unsafe extern "C" fn crsql_after_update(
     ctx: *mut sqlite::context,
     argc: c_int,
     argv: *mut *mut sqlite::value,
 ) {
-    if argc < 1 {
-        ctx.result_error("expected at least 1 argument");
-        return;
-    }
+    let result = trigger_fn_preamble(ctx, argc, argv, |table_info, values, ext_data| {
+        let (pks_new, pks_old, non_pks_new, non_pks_old) =
+            partition_values(values, 1, table_info.pks.len(), table_info.non_pks.len())?;
 
-    let values = sqlite::args!(argc, argv);
-    let ext_data = sqlite::user_data(ctx) as *mut crsql_ExtData;
-    let mut inner_err: *mut c_char = core::ptr::null_mut();
-    let outer_err: *mut *mut c_char = &mut inner_err;
+        after_update(
+            ctx.db_handle(),
+            ext_data,
+            table_info,
+            pks_new,
+            pks_old,
+            non_pks_new,
+            non_pks_old,
+        )
+    });
 
-    // TODO: check err. if err, return err
-    crsql_ensure_table_infos_are_up_to_date(ctx.db_handle(), ext_data, outer_err);
-
-    let table_infos =
-        ManuallyDrop::new(Box::from_raw((*ext_data).tableInfos as *mut Vec<TableInfo>));
-
-    let table_name = values[0].text();
-    let table_info = match table_infos.iter().find(|t| &(t.tbl_name) == table_name) {
-        Some(t) => t,
-        None => {
-            ctx.result_error(&format!("table {} not found", table_name));
-            return;
+    match result {
+        Ok(_) => {
+            ctx.result_int64(1);
         }
-    };
-
-    let (pks_new, pks_old, non_pks_new, non_pks_old) =
-        match partition_values(values, 1, table_info.pks.len(), table_info.non_pks.len()) {
-            Ok((pks_new, pks_old, non_pks_new, non_pks_old)) => {
-                (pks_new, pks_old, non_pks_new, non_pks_old)
-            }
-            Err(msg) => {
-                ctx.result_error(&msg);
-                return;
-            }
-        };
-
-    match after_update(
-        ctx.db_handle(),
-        ext_data,
-        table_info,
-        pks_new,
-        pks_old,
-        non_pks_new,
-        non_pks_old,
-    ) {
-        Ok(code) => ctx.result_int64(1),
         Err(msg) => {
             ctx.result_error(&msg);
         }
     }
-    return;
 }
 
 fn partition_values<T>(

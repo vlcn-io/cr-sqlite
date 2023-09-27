@@ -2,6 +2,9 @@ use crate::alloc::string::ToString;
 use crate::c::crsql_ExtData;
 use crate::c::crsql_fetchPragmaSchemaVersion;
 use crate::c::TABLE_INFO_SCHEMA_VERSION;
+use crate::pack_columns::bind_package_to_stmt;
+use crate::pack_columns::ColumnValue;
+use crate::stmt_cache::reset_cached_stmt;
 use crate::util::Countable;
 use alloc::boxed::Box;
 use alloc::format;
@@ -70,6 +73,56 @@ impl TableInfo {
         Err(ResultCode::ERROR)
     }
 
+    pub fn get_or_create_key(
+        &self,
+        db: *mut sqlite3,
+        pks: &Vec<ColumnValue>,
+    ) -> Result<sqlite::int64, ResultCode> {
+        let stmt_ref = self.get_select_key_stmt(db)?;
+        let stmt = stmt_ref.as_ref().ok_or(ResultCode::ERROR)?;
+        bind_package_to_stmt(stmt.stmt, pks, 0)?;
+        match stmt.step() {
+            Ok(ResultCode::DONE) => {
+                // create it
+                reset_cached_stmt(stmt.stmt)?;
+                let ret = self.create_key(db, pks)?;
+                return Ok(ret);
+            }
+            Ok(ResultCode::ROW) => {
+                // return it
+                let ret = stmt.column_int64(0);
+                reset_cached_stmt(stmt.stmt)?;
+                return Ok(ret);
+            }
+            Ok(rc) | Err(rc) => {
+                reset_cached_stmt(stmt.stmt)?;
+                return Err(rc);
+            }
+        }
+    }
+
+    fn create_key(
+        &self,
+        db: *mut sqlite3,
+        pks: &Vec<ColumnValue>,
+    ) -> Result<sqlite::int64, ResultCode> {
+        let stmt_ref = self.get_insert_key_stmt(db)?;
+        let stmt = stmt_ref.as_ref().ok_or(ResultCode::ERROR)?;
+        bind_package_to_stmt(stmt.stmt, pks, 0)?;
+        match stmt.step() {
+            Ok(ResultCode::ROW) => {
+                // return it
+                let ret = stmt.column_int64(0);
+                reset_cached_stmt(stmt.stmt)?;
+                return Ok(ret);
+            }
+            Ok(rc) | Err(rc) => {
+                reset_cached_stmt(stmt.stmt)?;
+                return Err(rc);
+            }
+        }
+    }
+
     // TODO: macro-ify all these
     pub fn get_select_key_stmt(
         &self,
@@ -93,7 +146,7 @@ impl TableInfo {
     ) -> Result<Ref<Option<ManagedStmt>>, ResultCode> {
         if self.insert_key_stmt.try_borrow()?.is_none() {
             let sql = format!(
-                "INSERT INTO \"{table_name}__crsql_pks\" ({pk_list}) VALUES ({pk_bindings})",
+                "INSERT INTO \"{table_name}__crsql_pks\" ({pk_list}) VALUES ({pk_bindings}) RETURNING __crsql_key",
                 table_name = crate::util::escape_ident(&self.tbl_name),
                 pk_list = crate::util::as_identifier_list(&self.pks, None)?,
                 pk_bindings = crate::util::binding_list(self.pks.len()),

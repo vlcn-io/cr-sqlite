@@ -76,13 +76,13 @@ fn after_update(
     let new_key = tbl_info
         .get_or_create_key_via_raw_values(db, pks_new)
         .or_else(|_| Err("failed geteting or creating lookaside key"))?;
-    let old_key = tbl_info
-        .get_or_create_key_via_raw_values(db, pks_old)
-        .or_else(|_| Err("failed geteting or creating lookaside key"))?;
 
     // Changing a primary key column to a new value is the same thing as deleting the row
     // previously identified by the primary key.
     if crate::compare_values::any_value_changed(pks_new, pks_old)? {
+        let old_key = tbl_info
+            .get_or_create_key_via_raw_values(db, pks_old)
+            .or_else(|_| Err("failed geteting or creating lookaside key"))?;
         let next_seq = super::bump_seq(ext_data);
         // Record the delete of the row identified by the old primary keys
         after_update__mark_old_pk_row_deleted(db, tbl_info, pks_old, next_db_version, next_seq)?;

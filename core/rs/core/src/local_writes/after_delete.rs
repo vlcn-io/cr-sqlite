@@ -69,10 +69,8 @@ fn after_delete(
         .as_ref()
         .ok_or("Failed to deref sentinel stmt")?;
 
-    for (i, pk) in pks_old.iter().enumerate() {
-        drop_clocks_stmt
-            .bind_value(i as i32 + 1, *pk)
-            .or_else(|_e| Err("failed to bind pks to mark_locally_deleted_stmt"))?;
-    }
+    drop_clocks_stmt
+        .bind_int64(1, key)
+        .or_else(|_e| Err("failed to bind pks to drop_clocks_stmt"))?;
     super::step_trigger_stmt(drop_clocks_stmt)
 }

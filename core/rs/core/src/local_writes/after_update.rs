@@ -85,7 +85,7 @@ fn after_update(
             .or_else(|_| Err("failed geteting or creating lookaside key"))?;
         let next_seq = super::bump_seq(ext_data);
         // Record the delete of the row identified by the old primary keys
-        after_update__mark_old_pk_row_deleted(db, tbl_info, pks_old, next_db_version, next_seq)?;
+        after_update__mark_old_pk_row_deleted(db, tbl_info, old_key, next_db_version, next_seq)?;
         // TODO: each non sentinel needs a unique seq on the move?
         after_update__move_non_sentinels(db, tbl_info, new_key, old_key)?;
         // Record a create of the row identified by the new primary keys
@@ -127,8 +127,8 @@ fn after_update(
 fn after_update__mark_old_pk_row_deleted(
     db: *mut sqlite3,
     tbl_info: &TableInfo,
-    pks: &[*mut value],
-    db_version: i64,
+    old_key: sqlite::int64,
+    db_version: sqlite::int64,
     seq: i32,
 ) -> Result<ResultCode, String> {
     let mark_locally_deleted_stmt_ref = tbl_info
@@ -137,17 +137,13 @@ fn after_update__mark_old_pk_row_deleted(
     let mark_locally_deleted_stmt = mark_locally_deleted_stmt_ref
         .as_ref()
         .ok_or("Failed to deref sentinel stmt")?;
-    for (i, pk) in pks.iter().enumerate() {
-        mark_locally_deleted_stmt
-            .bind_value(i as i32 + 1, *pk)
-            .or_else(|_e| Err("failed to bind pks to mark_locally_deleted_stmt"))?;
-    }
     mark_locally_deleted_stmt
-        .bind_int64(pks.len() as i32 + 1, db_version)
-        .and_then(|_| mark_locally_deleted_stmt.bind_int(pks.len() as i32 + 2, seq))
-        .and_then(|_| mark_locally_deleted_stmt.bind_int64(pks.len() as i32 + 3, db_version))
-        .and_then(|_| mark_locally_deleted_stmt.bind_int(pks.len() as i32 + 4, seq))
-        .or_else(|_| Err("failed binding to mark locally deleted stmt"))?;
+        .bind_int64(1, old_key)
+        .and_then(|_| mark_locally_deleted_stmt.bind_int64(2, db_version))
+        .and_then(|_| mark_locally_deleted_stmt.bind_int(3, seq))
+        .and_then(|_| mark_locally_deleted_stmt.bind_int64(4, db_version))
+        .and_then(|_| mark_locally_deleted_stmt.bind_int(5, seq))
+        .or_else(|_| Err("failed binding to mark_locally_deleted_stmt"))?;
     super::step_trigger_stmt(mark_locally_deleted_stmt)
 }
 

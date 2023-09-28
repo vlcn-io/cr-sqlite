@@ -5,7 +5,7 @@ import pytest
 changes_query = "SELECT [table], [pk], [cid], [val] FROM crsql_changes"
 changes_with_versions_query = "SELECT [table], [pk], [cid], [val], [db_version], [col_version] FROM crsql_changes"
 full_changes_query = "SELECT [table], [pk], [cid], [val], [db_version], [col_version], [site_id] FROM crsql_changes"
-clock_query = "SELECT rowid, col_version, db_version, col_name, site_id FROM todo__crsql_clock"
+clock_query = "SELECT key, col_version, db_version, col_name, site_id FROM todo__crsql_clock"
 
 
 def test_c1_4_no_primary_keys():
@@ -25,7 +25,7 @@ def test_c1_3_quoted_identifiers():
     c.execute("select crsql_as_crr('baz')")
 
     def check_clock(t): return c.execute(
-        "SELECT rowid, col_version, db_version, col_name, site_id FROM {t}__crsql_clock".format(t=t)).fetchall()
+        "SELECT col_version, db_version, col_name, site_id FROM {t}__crsql_clock".format(t=t)).fetchall()
 
     check_clock("foo")
     check_clock("bar")
@@ -38,7 +38,9 @@ def test_c1_c5_compound_primary_key():
     c.execute("select crsql_as_crr('foo')")
 
     c.execute(
-        "SELECT a, b, col_version, col_name, db_version, site_id FROM foo__crsql_clock").fetchall()
+        "SELECT key, col_version, col_name, db_version, site_id FROM foo__crsql_clock").fetchall()
+    c.execute(
+        "SELECT __crsql_key, a, b FROM foo__crsql_pks").fetchall()
     # with pytest.raises(Exception) as e_info:
     # c.execute("SELECT a__crsql_v FROM foo__crsql_crr").fetchall()
 
@@ -48,7 +50,9 @@ def test_c1_6_single_primary_key():
     c.execute("create table foo (a not null, b, c, primary key (a))")
     c.execute("select crsql_as_crr('foo')")
     c.execute(
-        "SELECT a, col_version, col_name, db_version, site_id FROM foo__crsql_clock").fetchall()
+        "SELECT key, col_version, col_name, db_version, site_id FROM foo__crsql_clock").fetchall()
+    c.execute(
+        "SELECT __crsql_key, a FROM foo__crsql_pks").fetchall()
 
 
 def test_c2_create_index():
@@ -82,10 +86,8 @@ def test_drop_clock_on_col_remove():
     assert (changes == expected)
 
     clock_entries = c.execute(clock_query).fetchall()
-    assert (clock_entries == [
-        (1, 1, 1, 'name', None),
-        (2, 1, 1, 'complete', None),
-        (3, 1, 1, 'list', None)])
+    assert (clock_entries == [(1, 1, 1, 'complete', None),
+            (1, 1, 1, 'list', None), (1, 1, 1, 'name', None)])
 
     c.execute("SELECT crsql_begin_alter('todo');")
     # Dropping a column should remove its entries from our replication logs.
@@ -103,7 +105,7 @@ def test_drop_clock_on_col_remove():
     clock_entries = c.execute(clock_query).fetchall()
     assert (
         clock_entries == [
-            (1, 1, 1, 'name', None), (2, 1, 1, 'complete', None)]
+            (1, 1, 1, 'complete', None), (1, 1, 1, 'name', None)]
     )
 
 
@@ -167,6 +169,7 @@ def test_backfill_clocks_on_rename():
     c.execute("SELECT crsql_commit_alter('todo');")
     c.commit()
     changes = c.execute(changes_with_versions_query).fetchall()
+    pprint(changes)
     assert (changes == [('todo', b'\x01\t\x01', 'complete', 0, 1, 1),
                         ('todo', b'\x01\t\x01', 'list', 'home', 1, 1),
                         ('todo', b'\x01\t\x01', 'task', 'cook', 2, 1),

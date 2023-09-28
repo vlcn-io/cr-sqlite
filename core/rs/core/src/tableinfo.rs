@@ -293,7 +293,7 @@ impl TableInfo {
                 crsql_next_db_version(?),
                 ?,
                 ?
-              ) RETURNING _rowid_",
+              ) RETURNING key",
                 table_name = crate::util::escape_ident(&self.tbl_name),
             );
             let ret = db.prepare_v3(&sql, sqlite::PREPARE_PERSISTENT)?;

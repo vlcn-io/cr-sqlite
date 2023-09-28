@@ -44,14 +44,14 @@ unsafe fn compact_post_alter(
     // the clock table.
     // A change in pk columns means a change in all identities
     // of all rows.
-    // We can determine this by comparing pks on clock table vs
+    // We can determine this by comparing unique index on lookaside table vs
     // pks on source table
     let stmt = db.prepare_v2(&format!(
         "SELECT count(name) FROM (
         SELECT name FROM pragma_table_info('{table_name}')
           WHERE pk > 0 AND name NOT IN
-            (SELECT name FROM pragma_table_info('{table_name}__crsql_clock') WHERE pk > 0)
-          UNION SELECT name FROM pragma_table_info('{table_name}__crsql_clock') WHERE pk > 0 AND name NOT IN 
+            (SELECT name FROM pragma_index_info('{table_name}__crsql_pks_pks'))
+          UNION SELECT name FROM pragma_index_info('{table_name}__crsql_pks_pks') WHERE name NOT IN 
             (SELECT name FROM pragma_table_info('{table_name}') WHERE pk > 0) AND name != 'col_name'
         );",
         table_name = crate::util::escape_ident_as_value(tbl_name_str),
@@ -65,7 +65,8 @@ unsafe fn compact_post_alter(
     if pk_diff > 0 {
         // drop the clock table so we can re-create it
         db.exec_safe(&format!(
-            "DROP TABLE \"{table_name}__crsql_clock\"",
+            "DROP TABLE \"{table_name}__crsql_clock\";
+             DROP TABLE \"{table_name}__crsql_pks\";",
             table_name = crate::util::escape_ident(tbl_name_str),
         ))?;
     } else {
@@ -83,10 +84,12 @@ unsafe fn compact_post_alter(
         );
         db.exec_safe(&sql)?;
 
-        // Next delete entries that no longer have a row
+        // Next delete entries that no longer have a row but keeping tombstones
+        // TODO: if we move the sentinel metadata to the lookaside this becomes much simpler
         let mut sql = String::from(
             format!(
-              "DELETE FROM \"{tbl_name}__crsql_clock\" WHERE (col_name != '-1' OR (col_name = '-1' AND col_version % 2 != 0)) AND NOT EXISTS (SELECT 1 FROM \"{tbl_name}\" WHERE ",
+              "DELETE FROM \"{tbl_name}__crsql_clock\" WHERE (col_name != '-1' OR (col_name = '-1' AND col_version % 2 != 0))
+              AND NOT EXISTS (SELECT 1 FROM \"{tbl_name}\" JOIN \"{tbl_name}__crsql_pks\" ON ",
               tbl_name = crate::util::escape_ident(tbl_name_str),
             ),
         );
@@ -106,7 +109,7 @@ unsafe fn compact_post_alter(
         // TODO: safe since we checked above but make more idiomatic
         let table_info = table_info.unwrap();
 
-        // for each pk col, append \"%w\".\"%w\" = \"%w__crsql_clock\".\"%w\"
+        // for each pk col, append \"%w\".\"%w\" = \"%w__crsql_pks\".\"%w\"
         // to the where clause then close the statement.
         for (i, col) in table_info.pks.iter().enumerate() {
             if i > 0 {
@@ -114,14 +117,28 @@ unsafe fn compact_post_alter(
             }
 
             sql.push_str(&format!(
-                "\"{tbl_name}\".\"{col_name}\" = \"{tbl_name}__crsql_clock\".\"{col_name}\"",
-                tbl_name = tbl_name_str,
+                "\"{tbl_name}\".\"{col_name}\" = \"{tbl_name}__crsql_pks\".\"{col_name}\"",
+                tbl_name = crate::util::escape_ident(tbl_name_str),
                 col_name = &col.name,
             ));
         }
-        sql.push_str(" LIMIT 1)");
+        sql.push_str(
+          &format!(
+            " WHERE \"{tbl_name}__crsql_clock\".key = \"{tbl_name}__crsql_pks\".__crsql_key LIMIT 1)",
+            tbl_name = crate::util::escape_ident(tbl_name_str)
+          )
+        );
         db.exec_safe(&sql)?;
     }
+
+    // now delete pk lookasides that no longer map to anything in the clock tables
+    let sql = format!(
+        "DELETE FROM \"{tbl_name}__crsql_pks\" WHERE __crsql_key NOT IN (
+          SELECT key FROM \"{tbl_name}__crsql_clock\"
+        )",
+        tbl_name = crate::util::escape_ident(tbl_name_str),
+    );
+    db.exec_safe(&sql)?;
 
     let stmt = db.prepare_v2(
         "INSERT OR REPLACE INTO crsql_master (key, value) VALUES ('pre_compact_dbversion', ?)",

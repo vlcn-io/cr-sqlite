@@ -31,6 +31,7 @@ fn did_cid_win(
     insert_tbl: &str,
     tbl_info: &TableInfo,
     unpacked_pks: &Vec<ColumnValue>,
+    key: sqlite::int64,
     col_name: &str,
     insert_val: *mut sqlite::value,
     col_version: sqlite::int64,
@@ -39,16 +40,12 @@ fn did_cid_win(
     let col_vrsn_stmt_ref = tbl_info.get_col_version_stmt(db)?;
     let col_vrsn_stmt = col_vrsn_stmt_ref.as_ref().ok_or(ResultCode::ERROR)?;
 
-    let bind_result = bind_package_to_stmt(col_vrsn_stmt.stmt, &unpacked_pks, 0);
+    let bind_result = col_vrsn_stmt.bind_int64(1, key);
     if let Err(rc) = bind_result {
         reset_cached_stmt(col_vrsn_stmt.stmt)?;
         return Err(rc);
     }
-    if let Err(rc) = col_vrsn_stmt.bind_text(
-        unpacked_pks.len() as i32 + 1,
-        col_name,
-        sqlite::Destructor::STATIC,
-    ) {
+    if let Err(rc) = col_vrsn_stmt.bind_text(2, col_name, sqlite::Destructor::STATIC) {
         reset_cached_stmt(col_vrsn_stmt.stmt)?;
         return Err(rc);
     }
@@ -117,7 +114,7 @@ fn set_winner_clock(
     db: *mut sqlite3,
     ext_data: *mut crsql_ExtData,
     tbl_info: &TableInfo,
-    unpacked_pks: &Vec<ColumnValue>,
+    key: sqlite::int64,
     insert_col_name: &str,
     insert_col_vrsn: sqlite::int64,
     insert_db_vrsn: sqlite::int64,
@@ -172,23 +169,19 @@ fn set_winner_clock(
     let set_stmt_ref = tbl_info.get_set_winner_clock_stmt(db)?;
     let set_stmt = set_stmt_ref.as_ref().ok_or(ResultCode::ERROR)?;
 
-    let bind_result = bind_package_to_stmt(set_stmt.stmt, unpacked_pks, 0);
+    let bind_result = set_stmt.bind_int64(1, key);
     if let Err(rc) = bind_result {
         reset_cached_stmt(set_stmt.stmt)?;
         return Err(rc);
     }
     let bind_result = set_stmt
-        .bind_text(
-            unpacked_pks.len() as i32 + 1,
-            insert_col_name,
-            sqlite::Destructor::STATIC,
-        )
-        .and_then(|_| set_stmt.bind_int64(unpacked_pks.len() as i32 + 2, insert_col_vrsn))
-        .and_then(|_| set_stmt.bind_int64(unpacked_pks.len() as i32 + 3, insert_db_vrsn))
-        .and_then(|_| set_stmt.bind_int64(unpacked_pks.len() as i32 + 4, insert_seq))
+        .bind_text(2, insert_col_name, sqlite::Destructor::STATIC)
+        .and_then(|_| set_stmt.bind_int64(3, insert_col_vrsn))
+        .and_then(|_| set_stmt.bind_int64(4, insert_db_vrsn))
+        .and_then(|_| set_stmt.bind_int64(5, insert_seq))
         .and_then(|_| match ordinal {
-            Some(ordinal) => set_stmt.bind_int64(unpacked_pks.len() as i32 + 5, ordinal),
-            None => set_stmt.bind_null(unpacked_pks.len() as i32 + 5),
+            Some(ordinal) => set_stmt.bind_int64(6, ordinal),
+            None => set_stmt.bind_null(6),
         });
 
     if let Err(rc) = bind_result {
@@ -214,6 +207,7 @@ fn merge_sentinel_only_insert(
     ext_data: *mut crsql_ExtData,
     tbl_info: &TableInfo,
     unpacked_pks: &Vec<ColumnValue>,
+    key: sqlite::int64,
     remote_col_vrsn: sqlite::int64,
     remote_db_vsn: sqlite::int64,
     remote_site_id: &[u8],
@@ -253,12 +247,12 @@ fn merge_sentinel_only_insert(
     }
 
     if let Ok(_) = rc {
-        zero_clocks_on_resurrect(db, tbl_info, unpacked_pks, remote_db_vsn)?;
+        zero_clocks_on_resurrect(db, tbl_info, key, remote_db_vsn)?;
         return set_winner_clock(
             db,
             ext_data,
             tbl_info,
-            unpacked_pks,
+            key,
             crate::c::INSERT_SENTINEL,
             remote_col_vrsn,
             remote_db_vsn,
@@ -273,35 +267,25 @@ fn merge_sentinel_only_insert(
 fn zero_clocks_on_resurrect(
     db: *mut sqlite3,
     tbl_info: &TableInfo,
-    unpacked_pks: &Vec<ColumnValue>,
+    key: sqlite::int64,
     insert_db_vrsn: sqlite::int64,
 ) -> Result<ResultCode, ResultCode> {
     let zero_stmt_ref = tbl_info.get_zero_clocks_on_resurrect_stmt(db)?;
     let zero_stmt = zero_stmt_ref.as_ref().ok_or(ResultCode::ERROR)?;
 
-    if let Err(rc) = zero_stmt.bind_int64(1, insert_db_vrsn) {
-        reset_cached_stmt(zero_stmt.stmt)?;
-        return Err(rc);
-    }
-
-    if let Err(rc) = bind_package_to_stmt(zero_stmt.stmt, unpacked_pks, 1) {
-        reset_cached_stmt(zero_stmt.stmt)?;
-        return Err(rc);
-    }
-
-    if let Err(rc) = zero_stmt.step() {
-        reset_cached_stmt(zero_stmt.stmt)?;
-        return Err(rc);
-    }
-
-    reset_cached_stmt(zero_stmt.stmt)
+    let ret = zero_stmt
+        .bind_int64(1, insert_db_vrsn)
+        .and_then(|_| zero_stmt.bind_int64(2, key))
+        .and_then(|_| zero_stmt.step());
+    reset_cached_stmt(zero_stmt.stmt)?;
+    return ret;
 }
 
 unsafe fn merge_delete(
     db: *mut sqlite3,
     ext_data: *mut crsql_ExtData,
     tbl_info: &TableInfo,
-    unpacked_pks: &Vec<ColumnValue>,
+    key: sqlite::int64,
     remote_col_vrsn: sqlite::int64,
     remote_db_vrsn: sqlite::int64,
     remote_site_id: &[u8],
@@ -310,7 +294,7 @@ unsafe fn merge_delete(
     let delete_stmt_ref = tbl_info.get_merge_delete_stmt(db)?;
     let delete_stmt = delete_stmt_ref.as_ref().ok_or(ResultCode::ERROR)?;
 
-    if let Err(rc) = bind_package_to_stmt(delete_stmt.stmt, unpacked_pks, 0) {
+    if let Err(rc) = delete_stmt.bind_int64(1, key) {
         reset_cached_stmt(delete_stmt.stmt)?;
         return Err(rc);
     }
@@ -338,7 +322,7 @@ unsafe fn merge_delete(
         db,
         ext_data,
         tbl_info,
-        unpacked_pks,
+        key,
         crate::c::DELETE_SENTINEL,
         remote_col_vrsn,
         remote_db_vrsn,
@@ -351,17 +335,11 @@ unsafe fn merge_delete(
     let drop_clocks_stmt_ref = tbl_info.get_merge_delete_drop_clocks_stmt(db)?;
     let drop_clocks_stmt = drop_clocks_stmt_ref.as_ref().ok_or(ResultCode::ERROR)?;
 
-    if let Err(rc) = bind_package_to_stmt(drop_clocks_stmt.stmt, unpacked_pks, 0) {
-        reset_cached_stmt(drop_clocks_stmt.stmt)?;
-        return Err(rc);
-    }
-
-    if let Err(rc) = drop_clocks_stmt.step() {
-        reset_cached_stmt(drop_clocks_stmt.stmt)?;
-        return Err(rc);
-    }
-
+    let rc = drop_clocks_stmt
+        .bind_int64(1, key)
+        .and_then(|_| drop_clocks_stmt.step());
     reset_cached_stmt(drop_clocks_stmt.stmt)?;
+    rc?;
 
     return Ok(ret);
 }
@@ -382,17 +360,17 @@ pub unsafe extern "C" fn crsql_merge_insert(
 fn get_local_cl(
     db: *mut sqlite::sqlite3,
     tbl_info: &TableInfo,
-    unpacked_pks: &Vec<ColumnValue>,
+    key: sqlite::int64,
 ) -> Result<sqlite::int64, ResultCode> {
     let local_cl_stmt_ref = tbl_info.get_local_cl_stmt(db)?;
     let local_cl_stmt = local_cl_stmt_ref.as_ref().ok_or(ResultCode::ERROR)?;
 
-    let rc = bind_package_to_stmt(local_cl_stmt.stmt, unpacked_pks, 0);
+    let rc = local_cl_stmt.bind_int64(1, key);
     if let Err(rc) = rc {
         reset_cached_stmt(local_cl_stmt.stmt)?;
         return Err(rc);
     }
-    let rc = bind_package_to_stmt(local_cl_stmt.stmt, unpacked_pks, unpacked_pks.len());
+    let rc = local_cl_stmt.bind_int64(2, key);
     if let Err(rc) = rc {
         reset_cached_stmt(local_cl_stmt.stmt)?;
         return Err(rc);
@@ -489,7 +467,7 @@ unsafe fn merge_insert(
     // We'll need the key for all later operations.
     let key = tbl_info.get_or_create_key(db, &unpacked_pks)?;
 
-    let local_cl = get_local_cl(db, &tbl_info, &unpacked_pks)?;
+    let local_cl = get_local_cl(db, &tbl_info, key)?;
 
     // We can ignore all updates from older causal lengths.
     // They won't win at anything.
@@ -517,7 +495,7 @@ unsafe fn merge_insert(
             db,
             (*tab).pExtData,
             &tbl_info,
-            &unpacked_pks,
+            key,
             insert_col_vrsn,
             insert_db_vrsn,
             insert_site_id,
@@ -554,6 +532,7 @@ unsafe fn merge_insert(
             (*tab).pExtData,
             &tbl_info,
             &unpacked_pks,
+            key,
             insert_col_vrsn,
             insert_db_vrsn,
             insert_site_id,
@@ -588,6 +567,7 @@ unsafe fn merge_insert(
             (*tab).pExtData,
             &tbl_info,
             &unpacked_pks,
+            key,
             insert_cl,
             insert_db_vrsn,
             insert_site_id,
@@ -606,6 +586,7 @@ unsafe fn merge_insert(
             insert_tbl,
             &tbl_info,
             &unpacked_pks,
+            key,
             insert_col,
             insert_val,
             insert_col_vrsn,
@@ -654,7 +635,7 @@ unsafe fn merge_insert(
         db,
         (*tab).pExtData,
         &tbl_info,
-        &unpacked_pks,
+        key,
         insert_col,
         insert_col_vrsn,
         insert_db_vrsn,

@@ -1,10 +1,11 @@
-use sqlite_nostd::{sqlite3, Connection, Destructor, ManagedStmt, ResultCode};
+use sqlite_nostd::{sqlite3, ColumnType, Connection, Destructor, ManagedStmt, ResultCode};
 extern crate alloc;
 use crate::tableinfo::ColumnInfo;
 use crate::util::get_dflt_value;
 use alloc::format;
 use alloc::string::String;
 use alloc::{vec, vec::Vec};
+use sqlite_nostd as sqlite;
 
 /**
  * Backfills rows in a table with clock values.
@@ -24,7 +25,7 @@ pub fn backfill_table(
     let sql = format!(
         "SELECT {pk_cols} FROM \"{table}\" AS t1
         WHERE NOT EXISTS
-          (SELECT 1 FROM \"{table}__crsql_clock\" AS t2 WHERE {pk_where_conditions})",
+          (SELECT 1 FROM \"{table}__crsql_pks\" AS t2 WHERE {pk_where_conditions})",
         table = crate::util::escape_ident(table),
         pk_cols = pk_cols
             .iter()
@@ -90,6 +91,21 @@ fn create_clock_rows_from_stmt(
     non_pk_cols: &Vec<&ColumnInfo>,
     is_commit_alter: bool,
 ) -> Result<ResultCode, ResultCode> {
+    let select_key = db.prepare_v2(&format!(
+        "SELECT __crsql_key FROM \"{table}__crsql_pks\" WHERE {pk_where_conditions}",
+        table = crate::util::escape_ident(table),
+        pk_where_conditions = crate::util::where_list(pk_cols, None)?
+    ))?;
+    let create_key = db.prepare_v2(&format!(
+        "INSERT INTO \"{table}__crsql_pks\" ({pk_cols}) VALUES ({pk_values}) RETURNING __crsql_key",
+        table = crate::util::escape_ident(table),
+        pk_cols = pk_cols
+            .iter()
+            .map(|f| format!("\"{}\"", crate::util::escape_ident(&f.name)))
+            .collect::<Vec<_>>()
+            .join(", "),
+        pk_values = pk_cols.iter().map(|_| "?").collect::<Vec<_>>().join(", "),
+    ))?;
     // We do not grab nextdbversion on migration.
     // The idea is that other nodes will apply the same migration
     // in the future so if they have already seen this node up
@@ -99,15 +115,9 @@ fn create_clock_rows_from_stmt(
     // to determine if rows should resurrect on a future insertion event provided by a peer.
     let sql = format!(
         "INSERT OR IGNORE INTO \"{table}__crsql_clock\"
-          ({pk_cols}, col_name, col_version, db_version, seq) VALUES
-          ({pk_values}, ?, 1, {dbversion_getter}, crsql_increment_and_get_seq())",
+          (key, col_name, col_version, db_version, seq) VALUES
+          (?, ?, 1, {dbversion_getter}, crsql_increment_and_get_seq())",
         table = crate::util::escape_ident(table),
-        pk_cols = pk_cols
-            .iter()
-            .map(|f| format!("\"{}\"", crate::util::escape_ident(&f.name)))
-            .collect::<Vec<_>>()
-            .join(", "),
-        pk_values = pk_cols.iter().map(|_| "?").collect::<Vec<_>>().join(", "),
         dbversion_getter = if is_commit_alter {
             "crsql_db_version()"
         } else {
@@ -117,31 +127,55 @@ fn create_clock_rows_from_stmt(
     let write_stmt = db.prepare_v2(&sql)?;
 
     while read_stmt.step()? == ResultCode::ROW {
-        // bind primary key values
-        for (i, _name) in pk_cols.iter().enumerate() {
-            let value = read_stmt.column_value(i as i32)?;
-            write_stmt.bind_value(i as i32 + 1, value)?;
-        }
+        let key = get_or_create_key(&select_key, &create_key, pk_cols, &read_stmt)?;
+        write_stmt.bind_int64(1, key)?;
 
         for col in non_pk_cols.iter() {
             // We even backfill default values since we can't differentiate between an explicit
             // reset to a default vs an implicit set to default on create. Do we? I don't think we do set defaults.
-            write_stmt.bind_text(pk_cols.len() as i32 + 1, &col.name, Destructor::STATIC)?;
+            write_stmt.bind_text(2, &col.name, Destructor::STATIC)?;
             write_stmt.step()?;
             write_stmt.reset()?;
         }
         if non_pk_cols.len() == 0 {
-            write_stmt.bind_text(
-                pk_cols.len() as i32 + 1,
-                crate::c::INSERT_SENTINEL,
-                Destructor::STATIC,
-            )?;
+            write_stmt.bind_text(2, crate::c::INSERT_SENTINEL, Destructor::STATIC)?;
             write_stmt.step()?;
             write_stmt.reset()?;
         }
     }
 
     Ok(ResultCode::OK)
+}
+
+fn get_or_create_key(
+    select_stmt: &ManagedStmt,
+    create_stmt: &ManagedStmt,
+    pk_cols: &Vec<ColumnInfo>,
+    read_stmt: &ManagedStmt,
+) -> Result<sqlite::int64, ResultCode> {
+    for (i, _name) in pk_cols.iter().enumerate() {
+        let value = read_stmt.column_value(i as i32)?;
+        // TODO: ok to bind into to places at once?
+        select_stmt.bind_value(i as i32 + 1, value)?;
+        create_stmt.bind_value(i as i32 + 1, value)?;
+    }
+
+    if let Ok(ResultCode::ROW) = select_stmt.step() {
+        let key = select_stmt.column_int64(0);
+        create_stmt.clear_bindings()?;
+        select_stmt.reset()?;
+        return Ok(key);
+    }
+    select_stmt.reset()?;
+
+    if let Ok(ResultCode::ROW) = create_stmt.step() {
+        let key = create_stmt.column_int64(0);
+        create_stmt.reset()?;
+        return Ok(key);
+    }
+    create_stmt.reset()?;
+
+    return Err(ResultCode::ERROR);
 }
 
 /**
@@ -180,7 +214,8 @@ fn fill_column(
     let dflt_value = get_dflt_value(db, table, &non_pk_col.name)?;
     let sql = format!(
         "SELECT {pk_cols} FROM {table} as t1
-          LEFT JOIN \"{table}__crsql_clock\" as t2 ON {pk_on_conditions} AND t2.col_name = ?
+          LEFT JOIN \"{table}__crsql_pks\" as t2 ON {pk_on_conditions}
+          JOIN \"{table}__crsql_clock\" as t3 ON t3.key = t2.__crsql_key AND t3.col_name = ?
           WHERE t2.\"{first_pk}\" IS NULL {dflt_value_condition}",
         table = crate::util::escape_ident(table),
         pk_cols = pk_cols

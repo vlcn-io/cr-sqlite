@@ -52,16 +52,12 @@ fn after_delete(
     let mark_locally_deleted_stmt = mark_locally_deleted_stmt_ref
         .as_ref()
         .ok_or("Failed to deref sentinel stmt")?;
-    for (i, pk) in pks_old.iter().enumerate() {
-        mark_locally_deleted_stmt
-            .bind_value(i as i32 + 1, *pk)
-            .or_else(|_e| Err("failed to bind pks to mark_locally_deleted_stmt"))?;
-    }
     mark_locally_deleted_stmt
-        .bind_int64(pks_old.len() as i32 + 1, db_version)
-        .and_then(|_| mark_locally_deleted_stmt.bind_int(pks_old.len() as i32 + 2, seq))
-        .and_then(|_| mark_locally_deleted_stmt.bind_int64(pks_old.len() as i32 + 3, db_version))
-        .and_then(|_| mark_locally_deleted_stmt.bind_int(pks_old.len() as i32 + 4, seq))
+        .bind_int64(1, key)
+        .and_then(|_| mark_locally_deleted_stmt.bind_int64(2, db_version))
+        .and_then(|_| mark_locally_deleted_stmt.bind_int(3, seq))
+        .and_then(|_| mark_locally_deleted_stmt.bind_int64(4, db_version))
+        .and_then(|_| mark_locally_deleted_stmt.bind_int(5, seq))
         .or_else(|_| Err("failed binding to mark locally deleted stmt"))?;
     super::step_trigger_stmt(mark_locally_deleted_stmt)?;
 

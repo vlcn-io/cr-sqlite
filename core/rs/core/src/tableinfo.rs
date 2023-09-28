@@ -132,6 +132,51 @@ impl TableInfo {
         }
     }
 
+    pub fn get_or_create_key_for_insert(
+        &self,
+        db: *mut sqlite3,
+        pks: &[*mut value],
+    ) -> Result<(bool, sqlite::int64), ResultCode> {
+        let stmt_ref = self.get_insert_or_ignore_returning_key_stmt(db)?;
+        let stmt = stmt_ref.as_ref().ok_or(ResultCode::ERROR)?;
+        for (i, pk) in pks.iter().enumerate() {
+            stmt.bind_value(i as i32 + 1, *pk)?;
+        }
+        match stmt.step() {
+            Ok(ResultCode::DONE) => {
+                // already exists, get it
+                reset_cached_stmt(stmt.stmt)?;
+                let stmt_ref = self.get_select_key_stmt(db)?;
+                let stmt = stmt_ref.as_ref().ok_or(ResultCode::ERROR)?;
+                for (i, pk) in pks.iter().enumerate() {
+                    stmt.bind_value(i as i32 + 1, *pk)?;
+                }
+                let ret = stmt.step()?;
+                match ret {
+                    ResultCode::ROW => {
+                        let ret = stmt.column_int64(0);
+                        reset_cached_stmt(stmt.stmt)?;
+                        return Ok((true, ret));
+                    }
+                    _ => {
+                        reset_cached_stmt(stmt.stmt)?;
+                        return Err(ret);
+                    }
+                }
+            }
+            Ok(ResultCode::ROW) => {
+                // return it
+                let ret = stmt.column_int64(0);
+                reset_cached_stmt(stmt.stmt)?;
+                return Ok((false, ret));
+            }
+            Ok(rc) | Err(rc) => {
+                reset_cached_stmt(stmt.stmt)?;
+                return Err(rc);
+            }
+        }
+    }
+
     fn create_key(
         &self,
         db: *mut sqlite3,
@@ -487,7 +532,7 @@ impl TableInfo {
               "UPDATE \"{table_name}__crsql_clock\" SET
                 col_version = CASE col_version % 2 WHEN 0 THEN col_version + 1 ELSE col_version + 2 END,
                 db_version = ?,
-                seq = crsql_increment_and_get_seq(),
+                seq = ?,
                 site_id = NULL
               WHERE key = ? AND col_name = ?",
               table_name = crate::util::escape_ident(&self.tbl_name),

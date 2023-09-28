@@ -114,7 +114,7 @@ fn mark_locally_updated(
     tbl_info: &TableInfo,
     new_key: sqlite::int64,
     col_info: &ColumnInfo,
-    db_version: i64,
+    db_version: sqlite::int64,
     seq: i32,
 ) -> Result<ResultCode, String> {
     let mark_locally_updated_stmt_ref = tbl_info

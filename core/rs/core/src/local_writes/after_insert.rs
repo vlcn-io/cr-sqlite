@@ -41,16 +41,17 @@ fn after_insert(
     pks_new: &[*mut value],
 ) -> Result<ResultCode, String> {
     let db_version = crate::db_version::next_db_version(db, ext_data, None)?;
-    let key_new = tbl_info
-        .get_or_create_key_via_raw_values(db, pks_new)
+    let (create_record_existed, key_new) = tbl_info
+        .get_or_create_key_for_insert(db, pks_new)
         .or_else(|_| Err("failed geteting or creating lookaside key"))?;
     if tbl_info.non_pks.len() == 0 {
         let seq = bump_seq(ext_data);
         // just a sentinel record
         return super::mark_new_pk_row_created(db, tbl_info, key_new, db_version, seq);
-    } else {
-        // update the create record if it exists
-        update_create_record_if_exists(db, tbl_info, key_new, db_version)?;
+    } else if create_record_existed {
+        // update the create record since it already exists.
+        let seq = bump_seq(ext_data);
+        update_create_record(db, tbl_info, key_new, db_version, seq)?;
     }
 
     // now for each non-pk column, create or update the column record
@@ -61,11 +62,12 @@ fn after_insert(
     Ok(ResultCode::OK)
 }
 
-fn update_create_record_if_exists(
+fn update_create_record(
     db: *mut sqlite3,
     tbl_info: &TableInfo,
     new_key: sqlite::int64,
-    db_version: i64,
+    db_version: sqlite::int64,
+    seq: i32,
 ) -> Result<ResultCode, String> {
     let update_create_record_stmt_ref = tbl_info
         .get_maybe_mark_locally_reinserted_stmt(db)
@@ -76,10 +78,11 @@ fn update_create_record_if_exists(
 
     update_create_record_stmt
         .bind_int64(1, db_version)
-        .and_then(|_| update_create_record_stmt.bind_int64(2, new_key))
+        .and_then(|_| update_create_record_stmt.bind_int(2, seq))
+        .and_then(|_| update_create_record_stmt.bind_int64(3, new_key))
         .and_then(|_| {
             update_create_record_stmt.bind_text(
-                3,
+                4,
                 crate::c::INSERT_SENTINEL,
                 sqlite::Destructor::STATIC,
             )

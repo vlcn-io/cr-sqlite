@@ -10,7 +10,7 @@ use alloc::slice;
 use alloc::string::String;
 use alloc::vec::Vec;
 use sqlite::sqlite3;
-use sqlite::{value, Context, ManagedStmt, Value};
+use sqlite::{Context, ManagedStmt, Value};
 use sqlite_nostd as sqlite;
 use sqlite_nostd::ResultCode;
 
@@ -80,7 +80,7 @@ fn step_trigger_stmt(stmt: &ManagedStmt) -> Result<ResultCode, String> {
 fn mark_new_pk_row_created(
     db: *mut sqlite3,
     tbl_info: &TableInfo,
-    pks_new: &[*mut value],
+    key_new: sqlite::int64,
     db_version: i64,
     seq: i32,
 ) -> Result<ResultCode, String> {
@@ -91,16 +91,12 @@ fn mark_new_pk_row_created(
         .as_ref()
         .ok_or("Failed to deref sentinel stmt")?;
 
-    for (i, pk) in pks_new.iter().enumerate() {
-        mark_locally_created_stmt
-            .bind_value(i as i32 + 1, *pk)
-            .or_else(|_e| Err("failed to bind pks to mark_locally_created_stmt"))?;
-    }
     mark_locally_created_stmt
-        .bind_int64(pks_new.len() as i32 + 1, db_version)
-        .and_then(|_| mark_locally_created_stmt.bind_int(pks_new.len() as i32 + 2, seq))
-        .and_then(|_| mark_locally_created_stmt.bind_int64(pks_new.len() as i32 + 3, db_version))
-        .and_then(|_| mark_locally_created_stmt.bind_int(pks_new.len() as i32 + 4, seq))
+        .bind_int64(1, key_new)
+        .and_then(|_| mark_locally_created_stmt.bind_int64(2, db_version))
+        .and_then(|_| mark_locally_created_stmt.bind_int(3, seq))
+        .and_then(|_| mark_locally_created_stmt.bind_int64(4, db_version))
+        .and_then(|_| mark_locally_created_stmt.bind_int(5, seq))
         .or_else(|_| Err("failed binding to mark_locally_created_stmt"))?;
     step_trigger_stmt(mark_locally_created_stmt)
 }
@@ -116,7 +112,7 @@ fn bump_seq(ext_data: *mut crsql_ExtData) -> c_int {
 fn mark_locally_updated(
     db: *mut sqlite3,
     tbl_info: &TableInfo,
-    pks_new: &[*mut value],
+    new_key: sqlite::int64,
     col_info: &ColumnInfo,
     db_version: i64,
     seq: i32,
@@ -128,21 +124,15 @@ fn mark_locally_updated(
         .as_ref()
         .ok_or("Failed to deref sentinel stmt")?;
 
-    for (i, pk) in pks_new.iter().enumerate() {
-        mark_locally_updated_stmt
-            .bind_value(i as i32 + 1, *pk)
-            .or_else(|_e| Err("failed to bind pks to mark_locally_updated_stmt"))?;
-    }
     mark_locally_updated_stmt
-        .bind_text(
-            pks_new.len() as i32 + 1,
-            &col_info.name,
-            sqlite::Destructor::STATIC,
-        )
-        .and_then(|_| mark_locally_updated_stmt.bind_int64(pks_new.len() as i32 + 2, db_version))
-        .and_then(|_| mark_locally_updated_stmt.bind_int(pks_new.len() as i32 + 3, seq))
-        .and_then(|_| mark_locally_updated_stmt.bind_int64(pks_new.len() as i32 + 4, db_version))
-        .and_then(|_| mark_locally_updated_stmt.bind_int(pks_new.len() as i32 + 5, seq))
+        .bind_int64(1, new_key)
+        .and_then(|_| {
+            mark_locally_updated_stmt.bind_text(2, &col_info.name, sqlite::Destructor::STATIC)
+        })
+        .and_then(|_| mark_locally_updated_stmt.bind_int64(3, db_version))
+        .and_then(|_| mark_locally_updated_stmt.bind_int(4, seq))
+        .and_then(|_| mark_locally_updated_stmt.bind_int64(5, db_version))
+        .and_then(|_| mark_locally_updated_stmt.bind_int(6, seq))
         .or_else(|_| Err("failed binding to mark_locally_updated_stmt"))?;
     step_trigger_stmt(mark_locally_updated_stmt)
 }

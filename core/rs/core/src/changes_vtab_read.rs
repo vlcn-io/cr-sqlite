@@ -1,5 +1,5 @@
 extern crate alloc;
-use crate::{tableinfo::TableInfo, util};
+use crate::tableinfo::TableInfo;
 use alloc::format;
 use alloc::string::String;
 use alloc::vec;
@@ -15,12 +15,8 @@ fn crsql_changes_query_for_table(table_info: &TableInfo) -> Result<String, Resul
         return Err(ResultCode::ABORT);
     }
 
-    let pk_list = crate::util::as_identifier_list(&table_info.pks, Some("t1."))?;
+    let pk_list = crate::util::as_identifier_list(&table_info.pks, Some("pk_tbl."))?;
     // TODO: we can remove the self join if we put causal length in the primary key table
-    let self_join = util::map_columns(&table_info.pks, |c| {
-        format!("t1.\"{c}\" = t2.\"{c}\"", c = crate::util::escape_ident(c))
-    })?
-    .join(" AND ");
 
     // We LEFT JOIN and COALESCE the causal length
     // since we incorporated an optimization to not store causal length records
@@ -34,17 +30,19 @@ fn crsql_changes_query_for_table(table_info: &TableInfo) -> Result<String, Resul
           t1.col_name as cid,
           t1.col_version as col_vrsn,
           t1.db_version as db_vrsn,
-          t3.site_id as site_id,
+          site_tbl.site_id as site_id,
           t1._rowid_,
           t1.seq as seq,
           COALESCE(t2.col_version, 1) as cl
-      FROM \"{table_name_ident}__crsql_clock\" AS t1 LEFT JOIN \"{table_name_ident}__crsql_clock\" AS t2 ON
-      {self_join} AND t2.col_name = '{sentinel}' LEFT JOIN crsql_site_id as t3 ON t1.site_id = t3.ordinal",
+      FROM \"{table_name_ident}__crsql_clock\" AS t1
+      JOIN \"{table_name_ident}__crsql_pks\" AS pk_tbl ON t1.key = pk_tbl.__crsql_key
+      LEFT JOIN crsql_site_id AS site_tbl ON t1.site_id = site_tbl.ordinal
+      LEFT JOIN \"{table_name_ident}__crsql_clock\" AS t2 ON
+      t1.key = t2.key AND t2.col_name = '{sentinel}'",
         table_name_val = crate::util::escape_ident_as_value(&table_info.tbl_name),
         pk_list = pk_list,
         table_name_ident = crate::util::escape_ident(&table_info.tbl_name),
-        sentinel = crate::c::INSERT_SENTINEL,
-        self_join = self_join
+        sentinel = crate::c::INSERT_SENTINEL
     ))
 }
 

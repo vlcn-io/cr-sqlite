@@ -40,7 +40,7 @@ fn insert_site_id(db: *mut sqlite3) -> Result<[u8; 16], ResultCode> {
 
 fn create_site_id_and_site_id_table(db: *mut sqlite3) -> Result<[u8; 16], ResultCode> {
     db.exec_safe(&format!(
-        "CREATE TABLE \"{tbl}\" (site_id BLOB NOT NULL, ordinal INTEGER PRIMARY KEY AUTOINCREMENT);
+        "CREATE TABLE \"{tbl}\" (site_id BLOB NOT NULL, ordinal INTEGER PRIMARY KEY);
         CREATE UNIQUE INDEX {tbl}_site_id ON \"{tbl}\" (site_id);",
         tbl = consts::TBL_SITE_ID
     ))?;
@@ -202,15 +202,14 @@ pub fn create_clock_table(
 
     db.exec_safe(&format!(
         "CREATE TABLE IF NOT EXISTS \"{table_name}__crsql_clock\" (
-      {pk_list},
+      key INTEGER NOT NULL,
       col_name TEXT NOT NULL,
-      col_version INT NOT NULL,
-      db_version INT NOT NULL,
-      site_id INT,
-      seq INT NOT NULL,
-      PRIMARY KEY ({pk_list}, col_name)
+      col_version INTEGER NOT NULL,
+      db_version INTEGER NOT NULL,
+      site_id INTEGER,
+      seq INTEGER NOT NULL,
+      PRIMARY KEY (key, col_name)
     )",
-        pk_list = pk_list,
         table_name = crate::util::escape_ident(table_name),
     ))?;
 
@@ -228,7 +227,9 @@ pub fn create_clock_table(
     )?;
     db.exec_safe(
       &format!(
-        "CREATE UNIQUE INDEX IF NOT EXISTS \"{table_name}__crsql_pks_pks\" ON \"{table_name}__crsql_pks\" ({pk_list})", table_name = table_name, pk_list = pk_list
+        "CREATE UNIQUE INDEX IF NOT EXISTS \"{table_name}__crsql_pks_pks\" ON \"{table_name}__crsql_pks\" ({pk_list})",
+        table_name = table_name,
+        pk_list = pk_list
       )
     )
 }

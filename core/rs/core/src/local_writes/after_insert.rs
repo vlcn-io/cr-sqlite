@@ -41,22 +41,22 @@ fn after_insert(
     pks_new: &[*mut value],
 ) -> Result<ResultCode, String> {
     let db_version = crate::db_version::next_db_version(db, ext_data, None)?;
-    let key = tbl_info
+    let key_new = tbl_info
         .get_or_create_key_via_raw_values(db, pks_new)
         .or_else(|_| Err("failed geteting or creating lookaside key"))?;
     if tbl_info.non_pks.len() == 0 {
         let seq = bump_seq(ext_data);
         // just a sentinel record
-        return super::mark_new_pk_row_created(db, tbl_info, pks_new, db_version, seq);
+        return super::mark_new_pk_row_created(db, tbl_info, key_new, db_version, seq);
     } else {
         // update the create record if it exists
-        update_create_record_if_exists(db, tbl_info, pks_new, db_version)?;
+        update_create_record_if_exists(db, tbl_info, key_new, db_version)?;
     }
 
     // now for each non-pk column, create or update the column record
     for col in tbl_info.non_pks.iter() {
         let seq = bump_seq(ext_data);
-        super::mark_locally_updated(db, tbl_info, pks_new, col, db_version, seq)?;
+        super::mark_locally_updated(db, tbl_info, key_new, col, db_version, seq)?;
     }
     Ok(ResultCode::OK)
 }
@@ -64,7 +64,7 @@ fn after_insert(
 fn update_create_record_if_exists(
     db: *mut sqlite3,
     tbl_info: &TableInfo,
-    pks_new: &[*mut value],
+    new_key: sqlite::int64,
     db_version: i64,
 ) -> Result<ResultCode, String> {
     let update_create_record_stmt_ref = tbl_info
@@ -76,20 +76,15 @@ fn update_create_record_if_exists(
 
     update_create_record_stmt
         .bind_int64(1, db_version)
+        .and_then(|_| update_create_record_stmt.bind_int64(2, new_key))
+        .and_then(|_| {
+            update_create_record_stmt.bind_text(
+                3,
+                crate::c::INSERT_SENTINEL,
+                sqlite::Destructor::STATIC,
+            )
+        })
         .or_else(|_e| Err("failed binding to update_create_record_stmt"))?;
 
-    for (i, pk) in pks_new.iter().enumerate() {
-        update_create_record_stmt
-            .bind_value(i as i32 + 2, *pk)
-            .or_else(|_e| Err("failed to bind pks to update_create_record_stmt"))?;
-    }
-
-    update_create_record_stmt
-        .bind_text(
-            pks_new.len() as i32 + 2,
-            crate::c::INSERT_SENTINEL,
-            sqlite::Destructor::STATIC,
-        )
-        .or_else(|_e| Err("failed to bind sentinel to update_create_record_stmt"))?;
     super::step_trigger_stmt(update_create_record_stmt)
 }

@@ -115,7 +115,7 @@ fn migrate_to(
         AND name NOT LIKE 'sqlite_%'
         AND name NOT LIKE 'crsql_%'
         AND name NOT LIKE '__crsql_%'
-        AND name NOT LIKE '%__crsql_clock'";
+        AND name NOT LIKE '%__crsql_%'";
     let fetch_mem_tables = mem_db.prepare_v2(sql)?;
     let fetch_local_tables = local_db.prepare_v2(sql)?;
 

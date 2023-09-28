@@ -87,14 +87,14 @@ fn after_update(
         // Record the delete of the row identified by the old primary keys
         after_update__mark_old_pk_row_deleted(db, tbl_info, pks_old, next_db_version, next_seq)?;
         // TODO: each non sentinel needs a unique seq on the move?
-        after_update__move_non_sentinels(db, tbl_info, pks_new, pks_old)?;
+        after_update__move_non_sentinels(db, tbl_info, new_key, old_key)?;
         // Record a create of the row identified by the new primary keys
         // if no rows were moved. This is related to the optimization to not save
         // sentinels unless required.
         // if db.changes64() == 0 { <-- an optimization if we can get to it. we'd need to know to increment causal length.
         // so we can get to this when CL is stored in the lookaside.
         let next_seq = super::bump_seq(ext_data);
-        super::mark_new_pk_row_created(db, tbl_info, pks_new, next_db_version, next_seq)?;
+        super::mark_new_pk_row_created(db, tbl_info, new_key, next_db_version, next_seq)?;
         // }
     }
 
@@ -112,7 +112,7 @@ fn after_update(
             super::mark_locally_updated(
                 db,
                 tbl_info,
-                pks_new,
+                new_key,
                 col_info,
                 next_db_version,
                 next_seq,
@@ -156,8 +156,8 @@ fn after_update__mark_old_pk_row_deleted(
 fn after_update__move_non_sentinels(
     db: *mut sqlite3,
     tbl_info: &TableInfo,
-    pks_new: &[*mut value],
-    pks_old: &[*mut value],
+    new_key: sqlite::int64,
+    old_key: sqlite::int64,
 ) -> Result<ResultCode, String> {
     let move_non_sentinels_stmt_ref = tbl_info
         .get_move_non_sentinels_stmt(db)
@@ -166,18 +166,12 @@ fn after_update__move_non_sentinels(
         .as_ref()
         .ok_or("Failed to deref move_non_sentinels_stmt")?;
 
-    // set things to new pk values
-    for (i, pk) in pks_new.iter().enumerate() {
-        move_non_sentinels_stmt
-            .bind_value(i as i32 + 1, *pk)
-            .or_else(|_| Err("failed to bind pks to move_non_sentinels_stmt"))?;
-    }
-    // where they have the old pk values
-    for (i, pk) in pks_old.iter().enumerate() {
-        move_non_sentinels_stmt
-            .bind_value((i + 1 + pks_new.len()) as i32, *pk)
-            .or_else(|_| Err("failed to bind pks to move_non_sentinels_stmt"))?;
-    }
+    move_non_sentinels_stmt
+        // set things to new key
+        .bind_int64(1, new_key)
+        // where they have the old key
+        .and_then(|_| move_non_sentinels_stmt.bind_int64(2, old_key))
+        .or_else(|_| Err("failed to bind pks to move_non_sentinels_stmt"))?;
     super::step_trigger_stmt(move_non_sentinels_stmt)
 }
 

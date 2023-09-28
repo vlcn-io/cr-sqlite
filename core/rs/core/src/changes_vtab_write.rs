@@ -285,6 +285,7 @@ unsafe fn merge_delete(
     db: *mut sqlite3,
     ext_data: *mut crsql_ExtData,
     tbl_info: &TableInfo,
+    unpacked_pks: &Vec<ColumnValue>,
     key: sqlite::int64,
     remote_col_vrsn: sqlite::int64,
     remote_db_vrsn: sqlite::int64,
@@ -294,7 +295,7 @@ unsafe fn merge_delete(
     let delete_stmt_ref = tbl_info.get_merge_delete_stmt(db)?;
     let delete_stmt = delete_stmt_ref.as_ref().ok_or(ResultCode::ERROR)?;
 
-    if let Err(rc) = delete_stmt.bind_int64(1, key) {
+    if let Err(rc) = bind_package_to_stmt(delete_stmt.stmt, unpacked_pks, 0) {
         reset_cached_stmt(delete_stmt.stmt)?;
         return Err(rc);
     }
@@ -495,6 +496,7 @@ unsafe fn merge_insert(
             db,
             (*tab).pExtData,
             &tbl_info,
+            &unpacked_pks,
             key,
             insert_col_vrsn,
             insert_db_vrsn,

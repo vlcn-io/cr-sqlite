@@ -1,6 +1,7 @@
 #![no_std]
-
+extern crate alloc;
 mod t;
+use alloc::ffi::CString;
 pub use crsql_bundle;
 use libc_print::std_name::println;
 
@@ -38,6 +39,14 @@ pub extern "C" fn crsql_integration_check() {
 
 pub fn opendb() -> Result<CRConnection, ResultCode> {
     let connection = sqlite::open(sqlite::strlit!(":memory:"))?;
+    // connection.enable_load_extension(true)?;
+    // connection.load_extension("../../dbg/crsqlite", None)?;
+    Ok(CRConnection { db: connection })
+}
+
+pub fn opendb_file(f: &str) -> Result<CRConnection, ResultCode> {
+    let f = CString::new(f)?;
+    let connection = sqlite::open(f.as_ptr())?;
     // connection.enable_load_extension(true)?;
     // connection.load_extension("../../dbg/crsqlite", None)?;
     Ok(CRConnection { db: connection })

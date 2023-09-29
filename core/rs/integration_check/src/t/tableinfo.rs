@@ -325,9 +325,35 @@ fn test_create_clock_table_from_table_info() {
 }
 
 fn test_leak_condition() {
-    // updating table infos prepares stements
+    // updating schemas prepares stements
     // re-pulling table infos should finalize those statements
-    // we do not use `Drop` given we cannot return error conditions from `Drop`
+    let c1w = crate::opendb_file("test_leak_condition").expect("Opened DB");
+    let c2w = crate::opendb_file("test_leak_condition").expect("Opened DB");
+
+    let c1 = &c1w.db;
+    let c2 = &c2w.db;
+
+    c1.exec_safe(
+        "DROP TABLE IF EXISTS foo;
+        DROP TABLE IF EXISTS bar;
+        VACUUM;",
+    )
+    .expect("reset db");
+
+    c1.exec_safe("CREATE TABLE foo (a not null, b not null, primary key (a, b));")
+        .expect("made foo");
+    c1.exec_safe("SELECT crsql_as_crr('foo')")
+        .expect("made foo a crr");
+    c1.exec_safe("INSERT INTO foo VALUES (1, 2)")
+        .expect("inserted into foo");
+    c1.exec_safe("UPDATE FOO set b = 3").expect("updated foo");
+    c2.exec_safe("INSERT INTO foo VALUES (2, 3)")
+        .expect("inserted into foo");
+    c2.exec_safe("CREATE TABLE bar (a)").expect("created bar");
+    c1.exec_safe("INSERT INTO foo VALUES (3, 4)")
+        .expect("inserted into foo");
+    c2.exec_safe("INSERT INTO foo VALUES (4, 5)")
+        .expect("inserted into foo");
 }
 
 pub fn run_suite() {
@@ -335,4 +361,5 @@ pub fn run_suite() {
     test_pull_table_info();
     test_is_table_compatible();
     test_create_clock_table_from_table_info();
+    test_leak_condition();
 }

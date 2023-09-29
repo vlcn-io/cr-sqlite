@@ -129,16 +129,16 @@ unsafe fn compact_post_alter(
           )
         );
         db.exec_safe(&sql)?;
-    }
 
-    // now delete pk lookasides that no longer map to anything in the clock tables
-    let sql = format!(
-        "DELETE FROM \"{tbl_name}__crsql_pks\" WHERE __crsql_key NOT IN (
-          SELECT key FROM \"{tbl_name}__crsql_clock\"
-        )",
-        tbl_name = crate::util::escape_ident(tbl_name_str),
-    );
-    db.exec_safe(&sql)?;
+        // now delete pk lookasides that no longer map to anything in the clock tables
+        let sql = format!(
+            "DELETE FROM \"{tbl_name}__crsql_pks\" WHERE __crsql_key NOT IN (
+        SELECT key FROM \"{tbl_name}__crsql_clock\"
+      )",
+            tbl_name = crate::util::escape_ident(tbl_name_str),
+        );
+        db.exec_safe(&sql)?;
+    }
 
     let stmt = db.prepare_v2(
         "INSERT OR REPLACE INTO crsql_master (key, value) VALUES ('pre_compact_dbversion', ?)",

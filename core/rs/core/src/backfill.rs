@@ -214,9 +214,9 @@ fn fill_column(
     let dflt_value = get_dflt_value(db, table, &non_pk_col.name)?;
     let sql = format!(
         "SELECT {pk_cols} FROM {table} as t1
-          LEFT JOIN \"{table}__crsql_pks\" as t2 ON {pk_on_conditions}
-          JOIN \"{table}__crsql_clock\" as t3 ON t3.key = t2.__crsql_key AND t3.col_name = ?
-          WHERE t2.\"{first_pk}\" IS NULL {dflt_value_condition}",
+          JOIN \"{table}__crsql_pks\" as t2 ON {pk_on_conditions}
+          LEFT JOIN \"{table}__crsql_clock\" as t3 ON t3.key = t2.__crsql_key AND t3.col_name = ?
+          WHERE t3.key IS NULL {dflt_value_condition}",
         table = crate::util::escape_ident(table),
         pk_cols = pk_cols
             .iter()
@@ -232,7 +232,6 @@ fn fill_column(
             ))
             .collect::<Vec<_>>()
             .join(" AND "),
-        first_pk = crate::util::escape_ident(&pk_cols[0].name),
         dflt_value_condition = if let Some(dflt) = dflt_value {
             format!("AND t1.\"{}\" IS NOT {}", &non_pk_col.name, dflt)
         } else {

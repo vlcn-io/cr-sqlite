@@ -169,7 +169,6 @@ def test_backfill_clocks_on_rename():
     c.execute("SELECT crsql_commit_alter('todo');")
     c.commit()
     changes = c.execute(changes_with_versions_query).fetchall()
-    pprint(changes)
     assert (changes == [('todo', b'\x01\t\x01', 'complete', 0, 1, 1),
                         ('todo', b'\x01\t\x01', 'list', 'home', 1, 1),
                         ('todo', b'\x01\t\x01', 'task', 'cook', 2, 1),

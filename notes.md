@@ -1,3 +1,13 @@
+# back-to-cid
+
+- cid from `pragma_table_info`
+- send `cid` over the wire too?
+  - maybe in future update
+- sentinel becomes actual -1? or empty string or some such? Neg numbers are large varints
+- begin_alter needs to save off cid mappings in temp table so we can detect dropped columns
+  - commit_alter would need to find where names no longer exist and remove them from clock tables based on their `old cid` mapping
+  - commit_alter would need to re-number entries in clock tables whose `name via old cid` matches `name via new cid` but where `old cid != new cid`
+
 # db-version
 
 db version as col version for tx preservation on merge.

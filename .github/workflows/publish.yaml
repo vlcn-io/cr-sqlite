@@ -145,10 +145,8 @@ jobs:
 
       - name: Rust Nightly
         run: |
-          rm core/rs/bundle_static/rust-toolchain.toml
-          rustup toolchain install nightly-2023-06-17-x86_64-pc-windows-gnu
-          rustup component add rust-src --toolchain nightly-2023-10-05-x86_64-pc-windows-gnu
-          rustup default nightly-2023-10-05-x86_64-pc-windows-gnu
+          rustup toolchain install nightly-2023-10-05
+          rustup target add x86_64-pc-windows-gnu --toolchain nightly-2023-10-05
 
       - name: Build
         run: |
@@ -180,10 +178,8 @@ jobs:
 
       - name: Rust Nightly
         run: |
-          rm core/rs/bundle_static/rust-toolchain.toml
-          rustup toolchain install nightly-2023-06-17-x86_64-pc-windows-gnu
-          rustup component add rust-src --toolchain nightly-2023-10-05-i686-pc-windows-gnu
-          rustup default nightly-2023-10-05-i686-pc-windows-gnu
+          rustup toolchain install nightly-2023-10-05
+          rustup target add i686-pc-windows-gnu --toolchain nightly-2023-10-05
 
       - name: Build
         run: |

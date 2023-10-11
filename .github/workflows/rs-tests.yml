@@ -25,8 +25,8 @@ jobs:
         if: runner.os == 'Windows'
         run: |
           find . -name rust-toolchain.toml -exec echo rm {} \;
-          rustup component add rust-src --toolchain nightly-2023-06-17-x86_64-pc-windows-gnu
-          rustup default nightly-2023-06-17-x86_64-pc-windows-gnu
+          rustup component add rust-src --toolchain nightly-2023-10-05-x86_64-pc-windows-gnu
+          rustup default nightly-2023-10-05-x86_64-pc-windows-gnu
 
       - name: Test Fractindex
         run: |

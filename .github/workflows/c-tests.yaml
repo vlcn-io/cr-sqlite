@@ -25,8 +25,8 @@ jobs:
         if: runner.os == 'Windows'
         run: |
           rm core/rs/integration_check/rust-toolchain.toml
-          rustup component add rust-src --toolchain nightly-2023-06-17-x86_64-pc-windows-gnu
-          rustup default nightly-2023-06-17-x86_64-pc-windows-gnu
+          rustup component add rust-src --toolchain nightly-2023-10-05-x86_64-pc-windows-gnu
+          rustup default nightly-2023-10-05-x86_64-pc-windows-gnu
 
       - name: Test
         run: |

@@ -99,15 +99,6 @@ pub fn binding_list(num_slots: usize) -> String {
         .join(", ")
 }
 
-pub fn set_list(columns: &Vec<ColumnInfo>) -> String {
-    // for each column, add a `col_name = ?` statement
-    columns
-        .iter()
-        .map(|c| format!("\"{col_name}\" = ?", col_name = escape_ident(&c.name)))
-        .collect::<Vec<_>>()
-        .join(", ")
-}
-
 pub fn as_identifier_list(
     columns: &Vec<ColumnInfo>,
     prefix: Option<&str>,
@@ -121,18 +112,6 @@ pub fn as_identifier_list(
         })
     }
     Ok(result.join(","))
-}
-
-pub fn map_columns<F>(columns: &Vec<ColumnInfo>, map: F) -> Result<Vec<String>, Utf8Error>
-where
-    F: Fn(&str) -> String,
-{
-    let mut result = vec![];
-    for c in columns {
-        result.push(map(&c.name))
-    }
-
-    return Ok(result);
 }
 
 pub fn escape_ident(ident: &str) -> String {

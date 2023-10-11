@@ -62,8 +62,8 @@ jobs:
 
       - name: Rust Nightly
         run: |
-          rustup toolchain install nightly-2023-06-17
-          rustup target add aarch64-apple-darwin --toolchain nightly-2023-06-17
+          rustup toolchain install nightly-2023-10-05
+          rustup target add aarch64-apple-darwin --toolchain nightly-2023-10-05
 
       - name: Build MacOS Arm dylib
         run: |
@@ -112,8 +112,8 @@ jobs:
 
       - name: Rust Nightly
         run: |
-          rustup toolchain install nightly-2023-06-17
-          rustup target add aarch64-unknown-linux-gnu --toolchain nightly-2023-06-17
+          rustup toolchain install nightly-2023-10-05
+          rustup target add aarch64-unknown-linux-gnu --toolchain nightly-2023-10-05
 
       - name: Build
         run: |
@@ -146,8 +146,8 @@ jobs:
       - name: Rust Nightly
         run: |
           rm core/rs/bundle_static/rust-toolchain.toml
-          rustup component add rust-src --toolchain nightly-2023-06-17-x86_64-pc-windows-gnu
-          rustup default nightly-2023-06-17-x86_64-pc-windows-gnu
+          rustup component add rust-src --toolchain nightly-2023-10-05-x86_64-pc-windows-gnu
+          rustup default nightly-2023-10-05-x86_64-pc-windows-gnu
 
       - name: Build
         run: |
@@ -180,8 +180,8 @@ jobs:
       - name: Rust Nightly
         run: |
           rm core/rs/bundle_static/rust-toolchain.toml
-          rustup component add rust-src --toolchain nightly-2023-06-17-i686-pc-windows-gnu
-          rustup default nightly-2023-06-17-i686-pc-windows-gnu
+          rustup component add rust-src --toolchain nightly-2023-10-05-i686-pc-windows-gnu
+          rustup default nightly-2023-10-05-i686-pc-windows-gnu
 
       - name: Build
         run: |
@@ -213,9 +213,9 @@ jobs:
 
       - name: Rust Nightly
         run: |
-          rustup toolchain install nightly-2023-06-17
-          rustup target add aarch64-linux-android --toolchain nightly-2023-06-17
-          rustup component add rust-src --toolchain nightly-2023-06-17-x86_64-unknown-linux-gnu
+          rustup toolchain install nightly-2023-10-05
+          rustup target add aarch64-linux-android --toolchain nightly-2023-10-05
+          rustup component add rust-src --toolchain nightly-2023-10-05-x86_64-unknown-linux-gnu
 
       - uses: nttld/setup-ndk@v1
         id: setup-ndk

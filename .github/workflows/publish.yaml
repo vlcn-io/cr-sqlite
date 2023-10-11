@@ -150,6 +150,10 @@ jobs:
           rustup target add x86_64-pc-windows-gnu --toolchain nightly-2023-10-05
           rustup component add rust-src --toolchain nightly-2023-10-05-x86_64-unknown-linux-gnu
 
+      - name: mingw-w64
+        run: |
+          sudo apt update && sudo apt install -y mingw-w64
+
       - name: Build
         run: |
           cd core
@@ -182,6 +186,11 @@ jobs:
         run: |
           rustup toolchain install nightly-2023-10-05
           rustup target add i686-pc-windows-gnu --toolchain nightly-2023-10-05
+          rustup component add rust-src --toolchain nightly-2023-10-05-x86_64-unknown-linux-gnu
+
+      - name: mingw-w64
+        run: |
+          sudo apt update && sudo apt install -y mingw-w64
 
       - name: Build
         run: |

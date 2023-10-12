@@ -1,3 +1,16 @@
+# write permissions
+
+- 2 phase commit
+- whole row to write callback
+- write callback can reject in which case we.. 
+  Well no data changed but we need to get the data back to the client.
+  We could
+    1. record the db version that failed and somehow get that back to the client
+    2. bump the db version of the record, causing all clients to re-pull it
+    3. Do nothing an allow client to be diverged.
+
+Note: data validation rules / write permissions should only be enforced in a hub and spoke topology.
+
 # back-to-cid
 
 - cid from `pragma_table_info`

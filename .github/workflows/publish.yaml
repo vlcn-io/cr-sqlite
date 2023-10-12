@@ -15,11 +15,13 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            artifact_name: crsqlite.so
-            asset_name: crsqlite-linux-x86_64.so
+            library_name: crsqlite.so
+            artifact_name: crsqlite.zip
+            asset_name: crsqlite-linux-x86_64.zip
           - os: macos-latest
-            artifact_name: crsqlite.dylib
-            asset_name: crsqlite-darwin-x86_64.dylib
+            library_name: crsqlite.dylib
+            artifact_name: crsqlite.zip
+            asset_name: crsqlite-darwin-x86_64.zip
 
     steps:
       - uses: actions/checkout@v3
@@ -35,6 +37,7 @@ jobs:
         run: |
           cd core
           make loadable
+          zip dist/crsqlite.zip dist/${{ matrix.library_name }}
 
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2
@@ -52,8 +55,9 @@ jobs:
       matrix:
         include:
           - os: macos-latest
-            artifact_name: crsqlite.dylib
-            asset_name: crsqlite-darwin-aarch64.dylib
+            library_name: crsqlite.dylib
+            artifact_name: crsqlite.zip
+            asset_name: crsqlite-darwin-aarch64.zip
 
     steps:
       - uses: actions/checkout@v3
@@ -69,6 +73,7 @@ jobs:
         run: |
           cd core
           export CI_MAYBE_TARGET="aarch64-apple-darwin" && make loadable
+          zip dist/crsqlite.zip dist/${{ matrix.library_name }}
 
       - name: Upload macos dylib to release
         uses: svenstaro/upload-release-action@v2
@@ -98,8 +103,9 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            artifact_name: crsqlite.so
-            asset_name: crsqlite-linux-aarch64.so
+            library_name: crsqlite.so
+            artifact_name: crsqlite.zip
+            asset_name: crsqlite-linux-aarch64.zip
 
     steps:
       - name: Install toolchain
@@ -120,6 +126,7 @@ jobs:
         run: |
           cd core
           export CI_MAYBE_TARGET="aarch64-unknown-linux-gnu" && export CI_GCC="aarch64-linux-gnu-gcc" && make loadable
+          zip dist/crsqlite.zip dist/${{ matrix.library_name }}
 
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2
@@ -136,8 +143,9 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            artifact_name: crsqlite.dll
-            asset_name: crsqlite-win-x86_64.dll
+            library_name: crsqlite.dll
+            artifact_name: crsqlite.zip
+            asset_name: crsqlite-win-x86_64.zip
 
     steps:
       - uses: actions/checkout@v3
@@ -158,6 +166,7 @@ jobs:
         run: |
           cd core
           export CI_MAYBE_TARGET="x86_64-pc-windows-gnu" && export CI_GCC="x86_64-w64-mingw32-gcc" && make loadable
+          zip dist/crsqlite.zip dist/${{ matrix.library_name }}
 
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2
@@ -174,8 +183,9 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            artifact_name: crsqlite.dll
-            asset_name: crsqlite-win-i686.dll
+            library_name: crsqlite.dll
+            artifact_name: crsqlite.zip
+            asset_name: crsqlite-win-i686.zip
 
     steps:
       - uses: actions/checkout@v3
@@ -196,6 +206,7 @@ jobs:
         run: |
           cd core
           export CI_MAYBE_TARGET="i686-pc-windows-gnu" && export CI_GCC="i686-w64-mingw32-gcc" && make loadable
+          zip dist/crsqlite.zip dist/${{ matrix.library_name }}
 
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2
@@ -212,8 +223,9 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            artifact_name: crsqlite.so
-            asset_name: crsqlite-aarch64-linux-android.so
+            library_name: crsqlite.so
+            artifact_name: crsqlite.zip
+            asset_name: crsqlite-aarch64-linux-android.zip
 
     steps:
       - uses: actions/checkout@v3
@@ -242,6 +254,7 @@ jobs:
         run: |
           cd core
           export ANDROID_TARGET=aarch64-linux-android; make loadable
+          zip dist/crsqlite.zip dist/${{ matrix.library_name }}
 
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2

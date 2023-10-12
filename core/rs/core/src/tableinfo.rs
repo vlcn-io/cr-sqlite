@@ -507,7 +507,7 @@ impl TableInfo {
               ?,
               0 WHERE true
             ON CONFLICT DO UPDATE SET
-              col_version = col_version + 1,
+              col_version = crsql_next_db_version(),
               db_version = ?,
               seq = ?,
               site_id = 0;",

@@ -1,3 +1,8 @@
+# many commit rollback
+
+- We should allow many commit and rollback hooks. As separate crate. This is so other layers can install commit hooks or other extensions themselves.
+- 
+
 # write permissions
 
 - 2 phase commit

@@ -56,6 +56,7 @@ pub struct crsql_ExtData {
     pub pendingDbVersion: sqlite::int64,
     pub pragmaSchemaVersion: ::core::ffi::c_int,
     pub updatedTableInfosThisTx: ::core::ffi::c_int,
+    pub readDbVersionThisTx: ::core::ffi::c_int,
     pub pragmaSchemaVersionForTableInfos: ::core::ffi::c_int,
     pub siteId: *mut ::core::ffi::c_uchar,
     pub pDbVersionStmt: *mut sqlite::stmt,
@@ -340,10 +341,20 @@ fn bindgen_test_layout_crsql_ExtData() {
         )
     );
     assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).readDbVersionThisTx) as usize - ptr as usize },
+        48usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(crsql_ExtData),
+            "::",
+            stringify!(readDbVersionThisTx)
+        )
+    );
+    assert_eq!(
         unsafe {
             ::core::ptr::addr_of!((*ptr).pragmaSchemaVersionForTableInfos) as usize - ptr as usize
         },
-        48usize,
+        52usize,
         concat!(
             "Offset of field: ",
             stringify!(crsql_ExtData),

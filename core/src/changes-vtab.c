@@ -27,7 +27,7 @@ static int changesConnect(sqlite3 *db, void *pAux, int argc,
       db,
       "CREATE TABLE x([table] TEXT NOT NULL, [pk] BLOB NOT NULL, [cid] TEXT "
       "NOT NULL, [val] ANY, [col_version] INTEGER NOT NULL, [db_version] "
-      "INTEGER NOT NULL, [site_id] BLOB, [cl] INTEGER NOT NULL, [seq] "
+      "INTEGER NOT NULL, [site_id] BLOB NOT NULL, [cl] INTEGER NOT NULL, [seq] "
       "INTEGER NOT NULL)");
   if (rc != SQLITE_OK) {
     *pzErr = sqlite3_mprintf("Could not define the table");

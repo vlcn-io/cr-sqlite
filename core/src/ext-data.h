@@ -22,6 +22,7 @@ struct crsql_ExtData {
   sqlite3_int64 pendingDbVersion;
   int pragmaSchemaVersion;
   int updatedTableInfosThisTx;
+  int readDbVersionThisTx;
 
   // we need another schema version number that tracks when we checked it
   // for zpTableInfos.

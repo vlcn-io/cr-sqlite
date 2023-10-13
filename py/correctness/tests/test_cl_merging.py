@@ -214,7 +214,7 @@ def test_equivalent_delete_cls_is_noop():
     # create a manual clock entry that wouldn't normally exist
     # this clock entry would be removed if the merge does any work rather than bailing early
     c2.execute(
-        "INSERT INTO foo__crsql_clock VALUES (1, 'b', 3, 1, NULL, 1)")
+        "INSERT INTO foo__crsql_clock VALUES (1, 'b', 3, 1, 0, 1)")
     c2.commit()
     pre_changes = c2.execute("SELECT * FROM crsql_changes").fetchall()
     sync_left_to_right(c1, c2, 0)

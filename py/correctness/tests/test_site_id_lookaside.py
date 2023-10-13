@@ -46,7 +46,7 @@ def test_site_id_filter():
         "SELECT quote(site_id) FROM crsql_changes WHERE site_id = x'1dc8d6bb7f8941088327d9439a7927a4'").fetchone()[0] == "x'1dc8d6bb7f8941088327d9439a7927a4'".upper())
 
 
-def test_local_changes_have_null_site():
+def test_local_changes_have_local_site():
     a = make_simple_schema()
     a.execute("INSERT INTO foo VALUES (2,2)")
     a.execute("INSERT INTO foo VALUES (3,2)")
@@ -57,7 +57,7 @@ def test_local_changes_have_null_site():
     a.commit()
 
     assert (a.execute(
-        "SELECT count(*) FROM crsql_changes WHERE site_id IS NULL").fetchone()[0] == 3)
+        "SELECT count(*) FROM crsql_changes WHERE site_id IS crsql_site_id()").fetchone()[0] == 3)
     assert (a.execute(
         "SELECT count(*) FROM crsql_changes").fetchone()[0] == 4)
     None

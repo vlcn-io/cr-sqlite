@@ -229,15 +229,16 @@ static void teste2e() {
   assert(rc == SQLITE_ROW);
 
   const char *tmpSiteid = (const char *)sqlite3_column_text(pStmt3, 0);
-  // printf("db1sid: %s\n", db1siteid);
-  // printf("db2sid: %s\n", db2siteid);
-  // printf("db3sid: %s\n", db3siteid);
-  // printf("tempsid: %s\n", tmpSiteid);
-  assert(strcmp(tmpSiteid, "NULL") == 0);
+  printf("db1sid: %s\n", db1siteid);
+  printf("db2sid: %s\n", db2siteid);
+  printf("db3sid: %s\n", db3siteid);
+  printf("tempsid: %s\n", tmpSiteid);
+  // printf("tmp: %s, db3: %s", tmpSiteid, db3siteid);
+  assert(strcmp(tmpSiteid, db3siteid) == 0);
 
   rc = sqlite3_step(pStmt3);
   assert(rc == SQLITE_ROW);
-  assert(strcmp((const char *)sqlite3_column_text(pStmt3, 0), "NULL") == 0);
+  assert(strcmp((const char *)sqlite3_column_text(pStmt3, 0), db3siteid) == 0);
   sqlite3_finalize(pStmt3);
 
   rc = sqlite3_prepare_v2(db2, "SELECT * FROM foo ORDER BY a ASC", -1, &pStmt2,

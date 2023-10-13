@@ -209,7 +209,7 @@ pub fn create_clock_table(
       site_id INTEGER,
       seq INTEGER NOT NULL,
       PRIMARY KEY (key, col_name)
-    ) WITHOUT ROWID",
+    ) WITHOUT ROWID, STRICT",
         table_name = crate::util::escape_ident(table_name),
     ))?;
 

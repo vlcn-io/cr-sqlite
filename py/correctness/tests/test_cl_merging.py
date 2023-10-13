@@ -56,7 +56,7 @@ def sync_left_to_right_exact_version(l, r, db_version):
 
 def sync_left_to_right_include_siteid(l, r, since):
     changes = l.execute(
-        "SELECT [table], pk, cid, val, col_version, db_version, coalesce(site_id, crsql_site_id()), cl, seq FROM crsql_changes WHERE db_version > ?", (since,))
+        "SELECT [table], pk, cid, val, col_version, db_version, site_id, cl, seq FROM crsql_changes WHERE db_version > ?", (since,))
     for change in changes:
         r.execute(
             "INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", change)
@@ -69,7 +69,7 @@ def sync_left_to_right_include_siteid(l, r, since):
 def sync_left_to_right_normal_delta_state(l, r, since):
     r_siteid = r.execute("SELECT crsql_site_id()").fetchone()[0]
     changes = l.execute(
-        "SELECT [table], pk, cid, val, col_version, db_version, coalesce(site_id, crsql_site_id()), cl, seq FROM crsql_changes WHERE db_version > ? AND site_id IS NOT ?",
+        "SELECT [table], pk, cid, val, col_version, db_version, site_id, cl, seq FROM crsql_changes WHERE db_version > ? AND site_id IS NOT ?",
         (since, r_siteid))
     largest_version = 0
     for change in changes:
@@ -83,7 +83,7 @@ def sync_left_to_right_normal_delta_state(l, r, since):
 def sync_left_to_right_single_vrsn(l, r, vrsn):
     r_siteid = r.execute("SELECT crsql_site_id()").fetchone()[0]
     changes = l.execute(
-        "SELECT [table], pk, cid, val, col_version, db_version, coalesce(site_id, crsql_site_id()), cl, seq FROM crsql_changes WHERE db_version = ? AND site_id IS NOT ?",
+        "SELECT [table], pk, cid, val, col_version, db_version, site_id, cl, seq FROM crsql_changes WHERE db_version = ? AND site_id IS NOT ?",
         (vrsn, r_siteid))
     for change in changes:
         r.execute(
@@ -276,6 +276,7 @@ def test_pr_299_scenario():
     # c2 should have accepted all the changes given the higher causal length
     # a = 1, b = 1, cl = 3
     # note: why is site_id missing??? Ah, it is missing since we don't coalesce to get it. This is expected.
+    # TODO: should no longer be missing site_id!
     assert (changes == [('foo', b'\x01\t\x01', '-1', None, 3, 3, None, 3, 0),
                         ('foo', b'\x01\t\x01', 'b', 1, 1, 3, None, 3, 1)])
     # c2 and c1 should match in terms of data

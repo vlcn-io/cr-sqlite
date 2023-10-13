@@ -421,12 +421,12 @@ impl TableInfo {
             2,
             ?,
             ?,
-            NULL WHERE true
+            0 WHERE true
           ON CONFLICT DO UPDATE SET
             col_version = 1 + col_version,
             db_version = ?,
             seq = ?,
-            site_id = crsql_site_id()",
+            site_id = 0",
                 table_name = crate::util::escape_ident(&self.tbl_name),
                 sentinel = crate::c::DELETE_SENTINEL,
             );
@@ -471,12 +471,12 @@ impl TableInfo {
                 1,
                 ?,
                 ?,
-                NULL WHERE true
+                0 WHERE true
                 ON CONFLICT DO UPDATE SET
                   col_version = CASE col_version % 2 WHEN 0 THEN col_version + 1 ELSE col_version + 2 END,
                   db_version = ?,
                   seq = ?,
-                  site_id = NULL",
+                  site_id = 0",
               table_name = crate::util::escape_ident(&self.tbl_name),
               sentinel = crate::c::INSERT_SENTINEL,
             );
@@ -505,12 +505,12 @@ impl TableInfo {
               1,
               ?,
               ?,
-              NULL WHERE true
+              0 WHERE true
             ON CONFLICT DO UPDATE SET
               col_version = col_version + 1,
               db_version = ?,
               seq = ?,
-              site_id = NULL;",
+              site_id = 0;",
                 table_name = crate::util::escape_ident(&self.tbl_name),
             );
             let ret = db.prepare_v3(&sql, sqlite::PREPARE_PERSISTENT)?;
@@ -533,7 +533,7 @@ impl TableInfo {
                 col_version = CASE col_version % 2 WHEN 0 THEN col_version + 1 ELSE col_version + 2 END,
                 db_version = ?,
                 seq = ?,
-                site_id = NULL
+                site_id = 0
               WHERE key = ? AND col_name = ?",
               table_name = crate::util::escape_ident(&self.tbl_name),
             );

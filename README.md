@@ -68,8 +68,8 @@ The full documentation site is available [here](https://vlcn.io/docs).
 - A function extension (`crsql_as_crr`) to upgrade existing tables to "crrs" or "conflict free replicated relations"
   - `SELECT crsql_as_crr('table_name')`
 - A virtual table (`crsql_changes`) to ask the database for changesets or to apply changesets from another database
-  - `SELECT "table", "pk", "cid", "val", "col_version", "db_version", COALESCE("site_id", crsql_site_id()), cl, seq FROM crsql_changes WHERE db_version > x AND site_id IS NULL` -- to get local changes
-  - `SELECT "table", "pk", "cid", "val", "col_version", "db_version", COALESCE("site_id", crsql_site_id()), cl, seq FROM crsql_changes WHERE db_version > x AND site_id IS NOT some_site` -- to get all changes excluding those synced from some site
+  - `SELECT "table", "pk", "cid", "val", "col_version", "db_version", "site_id", cl, seq FROM crsql_changes WHERE db_version > x AND site_id IS NULL` -- to get local changes
+  - `SELECT "table", "pk", "cid", "val", "col_version", "db_version", "site_id", cl, seq FROM crsql_changes WHERE db_version > x AND site_id IS NOT some_site` -- to get all changes excluding those synced from some site
   - `INSERT INTO crsql_changes VALUES ([patches received from select on another peer])`
 - And `crsql_begin_alter('table_name')` & `crsql_alter_commit('table_name')` primitives to allow altering table definitions that have been upgraded to `crr`s.
   - Until we move forward with extending the syntax of SQLite to be CRR aware, altering CRRs looks like:
@@ -104,10 +104,10 @@ insert into foo (a,b) values (1,2);
 insert into baz (a,b,c,d) values ('a', 'woo', 'doo', 'daa');
 
 -- ask for a record of what has changed
-select "table", "pk", "cid", "val", "col_version", "db_version", COALESCE("site_id", crsql_site_id()), "cl", "seq" from crsql_changes;
+select "table", "pk", "cid", "val", "col_version", "db_version", "site_id", "cl", "seq" from crsql_changes;
 
 ┌───────┬─────────────┬─────┬───────┬─────────────┬────────────┬──────────────────────────────────────┬────┬─────┐
-│ table │     pk      │ cid │  val  │ col_version │ db_version │ COALESCE("site_id", crsql_site_id()) │ cl │ seq │
+│ table │     pk      │ cid │  val  │ col_version │ db_version │ "site_id" │ cl │ seq │
 ├───────┼─────────────┼─────┼───────┼─────────────┼────────────┼──────────────────────────────────────┼────┼─────┤
 │ 'foo' │ x'010901'   │ 'b' │ 2     │ 1           │ 1          │ x'049c48eadf4440d7944ed9ec88b13ea5'  │ 1  │ 0   │
 │ 'baz' │ x'010b0161' │ 'b' │ 'woo' │ 1           │ 2          │ x'049c48eadf4440d7944ed9ec88b13ea5'  │ 1  │ 0   │

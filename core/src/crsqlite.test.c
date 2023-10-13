@@ -234,11 +234,11 @@ static void teste2e() {
   printf("db3sid: %s\n", db3siteid);
   printf("tempsid: %s\n", tmpSiteid);
   // printf("tmp: %s, db3: %s", tmpSiteid, db3siteid);
-  assert(strcmp(tmpSiteid, db3siteid) == 0);
+  assert(strcmp(tmpSiteid, db1siteid) == 0);
 
   rc = sqlite3_step(pStmt3);
   assert(rc == SQLITE_ROW);
-  assert(strcmp((const char *)sqlite3_column_text(pStmt3, 0), db3siteid) == 0);
+  assert(strcmp((const char *)sqlite3_column_text(pStmt3, 0), db1siteid) == 0);
   sqlite3_finalize(pStmt3);
 
   rc = sqlite3_prepare_v2(db2, "SELECT * FROM foo ORDER BY a ASC", -1, &pStmt2,
@@ -576,9 +576,9 @@ static void testPullingOnlyLocalChanges() {
   // TODO: why does `IS NULL` not work in the vtab???
   // `IS NOT NULL` also fails to call the virtual table bestIndex function with
   // any constraints p pIdxInfo->nConstraint
-  sqlite3_prepare_v2(db,
-                     "SELECT count(*) FROM crsql_changes WHERE site_id IS NULL",
-                     -1, &pStmt, 0);
+  sqlite3_prepare_v2(
+      db, "SELECT count(*) FROM crsql_changes WHERE site_id IS crsql_site_id()",
+      -1, &pStmt, 0);
 
   rc = sqlite3_step(pStmt);
   assert(rc == SQLITE_ROW);
@@ -591,8 +591,9 @@ static void testPullingOnlyLocalChanges() {
   sqlite3_finalize(pStmt);
 
   sqlite3_prepare_v2(
-      db, "SELECT count(*) FROM crsql_changes WHERE site_id IS NOT NULL", -1,
-      &pStmt, 0);
+      db,
+      "SELECT count(*) FROM crsql_changes WHERE site_id IS NOT crsql_site_id()",
+      -1, &pStmt, 0);
   rc = sqlite3_step(pStmt);
   assert(rc == SQLITE_ROW);
   count = sqlite3_column_int(pStmt, 0);

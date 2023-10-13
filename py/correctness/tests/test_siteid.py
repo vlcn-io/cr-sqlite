@@ -30,3 +30,11 @@ def test_c3c4():
     siteid_restored = c.execute("select crsql_site_id()").fetchone()[0]
 
     assert siteid_initial == siteid_restored
+
+
+def test_site_id_for_local_writes():
+    None
+
+
+def test_site_id_from_merge():
+    None

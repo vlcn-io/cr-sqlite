@@ -153,6 +153,10 @@ These can be loaded into `sqlite` via the [`load_extension` command](https://www
 
 The entrypoint to the loadable extension is [`sqlite3_crsqlite_init` ](https://github.com/vlcn-io/cr-sqlite/blob/92df9b4f3a6bdf2bd7c5d9a76949496fa5dc88cf/core/src/crsqlite.c#L536) so you'll either need to provide that to `load_extension` or rename your binary to `crsqlite.[dylib/dll/so]`. See the linked sqlite [`load_extension` docs](https://www.sqlite.org/loadext.html#loading_an_extension).
 
+```
+load_extension(extension_path, 'sqlite3_crsqlite_init')
+```
+
 > Note: if you're using `cr-sqlite` as a run time loadable extension, loading the extension should be the _first_ operation you do after opening a connection to the database. The extension needs to be loaded on every connection you create.
 
 For a WASM build that works in the browser, see the [js](./js) directory.

@@ -229,11 +229,10 @@ static void teste2e() {
   assert(rc == SQLITE_ROW);
 
   const char *tmpSiteid = (const char *)sqlite3_column_text(pStmt3, 0);
-  printf("db1sid: %s\n", db1siteid);
-  printf("db2sid: %s\n", db2siteid);
-  printf("db3sid: %s\n", db3siteid);
-  printf("tempsid: %s\n", tmpSiteid);
-  // printf("tmp: %s, db3: %s", tmpSiteid, db3siteid);
+  // printf("db1sid: %s\n", db1siteid);
+  // printf("db2sid: %s\n", db2siteid);
+  // printf("db3sid: %s\n", db3siteid);
+  // printf("tempsid: %s\n", tmpSiteid);
   assert(strcmp(tmpSiteid, db1siteid) == 0);
 
   rc = sqlite3_step(pStmt3);

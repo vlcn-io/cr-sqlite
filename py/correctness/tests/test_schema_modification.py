@@ -1,4 +1,4 @@
-from crsql_correctness import connect
+from crsql_correctness import connect, get_site_id
 from pprint import pprint
 import pytest
 
@@ -282,6 +282,7 @@ def test_backfill_for_alter_does_not_move_dbversion():
     c.execute("INSERT INTO foo VALUES (1, 'bar');")
     c.execute("SELECT crsql_as_crr('foo');")
     c.commit()
+    site_id = get_site_id(c)
 
     # - change name to have a default value
     # - add an age column (nullable)
@@ -307,9 +308,9 @@ def test_backfill_for_alter_does_not_move_dbversion():
             # Existing rows have their existing db_version (1).
             # New rows get the current db version given
             # migrations on other will create convergence.
-            ('foo', b'\x01\t\x01', 'name', 'bar', 1, 1, None),
-            ('foo', b'\x01\t\x02', 'name', 'baz', 1, 1, None),
-            ('foo', b'\x01\t\x02', 'age', 33, 1, 1, None)])
+            ('foo', b'\x01\t\x01', 'name', 'bar', 1, 1, site_id),
+            ('foo', b'\x01\t\x02', 'name', 'baz', 1, 1, site_id),
+            ('foo', b'\x01\t\x02', 'age', 33, 1, 1, site_id)])
 
 
 def test_add_col_with_default():
@@ -326,7 +327,8 @@ def test_add_col_with_default():
     changes = c.execute(full_changes_query).fetchall()
     # No change given we only added a column with a default value and we need
     # not backfill default values
-    assert (changes == [('foo', b'\x01\t\x01', 'name', 'bar', 1, 1, None)])
+    site_id = get_site_id(c)
+    assert (changes == [('foo', b'\x01\t\x01', 'name', 'bar', 1, 1, site_id)])
 
     None
 
@@ -343,7 +345,8 @@ def test_add_col_nullable():
     c.execute("SELECT crsql_commit_alter('foo');")
 
     changes = c.execute(full_changes_query).fetchall()
-    assert (changes == [('foo', b'\x01\t\x01', 'name', 'bar', 1, 1, None)])
+    site_id = get_site_id(c)
+    assert (changes == [('foo', b'\x01\t\x01', 'name', 'bar', 1, 1, site_id)])
 
 
 def test_add_col_implicit_nullable():
@@ -358,7 +361,8 @@ def test_add_col_implicit_nullable():
     c.execute("SELECT crsql_commit_alter('foo');")
 
     changes = c.execute(full_changes_query).fetchall()
-    assert (changes == [('foo', b'\x01\t\x01', 'name', 'bar', 1, 1, None)])
+    site_id = get_site_id(c)
+    assert (changes == [('foo', b'\x01\t\x01', 'name', 'bar', 1, 1, site_id)])
 
 
 def test_add_col_through_12step():
@@ -381,10 +385,11 @@ def test_add_col_through_12step():
     c.execute("SELECT crsql_commit_alter('foo');")
 
     changes = c.execute(full_changes_query).fetchall()
-    assert (changes == [('foo', b'\x01\t\x03', 'name', None, 1, 1, None),
-                        ('foo', b'\x01\t\x16', 'name', 'baz', 1, 1, None),
-                        ('foo', b'\x01\t\x16', 'age', 33, 1, 1, None),
-                        ('foo', b'\x01\t\x03', 'age', 44, 1, 1, None)])
+    site_id = get_site_id(c)
+    assert (changes == [('foo', b'\x01\t\x03', 'name', None, 1, 1, site_id),
+                        ('foo', b'\x01\t\x16', 'name', 'baz', 1, 1, site_id),
+                        ('foo', b'\x01\t\x16', 'age', 33, 1, 1, site_id),
+                        ('foo', b'\x01\t\x03', 'age', 44, 1, 1, site_id)])
 
 
 def test_pk_only_table_backfill():
@@ -396,8 +401,9 @@ def test_pk_only_table_backfill():
     c.commit()
 
     changes = c.execute(full_changes_query).fetchall()
-    assert (changes == [('foo', b'\x01\x09\x01', '-1', None, 1, 1, None),
-                        ('foo', b'\x01\x09\x02', '-1', None, 1, 1, None)])
+    site_id = get_site_id(c)
+    assert (changes == [('foo', b'\x01\x09\x01', '-1', None, 1, 1, site_id),
+                        ('foo', b'\x01\x09\x02', '-1', None, 1, 1, site_id)])
 
 
 # Imagine the case where we have a table:
@@ -416,9 +422,10 @@ def test_pk_and_default_backfill():
     c.commit()
 
     changes = c.execute(full_changes_query).fetchall()
+    site_id = get_site_id(c)
     # Rows should be backfilled
-    assert (changes == [('foo', b'\x01\t\x01', 'b', None, 1, 1, None),
-                        ('foo', b'\x01\t\x02', 'b', None, 1, 1, None)])
+    assert (changes == [('foo', b'\x01\t\x01', 'b', None, 1, 1, site_id),
+                        ('foo', b'\x01\t\x02', 'b', None, 1, 1, site_id)])
 
 
 def test_pk_and_default_backfill_post12step_with_new_rows():
@@ -449,8 +456,9 @@ def test_pk_and_default_backfill_post12step_with_new_rows():
     # 1. do schema alterations in begin/commit alter
     # 2. do data alterations after commit alter
     # data alterations will then get new db versions.
-    assert (changes == [('foo', b'\x01\t\x01', 'b', None, 0, 1, None),
-                        ('foo', b'\x01\t\x02', 'b', None, 0, 1, None)])
+    site_id = get_site_id(c)
+    assert (changes == [('foo', b'\x01\t\x01', 'b', None, 0, 1, site_id),
+                        ('foo', b'\x01\t\x02', 'b', None, 0, 1, site_id)])
 
 
 def test_add_column_and_set_column():
@@ -471,8 +479,9 @@ def test_add_column_and_set_column():
     c.commit()
 
     changes = c.execute(full_changes_query).fetchall()
-    assert (changes == [('foo', b'\x01\x09\x03', '-1', None, 1, 1, None),
-                        ('foo', b'\x01\x09\x03', 'age', 44, 1, 1, None)])
+    site_id = get_site_id(c)
+    assert (changes == [('foo', b'\x01\x09\x03', '-1', None, 1, 1, site_id),
+                        ('foo', b'\x01\x09\x03', 'age', 44, 1, 1, site_id)])
 
 
 # TODO: users can not remove rows during a migration
@@ -541,10 +550,11 @@ def test_remove_col_from_pk():
     c.commit()
 
     changes = c.execute(full_changes_query).fetchall()
-    assert (changes == [('foo', b'\x01\t\x01', 'b', 2, 1, 1, None),
-                        ('foo', b'\x01\t\x01', 'c', 3, 1, 1, None),
-                        ('foo', b'\x01\t\x04', 'b', 5, 1, 1, None),
-                        ('foo', b'\x01\t\x04', 'c', 6, 1, 1, None)])
+    site_id = get_site_id(c)
+    assert (changes == [('foo', b'\x01\t\x01', 'b', 2, 1, 1, site_id),
+                        ('foo', b'\x01\t\x01', 'c', 3, 1, 1, site_id),
+                        ('foo', b'\x01\t\x04', 'b', 5, 1, 1, site_id),
+                        ('foo', b'\x01\t\x04', 'c', 6, 1, 1, site_id)])
 
     None
 
@@ -570,8 +580,9 @@ def test_remove_pk_column():
     c.execute("SELECT crsql_commit_alter('foo');")
 
     changes = c.execute(full_changes_query).fetchall()
-    assert (changes == [('foo', b'\x01\t\x02', 'c', 3, 1, 1, None),
-                        ('foo', b'\x01\t\x05', 'c', 6, 1, 1, None)])
+    site_id = get_site_id(c)
+    assert (changes == [('foo', b'\x01\t\x02', 'c', 3, 1, 1, site_id),
+                        ('foo', b'\x01\t\x05', 'c', 6, 1, 1, site_id)])
 
 
 def test_add_existing_col_to_pk():
@@ -593,8 +604,9 @@ def test_add_existing_col_to_pk():
     c.execute("SELECT crsql_commit_alter('foo');")
 
     changes = c.execute(full_changes_query).fetchall()
-    assert (changes == [('foo', b'\x02\t\x01\t\x02', 'c', 3, 1, 1, None),
-                        ('foo', b'\x02\t\x04\t\x05', 'c', 6, 1, 1, None)])
+    site_id = get_site_id(c)
+    assert (changes == [('foo', b'\x02\t\x01\t\x02', 'c', 3, 1, 1, site_id),
+                        ('foo', b'\x02\t\x04\t\x05', 'c', 6, 1, 1, site_id)])
 
 
 def test_add_new_col_to_pk():
@@ -616,9 +628,9 @@ def test_add_new_col_to_pk():
     c.execute("SELECT crsql_commit_alter('foo');")
 
     changes = c.execute(full_changes_query).fetchall()
-    pprint(changes)
-    assert (changes == [('foo', b'\x02\t\x01\t\x03', 'b', 2, 1, 1, None),
-                        ('foo', b'\x02\t\x04\t\x06', 'b', 5, 1, 1, None)])
+    site_id = get_site_id(c)
+    assert (changes == [('foo', b'\x02\t\x01\t\x03', 'b', 2, 1, 1, site_id),
+                        ('foo', b'\x02\t\x04\t\x06', 'b', 5, 1, 1, site_id)])
 
 
 # DB version isn't bumped but this is fine...
@@ -648,8 +660,9 @@ def test_rename_pk_column():
 
     changes = c.execute(full_changes_query).fetchall()
 
-    assert (changes == [('foo', b'\x01\t\x01', 'b', 2, 1, 1, None),
-                        ('foo', b'\x01\t\x04', 'b', 5, 1, 1, None)])
+    site_id = get_site_id(c)
+    assert (changes == [('foo', b'\x01\t\x01', 'b', 2, 1, 1, site_id),
+                        ('foo', b'\x01\t\x04', 'b', 5, 1, 1, site_id)])
 
 
 def test_pk_only_table_pk_membership():
@@ -675,8 +688,9 @@ def test_changing_values_in_primary_key_columns():
     # TODO: should we not be recording a delete fro `a = 1` given the row was last
     # as a result of the migration? Hmm.. under the current rules of "no sync while schema mismatch"
     # this shouldn't be required.
-    assert (changes == [('foo', b'\x01\t\x02', 'b', 2, 1, 1, None),
-                        ('foo', b'\x01\t\x04', 'b', 5, 1, 1, None)])
+    site_id = get_site_id(c)
+    assert (changes == [('foo', b'\x01\t\x02', 'b', 2, 1, 1, site_id),
+                        ('foo', b'\x01\t\x04', 'b', 5, 1, 1, site_id)])
 
 
 def test_12step_backfill_retains_siteid():

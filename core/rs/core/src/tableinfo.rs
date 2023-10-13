@@ -426,7 +426,7 @@ impl TableInfo {
             col_version = 1 + col_version,
             db_version = ?,
             seq = ?,
-            site_id = NULL",
+            site_id = crsql_site_id()",
                 table_name = crate::util::escape_ident(&self.tbl_name),
                 sentinel = crate::c::DELETE_SENTINEL,
             );

@@ -206,7 +206,7 @@ pub fn create_clock_table(
       col_name TEXT NOT NULL,
       col_version INTEGER NOT NULL,
       db_version INTEGER NOT NULL,
-      site_id INTEGER,
+      site_id INTEGER NOT NULL DEFAULT 0,
       seq INTEGER NOT NULL,
       PRIMARY KEY (key, col_name)
     ) WITHOUT ROWID, STRICT",

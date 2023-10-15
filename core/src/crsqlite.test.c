@@ -545,6 +545,9 @@ static void noopsDoNotMoveClocks() {
   sqlite3_int64 db1vPost = getDbVersion(db1);
   sqlite3_int64 db2vPost = getDbVersion(db2);
 
+  // TODO: we still need to compare values so as not to bump the db_version
+  // forward on a no-difference
+  printf("db1 pre: %lld db2 post: %lld", db1vPre, db2vPost);
   assert(db1vPre == db2vPost);
   assert(db1vPre == db1vPost);
 

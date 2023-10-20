@@ -83,7 +83,7 @@ fn automigrate_impl(
         let migrate_result = migrate_to(local_db, &mem_db);
 
         if let Err(_) = migrate_result {
-            local_db.exec_safe("ROLLBACK TO automigrate_tables")?;
+            local_db.exec_safe("ROLLBACK")?;
             let mem_db_err_msg = mem_db.errmsg()?;
             ctx.result_error(&mem_db_err_msg);
             ctx.result_error_code(mem_db.errcode());

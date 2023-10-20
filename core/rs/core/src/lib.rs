@@ -73,7 +73,7 @@ pub extern "C" fn crsql_as_table(
 
     if let Err(_) = crsql_as_table_impl(db, table) {
         ctx.result_error("failed to downgrade the crr");
-        if let Err(_) = db.exec_safe("ROLLBACK TO as_table;") {
+        if let Err(_) = db.exec_safe("ROLLBACK") {
             // fine.
         }
         return;

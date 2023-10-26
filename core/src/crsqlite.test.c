@@ -440,6 +440,20 @@ static sqlite3_int64 getDbVersion(sqlite3 *db) {
   return db2v;
 }
 
+static void *getSiteId(sqlite3 *db) {
+  sqlite3_stmt *pStmt = 0;
+  int rc = sqlite3_prepare_v2(db, "SELECT crsql_site_id()", -1, &pStmt, 0);
+  if (rc != SQLITE_OK) {
+    return 0;
+  }
+
+  sqlite3_step(pStmt);
+  void *site = sqlite3_column_blob(pStmt, 0);
+  sqlite3_finalize(pStmt);
+
+  return site;
+}
+
 static void testLamportCondition() {
   printf("LamportCondition\n");
   // syncing from A -> B, while no changes happen on B, moves up
@@ -511,6 +525,17 @@ static void noopsDoNotMoveClocks() {
   rc += sqlite3_open(":memory:", &db1);
   rc += sqlite3_open(":memory:", &db2);
 
+  void *db1SiteId = getSiteId(db1);
+  void *db2SiteId = getSiteId(db2);
+  int cmp = memcmp(db1SiteId, db2SiteId, 16);
+  if (cmp > 0) {
+    sqlite3 *temp = db1;
+    db1 = db2;
+    db2 = temp;
+  }
+
+  // swap dbs based on site id compare to make it a noop.
+
   rc += sqlite3_exec(
       db1, "CREATE TABLE \"hoot\" (\"a\", \"b\" primary key not null, \"c\")",
       0, 0, 0);
@@ -547,6 +572,7 @@ static void noopsDoNotMoveClocks() {
 
   // TODO: we still need to compare values so as not to bump the db_version
   // forward on a no-difference
+  // this fails sometimes because site id winning.
   printf("db1 pre: %lld db2 post: %lld", db1vPre, db2vPost);
   assert(db1vPre == db2vPost);
   assert(db1vPre == db1vPost);

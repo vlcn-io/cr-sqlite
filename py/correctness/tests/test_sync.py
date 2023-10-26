@@ -155,7 +155,8 @@ def test_delete():
     close(db)
 
 
-# Row not exists case so entry created and default filled in
+# TODO: create db _then swap_ then create rows then check original invariants
+# Col? not exists case so entry created and default filled in
 def test_merging_on_defaults():
     def create_db1():
         db1 = connect(":memory:")
@@ -176,6 +177,10 @@ def test_merging_on_defaults():
     # test merging from thing with records (db2) to thing without records for default cols (db1)
     db1 = create_db1()
     db2 = create_db2()
+    if get_site_id(db1) > get_site_id(db2):
+        temp = db1
+        db1 = db2
+        db2 = temp
 
     sync_left_to_right(db2, db1, 0)
     # db1 has changes from db2
@@ -190,6 +195,10 @@ def test_merging_on_defaults():
 
     db1 = create_db1()
     db2 = create_db2()
+    if get_site_id(db1) > get_site_id(db2):
+        temp = db1
+        db1 = db2
+        db2 = temp
 
     sync_left_to_right(db1, db2, 0)
 

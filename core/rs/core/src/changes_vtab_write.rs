@@ -33,6 +33,7 @@ fn did_cid_win(
     tbl_info: &TableInfo,
     unpacked_pks: &Vec<ColumnValue>,
     key: sqlite::int64,
+    insert_val: *mut sqlite::value,
     insert_site_id: &[u8],
     col_name: &str,
     col_version: sqlite::int64,
@@ -82,6 +83,45 @@ fn did_cid_win(
         let my_site_id = core::slice::from_raw_parts((*ext_data).siteId, 16);
         insert_site_id.cmp(my_site_id) as c_int
     };
+
+    // site id lost.
+    if ret <= 0 {
+        return Ok(false);
+    }
+
+    // site id won
+    // last thing, compare values to ensure we're not changing state on equal values
+    let col_val_stmt_ref = tbl_info.get_col_value_stmt(db, col_name)?;
+    let col_val_stmt = col_val_stmt_ref.as_ref().ok_or(ResultCode::ERROR)?;
+
+    let bind_result = bind_package_to_stmt(col_val_stmt.stmt, &unpacked_pks, 0);
+    if let Err(rc) = bind_result {
+        reset_cached_stmt(col_val_stmt.stmt)?;
+        return Err(rc);
+    }
+
+    let step_result = col_val_stmt.step();
+    match step_result {
+        Ok(ResultCode::ROW) => {
+            let local_value = col_val_stmt.column_value(0)?;
+            let ret = crsql_compare_sqlite_values(insert_val, local_value);
+            reset_cached_stmt(col_val_stmt.stmt)?;
+            // insert site id won and values differ. We should take the update.
+            return Ok(ret != 0);
+        }
+        _ => {
+            // ResultCode::DONE would happen if clock values exist but actual values are missing.
+            // should we just allow the insert anyway?
+            reset_cached_stmt(col_val_stmt.stmt)?;
+            let err = CString::new(format!(
+                "could not find row to merge with for tbl {}",
+                insert_tbl
+            ))?;
+            unsafe { *errmsg = err.into_raw() };
+            return Err(ResultCode::ERROR);
+        }
+    }
+
     return Ok(ret > 0);
 }
 
@@ -565,6 +605,7 @@ unsafe fn merge_insert(
             &tbl_info,
             &unpacked_pks,
             key,
+            insert_val,
             insert_site_id,
             insert_col,
             insert_col_vrsn,

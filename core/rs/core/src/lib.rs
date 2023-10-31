@@ -44,11 +44,12 @@ mod triggers;
 mod unpack_columns_vtab;
 mod util;
 
+use core::mem;
 use core::{ffi::c_char, slice};
 extern crate alloc;
 use automigrate::*;
 use backfill::*;
-use core::ffi::{c_int, CStr};
+use core::ffi::{c_int, c_void, CStr};
 use create_crr::create_crr;
 use is_crr::*;
 use sqlite::ResultCode;
@@ -149,8 +150,59 @@ pub extern "C" fn sqlite3_crsqlcore_init(
     if rc != ResultCode::OK {
         return rc as c_int;
     }
+
     let rc = create_cl_set_vtab::create_module(db).unwrap_or(ResultCode::ERROR);
+    if rc != ResultCode::OK {
+        return rc as c_int;
+    }
+
+    let rc = crate::bootstrap::crsql_init_peer_tracking_table(db);
+    if rc != ResultCode::OK as c_int {
+        return rc;
+    }
+
+    let sync_bit_ptr = sqlite::malloc(mem::size_of::<c_int>()) as *mut c_int;
+    unsafe {
+        *sync_bit_ptr = 0;
+    }
+    // Function to allow us to disable triggers when syncing remote changes
+    // to base tables.
+    let rc = db
+        .create_function_v2(
+            "crsql_internal_sync_bit",
+            -1,
+            sqlite::UTF8 | sqlite::INNOCUOUS,
+            Some(sync_bit_ptr as *mut c_void),
+            Some(crsql_sync_bit),
+            None,
+            None,
+            Some(crsql_sqlite_free),
+        )
+        .unwrap_or(sqlite::ResultCode::ERROR);
+
     return rc as c_int;
+}
+
+pub unsafe extern "C" fn crsql_sqlite_free(ptr: *mut c_void) {
+    sqlite::free(ptr);
+}
+
+pub unsafe extern "C" fn crsql_sync_bit(
+    ctx: *mut sqlite::context,
+    argc: i32,
+    argv: *mut *mut sqlite::value,
+) {
+    let sync_bit_ptr = ctx.user_data() as *mut c_int;
+    if argc != 1 {
+        ctx.result_int(*sync_bit_ptr);
+        return;
+    }
+
+    let args = sqlite::args!(argc, argv);
+    let new_value = args[0].int();
+    *sync_bit_ptr = new_value;
+
+    ctx.result_int(*sync_bit_ptr);
 }
 
 #[no_mangle]

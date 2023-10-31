@@ -99,22 +99,6 @@ static void getSeqFunc(sqlite3_context *context, int argc,
   sqlite3_result_int(context, pExtData->seq);
 }
 
-static void crsqlSyncBit(sqlite3_context *context, int argc,
-                         sqlite3_value **argv) {
-  int *syncBit = (int *)sqlite3_user_data(context);
-
-  // No args? We're reading the value of the bit.
-  if (argc == 0) {
-    sqlite3_result_int(context, *syncBit);
-    return;
-  }
-
-  // Args? We're setting the value of the bit
-  int newValue = sqlite3_value_int(argv[0]);
-  *syncBit = newValue;
-  sqlite3_result_int(context, newValue);
-}
-
 /**
  * Takes a table name and turns it into a CRR.
  *
@@ -319,29 +303,6 @@ __declspec(dllexport)
   // function pointers. we need to init the rust bundle otherwise sqlite api
   // methods are not isntalled when we start calling rust
   rc = sqlite3_crsqlrustbundle_init(db, pzErrMsg, pApi);
-
-  rc = crsql_init_peer_tracking_table(db);
-  if (rc != SQLITE_OK) {
-    return rc;
-  }
-
-  // Register a thread & connection local bit to toggle on or off
-  // our triggers depending on the source of updates to a table.
-  int *syncBit = sqlite3_malloc(sizeof *syncBit);
-  *syncBit = 0;
-  rc = sqlite3_create_function_v2(
-      db, "crsql_internal_sync_bit",
-      -1,                              // num args: -1 -> 0 or more
-      SQLITE_UTF8 | SQLITE_INNOCUOUS,  // configuration
-      syncBit,                         // user data
-      crsqlSyncBit,
-      0,            // step
-      0,            // final
-      sqlite3_free  // destroy / free syncBit
-  );
-  if (rc != SQLITE_OK) {
-    return rc;
-  }
 
   if (rc == SQLITE_OK) {
     rc = crsql_maybe_update_db(db, pzErrMsg);

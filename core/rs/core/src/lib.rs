@@ -93,7 +93,7 @@ fn crsql_as_table_impl(db: *mut sqlite::sqlite3, table: &str) -> Result<ResultCo
 #[no_mangle]
 pub extern "C" fn sqlite3_crsqlcore_init(
     db: *mut sqlite::sqlite3,
-    _err_msg: *mut *mut c_char,
+    err_msg: *mut *mut c_char,
     api: *mut sqlite::api_routines,
 ) -> c_int {
     sqlite::EXTENSION_INIT2(api);
@@ -179,6 +179,16 @@ pub extern "C" fn sqlite3_crsqlcore_init(
             Some(crsql_sqlite_free),
         )
         .unwrap_or(sqlite::ResultCode::ERROR);
+    if rc != ResultCode::OK {
+        return rc as c_int;
+    }
+
+    let rc = crate::bootstrap::crsql_maybe_update_db(db, err_msg);
+
+    // let site_id_buffer = sqlite::malloc(consts::SITE_ID_LEN * mem::size_of::<*const c_char>());
+    // let rc = if rc == ResultCode::OK {
+    //     crate::bootstrap::crsql_init_site_id(db, site_id_buffer)
+    // };
 
     return rc as c_int;
 }

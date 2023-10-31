@@ -278,8 +278,8 @@ static void closeHook(void *pUserData, sqlite3 *db) {
 }
 #endif
 
-int sqlite3_crsqlrustbundle_init(sqlite3 *db, char **pzErrMsg,
-                                 const sqlite3_api_routines *pApi);
+void *sqlite3_crsqlrustbundle_init(sqlite3 *db, char **pzErrMsg,
+                                   const sqlite3_api_routines *pApi);
 
 #ifdef _WIN32
 __declspec(dllexport)
@@ -302,7 +302,10 @@ __declspec(dllexport)
   // RN it is safe here since the rust bundle init is largely just reigstering
   // function pointers. we need to init the rust bundle otherwise sqlite api
   // methods are not isntalled when we start calling rust
-  rc = sqlite3_crsqlrustbundle_init(db, pzErrMsg, pApi);
+  crsql_ExtData *pExtData = sqlite3_crsqlrustbundle_init(db, pzErrMsg, pApi);
+  if (pExtData == 0) {
+    return SQLITE_ERROR;
+  }
 
   if (rc == SQLITE_OK) {
     rc = sqlite3_create_function(

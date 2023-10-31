@@ -48,17 +48,22 @@ use core::mem;
 use core::ptr::null_mut;
 use core::{ffi::c_char, slice};
 extern crate alloc;
+use alter::crsql_compact_post_alter;
 use automigrate::*;
 use backfill::*;
-use c::crsql_newExtData;
+use c::{crsql_freeExtData, crsql_newExtData};
+use consts::SITE_ID_LEN;
 use core::ffi::{c_int, c_void, CStr};
 use create_crr::create_crr;
+use db_version::crsql_fill_db_version_if_needed;
 use is_crr::*;
-use sqlite::ResultCode;
+use sqlite::{Destructor, ResultCode};
 use sqlite_nostd as sqlite;
 use sqlite_nostd::{Connection, Context, Value};
 use tableinfo::is_table_compatible;
 use teardown::*;
+
+use crate::db_version::crsql_next_db_version;
 
 pub extern "C" fn crsql_as_table(
     ctx: *mut sqlite::context,
@@ -175,7 +180,7 @@ pub extern "C" fn sqlite3_crsqlcore_init(
             -1,
             sqlite::UTF8 | sqlite::INNOCUOUS,
             Some(sync_bit_ptr as *mut c_void),
-            Some(crsql_sync_bit),
+            Some(x_crsql_sync_bit),
             None,
             None,
             Some(crsql_sqlite_free),
@@ -204,14 +209,289 @@ pub extern "C" fn sqlite3_crsqlcore_init(
         return null_mut();
     }
 
+    let rc = db
+        .create_function_v2(
+            "crsql_site_id",
+            0,
+            sqlite::UTF8 | sqlite::INNOCUOUS | sqlite::DETERMINISTIC,
+            Some(ext_data as *mut c_void),
+            Some(x_crsql_site_id),
+            None,
+            None,
+            None,
+        )
+        .unwrap_or(ResultCode::ERROR);
+    if rc != ResultCode::OK {
+        return null_mut();
+    }
+
+    let rc = db
+        .create_function_v2(
+            "crsql_db_version",
+            0,
+            sqlite::INNOCUOUS | sqlite::UTF8,
+            Some(ext_data as *mut c_void),
+            Some(x_crsql_db_version),
+            None,
+            None,
+            Some(x_free_connection_ext_data),
+        )
+        .unwrap_or(ResultCode::ERROR);
+    if rc != ResultCode::OK {
+        return null_mut();
+    }
+
+    let rc = db
+        .create_function_v2(
+            "crsql_next_db_version",
+            -1,
+            sqlite::UTF8 | sqlite::INNOCUOUS,
+            Some(ext_data as *mut c_void),
+            Some(x_crsql_next_db_version),
+            None,
+            None,
+            None,
+        )
+        .unwrap_or(ResultCode::ERROR);
+    if rc != ResultCode::OK {
+        return null_mut();
+    }
+
+    let rc = db
+        .create_function_v2(
+            "crsql_increment_and_get_seq",
+            0,
+            sqlite::UTF8 | sqlite::INNOCUOUS,
+            Some(ext_data as *mut c_void),
+            Some(x_crsql_increment_and_get_seq),
+            None,
+            None,
+            None,
+        )
+        .unwrap_or(ResultCode::ERROR);
+    if rc != ResultCode::OK {
+        return null_mut();
+    }
+
+    let rc = db
+        .create_function_v2(
+            "crsql_get_seq",
+            0,
+            sqlite::UTF8 | sqlite::INNOCUOUS | sqlite::DETERMINISTIC,
+            Some(ext_data as *mut c_void),
+            Some(x_crsql_get_seq),
+            None,
+            None,
+            None,
+        )
+        .unwrap_or(ResultCode::ERROR);
+    if rc != ResultCode::OK {
+        return null_mut();
+    }
+
+    let rc = db
+        .create_function_v2(
+            "crsql_commit_alter",
+            -1,
+            sqlite::UTF8 | sqlite::DIRECTONLY,
+            Some(ext_data as *mut c_void),
+            Some(x_crsql_commit_alter),
+            None,
+            None,
+            None,
+        )
+        .unwrap_or(ResultCode::ERROR);
+    if rc != ResultCode::OK {
+        return null_mut();
+    }
+
+    // see https://sqlite.org/forum/forumpost/c94f943821
+    let rc = db
+        .create_function_v2(
+            "crsql_finalize",
+            -1,
+            sqlite::UTF8 | sqlite::DIRECTONLY,
+            Some(ext_data as *mut c_void),
+            Some(x_crsql_finalize),
+            None,
+            None,
+            None,
+        )
+        .unwrap_or(ResultCode::ERROR);
+    if rc != ResultCode::OK {
+        return null_mut();
+    }
+
     return ext_data as *mut c_void;
 }
 
-pub unsafe extern "C" fn crsql_sqlite_free(ptr: *mut c_void) {
+unsafe extern "C" fn x_crsql_finalize(
+    ctx: *mut sqlite::context,
+    argc: i32,
+    argv: *mut *mut sqlite::value,
+) {
+    let ext_data = ctx.user_data() as *mut c::crsql_ExtData;
+    c::crsql_finalize(ext_data);
+    ctx.result_text_static("finalized");
+}
+
+unsafe extern "C" fn x_crsql_commit_alter(
+    ctx: *mut sqlite::context,
+    argc: i32,
+    argv: *mut *mut sqlite::value,
+) {
+    if argc == 0 {
+        ctx.result_error(
+            "Wrong number of args provided to crsql_commit_alter. Provide the 
+            schema name and table name or just the table name.",
+        );
+        return;
+    }
+
+    let args = sqlite::args!(argc, argv);
+    let (schema_name, table_name) = if argc == 2 {
+        (args[0].text(), args[1].text())
+    } else {
+        ("main", args[1].text())
+    };
+
+    let ext_data = ctx.user_data() as *mut c::crsql_ExtData;
+    let mut err_msg = null_mut();
+    let db = ctx.db_handle();
+    let rc = crsql_compact_post_alter(
+        db,
+        table_name.as_ptr() as *const c_char,
+        ext_data,
+        &mut err_msg as *mut _,
+    );
+
+    let rc = if rc == ResultCode::OK as c_int {
+        crsql_create_crr(
+            db,
+            schema_name.as_ptr() as *const c_char,
+            table_name.as_ptr() as *const c_char,
+            1,
+            0,
+            &mut err_msg as *mut _,
+        )
+    } else {
+        rc
+    };
+    let rc = if rc == ResultCode::OK as c_int {
+        db.exec_safe("RELEASE alter_crr")
+            .unwrap_or(ResultCode::ERROR) as c_int
+    } else {
+        rc
+    };
+    if rc != ResultCode::OK as c_int {
+        // TODO: use err_msg
+        ctx.result_error("failed compacting tables post alteration");
+        let _ = db.exec_safe("ROLLBACK");
+        return;
+    }
+}
+
+unsafe extern "C" fn x_crsql_get_seq(
+    ctx: *mut sqlite::context,
+    argc: i32,
+    argv: *mut *mut sqlite::value,
+) {
+    let ext_data = ctx.user_data() as *mut c::crsql_ExtData;
+    ctx.result_int((*ext_data).seq);
+}
+
+unsafe extern "C" fn x_crsql_increment_and_get_seq(
+    ctx: *mut sqlite::context,
+    argc: i32,
+    argv: *mut *mut sqlite::value,
+) {
+    let ext_data = ctx.user_data() as *mut c::crsql_ExtData;
+    ctx.result_int((*ext_data).seq);
+    (*ext_data).seq += 1;
+}
+
+/**
+ * Return the current version of the database.
+ *
+ * `select crsql_db_version()`
+ */
+unsafe extern "C" fn x_crsql_db_version(
+    ctx: *mut sqlite::context,
+    argc: i32,
+    argv: *mut *mut sqlite::value,
+) {
+    let ext_data = ctx.user_data() as *mut c::crsql_ExtData;
+    let db = ctx.db_handle();
+    let mut err_msg = null_mut();
+    let rc = crsql_fill_db_version_if_needed(db, ext_data, &mut err_msg as *mut _);
+    if rc != ResultCode::OK as c_int {
+        // TODO: pass err_msg!
+        ctx.result_error("failed to fill db version");
+        return;
+    }
+    sqlite::result_int64(ctx, (*ext_data).dbVersion);
+}
+
+/**
+ * Return the next version of the database for use in inserts/updates/deletes
+ *
+ * `select crsql_next_db_version()`
+ *
+ * Nit: this should be same as `crsql_db_version`
+ * If you change this behavior you need to change trigger behaviors
+ * as each invocation to `nextVersion` should return the same version
+ * when in the same transaction.
+ */
+unsafe extern "C" fn x_crsql_next_db_version(
+    ctx: *mut sqlite::context,
+    argc: i32,
+    argv: *mut *mut sqlite::value,
+) {
+    let ext_data = ctx.user_data() as *mut c::crsql_ExtData;
+    let db = ctx.db_handle();
+    let mut err_msg = null_mut();
+
+    let provided_version = if argc == 1 {
+        sqlite::args!(argc, argv)[0].int64()
+    } else {
+        0
+    };
+
+    let ret = crsql_next_db_version(db, ext_data, provided_version, &mut err_msg as *mut _);
+    if ret < 0 {
+        // TODO: use err_msg!
+        ctx.result_error("Unable to determine the next db version");
+        return;
+    }
+
+    ctx.result_int64(ret);
+}
+
+unsafe extern "C" fn x_free_connection_ext_data(data: *mut c_void) {
+    let ext_data = data as *mut c::crsql_ExtData;
+    crsql_freeExtData(ext_data);
+}
+
+/**
+ * return the uuid which uniquely identifies this database.
+ *
+ * `select crsql_site_id()`
+ */
+unsafe extern "C" fn x_crsql_site_id(
+    ctx: *mut sqlite::context,
+    argc: i32,
+    argv: *mut *mut sqlite::value,
+) {
+    let ext_data = ctx.user_data() as *mut c::crsql_ExtData;
+    let site_id = (*ext_data).siteId;
+    sqlite::result_blob(ctx, site_id, SITE_ID_LEN, Destructor::STATIC);
+}
+
+unsafe extern "C" fn crsql_sqlite_free(ptr: *mut c_void) {
     sqlite::free(ptr);
 }
 
-pub unsafe extern "C" fn crsql_sync_bit(
+unsafe extern "C" fn x_crsql_sync_bit(
     ctx: *mut sqlite::context,
     argc: i32,
     argv: *mut *mut sqlite::value,

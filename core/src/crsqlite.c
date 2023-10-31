@@ -21,85 +21,6 @@ unsigned char __rust_no_alloc_shim_is_unstable;
 #endif
 
 /**
- * return the uuid which uniquely identifies this database.
- *
- * `select crsql_site_id()`
- *
- * @param context
- * @param argc
- * @param argv
- */
-static void siteIdFunc(sqlite3_context *context, int argc,
-                       sqlite3_value **argv) {
-  crsql_ExtData *pExtData = (crsql_ExtData *)sqlite3_user_data(context);
-  sqlite3_result_blob(context, pExtData->siteId, SITE_ID_LEN, SQLITE_STATIC);
-}
-
-/**
- * Return the current version of the database.
- *
- * `select crsql_db_version()`
- */
-static void dbVersionFunc(sqlite3_context *context, int argc,
-                          sqlite3_value **argv) {
-  char *errmsg = 0;
-  crsql_ExtData *pExtData = (crsql_ExtData *)sqlite3_user_data(context);
-  sqlite3 *db = sqlite3_context_db_handle(context);
-  int rc = crsql_fill_db_version_if_needed(db, pExtData, &errmsg);
-  if (rc != SQLITE_OK) {
-    sqlite3_result_error(context, errmsg, -1);
-    sqlite3_free(errmsg);
-    return;
-  }
-
-  sqlite3_result_int64(context, pExtData->dbVersion);
-}
-
-/**
- * Return the next version of the database for use in inserts/updates/deletes
- *
- * `select crsql_next_db_version()`
- *
- * Nit: this should be same as `crsql_db_version`
- * If you change this behavior you need to change trigger behaviors
- * as each invocation to `nextVersion` should return the same version
- * when in the same transaction.
- */
-static void nextDbVersionFunc(sqlite3_context *context, int argc,
-                              sqlite3_value **argv) {
-  char *errmsg = 0;
-  crsql_ExtData *pExtData = (crsql_ExtData *)sqlite3_user_data(context);
-  sqlite3 *db = sqlite3_context_db_handle(context);
-  sqlite3_int64 providedVersion = 0;
-  if (argc == 1) {
-    providedVersion = sqlite3_value_int64(argv[0]);
-  }
-
-  sqlite3_int64 ret =
-      crsql_next_db_version(db, pExtData, providedVersion, &errmsg);
-  if (ret < 0) {
-    sqlite3_result_error(context, errmsg, -1);
-    sqlite3_free(errmsg);
-    return;
-  }
-
-  sqlite3_result_int64(context, ret);
-}
-
-static void incrementAndGetSeqFunc(sqlite3_context *context, int argc,
-                                   sqlite3_value **argv) {
-  crsql_ExtData *pExtData = (crsql_ExtData *)sqlite3_user_data(context);
-  sqlite3_result_int(context, pExtData->seq);
-  pExtData->seq += 1;
-}
-
-static void getSeqFunc(sqlite3_context *context, int argc,
-                       sqlite3_value **argv) {
-  crsql_ExtData *pExtData = (crsql_ExtData *)sqlite3_user_data(context);
-  sqlite3_result_int(context, pExtData->seq);
-}
-
-/**
  * Takes a table name and turns it into a CRR.
  *
  * This allows users to create and modify tables as normal.
@@ -192,59 +113,6 @@ static void crsqlBeginAlterFunc(sqlite3_context *context, int argc,
 int crsql_compact_post_alter(sqlite3 *db, const char *tblName,
                              crsql_ExtData *pExtData, char **errmsg);
 
-static void crsqlCommitAlterFunc(sqlite3_context *context, int argc,
-                                 sqlite3_value **argv) {
-  const char *tblName = 0;
-  const char *schemaName = 0;
-  int rc = SQLITE_OK;
-  sqlite3 *db = sqlite3_context_db_handle(context);
-  char *errmsg = 0;
-
-  if (argc == 0) {
-    sqlite3_result_error(
-        context,
-        "Wrong number of args provided to crsql_commit_alter. Provide the "
-        "schema name and table name or just the table name.",
-        -1);
-    return;
-  }
-
-  if (argc == 2) {
-    schemaName = (const char *)sqlite3_value_text(argv[0]);
-    tblName = (const char *)sqlite3_value_text(argv[1]);
-  } else {
-    schemaName = "main";
-    tblName = (const char *)sqlite3_value_text(argv[0]);
-  }
-
-  crsql_ExtData *pExtData = (crsql_ExtData *)sqlite3_user_data(context);
-  rc = crsql_compact_post_alter(db, tblName, pExtData, &errmsg);
-  if (rc == SQLITE_OK) {
-    rc = crsql_create_crr(db, schemaName, tblName, 1, 0, &errmsg);
-  }
-  if (rc == SQLITE_OK) {
-    rc = sqlite3_exec(db, "RELEASE alter_crr", 0, 0, &errmsg);
-  }
-  if (rc != SQLITE_OK) {
-    sqlite3_result_error(context, errmsg, -1);
-    sqlite3_free(errmsg);
-    sqlite3_exec(db, "ROLLBACK", 0, 0, 0);
-    return;
-  }
-}
-
-static void freeConnectionExtData(void *pUserData) {
-  crsql_ExtData *pExtData = (crsql_ExtData *)pUserData;
-
-  crsql_freeExtData(pExtData);
-}
-
-static void crsqlFinalize(sqlite3_context *context, int argc,
-                          sqlite3_value **argv) {
-  crsql_ExtData *pExtData = (crsql_ExtData *)sqlite3_user_data(context);
-  crsql_finalize(pExtData);
-}
-
 static void crsqlRowsImpacted(sqlite3_context *context, int argc,
                               sqlite3_value **argv) {
   crsql_ExtData *pExtData = (crsql_ExtData *)sqlite3_user_data(context);
@@ -308,37 +176,6 @@ __declspec(dllexport)
   }
 
   if (rc == SQLITE_OK) {
-    rc = sqlite3_create_function(
-        db, "crsql_site_id", 0,
-        // siteid never changes -- deterministic and innnocuous
-        SQLITE_UTF8 | SQLITE_INNOCUOUS | SQLITE_DETERMINISTIC, pExtData,
-        siteIdFunc, 0, 0);
-  }
-  if (rc == SQLITE_OK) {
-    rc = sqlite3_create_function_v2(db, "crsql_db_version", 0,
-                                    // dbversion can change on each invocation.
-                                    SQLITE_UTF8 | SQLITE_INNOCUOUS, pExtData,
-                                    dbVersionFunc, 0, 0, freeConnectionExtData);
-  }
-  if (rc == SQLITE_OK) {
-    rc = sqlite3_create_function(db, "crsql_next_db_version", -1,
-                                 // dbversion can change on each invocation.
-                                 SQLITE_UTF8 | SQLITE_INNOCUOUS, pExtData,
-                                 nextDbVersionFunc, 0, 0);
-  }
-  if (rc == SQLITE_OK) {
-    rc = sqlite3_create_function(db, "crsql_increment_and_get_seq", 0,
-                                 SQLITE_UTF8 | SQLITE_INNOCUOUS, pExtData,
-                                 incrementAndGetSeqFunc, 0, 0);
-  }
-  if (rc == SQLITE_OK) {
-    rc = sqlite3_create_function(
-        db, "crsql_get_seq", 0,
-        SQLITE_UTF8 | SQLITE_INNOCUOUS | SQLITE_DETERMINISTIC, pExtData,
-        getSeqFunc, 0, 0);
-  }
-
-  if (rc == SQLITE_OK) {
     // Only register a commit hook, not update or pre-update, since all rows
     // in the same transaction should have the same clock value. This allows
     // us to replicate them together and ensure more consistency.
@@ -354,19 +191,6 @@ __declspec(dllexport)
     rc = sqlite3_create_function(db, "crsql_begin_alter", -1,
                                  SQLITE_UTF8 | SQLITE_DIRECTONLY, 0,
                                  crsqlBeginAlterFunc, 0, 0);
-  }
-
-  if (rc == SQLITE_OK) {
-    rc = sqlite3_create_function(db, "crsql_commit_alter", -1,
-                                 SQLITE_UTF8 | SQLITE_DIRECTONLY, pExtData,
-                                 crsqlCommitAlterFunc, 0, 0);
-  }
-
-  if (rc == SQLITE_OK) {
-    // see https://sqlite.org/forum/forumpost/c94f943821
-    rc = sqlite3_create_function(db, "crsql_finalize", -1,
-                                 SQLITE_UTF8 | SQLITE_DIRECTONLY, pExtData,
-                                 crsqlFinalize, 0, 0);
   }
 
   if (rc == SQLITE_OK) {

@@ -575,7 +575,9 @@ unsafe fn merge_insert(
     // In an in-order delivery situation then `sentinel_only` would have already resurrected the row
     // In out-of-order delivery, we need to resurrect the row as soon as we get a value
     // which should resurrect the row. I.e., don't wait on the sentinel value to resurrect the row!
-    if needs_resurrect && row_exists_locally {
+    // If the row does not exist locally and the insert_cl is > 1 then we need to create a sentinel to record the insert cl.
+    // Not doing so will cause us to assume a cl of 1.
+    if needs_resurrect && (row_exists_locally || (!row_exists_locally && insert_cl > 1)) {
         // this should work -- same as `merge_sentinel_only_insert` except we're not done once we do it
         // and the version to set to is the cl not col_vrsn of current insert
         merge_sentinel_only_insert(

@@ -43,12 +43,12 @@ pub extern "C" fn sqlite3_crsqlrustbundle_init(
     db: *mut sqlite::sqlite3,
     err_msg: *mut *mut c_char,
     api: *mut sqlite::api_routines,
-) -> c_int {
+) -> *mut ::core::ffi::c_void {
     sqlite::EXTENSION_INIT2(api);
 
     let rc = sqlite3_crsqlfractionalindex_init(db, err_msg, api);
     if rc != 0 {
-        return rc;
+        return core::ptr::null_mut();
     }
 
     sqlite3_crsqlcore_init(db, err_msg, api)

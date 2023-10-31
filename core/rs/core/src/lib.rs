@@ -45,6 +45,7 @@ mod unpack_columns_vtab;
 mod util;
 
 use core::mem;
+use core::ptr::null_mut;
 use core::{ffi::c_char, slice};
 extern crate alloc;
 use automigrate::*;
@@ -96,7 +97,7 @@ pub extern "C" fn sqlite3_crsqlcore_init(
     db: *mut sqlite::sqlite3,
     err_msg: *mut *mut c_char,
     api: *mut sqlite::api_routines,
-) -> c_int {
+) -> *mut c_void {
     sqlite::EXTENSION_INIT2(api);
 
     let rc = db
@@ -112,7 +113,7 @@ pub extern "C" fn sqlite3_crsqlcore_init(
         )
         .unwrap_or(sqlite::ResultCode::ERROR);
     if rc != ResultCode::OK {
-        return rc as c_int;
+        return null_mut();
     }
 
     let rc = db
@@ -128,7 +129,7 @@ pub extern "C" fn sqlite3_crsqlcore_init(
         )
         .unwrap_or(sqlite::ResultCode::ERROR);
     if rc != ResultCode::OK {
-        return rc as c_int;
+        return null_mut();
     }
 
     let rc = db
@@ -144,22 +145,22 @@ pub extern "C" fn sqlite3_crsqlcore_init(
         )
         .unwrap_or(sqlite::ResultCode::ERROR);
     if rc != ResultCode::OK {
-        return rc as c_int;
+        return null_mut();
     }
 
     let rc = unpack_columns_vtab::create_module(db).unwrap_or(sqlite::ResultCode::ERROR);
     if rc != ResultCode::OK {
-        return rc as c_int;
+        return null_mut();
     }
 
     let rc = create_cl_set_vtab::create_module(db).unwrap_or(ResultCode::ERROR);
     if rc != ResultCode::OK {
-        return rc as c_int;
+        return null_mut();
     }
 
     let rc = crate::bootstrap::crsql_init_peer_tracking_table(db);
     if rc != ResultCode::OK as c_int {
-        return rc;
+        return null_mut();
     }
 
     let sync_bit_ptr = sqlite::malloc(mem::size_of::<c_int>()) as *mut c_int;
@@ -181,21 +182,29 @@ pub extern "C" fn sqlite3_crsqlcore_init(
         )
         .unwrap_or(sqlite::ResultCode::ERROR);
     if rc != ResultCode::OK {
-        return rc as c_int;
+        return null_mut();
     }
 
     let rc = crate::bootstrap::crsql_maybe_update_db(db, err_msg);
-
-    let site_id_buffer = sqlite::malloc(consts::SITE_ID_LEN * mem::size_of::<*const c_char>());
-    let rc = if rc == ResultCode::OK {
-        crate::bootstrap::crsql_init_site_id(db, site_id_buffer)
-    };
-    let ext_data = unsafe { crsql_newExtData(db, siteIdBuffer) };
-    if ext_data.is_null() {
-        return ResultCode::ERROR as c_int;
+    if rc != ResultCode::OK as c_int {
+        return null_mut();
     }
 
-    return rc as c_int;
+    let site_id_buffer =
+        sqlite::malloc((consts::SITE_ID_LEN as usize) * mem::size_of::<*const c_char>());
+    let rc = crate::bootstrap::crsql_init_site_id(db, site_id_buffer);
+    if rc != ResultCode::OK as c_int {
+        sqlite::free(site_id_buffer as *mut c_void);
+        return null_mut();
+    }
+
+    let ext_data = unsafe { crsql_newExtData(db, site_id_buffer as *mut c_char) };
+    if ext_data.is_null() {
+        sqlite::free(site_id_buffer as *mut c_void);
+        return null_mut();
+    }
+
+    return ext_data as *mut c_void;
 }
 
 pub unsafe extern "C" fn crsql_sqlite_free(ptr: *mut c_void) {

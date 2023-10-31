@@ -304,16 +304,6 @@ __declspec(dllexport)
   // methods are not isntalled when we start calling rust
   rc = sqlite3_crsqlrustbundle_init(db, pzErrMsg, pApi);
 
-  unsigned char *siteIdBuffer = sqlite3_malloc(SITE_ID_LEN * sizeof(char *));
-  if (rc == SQLITE_OK) {
-    rc = crsql_init_site_id(db, siteIdBuffer);
-  }
-
-  crsql_ExtData *pExtData = crsql_newExtData(db, siteIdBuffer);
-  if (pExtData == 0) {
-    return SQLITE_ERROR;
-  }
-
   if (rc == SQLITE_OK) {
     rc = sqlite3_create_function(
         db, "crsql_site_id", 0,

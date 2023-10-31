@@ -49,6 +49,7 @@ use core::{ffi::c_char, slice};
 extern crate alloc;
 use automigrate::*;
 use backfill::*;
+use c::crsql_newExtData;
 use core::ffi::{c_int, c_void, CStr};
 use create_crr::create_crr;
 use is_crr::*;
@@ -185,10 +186,14 @@ pub extern "C" fn sqlite3_crsqlcore_init(
 
     let rc = crate::bootstrap::crsql_maybe_update_db(db, err_msg);
 
-    // let site_id_buffer = sqlite::malloc(consts::SITE_ID_LEN * mem::size_of::<*const c_char>());
-    // let rc = if rc == ResultCode::OK {
-    //     crate::bootstrap::crsql_init_site_id(db, site_id_buffer)
-    // };
+    let site_id_buffer = sqlite::malloc(consts::SITE_ID_LEN * mem::size_of::<*const c_char>());
+    let rc = if rc == ResultCode::OK {
+        crate::bootstrap::crsql_init_site_id(db, site_id_buffer)
+    };
+    let ext_data = unsafe { crsql_newExtData(db, siteIdBuffer) };
+    if ext_data.is_null() {
+        return ResultCode::ERROR as c_int;
+    }
 
     return rc as c_int;
 }

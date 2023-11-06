@@ -287,6 +287,13 @@ static void rollbackHook(void *pUserData) {
   pExtData->readDbVersionThisTx = 0;
 }
 
+#ifdef LIBSQL
+static void closeHook(void *pUserData, sqlite3 *db) {
+  crsql_ExtData *pExtData = (crsql_ExtData *)pUserData;
+  crsql_finalize(pExtData);
+}
+#endif
+
 int sqlite3_crsqlrustbundle_init(sqlite3 *db, char **pzErrMsg,
                                  const sqlite3_api_routines *pApi);
 
@@ -294,10 +301,18 @@ int sqlite3_crsqlrustbundle_init(sqlite3 *db, char **pzErrMsg,
 __declspec(dllexport)
 #endif
     int sqlite3_crsqlite_init(sqlite3 *db, char **pzErrMsg,
-                              const sqlite3_api_routines *pApi) {
+                              const sqlite3_api_routines *pApi
+#ifdef LIBSQL
+                              ,
+                              const libsql_api_routines *pLibsqlApi
+#endif
+    ) {
   int rc = SQLITE_OK;
 
   SQLITE_EXTENSION_INIT2(pApi);
+#ifdef LIBSQL
+  LIBSQL_EXTENSION_INIT2(pLibsqlApi);
+#endif
 
   // TODO: should be moved lower once we finish migrating to rust.
   // RN it is safe here since the rust bundle init is largely just reigstering
@@ -432,6 +447,9 @@ __declspec(dllexport)
   }
 
   if (rc == SQLITE_OK) {
+#ifdef LIBSQL
+    libsql_close_hook(db, closeHook, pExtData);
+#endif
     // TODO: get the prior callback so we can call it rather than replace
     // it?
     sqlite3_commit_hook(db, commitHook, pExtData);

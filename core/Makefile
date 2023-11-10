@@ -4,8 +4,9 @@ else
 CC:=$(CI_GCC)
 endif
 
-LOADABLE_CFLAGS=-std=c99 -fPIC -shared -Wall
-STATIC_CFLAGS=-std=c99 -fPIC -c -Wall
+# SHARED_CFLAGS=-DLIBSQL=1
+LOADABLE_CFLAGS=-std=c99 -fPIC -shared -Wall $(SHARED_CFLAGS)
+STATIC_CFLAGS=-std=c99 -fPIC -c -Wall $(SHARED_CFLAGS)
 
 ifeq ($(shell uname -s),Darwin)
 CONFIG_DARWIN=y

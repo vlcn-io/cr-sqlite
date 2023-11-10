@@ -107,6 +107,7 @@ fn did_cid_win(
             let ret = crsql_compare_sqlite_values(insert_val, local_value);
             reset_cached_stmt(col_val_stmt.stmt)?;
             // insert site id won and values differ. We should take the update.
+            // if values are the same (ret == 0) then we return false and do not take the update
             return Ok(ret != 0);
         }
         _ => {
@@ -121,8 +122,6 @@ fn did_cid_win(
             return Err(ResultCode::ERROR);
         }
     }
-
-    return Ok(ret > 0);
 }
 
 fn set_winner_clock(

@@ -176,5 +176,9 @@ sqlite3_module crsql_changesModule = {
     /* xSavepoint  */ 0,
     /* xRelease    */ 0,
     /* xRollbackTo */ 0,
-    /* xShadowName */ 0,
-    /* xPreparedSql */ 0};
+    /* xShadowName */ 0
+#ifdef LIBSQL
+    ,
+    /* xPreparedSql */ 0
+#endif
+};

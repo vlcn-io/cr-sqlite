@@ -7,6 +7,7 @@ endif
 # SHARED_CFLAGS=-DLIBSQL=1
 LOADABLE_CFLAGS=-std=c99 -fPIC -shared -Wall $(SHARED_CFLAGS)
 STATIC_CFLAGS=-std=c99 -fPIC -c -Wall $(SHARED_CFLAGS)
+# libsql_feature=,libsql
 
 ifeq ($(shell uname -s),Darwin)
 CONFIG_DARWIN=y
@@ -170,19 +171,19 @@ $(sqlite3.c):
 	cd $(sqlite_src) && make sqlite3.c
 
 $(rs_lib_dbg_static_cpy): FORCE $(dbg_prefix)
-	cd ./rs/$(bundle) && cargo rustc $(RS_TARGET) --features static,omit_load_extension $(rs_build_flags)
+	cd ./rs/$(bundle) && cargo rustc $(RS_TARGET) --features static,omit_load_extension$(libsql_feature) $(rs_build_flags)
 	cp $(rs_lib_dbg_static) $(rs_lib_dbg_static_cpy)
 
 $(rs_lib_static_cpy): FORCE $(prefix)
-	cd ./rs/$(bundle) && cargo rustc $(RS_TARGET) --release --features static,omit_load_extension $(rs_build_flags)
+	cd ./rs/$(bundle) && cargo rustc $(RS_TARGET) --release --features static,omit_load_extension$(libsql_feature) $(rs_build_flags)
 	cp $(rs_lib_static) $(rs_lib_static_cpy)
 
 $(rs_lib_loadable_cpy): FORCE $(prefix)
-	cd ./rs/$(bundle) && cargo $(rs_ndk) build $(RS_TARGET) --release --features loadable_extension $(rs_build_flags)
+	cd ./rs/$(bundle) && cargo $(rs_ndk) build $(RS_TARGET) --release --features loadable_extension$(libsql_feature) $(rs_build_flags)
 	cp $(rs_lib_loadable) $(rs_lib_loadable_cpy)
 
 $(rs_lib_dbg_loadable_cpy): FORCE $(dbg_prefix)
-	cd ./rs/$(bundle) && cargo rustc $(RS_TARGET) --features loadable_extension $(rs_build_flags)
+	cd ./rs/$(bundle) && cargo rustc $(RS_TARGET) --features loadable_extension$(libsql_feature) $(rs_build_flags)
 	cp $(rs_lib_dbg_loadable) $(rs_lib_dbg_loadable_cpy)
 
 # Build the loadable extension.

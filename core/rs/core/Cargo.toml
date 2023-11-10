@@ -26,6 +26,7 @@ panic = "abort"
 
 [features]
 test = []
+libsql = []
 loadable_extension = ["sqlite_nostd/loadable_extension"]
 static = ["sqlite_nostd/static"]
 omit_load_extension = ["sqlite_nostd/omit_load_extension"]

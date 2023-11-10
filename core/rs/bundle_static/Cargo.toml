@@ -20,6 +20,7 @@ panic = "abort"
 panic = "abort"
 
 [features]
+libsql = ["crsql_bundle/libsql"]
 test = [
   "crsql_bundle/test"
 ]

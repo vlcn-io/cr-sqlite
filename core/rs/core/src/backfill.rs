@@ -1,4 +1,4 @@
-use sqlite_nostd::{sqlite3, ColumnType, Connection, Destructor, ManagedStmt, ResultCode};
+use sqlite_nostd::{sqlite3, Connection, Destructor, ManagedStmt, ResultCode};
 extern crate alloc;
 use crate::tableinfo::ColumnInfo;
 use crate::util::get_dflt_value;

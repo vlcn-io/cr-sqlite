@@ -299,6 +299,23 @@ pub extern "C" fn sqlite3_crsqlcore_init(
 
     let rc = db
         .create_function_v2(
+            "crsql_as_crr",
+            -1,
+            sqlite::UTF8 | sqlite::DETERMINISTIC,
+            None,
+            Some(x_crsql_as_crr),
+            None,
+            None,
+            None,
+        )
+        .unwrap_or(ResultCode::ERROR);
+    if rc != ResultCode::OK {
+        unsafe { crsql_freeExtData(ext_data) };
+        return null_mut();
+    }
+
+    let rc = db
+        .create_function_v2(
             "crsql_commit_alter",
             -1,
             sqlite::UTF8 | sqlite::DIRECTONLY,
@@ -351,12 +368,67 @@ unsafe extern "C" fn x_crsql_site_id(
 
 unsafe extern "C" fn x_crsql_finalize(
     ctx: *mut sqlite::context,
-    argc: i32,
-    argv: *mut *mut sqlite::value,
+    _argc: i32,
+    _argv: *mut *mut sqlite::value,
 ) {
     let ext_data = ctx.user_data() as *mut c::crsql_ExtData;
     c::crsql_finalize(ext_data);
     ctx.result_text_static("finalized");
+}
+
+/**
+ * Takes a table name and turns it into a CRR.
+ *
+ * This allows users to create and modify tables as normal.
+ */
+unsafe extern "C" fn x_crsql_as_crr(
+    ctx: *mut sqlite::context,
+    argc: i32,
+    argv: *mut *mut sqlite::value,
+) {
+    if argc == 0 {
+        ctx.result_error(
+            "Wrong number of args provided to crsql_as_crr. Provide the schema 
+          name and table name or just the table name.",
+        );
+        return;
+    }
+
+    let args = sqlite::args!(argc, argv);
+    let (schema_name, table_name) = if argc == 2 {
+        (args[0].text(), args[1].text())
+    } else {
+        ("main", args[0].text())
+    };
+
+    let db = ctx.db_handle();
+    let mut err_msg = null_mut();
+    let rc = db.exec_safe("SAVEPOINT as_crr");
+    if rc.is_err() {
+        ctx.result_error("failed to start as_crr savepoint");
+        return;
+    }
+    let rc = crsql_create_crr(
+        db,
+        schema_name.as_ptr() as *const c_char,
+        table_name.as_ptr() as *const c_char,
+        0,
+        0,
+        &mut err_msg as *mut _,
+    );
+    if rc != ResultCode::OK as c_int {
+        sqlite::result_error(ctx, err_msg, -1);
+        sqlite::result_error_code(ctx, rc);
+        let _ = db.exec_safe("ROLLBACK");
+        return;
+    }
+
+    let rc = db.exec_safe("RELEASE as_crr");
+    if rc.is_err() {
+        ctx.result_error("failed to release as_crr savepoint");
+        return;
+    }
+    ctx.result_text_static("OK");
 }
 
 unsafe extern "C" fn x_crsql_commit_alter(

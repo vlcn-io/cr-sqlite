@@ -20,55 +20,6 @@ SQLITE_EXTENSION_INIT1
 unsigned char __rust_no_alloc_shim_is_unstable;
 #endif
 
-/**
- * Takes a table name and turns it into a CRR.
- *
- * This allows users to create and modify tables as normal.
- */
-static void crsqlMakeCrrFunc(sqlite3_context *context, int argc,
-                             sqlite3_value **argv) {
-  const char *tblName = 0;
-  const char *schemaName = 0;
-  int rc = SQLITE_OK;
-  sqlite3 *db = sqlite3_context_db_handle(context);
-  char *errmsg = 0;
-
-  if (argc == 0) {
-    sqlite3_result_error(
-        context,
-        "Wrong number of args provided to crsql_as_crr. Provide the schema "
-        "name and table name or just the table name.",
-        -1);
-    return;
-  }
-
-  if (argc == 2) {
-    schemaName = (const char *)sqlite3_value_text(argv[0]);
-    tblName = (const char *)sqlite3_value_text(argv[1]);
-  } else {
-    schemaName = "main";
-    tblName = (const char *)sqlite3_value_text(argv[0]);
-  }
-
-  rc = sqlite3_exec(db, "SAVEPOINT as_crr", 0, 0, &errmsg);
-  if (rc != SQLITE_OK) {
-    sqlite3_result_error(context, errmsg, -1);
-    sqlite3_free(errmsg);
-    return;
-  }
-
-  rc = crsql_create_crr(db, schemaName, tblName, 0, 0, &errmsg);
-  if (rc != SQLITE_OK) {
-    sqlite3_result_error(context, errmsg, -1);
-    sqlite3_result_error_code(context, rc);
-    sqlite3_free(errmsg);
-    sqlite3_exec(db, "ROLLBACK", 0, 0, 0);
-    return;
-  }
-
-  sqlite3_exec(db, "RELEASE as_crr", 0, 0, 0);
-}
-
 static void crsqlBeginAlterFunc(sqlite3_context *context, int argc,
                                 sqlite3_value **argv) {
   const char *tblName = 0;
@@ -179,18 +130,6 @@ __declspec(dllexport)
   crsql_ExtData *pExtData = sqlite3_crsqlrustbundle_init(db, pzErrMsg, pApi);
   if (pExtData == 0) {
     return SQLITE_ERROR;
-  }
-
-  if (rc == SQLITE_OK) {
-    // Only register a commit hook, not update or pre-update, since all rows
-    // in the same transaction should have the same clock value. This allows
-    // us to replicate them together and ensure more consistency.
-    rc = sqlite3_create_function(db, "crsql_as_crr", -1,
-                                 // crsql should only ever be used at the top
-                                 // level and does a great deal to modify
-                                 // existing database state. directonly.
-                                 SQLITE_UTF8 | SQLITE_DIRECTONLY, 0,
-                                 crsqlMakeCrrFunc, 0, 0);
   }
 
   if (rc == SQLITE_OK) {

@@ -316,6 +316,23 @@ pub extern "C" fn sqlite3_crsqlcore_init(
 
     let rc = db
         .create_function_v2(
+            "crsql_begin_alter",
+            -1,
+            sqlite::UTF8 | sqlite::DIRECTONLY,
+            None,
+            Some(x_crsql_begin_alter),
+            None,
+            None,
+            None,
+        )
+        .unwrap_or(ResultCode::ERROR);
+    if rc != ResultCode::OK {
+        unsafe { crsql_freeExtData(ext_data) };
+        return null_mut();
+    }
+
+    let rc = db
+        .create_function_v2(
             "crsql_commit_alter",
             -1,
             sqlite::UTF8 | sqlite::DIRECTONLY,
@@ -426,6 +443,43 @@ unsafe extern "C" fn x_crsql_as_crr(
     let rc = db.exec_safe("RELEASE as_crr");
     if rc.is_err() {
         ctx.result_error("failed to release as_crr savepoint");
+        return;
+    }
+    ctx.result_text_static("OK");
+}
+
+unsafe extern "C" fn x_crsql_begin_alter(
+    ctx: *mut sqlite::context,
+    argc: i32,
+    argv: *mut *mut sqlite::value,
+) {
+    if argc == 0 {
+        ctx.result_error(
+            "Wrong number of args provided to crsql_begin_alter. Provide the 
+          schema name and table name or just the table name.",
+        );
+        return;
+    }
+
+    let args = sqlite::args!(argc, argv);
+    let (schema_name, table_name) = if argc == 2 {
+        (args[0].text(), args[1].text())
+    } else {
+        ("main", args[0].text())
+    };
+
+    let db = ctx.db_handle();
+    let mut err_msg = null_mut();
+    let rc = db.exec_safe("SAVEPOINT alter_crr");
+    if rc.is_err() {
+        ctx.result_error("failed to start alter_crr savepoint");
+        return;
+    }
+    let rc = remove_crr_triggers_if_exist(db, table_name);
+    if rc.is_err() {
+        sqlite::result_error(ctx, err_msg, -1);
+        sqlite::result_error_code(ctx, rc.unwrap_err() as c_int);
+        let _ = db.exec_safe("ROLLBACK");
         return;
     }
     ctx.result_text_static("OK");
@@ -588,22 +642,6 @@ unsafe extern "C" fn x_crsql_sync_bit(
     *sync_bit_ptr = new_value;
 
     ctx.result_int(*sync_bit_ptr);
-}
-
-#[no_mangle]
-pub extern "C" fn crsql_remove_crr_triggers_if_exist(
-    db: *mut sqlite::sqlite3,
-    table: *const c_char,
-) -> c_int {
-    if let Ok(table) = unsafe { CStr::from_ptr(table).to_str() } {
-        let result = remove_crr_triggers_if_exist(db, table);
-        match result {
-            Ok(result) => result as c_int,
-            Err(result) => result as c_int,
-        }
-    } else {
-        ResultCode::NOMEM as c_int
-    }
 }
 
 #[no_mangle]

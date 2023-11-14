@@ -10,7 +10,6 @@ use alloc::vec::Vec;
 use core::ffi::{c_char, c_int, CStr};
 use core::mem::{self, forget};
 use core::ptr::null_mut;
-use core::slice;
 
 use alloc::ffi::CString;
 #[cfg(not(feature = "std"))]

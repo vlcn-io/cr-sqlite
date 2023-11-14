@@ -6,7 +6,6 @@ use crate::c::crsql_ExtData;
 use crate::stmt_cache::reset_cached_stmt;
 use alloc::boxed::Box;
 use alloc::format;
-use alloc::slice;
 use alloc::string::String;
 use alloc::vec::Vec;
 use sqlite::sqlite3;

@@ -419,6 +419,23 @@ pub extern "C" fn sqlite3_crsqlcore_init(
         return null_mut();
     }
 
+    let rc = db
+        .create_function_v2(
+            "crsql_rows_impacted",
+            0,
+            sqlite::UTF8 | sqlite::INNOCUOUS,
+            Some(ext_data as *mut c_void),
+            Some(x_crsql_rows_impacted),
+            None,
+            None,
+            None,
+        )
+        .unwrap_or(ResultCode::ERROR);
+    if rc != ResultCode::OK {
+        unsafe { crsql_freeExtData(ext_data) };
+        return null_mut();
+    }
+
     return ext_data as *mut c_void;
 }
 
@@ -502,6 +519,16 @@ unsafe extern "C" fn x_crsql_as_crr(
     ctx.result_text_static("OK");
 }
 
+unsafe extern "C" fn x_crsql_rows_impacted(
+    ctx: *mut sqlite::context,
+    _argc: i32,
+    _argv: *mut *mut sqlite::value,
+) {
+    let ext_data = ctx.user_data() as *mut c::crsql_ExtData;
+    let rows_impacted = (*ext_data).rowsImpacted;
+    sqlite::result_int(ctx, rows_impacted);
+}
+
 unsafe extern "C" fn x_crsql_begin_alter(
     ctx: *mut sqlite::context,
     argc: i32,
@@ -524,7 +551,6 @@ unsafe extern "C" fn x_crsql_begin_alter(
     };
 
     let db = ctx.db_handle();
-    let mut err_msg = null_mut();
     let rc = db.exec_safe("SAVEPOINT alter_crr");
     if rc.is_err() {
         ctx.result_error("failed to start alter_crr savepoint");
@@ -532,7 +558,6 @@ unsafe extern "C" fn x_crsql_begin_alter(
     }
     let rc = remove_crr_triggers_if_exist(db, table_name);
     if rc.is_err() {
-        sqlite::result_error(ctx, err_msg, -1);
         sqlite::result_error_code(ctx, rc.unwrap_err() as c_int);
         let _ = db.exec_safe("ROLLBACK");
         return;

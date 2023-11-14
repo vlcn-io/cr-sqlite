@@ -29,12 +29,6 @@ static void freeConnectionExtData(void *pUserData) {
   crsql_freeExtData(pExtData);
 }
 
-static void crsqlRowsImpacted(sqlite3_context *context, int argc,
-                              sqlite3_value **argv) {
-  crsql_ExtData *pExtData = (crsql_ExtData *)sqlite3_user_data(context);
-  sqlite3_result_int(context, pExtData->rowsImpacted);
-}
-
 static int commitHook(void *pUserData) {
   crsql_ExtData *pExtData = (crsql_ExtData *)pUserData;
 
@@ -89,12 +83,6 @@ __declspec(dllexport)
   crsql_ExtData *pExtData = sqlite3_crsqlrustbundle_init(db, pzErrMsg, pApi);
   if (pExtData == 0) {
     return SQLITE_ERROR;
-  }
-
-  if (rc == SQLITE_OK) {
-    rc = sqlite3_create_function(db, "crsql_rows_impacted", 0,
-                                 SQLITE_UTF8 | SQLITE_INNOCUOUS, pExtData,
-                                 crsqlRowsImpacted, 0, 0);
   }
 
   if (rc == SQLITE_OK) {

@@ -48,6 +48,7 @@ use core::mem;
 use core::ptr::null_mut;
 use core::{ffi::c_char, slice};
 extern crate alloc;
+use alter::crsql_compact_post_alter;
 use automigrate::*;
 use backfill::*;
 use c::{crsql_freeExtData, crsql_newExtData};
@@ -296,6 +297,23 @@ pub extern "C" fn sqlite3_crsqlcore_init(
         return null_mut();
     }
 
+    let rc = db
+        .create_function_v2(
+            "crsql_commit_alter",
+            -1,
+            sqlite::UTF8 | sqlite::DIRECTONLY,
+            Some(ext_data as *mut c_void),
+            Some(x_crsql_commit_alter),
+            None,
+            None,
+            None,
+        )
+        .unwrap_or(ResultCode::ERROR);
+    if rc != ResultCode::OK {
+        unsafe { crsql_freeExtData(ext_data) };
+        return null_mut();
+    }
+
     return ext_data as *mut c_void;
 }
 
@@ -312,6 +330,62 @@ unsafe extern "C" fn x_crsql_site_id(
     let ext_data = ctx.user_data() as *mut c::crsql_ExtData;
     let site_id = (*ext_data).siteId;
     sqlite::result_blob(ctx, site_id, consts::SITE_ID_LEN, Destructor::STATIC);
+}
+
+unsafe extern "C" fn x_crsql_commit_alter(
+    ctx: *mut sqlite::context,
+    argc: i32,
+    argv: *mut *mut sqlite::value,
+) {
+    if argc == 0 {
+        ctx.result_error(
+            "Wrong number of args provided to crsql_commit_alter. Provide the 
+          schema name and table name or just the table name.",
+        );
+        return;
+    }
+
+    let args = sqlite::args!(argc, argv);
+    let (schema_name, table_name) = if argc == 2 {
+        (args[0].text(), args[1].text())
+    } else {
+        ("main", args[0].text())
+    };
+
+    let ext_data = ctx.user_data() as *mut c::crsql_ExtData;
+    let mut err_msg = null_mut();
+    let db = ctx.db_handle();
+    let rc = crsql_compact_post_alter(
+        db,
+        table_name.as_ptr() as *const c_char,
+        ext_data,
+        &mut err_msg as *mut _,
+    );
+
+    let rc = if rc == ResultCode::OK as c_int {
+        crsql_create_crr(
+            db,
+            schema_name.as_ptr() as *const c_char,
+            table_name.as_ptr() as *const c_char,
+            1,
+            0,
+            &mut err_msg as *mut _,
+        )
+    } else {
+        rc
+    };
+    let rc = if rc == ResultCode::OK as c_int {
+        db.exec_safe("RELEASE alter_crr")
+            .unwrap_or(ResultCode::ERROR) as c_int
+    } else {
+        rc
+    };
+    if rc != ResultCode::OK as c_int {
+        // TODO: use err_msg
+        ctx.result_error("failed compacting tables post alteration");
+        let _ = db.exec_safe("ROLLBACK");
+        return;
+    }
 }
 
 unsafe extern "C" fn x_crsql_get_seq(

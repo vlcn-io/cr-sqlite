@@ -92,11 +92,6 @@ __declspec(dllexport)
   }
 
   if (rc == SQLITE_OK) {
-    rc = sqlite3_create_function(db, "crsql_after_update", -1,
-                                 SQLITE_UTF8 | SQLITE_INNOCUOUS, pExtData,
-                                 crsql_after_update, 0, 0);
-  }
-  if (rc == SQLITE_OK) {
     rc = sqlite3_create_function(db, "crsql_after_insert", -1,
                                  SQLITE_UTF8 | SQLITE_INNOCUOUS, pExtData,
                                  crsql_after_insert, 0, 0);

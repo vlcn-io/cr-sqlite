@@ -4,7 +4,6 @@ use alloc::format;
 use alloc::vec::Vec;
 use core::ffi::{c_char, c_int};
 use core::mem;
-use core::slice;
 use sqlite::Stmt;
 use sqlite_nostd as sqlite;
 use sqlite_nostd::{sqlite3, ResultCode, Value};

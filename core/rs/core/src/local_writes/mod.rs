@@ -17,7 +17,7 @@ use crate::tableinfo::{crsql_ensure_table_infos_are_up_to_date, ColumnInfo, Tabl
 
 mod after_delete;
 mod after_insert;
-mod after_update;
+pub mod after_update;
 
 fn trigger_fn_preamble<F>(
     ctx: *mut sqlite::context,

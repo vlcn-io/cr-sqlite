@@ -56,6 +56,8 @@ use core::ffi::{c_int, c_void, CStr};
 use create_crr::create_crr;
 use db_version::{crsql_fill_db_version_if_needed, crsql_next_db_version};
 use is_crr::*;
+use local_writes::after_delete::x_crsql_after_delete;
+use local_writes::after_insert::x_crsql_after_insert;
 use local_writes::after_update::x_crsql_after_update;
 use sqlite::{Destructor, ResultCode};
 use sqlite_nostd as sqlite;
@@ -351,6 +353,23 @@ pub extern "C" fn sqlite3_crsqlcore_init(
 
     let rc = db
         .create_function_v2(
+            "crsql_finalize",
+            -1,
+            sqlite::UTF8 | sqlite::DIRECTONLY,
+            Some(ext_data as *mut c_void),
+            Some(x_crsql_finalize),
+            None,
+            None,
+            None,
+        )
+        .unwrap_or(ResultCode::ERROR);
+    if rc != ResultCode::OK {
+        unsafe { crsql_freeExtData(ext_data) };
+        return null_mut();
+    }
+
+    let rc = db
+        .create_function_v2(
             "crsql_after_update",
             -1,
             sqlite::UTF8 | sqlite::INNOCUOUS,
@@ -368,11 +387,28 @@ pub extern "C" fn sqlite3_crsqlcore_init(
 
     let rc = db
         .create_function_v2(
-            "crsql_finalize",
+            "crsql_after_insert",
             -1,
-            sqlite::UTF8 | sqlite::DIRECTONLY,
+            sqlite::UTF8 | sqlite::INNOCUOUS,
             Some(ext_data as *mut c_void),
-            Some(x_crsql_finalize),
+            Some(x_crsql_after_insert),
+            None,
+            None,
+            None,
+        )
+        .unwrap_or(ResultCode::ERROR);
+    if rc != ResultCode::OK {
+        unsafe { crsql_freeExtData(ext_data) };
+        return null_mut();
+    }
+
+    let rc = db
+        .create_function_v2(
+            "crsql_after_delete",
+            -1,
+            sqlite::UTF8 | sqlite::INNOCUOUS,
+            Some(ext_data as *mut c_void),
+            Some(x_crsql_after_delete),
             None,
             None,
             None,

@@ -14,8 +14,7 @@ use super::trigger_fn_preamble;
 /**
  * crsql_after_insert("table", pk_values...)
  */
-#[no_mangle]
-pub unsafe extern "C" fn crsql_after_insert(
+pub unsafe extern "C" fn x_crsql_after_insert(
     ctx: *mut sqlite::context,
     argc: c_int,
     argv: *mut *mut sqlite::value,

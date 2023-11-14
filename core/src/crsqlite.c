@@ -119,12 +119,6 @@ static void freeConnectionExtData(void *pUserData) {
   crsql_freeExtData(pExtData);
 }
 
-static void crsqlFinalize(sqlite3_context *context, int argc,
-                          sqlite3_value **argv) {
-  crsql_ExtData *pExtData = (crsql_ExtData *)sqlite3_user_data(context);
-  crsql_finalize(pExtData);
-}
-
 static void crsqlRowsImpacted(sqlite3_context *context, int argc,
                               sqlite3_value **argv) {
   crsql_ExtData *pExtData = (crsql_ExtData *)sqlite3_user_data(context);
@@ -203,13 +197,6 @@ __declspec(dllexport)
     rc = sqlite3_create_function(db, "crsql_begin_alter", -1,
                                  SQLITE_UTF8 | SQLITE_DIRECTONLY, 0,
                                  crsqlBeginAlterFunc, 0, 0);
-  }
-
-  if (rc == SQLITE_OK) {
-    // see https://sqlite.org/forum/forumpost/c94f943821
-    rc = sqlite3_create_function(db, "crsql_finalize", -1,
-                                 SQLITE_UTF8 | SQLITE_DIRECTONLY, pExtData,
-                                 crsqlFinalize, 0, 0);
   }
 
   if (rc == SQLITE_OK) {

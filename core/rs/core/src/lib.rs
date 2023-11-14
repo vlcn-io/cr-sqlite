@@ -314,6 +314,23 @@ pub extern "C" fn sqlite3_crsqlcore_init(
         return null_mut();
     }
 
+    let rc = db
+        .create_function_v2(
+            "crsql_finalize",
+            -1,
+            sqlite::UTF8 | sqlite::DIRECTONLY,
+            Some(ext_data as *mut c_void),
+            Some(x_crsql_finalize),
+            None,
+            None,
+            None,
+        )
+        .unwrap_or(ResultCode::ERROR);
+    if rc != ResultCode::OK {
+        unsafe { crsql_freeExtData(ext_data) };
+        return null_mut();
+    }
+
     return ext_data as *mut c_void;
 }
 
@@ -330,6 +347,16 @@ unsafe extern "C" fn x_crsql_site_id(
     let ext_data = ctx.user_data() as *mut c::crsql_ExtData;
     let site_id = (*ext_data).siteId;
     sqlite::result_blob(ctx, site_id, consts::SITE_ID_LEN, Destructor::STATIC);
+}
+
+unsafe extern "C" fn x_crsql_finalize(
+    ctx: *mut sqlite::context,
+    argc: i32,
+    argv: *mut *mut sqlite::value,
+) {
+    let ext_data = ctx.user_data() as *mut c::crsql_ExtData;
+    c::crsql_finalize(ext_data);
+    ctx.result_text_static("finalized");
 }
 
 unsafe extern "C" fn x_crsql_commit_alter(

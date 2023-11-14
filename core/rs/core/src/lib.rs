@@ -175,7 +175,7 @@ pub extern "C" fn sqlite3_crsqlcore_init(
             -1,
             sqlite::UTF8 | sqlite::INNOCUOUS,
             Some(sync_bit_ptr as *mut c_void),
-            Some(crsql_sync_bit),
+            Some(x_crsql_sync_bit),
             None,
             None,
             Some(crsql_sqlite_free),
@@ -204,14 +204,35 @@ pub extern "C" fn sqlite3_crsqlcore_init(
         return null_mut();
     }
 
+    let rc = db.create_function_v2(
+        "crsql_site_id",
+        0,
+        sqlite::UTF8 | sqlite::INNOCUOUS | sqlite::DETERMINISTIC,
+        Some(ext_data),
+        Some(x_crsql_site_id),
+        None,
+        None,
+        None,
+    );
+
     return ext_data as *mut c_void;
+}
+
+pub unsafe extern "C" fn x_crsql_site_id(
+    ctx: *mut sqlite::context,
+    argc: i32,
+    argv: *mut *mut sqlite::value,
+) {
+    let ext_data = ctx.user_data() as *mut ext_data::ExtData;
+    let site_id = (*ext_data).siteId;
+    ctx.result_blob();
 }
 
 pub unsafe extern "C" fn crsql_sqlite_free(ptr: *mut c_void) {
     sqlite::free(ptr);
 }
 
-pub unsafe extern "C" fn crsql_sync_bit(
+pub unsafe extern "C" fn x_crsql_sync_bit(
     ctx: *mut sqlite::context,
     argc: i32,
     argv: *mut *mut sqlite::value,

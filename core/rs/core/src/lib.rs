@@ -50,11 +50,11 @@ use core::{ffi::c_char, slice};
 extern crate alloc;
 use automigrate::*;
 use backfill::*;
-use c::crsql_newExtData;
+use c::{crsql_freeExtData, crsql_newExtData};
 use core::ffi::{c_int, c_void, CStr};
 use create_crr::create_crr;
 use is_crr::*;
-use sqlite::ResultCode;
+use sqlite::{Destructor, ResultCode};
 use sqlite_nostd as sqlite;
 use sqlite_nostd::{Connection, Context, Value};
 use tableinfo::is_table_compatible;
@@ -190,6 +190,12 @@ pub extern "C" fn sqlite3_crsqlcore_init(
         return null_mut();
     }
 
+    // TODO: convert this function to a proper rust function
+    // and have rust free:
+    // 1. site_id_buffer
+    // 2. ext_data
+    // automatically.
+
     let site_id_buffer =
         sqlite::malloc((consts::SITE_ID_LEN as usize) * mem::size_of::<*const c_char>());
     let rc = crate::bootstrap::crsql_init_site_id(db, site_id_buffer);
@@ -204,28 +210,39 @@ pub extern "C" fn sqlite3_crsqlcore_init(
         return null_mut();
     }
 
-    let rc = db.create_function_v2(
-        "crsql_site_id",
-        0,
-        sqlite::UTF8 | sqlite::INNOCUOUS | sqlite::DETERMINISTIC,
-        Some(ext_data),
-        Some(x_crsql_site_id),
-        None,
-        None,
-        None,
-    );
+    let rc = db
+        .create_function_v2(
+            "crsql_site_id",
+            0,
+            sqlite::UTF8 | sqlite::INNOCUOUS | sqlite::DETERMINISTIC,
+            Some(ext_data as *mut c_void),
+            Some(x_crsql_site_id),
+            None,
+            None,
+            None,
+        )
+        .unwrap_or(ResultCode::ERROR);
+    if rc != ResultCode::OK {
+        unsafe { crsql_freeExtData(ext_data) };
+        return null_mut();
+    }
 
     return ext_data as *mut c_void;
 }
 
-pub unsafe extern "C" fn x_crsql_site_id(
+/**
+ * return the uuid which uniquely identifies this database.
+ *
+ * `select crsql_site_id()`
+ */
+unsafe extern "C" fn x_crsql_site_id(
     ctx: *mut sqlite::context,
     argc: i32,
     argv: *mut *mut sqlite::value,
 ) {
-    let ext_data = ctx.user_data() as *mut ext_data::ExtData;
+    let ext_data = ctx.user_data() as *mut c::crsql_ExtData;
     let site_id = (*ext_data).siteId;
-    ctx.result_blob();
+    sqlite::result_blob(ctx, site_id, consts::SITE_ID_LEN, Destructor::STATIC);
 }
 
 pub unsafe extern "C" fn crsql_sqlite_free(ptr: *mut c_void) {

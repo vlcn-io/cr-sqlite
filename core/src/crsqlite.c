@@ -113,47 +113,6 @@ static void crsqlBeginAlterFunc(sqlite3_context *context, int argc,
 int crsql_compact_post_alter(sqlite3 *db, const char *tblName,
                              crsql_ExtData *pExtData, char **errmsg);
 
-static void crsqlCommitAlterFunc(sqlite3_context *context, int argc,
-                                 sqlite3_value **argv) {
-  const char *tblName = 0;
-  const char *schemaName = 0;
-  int rc = SQLITE_OK;
-  sqlite3 *db = sqlite3_context_db_handle(context);
-  char *errmsg = 0;
-
-  if (argc == 0) {
-    sqlite3_result_error(
-        context,
-        "Wrong number of args provided to crsql_commit_alter. Provide the "
-        "schema name and table name or just the table name.",
-        -1);
-    return;
-  }
-
-  if (argc == 2) {
-    schemaName = (const char *)sqlite3_value_text(argv[0]);
-    tblName = (const char *)sqlite3_value_text(argv[1]);
-  } else {
-    schemaName = "main";
-    tblName = (const char *)sqlite3_value_text(argv[0]);
-  }
-
-  crsql_ExtData *pExtData = (crsql_ExtData *)sqlite3_user_data(context);
-  rc = crsql_compact_post_alter(db, tblName, pExtData, &errmsg);
-  if (rc == SQLITE_OK) {
-    rc = crsql_create_crr(db, schemaName, tblName, 1, 0, &errmsg);
-  }
-  if (rc == SQLITE_OK) {
-    rc = sqlite3_exec(db, "RELEASE alter_crr", 0, 0, &errmsg);
-  }
-  if (rc != SQLITE_OK) {
-    sqlite3_result_error(context, errmsg, -1);
-    sqlite3_free(errmsg);
-    sqlite3_exec(db, "ROLLBACK", 0, 0, 0);
-    return;
-  }
-}
-
 static void freeConnectionExtData(void *pUserData) {
   crsql_ExtData *pExtData = (crsql_ExtData *)pUserData;
 
@@ -244,12 +203,6 @@ __declspec(dllexport)
     rc = sqlite3_create_function(db, "crsql_begin_alter", -1,
                                  SQLITE_UTF8 | SQLITE_DIRECTONLY, 0,
                                  crsqlBeginAlterFunc, 0, 0);
-  }
-
-  if (rc == SQLITE_OK) {
-    rc = sqlite3_create_function(db, "crsql_commit_alter", -1,
-                                 SQLITE_UTF8 | SQLITE_DIRECTONLY, pExtData,
-                                 crsqlCommitAlterFunc, 0, 0);
   }
 
   if (rc == SQLITE_OK) {

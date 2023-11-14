@@ -21,21 +21,6 @@ unsigned char __rust_no_alloc_shim_is_unstable;
 #endif
 
 /**
- * return the uuid which uniquely identifies this database.
- *
- * `select crsql_site_id()`
- *
- * @param context
- * @param argc
- * @param argv
- */
-static void siteIdFunc(sqlite3_context *context, int argc,
-                       sqlite3_value **argv) {
-  crsql_ExtData *pExtData = (crsql_ExtData *)sqlite3_user_data(context);
-  sqlite3_result_blob(context, pExtData->siteId, SITE_ID_LEN, SQLITE_STATIC);
-}
-
-/**
  * Return the current version of the database.
  *
  * `select crsql_db_version()`
@@ -307,13 +292,6 @@ __declspec(dllexport)
     return SQLITE_ERROR;
   }
 
-  if (rc == SQLITE_OK) {
-    rc = sqlite3_create_function(
-        db, "crsql_site_id", 0,
-        // siteid never changes -- deterministic and innnocuous
-        SQLITE_UTF8 | SQLITE_INNOCUOUS | SQLITE_DETERMINISTIC, pExtData,
-        siteIdFunc, 0, 0);
-  }
   if (rc == SQLITE_OK) {
     rc = sqlite3_create_function_v2(db, "crsql_db_version", 0,
                                     // dbversion can change on each invocation.

@@ -14,8 +14,7 @@ use super::trigger_fn_preamble;
 /**
  * crsql_after_delete("table", old_pk_values...)
  */
-#[no_mangle]
-pub unsafe extern "C" fn crsql_after_delete(
+pub unsafe extern "C" fn x_crsql_after_delete(
     ctx: *mut sqlite::context,
     argc: c_int,
     argv: *mut *mut sqlite::value,

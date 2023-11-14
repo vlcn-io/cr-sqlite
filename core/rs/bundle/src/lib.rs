@@ -6,7 +6,7 @@ extern crate alloc;
 
 use core::alloc::GlobalAlloc;
 use core::alloc::Layout;
-use core::ffi::{c_char, c_int};
+use core::ffi::c_char;
 use core::panic::PanicInfo;
 use crsql_core;
 use crsql_core::sqlite3_crsqlcore_init;

@@ -9,4 +9,3 @@ pub mod tableinfo;
 pub mod teardown;
 pub mod test_cl_set_vtab;
 pub mod test_db_version;
-pub mod test_merge_delete;

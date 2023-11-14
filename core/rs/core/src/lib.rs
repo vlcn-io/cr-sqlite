@@ -44,9 +44,9 @@ mod triggers;
 mod unpack_columns_vtab;
 mod util;
 
+use core::ffi::c_char;
 use core::mem;
 use core::ptr::null_mut;
-use core::{ffi::c_char, slice};
 extern crate alloc;
 use alter::crsql_compact_post_alter;
 use automigrate::*;
@@ -56,6 +56,7 @@ use core::ffi::{c_int, c_void, CStr};
 use create_crr::create_crr;
 use db_version::{crsql_fill_db_version_if_needed, crsql_next_db_version};
 use is_crr::*;
+use local_writes::after_update::x_crsql_after_update;
 use sqlite::{Destructor, ResultCode};
 use sqlite_nostd as sqlite;
 use sqlite_nostd::{Connection, Context, Value};
@@ -350,6 +351,23 @@ pub extern "C" fn sqlite3_crsqlcore_init(
 
     let rc = db
         .create_function_v2(
+            "crsql_after_update",
+            -1,
+            sqlite::UTF8 | sqlite::INNOCUOUS,
+            Some(ext_data as *mut c_void),
+            Some(x_crsql_after_update),
+            None,
+            None,
+            None,
+        )
+        .unwrap_or(ResultCode::ERROR);
+    if rc != ResultCode::OK {
+        unsafe { crsql_freeExtData(ext_data) };
+        return null_mut();
+    }
+
+    let rc = db
+        .create_function_v2(
             "crsql_finalize",
             -1,
             sqlite::UTF8 | sqlite::DIRECTONLY,
@@ -462,7 +480,8 @@ unsafe extern "C" fn x_crsql_begin_alter(
     }
 
     let args = sqlite::args!(argc, argv);
-    let (schema_name, table_name) = if argc == 2 {
+    // TODO: use schema name!
+    let (_schema_name, table_name) = if argc == 2 {
         (args[0].text(), args[1].text())
     } else {
         ("main", args[0].text())

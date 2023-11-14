@@ -10,8 +10,7 @@ use crate::{c::crsql_ExtData, tableinfo::TableInfo};
 
 use super::trigger_fn_preamble;
 
-#[no_mangle]
-pub unsafe extern "C" fn crsql_after_update(
+pub unsafe extern "C" fn x_crsql_after_update(
     ctx: *mut sqlite::context,
     argc: c_int,
     argv: *mut *mut sqlite::value,

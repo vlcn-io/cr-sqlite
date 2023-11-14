@@ -108,6 +108,7 @@ extern "C" {
         siteIdBuffer: *mut c_char,
     ) -> *mut crsql_ExtData;
     pub fn crsql_freeExtData(pExtData: *mut crsql_ExtData);
+    pub fn crsql_finalize(pExtData: *mut crsql_ExtData);
 }
 
 #[test]

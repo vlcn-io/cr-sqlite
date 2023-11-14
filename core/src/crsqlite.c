@@ -20,12 +20,6 @@ SQLITE_EXTENSION_INIT1
 unsigned char __rust_no_alloc_shim_is_unstable;
 #endif
 
-static void getSeqFunc(sqlite3_context *context, int argc,
-                       sqlite3_value **argv) {
-  crsql_ExtData *pExtData = (crsql_ExtData *)sqlite3_user_data(context);
-  sqlite3_result_int(context, pExtData->seq);
-}
-
 /**
  * Takes a table name and turns it into a CRR.
  *
@@ -232,13 +226,6 @@ __declspec(dllexport)
   crsql_ExtData *pExtData = sqlite3_crsqlrustbundle_init(db, pzErrMsg, pApi);
   if (pExtData == 0) {
     return SQLITE_ERROR;
-  }
-
-  if (rc == SQLITE_OK) {
-    rc = sqlite3_create_function(
-        db, "crsql_get_seq", 0,
-        SQLITE_UTF8 | SQLITE_INNOCUOUS | SQLITE_DETERMINISTIC, pExtData,
-        getSeqFunc, 0, 0);
   }
 
   if (rc == SQLITE_OK) {

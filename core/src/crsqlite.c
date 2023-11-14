@@ -21,26 +21,6 @@ unsigned char __rust_no_alloc_shim_is_unstable;
 #endif
 
 /**
- * Return the current version of the database.
- *
- * `select crsql_db_version()`
- */
-static void dbVersionFunc(sqlite3_context *context, int argc,
-                          sqlite3_value **argv) {
-  char *errmsg = 0;
-  crsql_ExtData *pExtData = (crsql_ExtData *)sqlite3_user_data(context);
-  sqlite3 *db = sqlite3_context_db_handle(context);
-  int rc = crsql_fill_db_version_if_needed(db, pExtData, &errmsg);
-  if (rc != SQLITE_OK) {
-    sqlite3_result_error(context, errmsg, -1);
-    sqlite3_free(errmsg);
-    return;
-  }
-
-  sqlite3_result_int64(context, pExtData->dbVersion);
-}
-
-/**
  * Return the next version of the database for use in inserts/updates/deletes
  *
  * `select crsql_next_db_version()`
@@ -292,12 +272,6 @@ __declspec(dllexport)
     return SQLITE_ERROR;
   }
 
-  if (rc == SQLITE_OK) {
-    rc = sqlite3_create_function_v2(db, "crsql_db_version", 0,
-                                    // dbversion can change on each invocation.
-                                    SQLITE_UTF8 | SQLITE_INNOCUOUS, pExtData,
-                                    dbVersionFunc, 0, 0, freeConnectionExtData);
-  }
   if (rc == SQLITE_OK) {
     rc = sqlite3_create_function(db, "crsql_next_db_version", -1,
                                  // dbversion can change on each invocation.

@@ -53,6 +53,7 @@ use backfill::*;
 use c::{crsql_freeExtData, crsql_newExtData};
 use core::ffi::{c_int, c_void, CStr};
 use create_crr::create_crr;
+use db_version::crsql_fill_db_version_if_needed;
 use is_crr::*;
 use sqlite::{Destructor, ResultCode};
 use sqlite_nostd as sqlite;
@@ -227,6 +228,23 @@ pub extern "C" fn sqlite3_crsqlcore_init(
         return null_mut();
     }
 
+    let rc = db
+        .create_function_v2(
+            "crsql_db_version",
+            0,
+            sqlite::INNOCUOUS | sqlite::UTF8,
+            Some(ext_data as *mut c_void),
+            Some(x_crsql_db_version),
+            None,
+            None,
+            Some(x_free_connection_ext_data),
+        )
+        .unwrap_or(ResultCode::ERROR);
+    if rc != ResultCode::OK {
+        unsafe { crsql_freeExtData(ext_data) };
+        return null_mut();
+    }
+
     return ext_data as *mut c_void;
 }
 
@@ -245,11 +263,38 @@ unsafe extern "C" fn x_crsql_site_id(
     sqlite::result_blob(ctx, site_id, consts::SITE_ID_LEN, Destructor::STATIC);
 }
 
+/**
+ * Return the current version of the database.
+ *
+ * `select crsql_db_version()`
+ */
+unsafe extern "C" fn x_crsql_db_version(
+    ctx: *mut sqlite::context,
+    argc: i32,
+    argv: *mut *mut sqlite::value,
+) {
+    let ext_data = ctx.user_data() as *mut c::crsql_ExtData;
+    let db = ctx.db_handle();
+    let mut err_msg = null_mut();
+    let rc = crsql_fill_db_version_if_needed(db, ext_data, &mut err_msg as *mut _);
+    if rc != ResultCode::OK as c_int {
+        // TODO: pass err_msg!
+        ctx.result_error("failed to fill db version");
+        return;
+    }
+    sqlite::result_int64(ctx, (*ext_data).dbVersion);
+}
+
+unsafe extern "C" fn x_free_connection_ext_data(data: *mut c_void) {
+    let ext_data = data as *mut c::crsql_ExtData;
+    crsql_freeExtData(ext_data);
+}
+
 pub unsafe extern "C" fn crsql_sqlite_free(ptr: *mut c_void) {
     sqlite::free(ptr);
 }
 
-pub unsafe extern "C" fn x_crsql_sync_bit(
+unsafe extern "C" fn x_crsql_sync_bit(
     ctx: *mut sqlite::context,
     argc: i32,
     argv: *mut *mut sqlite::value,

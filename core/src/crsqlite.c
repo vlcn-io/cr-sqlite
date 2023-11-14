@@ -20,13 +20,6 @@ SQLITE_EXTENSION_INIT1
 unsigned char __rust_no_alloc_shim_is_unstable;
 #endif
 
-static void incrementAndGetSeqFunc(sqlite3_context *context, int argc,
-                                   sqlite3_value **argv) {
-  crsql_ExtData *pExtData = (crsql_ExtData *)sqlite3_user_data(context);
-  sqlite3_result_int(context, pExtData->seq);
-  pExtData->seq += 1;
-}
-
 static void getSeqFunc(sqlite3_context *context, int argc,
                        sqlite3_value **argv) {
   crsql_ExtData *pExtData = (crsql_ExtData *)sqlite3_user_data(context);
@@ -241,11 +234,6 @@ __declspec(dllexport)
     return SQLITE_ERROR;
   }
 
-  if (rc == SQLITE_OK) {
-    rc = sqlite3_create_function(db, "crsql_increment_and_get_seq", 0,
-                                 SQLITE_UTF8 | SQLITE_INNOCUOUS, pExtData,
-                                 incrementAndGetSeqFunc, 0, 0);
-  }
   if (rc == SQLITE_OK) {
     rc = sqlite3_create_function(
         db, "crsql_get_seq", 0,

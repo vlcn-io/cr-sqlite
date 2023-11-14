@@ -53,7 +53,7 @@ use backfill::*;
 use c::{crsql_freeExtData, crsql_newExtData};
 use core::ffi::{c_int, c_void, CStr};
 use create_crr::create_crr;
-use db_version::crsql_fill_db_version_if_needed;
+use db_version::{crsql_fill_db_version_if_needed, crsql_next_db_version};
 use is_crr::*;
 use sqlite::{Destructor, ResultCode};
 use sqlite_nostd as sqlite;
@@ -245,6 +245,23 @@ pub extern "C" fn sqlite3_crsqlcore_init(
         return null_mut();
     }
 
+    let rc = db
+        .create_function_v2(
+            "crsql_next_db_version",
+            -1,
+            sqlite::UTF8 | sqlite::INNOCUOUS,
+            Some(ext_data as *mut c_void),
+            Some(x_crsql_next_db_version),
+            None,
+            None,
+            None,
+        )
+        .unwrap_or(ResultCode::ERROR);
+    if rc != ResultCode::OK {
+        unsafe { crsql_freeExtData(ext_data) };
+        return null_mut();
+    }
+
     return ext_data as *mut c_void;
 }
 
@@ -255,8 +272,8 @@ pub extern "C" fn sqlite3_crsqlcore_init(
  */
 unsafe extern "C" fn x_crsql_site_id(
     ctx: *mut sqlite::context,
-    argc: i32,
-    argv: *mut *mut sqlite::value,
+    _argc: i32,
+    _argv: *mut *mut sqlite::value,
 ) {
     let ext_data = ctx.user_data() as *mut c::crsql_ExtData;
     let site_id = (*ext_data).siteId;
@@ -270,8 +287,8 @@ unsafe extern "C" fn x_crsql_site_id(
  */
 unsafe extern "C" fn x_crsql_db_version(
     ctx: *mut sqlite::context,
-    argc: i32,
-    argv: *mut *mut sqlite::value,
+    _argc: i32,
+    _argv: *mut *mut sqlite::value,
 ) {
     let ext_data = ctx.user_data() as *mut c::crsql_ExtData;
     let db = ctx.db_handle();
@@ -283,6 +300,41 @@ unsafe extern "C" fn x_crsql_db_version(
         return;
     }
     sqlite::result_int64(ctx, (*ext_data).dbVersion);
+}
+
+/**
+ * Return the next version of the database for use in inserts/updates/deletes
+ *
+ * `select crsql_next_db_version()`
+ *
+ * Nit: this should be same as `crsql_db_version`
+ * If you change this behavior you need to change trigger behaviors
+ * as each invocation to `nextVersion` should return the same version
+ * when in the same transaction.
+ */
+unsafe extern "C" fn x_crsql_next_db_version(
+    ctx: *mut sqlite::context,
+    argc: i32,
+    argv: *mut *mut sqlite::value,
+) {
+    let ext_data = ctx.user_data() as *mut c::crsql_ExtData;
+    let db = ctx.db_handle();
+    let mut err_msg = null_mut();
+
+    let provided_version = if argc == 1 {
+        sqlite::args!(argc, argv)[0].int64()
+    } else {
+        0
+    };
+
+    let ret = crsql_next_db_version(db, ext_data, provided_version, &mut err_msg as *mut _);
+    if ret < 0 {
+        // TODO: use err_msg!
+        ctx.result_error("Unable to determine the next db version");
+        return;
+    }
+
+    ctx.result_int64(ret);
 }
 
 unsafe extern "C" fn x_free_connection_ext_data(data: *mut c_void) {

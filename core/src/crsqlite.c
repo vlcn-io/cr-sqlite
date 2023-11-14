@@ -20,37 +20,6 @@ SQLITE_EXTENSION_INIT1
 unsigned char __rust_no_alloc_shim_is_unstable;
 #endif
 
-/**
- * Return the next version of the database for use in inserts/updates/deletes
- *
- * `select crsql_next_db_version()`
- *
- * Nit: this should be same as `crsql_db_version`
- * If you change this behavior you need to change trigger behaviors
- * as each invocation to `nextVersion` should return the same version
- * when in the same transaction.
- */
-static void nextDbVersionFunc(sqlite3_context *context, int argc,
-                              sqlite3_value **argv) {
-  char *errmsg = 0;
-  crsql_ExtData *pExtData = (crsql_ExtData *)sqlite3_user_data(context);
-  sqlite3 *db = sqlite3_context_db_handle(context);
-  sqlite3_int64 providedVersion = 0;
-  if (argc == 1) {
-    providedVersion = sqlite3_value_int64(argv[0]);
-  }
-
-  sqlite3_int64 ret =
-      crsql_next_db_version(db, pExtData, providedVersion, &errmsg);
-  if (ret < 0) {
-    sqlite3_result_error(context, errmsg, -1);
-    sqlite3_free(errmsg);
-    return;
-  }
-
-  sqlite3_result_int64(context, ret);
-}
-
 static void incrementAndGetSeqFunc(sqlite3_context *context, int argc,
                                    sqlite3_value **argv) {
   crsql_ExtData *pExtData = (crsql_ExtData *)sqlite3_user_data(context);
@@ -272,12 +241,6 @@ __declspec(dllexport)
     return SQLITE_ERROR;
   }
 
-  if (rc == SQLITE_OK) {
-    rc = sqlite3_create_function(db, "crsql_next_db_version", -1,
-                                 // dbversion can change on each invocation.
-                                 SQLITE_UTF8 | SQLITE_INNOCUOUS, pExtData,
-                                 nextDbVersionFunc, 0, 0);
-  }
   if (rc == SQLITE_OK) {
     rc = sqlite3_create_function(db, "crsql_increment_and_get_seq", 0,
                                  SQLITE_UTF8 | SQLITE_INNOCUOUS, pExtData,

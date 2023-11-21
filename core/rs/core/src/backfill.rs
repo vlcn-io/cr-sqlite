@@ -24,22 +24,13 @@ pub fn backfill_table(
 
     let sql = format!(
         "SELECT {pk_cols} FROM \"{table}\" AS t1
-        WHERE NOT EXISTS
-          (SELECT 1 FROM \"{table}__crsql_pks\" AS t2 WHERE {pk_where_conditions})",
+        EXCEPT SELECT {pk_cols} FROM \"{table}__crsql_pks\" AS t2",
         table = crate::util::escape_ident(table),
         pk_cols = pk_cols
             .iter()
-            .map(|f| format!("t1.\"{}\"", crate::util::escape_ident(&f.name)))
+            .map(|f| format!("\"{}\"", crate::util::escape_ident(&f.name)))
             .collect::<Vec<_>>()
             .join(", "),
-        pk_where_conditions = pk_cols
-            .iter()
-            .map(|f| format!(
-                "t1.\"{col_name}\" IS t2.\"{col_name}\"",
-                col_name = crate::util::escape_ident(&f.name),
-            ))
-            .collect::<Vec<_>>()
-            .join(" AND "),
     );
     let stmt = db.prepare_v2(&sql);
 

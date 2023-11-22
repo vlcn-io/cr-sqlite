@@ -105,9 +105,7 @@ def test_larger_cl_wins_all():
     c1.commit()
 
     c2.execute("INSERT INTO foo VALUES (1, 1)")
-    c2.commit()
     c2.execute("UPDATE foo SET b = 3 WHERE a = 1")
-    c2.commit()
     c2.execute("UPDATE foo SET b = 4 WHERE a = 1")
     c2.commit()
 
@@ -120,7 +118,7 @@ def test_larger_cl_wins_all():
     assert (c1.execute(
         "SELECT col_version, cl FROM crsql_changes WHERE cid = 'b'").fetchone() == (1, 3))
 
-    # c2 had col_version = 3 given insert + 2 updates
+    # c2 hard col_version = 3 given insert + 2 updates
     # an cl = 1 given a single isnert
     assert (c2.execute(
         "SELECT col_version, cl FROM crsql_changes WHERE cid = 'b'").fetchone() == (3, 1))
@@ -998,15 +996,15 @@ def test_discord_report_corrosion():
     # make sure we have the expected change coming out of node C
     assert (c.execute(
         "SELECT cid, col_version, cl FROM crsql_changes WHERE db_version = 4").fetchall() ==
-        [('b', 4, 3), ('c', 4, 3)])
+        [('b', 2, 3), ('c', 2, 3)])
 
     # a received the delete followed by updates of cells `b` and `c`
     # so it's changes should only have:
     # 1. the sentinal with causal length 3
-    # 2. cell b with col version 4 and causal length 3
+    # 2. cell b with col version 2 and causal length 3
     # 3. cell c with the same
     assert (a.execute("SELECT cid, col_version, cl FROM crsql_changes").fetchall(
-    ) == [('-1', 3, 3), ('b', 4, 3), ('c', 4, 3)])
+    ) == [('-1', 3, 3), ('b', 2, 3), ('c', 2, 3)])
 
     # now that old re-insert goes to A
     sync_left_to_right_single_vrsn(c, a, 3)

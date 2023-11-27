@@ -28,10 +28,6 @@ def make_simple_schema():
     return c
 
 
-def get_site_id(c):
-    return c.execute("SELECT crsql_site_id()").fetchone()[0]
-
-
 def make_pko_schema():
     c = connect(":memory:")
     c.execute("CREATE TABLE foo (a INTEGER PRIMARY KEY NOT NULL) STRICT;")
@@ -841,18 +837,9 @@ def test_larger_col_version_same_cl():
     close(c2)
 
 
-# should be a no-op.
-# values do not break ties.
-# site id loses on the merge
 def test_larger_col_value_same_cl_and_col_version():
     c1 = make_simple_schema()
     c2 = make_simple_schema()
-
-    # greater site id wins so we need to swap
-    if get_site_id(c1) > get_site_id(c2):
-        temp = c1
-        c1 = c2
-        c2 = temp
 
     c1.execute("INSERT INTO foo VALUES (1, 4)")
     c1.commit()
@@ -861,12 +848,6 @@ def test_larger_col_value_same_cl_and_col_version():
 
     sync_left_to_right(c1, c2, 0)
 
-    assert (c1.execute("SELECT * FROM foo").fetchall() !=
-            c2.execute("SELECT * FROM foo").fetchall())
-
-    sync_left_to_right(c2, c1, 0)
-
-    # swapping direcitons it'll merge because the other guy had the bigger site id
     assert (c1.execute("SELECT * FROM foo").fetchall() ==
             c2.execute("SELECT * FROM foo").fetchall())
 

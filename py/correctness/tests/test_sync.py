@@ -155,30 +155,17 @@ def test_delete():
     close(db)
 
 
-# returns two dbs. The lower site id being the first one returned.
-def create_and_swap():
-    db1 = connect(":memory:")
-    db2 = connect(":memory:")
-    if get_site_id(db1) > get_site_id(db2):
-        temp = db1
-        db1 = db2
-        db2 = temp
-
-    return (db1, db2)
-
-# TODO: create db _then swap_ then create rows then check original invariants
-# Col? not exists case so entry created and default filled in
-
-
 def test_merging_on_defaults():
-    def setup_db1_schema(db1):
+    def create_db1():
+        db1 = connect(":memory:")
         db1.execute("CREATE TABLE foo (a PRIMARY KEY NOT NULL, b DEFAULT 0);")
         db1.execute("INSERT INTO foo (a) VALUES (1);")
         db1.execute("SELECT crsql_as_crr('foo');")
         db1.commit()
         return db1
 
-    def setup_db2_schema(db2):
+    def create_db2():
+        db2 = connect(":memory:")
         db2.execute("CREATE TABLE foo (a PRIMARY KEY NOT NULL, b DEFAULT 0);")
         db2.execute("INSERT INTO foo VALUES (1, 2);")
         db2.execute("SELECT crsql_as_crr('foo');")
@@ -186,9 +173,8 @@ def test_merging_on_defaults():
         return db2
 
     # test merging from thing with records (db2) to thing without records for default cols (db1)
-    (db1, db2) = create_and_swap()
-    setup_db1_schema(db1)
-    setup_db2_schema(db2)
+    db1 = create_db1()
+    db2 = create_db2()
 
     sync_left_to_right(db2, db1, 0)
     # db1 has changes from db2
@@ -201,9 +187,8 @@ def test_merging_on_defaults():
     close(db1)
     close(db2)
 
-    (db1, db2) = create_and_swap()
-    setup_db1_schema(db1)
-    setup_db2_schema(db2)
+    db1 = create_db1()
+    db2 = create_db2()
 
     sync_left_to_right(db1, db2, 0)
 
@@ -230,19 +215,18 @@ def test_merging_on_defaults():
 # this value will be less than the default
 def test_merging_larger_backfilled_default():
     def create_dbs():
-        (db2, db1) = create_and_swap()
+        db1 = connect(":memory:")
         db1.execute("CREATE TABLE foo (a PRIMARY KEY NOT NULL, b DEFAULT 4);")
         db1.execute("INSERT INTO foo (a) VALUES (1);")
         db1.execute("SELECT crsql_as_crr('foo');")
         db1.commit()
 
+        db2 = connect(":memory:")
         db2.execute("CREATE TABLE foo (a PRIMARY KEY NOT NULL, b DEFAULT 4);")
         db2.execute("SELECT crsql_as_crr('foo');")
         db2.commit()
-
         db2.execute("INSERT INTO foo (a,b) VALUES (1,2);")
         db2.commit()
-
         return (db1, db2)
 
     (db1, db2) = create_dbs()
@@ -298,7 +282,8 @@ def test_db_version_moves_as_expected_post_alter():
 # DB2 has a row with all columns having clock records since value was set explicityl
 # The default value with no records should always be overridden in all cases
 def test_merging_on_defaults2():
-    def setup_db1_schema(db1):
+    def create_db1():
+        db1 = connect(":memory:")
         db1.execute("CREATE TABLE foo (a PRIMARY KEY NOT NULL, b DEFAULT 4);")
         db1.execute("SELECT crsql_as_crr('foo');")
         db1.commit()
@@ -314,7 +299,8 @@ def test_merging_on_defaults2():
         db1.commit()
         return db1
 
-    def setup_db2_schema(db2):
+    def create_db2():
+        db2 = connect(":memory:")
         db2.execute("CREATE TABLE foo (a PRIMARY KEY NOT NULL, b DEFAULT 4);")
         db2.execute("SELECT crsql_as_crr('foo');")
         db2.commit()
@@ -328,9 +314,9 @@ def test_merging_on_defaults2():
         db2.commit()
         return db2
 
-    (db1, db2) = create_and_swap()
-    setup_db1_schema(db1)
-    setup_db2_schema(db2)
+    # test merging from thing with records (db2) to thing without records for default cols (db1)
+    db1 = create_db1()
+    db2 = create_db2()
 
     sync_left_to_right(db2, db1, 0)
 
@@ -338,67 +324,34 @@ def test_merging_on_defaults2():
     site_id1 = get_site_id(db1)
     site_id2 = get_site_id(db2)
 
-    assert (changes == [('foo',
-                         b'\x01\t\x01',
-                         'b',
-                         2,
-                         1,
-                         2,
-                         site_id2,
-                         1,
-                         0),
-                        ('foo',
-                         b'\x01\t\x01',
-                         'c',
-                         3,
-                         1,
-                         2,
-                         site_id2,
-                         1,
-                         1)])
+    assert (changes == [('foo', b'\x01\t\x01', 'b', 4, 1, 1, site_id1, 1, 0),
+                        ('foo', b'\x01\t\x01', 'c', 3, 1, 2, site_id2, 1, 1)])
 
     close(db1)
     close(db2)
 
-    (db1, db2) = create_and_swap()
-    setup_db1_schema(db1)
-    setup_db2_schema(db2)
+    db1 = create_db1()
+    db2 = create_db2()
     site_id1 = get_site_id(db1)
     site_id2 = get_site_id(db2)
 
     sync_left_to_right(db1, db2, 0)
 
     changes = db2.execute("SELECT * FROM crsql_changes").fetchall()
-    assert (changes == [('foo',
-                         b'\x01\t\x01',
-                         'b',
-                         2,
-                         1,
-                         1,
-                         site_id2,
-                         1,
-                         0),
-                        ('foo',
-                         b'\x01\t\x01',
-                         'c',
-                         3,
-                         1,
-                         1,
-                         site_id2,
-                         1,
-                         1)])
+    assert (changes == [  # db2 c 3 wins given columns with no value after an alter
+        # do no merging
+        ('foo', b'\x01\t\x01', 'c', 3, 1, 1, site_id2, 1, 1),
+        # Move db version since b lost on db2.
+        # b had the value 2 on db2.
+        ('foo', b'\x01\t\x01', 'b', 4, 1, 2, site_id1, 1, 0)])
 
 
 def create_basic_db():
     db = connect(":memory:")
-    setup_basic_db(db)
-    return db
-
-
-def setup_basic_db(db):
     db.execute("CREATE TABLE foo (a PRIMARY KEY NOT NULL, b);")
     db.execute("SELECT crsql_as_crr('foo');")
     db.commit()
+    return db
 
 
 def test_merge_same():
@@ -428,11 +381,10 @@ def test_merge_same():
     assert (changes == [('foo', b'\x01\t\x01', 'b', 2, 1, 1, site_id, 1, 0)])
 
 
-def test_merge_matching_clocks_lesser_siteid():
+def test_merge_matching_clocks_lesser_value():
     def make_dbs():
-        (db1, db2) = create_and_swap()
-        setup_basic_db(db1)
-        setup_basic_db(db2)
+        db1 = create_basic_db()
+        db2 = create_basic_db()
 
         db1.execute("INSERT INTO foo (a,b) VALUES (1,1);")
         db1.commit()

@@ -1,5 +1,11 @@
 # @vlcn.io/crsqlite
 
+## 0.16.0-next.0
+
+### Minor Changes
+
+- v0.16.0-next
+
 ## 0.15.1
 
 ### Patch Changes

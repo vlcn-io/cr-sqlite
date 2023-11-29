@@ -8,6 +8,8 @@ import fs from "fs";
 import https from "https";
 import pkg from "./package.json" assert { type: "json" };
 import { exec } from "child_process";
+import zlip from "zlib";
+const unzip = zlip.createUnzip();
 let { version } = pkg;
 
 let arch = process.arch;
@@ -50,7 +52,7 @@ if (process.env.CRSQLITE_NOPREBUILD) {
       break;
   }
 
-  const binaryUrl = `https://github.com/vlcn-io/cr-sqlite/releases/download/${version}/crsqlite-${os}-${arch}.${ext}`;
+  const binaryUrl = `https://github.com/vlcn-io/cr-sqlite/releases/download/${version}/crsqlite-${os}-${arch}.zip`;
   console.log(`Look for prebuilt binary from ${binaryUrl}`);
   const distPath = join("dist", `crsqlite.${ext}`);
 
@@ -89,7 +91,7 @@ if (process.env.CRSQLITE_NOPREBUILD) {
     }
 
     const file = fs.createWriteStream(distPath);
-    res.pipe(file);
+    res.pipe(unzip).pipe(file);
     file.on("finish", () => {
       file.close();
       console.log("Prebuilt binary downloaded");

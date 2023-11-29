@@ -52,7 +52,7 @@ if (process.env.CRSQLITE_NOPREBUILD) {
       break;
   }
 
-  const binaryUrl = `https://github.com/vlcn-io/cr-sqlite/releases/download/${version}/crsqlite-${os}-${arch}.zip`;
+  const binaryUrl = `https://github.com/vlcn-io/cr-sqlite/releases/download/${version}/crsqlite-${os}-${arch}.gz`;
   console.log(`Look for prebuilt binary from ${binaryUrl}`);
   const distPath = join("dist", `crsqlite.${ext}`);
 

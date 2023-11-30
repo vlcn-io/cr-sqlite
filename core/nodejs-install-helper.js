@@ -8,8 +8,7 @@ import fs from "fs";
 import https from "https";
 import pkg from "./package.json" assert { type: "json" };
 import { exec } from "child_process";
-import zlip from "zlib";
-const unzip = zlip.createUnzip();
+import unzipper from "unzipper";
 let { version } = pkg;
 
 let arch = process.arch;
@@ -91,7 +90,7 @@ if (process.env.CRSQLITE_NOPREBUILD) {
     }
 
     const file = fs.createWriteStream(distPath);
-    res.pipe(unzip).pipe(file);
+    res.pip(unzipper.Extract({ path: join(".", "dist") }));
     file.on("finish", () => {
       file.close();
       console.log("Prebuilt binary downloaded");

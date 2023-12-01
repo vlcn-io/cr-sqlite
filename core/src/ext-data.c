@@ -50,7 +50,6 @@ crsql_ExtData *crsql_newExtData(sqlite3 *db, unsigned char *siteIdBuffer) {
   pExtData->tableInfos = 0;
   pExtData->rowsImpacted = 0;
   pExtData->updatedTableInfosThisTx = 0;
-  pExtData->readDbVersionThisTx = 0;
   crsql_init_table_info_vec(pExtData);
 
   int pv = crsql_fetchPragmaDataVersion(db, pExtData);

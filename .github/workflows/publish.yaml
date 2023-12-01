@@ -37,7 +37,7 @@ jobs:
         run: |
           cd core
           make loadable
-          zip dist/crsqlite.zip dist/${{ matrix.library_name }}
+          cd dist; zip ../crsqlite.zip ${{ matrix.library_name }}
 
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2
@@ -73,7 +73,7 @@ jobs:
         run: |
           cd core
           export CI_MAYBE_TARGET="aarch64-apple-darwin" && make loadable
-          zip dist/crsqlite.zip dist/${{ matrix.library_name }}
+          cd dist; zip ../crsqlite.zip ${{ matrix.library_name }}
 
       - name: Upload macos dylib to release
         uses: svenstaro/upload-release-action@v2
@@ -126,7 +126,7 @@ jobs:
         run: |
           cd core
           export CI_MAYBE_TARGET="aarch64-unknown-linux-gnu" && export CI_GCC="aarch64-linux-gnu-gcc" && make loadable
-          zip dist/crsqlite.zip dist/${{ matrix.library_name }}
+          cd dist; zip ../crsqlite.zip ${{ matrix.library_name }}
 
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2
@@ -166,7 +166,7 @@ jobs:
         run: |
           cd core
           export CI_MAYBE_TARGET="x86_64-pc-windows-gnu" && export CI_GCC="x86_64-w64-mingw32-gcc" && make loadable
-          zip dist/crsqlite.zip dist/${{ matrix.library_name }}
+          cd dist; zip ../crsqlite.zip ${{ matrix.library_name }}
 
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2
@@ -206,7 +206,7 @@ jobs:
         run: |
           cd core
           export CI_MAYBE_TARGET="i686-pc-windows-gnu" && export CI_GCC="i686-w64-mingw32-gcc" && make loadable
-          zip dist/crsqlite.zip dist/${{ matrix.library_name }}
+          cd dist; zip ../crsqlite.zip ${{ matrix.library_name }}
 
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2
@@ -254,7 +254,7 @@ jobs:
         run: |
           cd core
           export ANDROID_TARGET=aarch64-linux-android; make loadable
-          zip dist/crsqlite.zip dist/${{ matrix.library_name }}
+          cd dist; zip ../crsqlite.zip ${{ matrix.library_name }}
 
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2

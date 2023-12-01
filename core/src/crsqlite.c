@@ -36,7 +36,6 @@ static int commitHook(void *pUserData) {
   pExtData->pendingDbVersion = -1;
   pExtData->seq = 0;
   pExtData->updatedTableInfosThisTx = 0;
-  pExtData->readDbVersionThisTx = 0;
   return SQLITE_OK;
 }
 
@@ -46,7 +45,6 @@ static void rollbackHook(void *pUserData) {
   pExtData->pendingDbVersion = -1;
   pExtData->seq = 0;
   pExtData->updatedTableInfosThisTx = 0;
-  pExtData->readDbVersionThisTx = 0;
 }
 
 #ifdef LIBSQL

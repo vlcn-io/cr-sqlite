@@ -79,10 +79,6 @@ pub fn fill_db_version_if_needed(
     ext_data: *mut crsql_ExtData,
 ) -> Result<ResultCode, String> {
     unsafe {
-        if (*ext_data).readDbVersionThisTx == 1 {
-            return Ok(ResultCode::OK);
-        }
-        (*ext_data).readDbVersionThisTx = 1;
         let rc = crsql_fetchPragmaDataVersion(db, ext_data);
         if rc == -1 {
             return Err("failed to fetch PRAGMA data_version".to_string());

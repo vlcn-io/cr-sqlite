@@ -160,9 +160,9 @@ load_extension(extension_path, 'sqlite3_crsqlite_init')
 
 > Note: if you're using `cr-sqlite` as a run time loadable extension, loading the extension should be the _first_ operation you do after opening a connection to the database. The extension needs to be loaded on every connection you create.
 
-For a WASM build that works in the browser, see the [js](./js) directory.
+For a WASM build that works in the browser, see the [js](https://github.com/vlcn-io/js) directory.
 
-For UI integrations (e.g., React) see the [js](./js) directory.
+For UI integrations (e.g., React) see the [js](https://github.com/vlcn-io/js) directory.
 
 # How does it work?
 

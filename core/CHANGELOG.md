@@ -1,5 +1,11 @@
 # @vlcn.io/crsqlite
 
+## 0.16.1
+
+### Patch Changes
+
+- fix install script for nodejs based projects
+
 ## 0.16.0
 
 ### Minor Changes

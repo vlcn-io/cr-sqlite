@@ -9,7 +9,6 @@ A component of the [vulcan](https://vlcn.io) project.
 
 [![](https://dcbadge.vercel.app/api/server/AtdVY6zDW3)](https://discord.gg/AtdVY6zDW3)
 
-
 # Examples
 
 Example applications using cr-sqlite to sync state.
@@ -49,7 +48,6 @@ Discussions of these problems in the application space:
 Companies:
 <a href="https://turso.tech"><img src="https://images.ctfassets.net/8fv5t5my8687/01j7yaLj77zqmYK62Y49g7/aee841e7bd176864aa5388448db0f8ef/iku-turquoise.svg" width="64" /></a> <a href="https://fly.io"><img src="https://fly.io/static/images/brand/brandmark.svg" height="64" /></a> <a href="https://reflect.app/"><img src="https://reflect.app/_next/image?url=%2Fsite%2Ficons%2F1024x1024.png&w=64&q=100" /></a><a href="https://expo.dev"><img src="https://avatars.githubusercontent.com/u/12504344?s=200&v=4" width="64" /></a> <a href="https://electric-sql.com"><img width="108" alt="Screenshot 2023-11-16 at 8 29 27 AM" src="https://github.com/vlcn-io/cr-sqlite/assets/1009003/5c0c8ab3-005a-4b03-ba0a-de7ed213e26d"></a>
 
-
 Individuals:
 [robinvasan](https://github.com/robinvasan) | [iansinnott](https://github.com/iansinnott) | [davefowler](https://github.com/davefowler) | [barbalex](https://github.com/barbalex) | [MohannadNaj](https://github.com/MohannadNaj)
 
@@ -69,8 +67,8 @@ The full documentation site is available [here](https://vlcn.io/docs).
 - A function extension (`crsql_as_crr`) to upgrade existing tables to "crrs" or "conflict free replicated relations"
   - `SELECT crsql_as_crr('table_name')`
 - A virtual table (`crsql_changes`) to ask the database for changesets or to apply changesets from another database
-  - `SELECT "table", "pk", "cid", "val", "col_version", "db_version", "site_id", cl, seq FROM crsql_changes WHERE db_version > x AND site_id IS NULL` -- to get local changes
-  - `SELECT "table", "pk", "cid", "val", "col_version", "db_version", "site_id", cl, seq FROM crsql_changes WHERE db_version > x AND site_id IS NOT some_site` -- to get all changes excluding those synced from some site
+  - `SELECT "table", "pk", "cid", "val", "col_version", "db_version", "site_id", cl, seq FROM crsql_changes WHERE db_version > x AND site_id = crsql_site_id()` -- to get local changes
+  - `SELECT "table", "pk", "cid", "val", "col_version", "db_version", "site_id", cl, seq FROM crsql_changes WHERE db_version > x AND site_id != some_site_id` -- to get all changes excluding those synced from some actor
   - `INSERT INTO crsql_changes VALUES ([patches received from select on another peer])`
 - And `crsql_begin_alter('table_name')` & `crsql_alter_commit('table_name')` primitives to allow altering table definitions that have been upgraded to `crr`s.
   - Until we move forward with extending the syntax of SQLite to be CRR aware, altering CRRs looks like:
@@ -310,4 +308,3 @@ cr-sqlite was inspired by and built on ideas from these papers:
 - [Time, Clocks, and the Ordering of Events in a Distributed System](https://lamport.azurewebsites.net/pubs/time-clocks.pdf)
 - [Replicated abstract data types: Building blocks for collaborative applications](http://csl.skku.edu/papers/jpdc11.pdf)
 - [CRDTs for Brrr](https://josephg.com/blog/crdts-go-brrr/)
-

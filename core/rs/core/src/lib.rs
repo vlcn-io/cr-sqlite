@@ -156,22 +156,6 @@ pub extern "C" fn sqlite3_crsqlcore_init(
         return null_mut();
     }
 
-    let rc = db
-        .create_function_v2(
-            "crsql_config_set",
-            2,
-            sqlite::UTF8,
-            None,
-            Some(crsql_config_set),
-            None,
-            None,
-            None,
-        )
-        .unwrap_or(sqlite::ResultCode::ERROR);
-    if rc != ResultCode::OK {
-        return null_mut();
-    }
-
     let rc = unpack_columns_vtab::create_module(db).unwrap_or(sqlite::ResultCode::ERROR);
     if rc != ResultCode::OK {
         return null_mut();
@@ -486,6 +470,22 @@ pub extern "C" fn sqlite3_crsqlcore_init(
         .unwrap_or(ResultCode::ERROR);
     if rc != ResultCode::OK {
         unsafe { crsql_freeExtData(ext_data) };
+        return null_mut();
+    }
+
+    let rc = db
+        .create_function_v2(
+            "crsql_config_set",
+            2,
+            sqlite::UTF8,
+            Some(ext_data as *mut c_void),
+            Some(crsql_config_set),
+            None,
+            None,
+            None,
+        )
+        .unwrap_or(sqlite::ResultCode::ERROR);
+    if rc != ResultCode::OK {
         return null_mut();
     }
 

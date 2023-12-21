@@ -14,8 +14,8 @@ pub extern "C" fn crsql_config_set(
     let name = args[0].text();
 
     match name {
-        "always-declare-winner" => {
-            let value = args[1].int() == 1;
+        "merge-equal-values" => {
+            let value = args[1].int();
             let ext_data = ctx.user_data() as *mut crsql_ExtData;
             unsafe { (*ext_data).tieBreakSameColValue = value };
         }

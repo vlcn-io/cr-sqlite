@@ -67,7 +67,7 @@ pub struct crsql_ExtData {
     pub pSetSiteIdOrdinalStmt: *mut sqlite::stmt,
     pub pSelectSiteIdOrdinalStmt: *mut sqlite::stmt,
     pub pSelectClockTablesStmt: *mut sqlite::stmt,
-    pub tieBreakSameColValue: bool,
+    pub tieBreakSameColValue: ::core::ffi::c_int,
 }
 
 #[repr(C)]

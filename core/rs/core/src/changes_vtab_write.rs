@@ -93,7 +93,7 @@ fn did_cid_win(
             let local_value = col_val_stmt.column_value(0)?;
             let mut ret = crsql_compare_sqlite_values(insert_val, local_value);
             reset_cached_stmt(col_val_stmt.stmt)?;
-            if ret == 0 && unsafe { (*ext_data).tieBreakSameColValue } {
+            if ret == 0 && unsafe { (*ext_data).tieBreakSameColValue == 1 } {
                 // values are the same (ret == 0) and the option to tie break on site_id is true
                 ret = unsafe {
                     let my_site_id = core::slice::from_raw_parts((*ext_data).siteId, 16);

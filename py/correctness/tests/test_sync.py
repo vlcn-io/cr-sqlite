@@ -380,6 +380,48 @@ def test_merge_same():
     site_id = get_site_id(db2)
     assert (changes == [('foo', b'\x01\t\x01', 'b', 2, 1, 1, site_id, 1, 0)])
 
+def test_merge_same_w_tie_breaker():
+    def make_dbs():
+        db1 = create_basic_db()
+        db2 = create_basic_db()
+
+        db1.execute("INSERT INTO foo (a,b) VALUES (1,2);")
+        db1.execute("SELECT crsql_config_set('merge-equal-values', 1);")
+        db1.commit()
+
+        db2.execute("INSERT INTO foo (a,b) VALUES (1,2);")
+        db2.execute("SELECT crsql_config_set('merge-equal-values', 1);")
+        db2.commit()
+        return (db1, db2)
+
+    (db1, db2) = make_dbs()
+    sync_left_to_right(db1, db2, 0)
+    changes = db2.execute("SELECT * FROM crsql_changes").fetchall()
+    
+    site_id1 = get_site_id(db1)
+    site_id2 = get_site_id(db2)
+
+    max_site_id = max(site_id1, site_id2)
+    version = 1;
+    if max_site_id != site_id1:
+        version = 2
+
+    assert (changes == [('foo', b'\x01\t\x01', 'b', 2, 1, version, max_site_id, 1, 0)])
+
+    (db1, db2) = make_dbs()
+    sync_left_to_right(db2, db1, 0)
+    changes = db2.execute("SELECT * FROM crsql_changes").fetchall()
+    
+    site_id1 = get_site_id(db1)
+    site_id2 = get_site_id(db2)
+
+    max_site_id = max(site_id1, site_id2)
+    version = 1;
+    if max_site_id != site_id2:
+        version = 2
+
+    assert (changes == [('foo', b'\x01\t\x01', 'b', 2, 1, version, max_site_id, 1, 0)])
+
 
 def test_merge_matching_clocks_lesser_value():
     def make_dbs():

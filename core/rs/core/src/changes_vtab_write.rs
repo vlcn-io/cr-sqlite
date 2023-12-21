@@ -19,19 +19,21 @@ use crate::util::slab_rowid;
 
 /**
  * did_cid_win does not take into account the causal length.
- * The expectation is that all cuasal length concerns have already been handle
+ * The expectation is that all causal length concerns have already been handle
  * via:
  * - early return because insert_cl < local_cl
  * - automatic win because insert_cl > local_cl
- * - come here to did_cid_win iff insert_cl = local_cl
+ * - come here to did_cid_win if insert_cl = local_cl
  */
 fn did_cid_win(
     db: *mut sqlite3,
+    ext_data: *mut crsql_ExtData,
     insert_tbl: &str,
     tbl_info: &TableInfo,
     unpacked_pks: &Vec<ColumnValue>,
     key: sqlite::int64,
     insert_val: *mut sqlite::value,
+    insert_site_id: &[u8],
     col_name: &str,
     col_version: sqlite::int64,
     errmsg: *mut *mut c_char,
@@ -89,10 +91,15 @@ fn did_cid_win(
     match step_result {
         Ok(ResultCode::ROW) => {
             let local_value = col_val_stmt.column_value(0)?;
-            let ret = crsql_compare_sqlite_values(insert_val, local_value);
+            let mut ret = crsql_compare_sqlite_values(insert_val, local_value);
             reset_cached_stmt(col_val_stmt.stmt)?;
-            // value won, take value
-            // if values are the same (ret == 0) then we return false and do not take the update
+            if ret == 0 && unsafe { (*ext_data).tieBreakSameColValue } {
+                // values are the same (ret == 0) and the option to tie break on site_id is true
+                ret = unsafe {
+                    let my_site_id = core::slice::from_raw_parts((*ext_data).siteId, 16);
+                    insert_site_id.cmp(my_site_id) as c_int
+                };
+            }
             return Ok(ret > 0);
         }
         _ => {
@@ -586,17 +593,19 @@ unsafe fn merge_insert(
         || !row_exists_locally
         || did_cid_win(
             db,
+            (*tab).pExtData,
             insert_tbl,
             &tbl_info,
             &unpacked_pks,
             key,
             insert_val,
+            insert_site_id,
             insert_col,
             insert_col_vrsn,
             errmsg,
         )?;
 
-    if does_cid_win == false {
+    if !does_cid_win {
         // doesCidWin == 0? compared against our clocks, nothing wins. OK and
         // Done.
         return Ok(ResultCode::OK);

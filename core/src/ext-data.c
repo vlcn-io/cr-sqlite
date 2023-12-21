@@ -58,6 +58,9 @@ crsql_ExtData *crsql_newExtData(sqlite3 *db, unsigned char *siteIdBuffer) {
     return 0;
   }
 
+  // default to not tie-breaking
+  pExtData->tieBreakSameColValue = 0;
+
   return pExtData;
 }
 

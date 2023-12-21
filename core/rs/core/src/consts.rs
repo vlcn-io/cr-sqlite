@@ -13,6 +13,7 @@ pub const TBL_SCHEMA: &'static str = "crsql_master";
 // 00_05_01_01
 pub const CRSQLITE_VERSION: i32 = 16_01_00;
 pub const SITE_ID_LEN: i32 = 16;
+pub const SHA: &'static str = "03885434ab73d473c3ce02ac89c42cb870dba0a5";
 pub const ROWID_SLAB_SIZE: i64 = 10000000000000;
 // db version is a signed 64bit int since sqlite doesn't support saving and
 // retrieving unsigned 64bit ints. (2^64 / 2) is a big enough number to write 1

@@ -7,9 +7,11 @@ src/crsql_correctness.egg-info/top_level.txt
 tests/test_as_ordered.py
 tests/test_cl_merging.py
 tests/test_cl_triggers.py
+tests/test_commit_alter_perf.py
 tests/test_crsql_changes_filters.py
 tests/test_dbversion.py
 tests/test_insert_new_rows.py
+tests/test_lookaside_key_creation.py
 tests/test_prior_versions.py
 tests/test_sandbox.py
 tests/test_schema_modification.py
@@ -18,5 +20,6 @@ tests/test_seq.py
 tests/test_site_id_lookaside.py
 tests/test_siteid.py
 tests/test_sync.py
+tests/test_sync_bit.py
 tests/test_sync_prop.py
 tests/test_update_rows.py

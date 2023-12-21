@@ -18,6 +18,7 @@ mod changes_vtab;
 mod changes_vtab_read;
 mod changes_vtab_write;
 mod compare_values;
+mod config;
 mod consts;
 mod create_cl_set_vtab;
 mod create_crr;
@@ -53,6 +54,7 @@ use alter::crsql_compact_post_alter;
 use automigrate::*;
 use backfill::*;
 use c::{crsql_freeExtData, crsql_newExtData};
+use config::crsql_config_set;
 use core::ffi::{c_int, c_void, CStr};
 use create_crr::create_crr;
 use db_version::{crsql_fill_db_version_if_needed, crsql_next_db_version};
@@ -145,6 +147,22 @@ pub extern "C" fn sqlite3_crsqlcore_init(
             sqlite::UTF8,
             None,
             Some(crsql_as_table),
+            None,
+            None,
+            None,
+        )
+        .unwrap_or(sqlite::ResultCode::ERROR);
+    if rc != ResultCode::OK {
+        return null_mut();
+    }
+
+    let rc = db
+        .create_function_v2(
+            "crsql_config_set",
+            2,
+            sqlite::UTF8,
+            None,
+            Some(crsql_config_set),
             None,
             None,
             None,

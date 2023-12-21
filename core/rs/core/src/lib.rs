@@ -32,6 +32,7 @@ mod local_writes;
 pub mod pack_columns;
 #[cfg(not(feature = "test"))]
 mod pack_columns;
+mod sha;
 mod stmt_cache;
 #[cfg(feature = "test")]
 pub mod tableinfo;
@@ -256,6 +257,40 @@ pub extern "C" fn sqlite3_crsqlcore_init(
             sqlite::UTF8 | sqlite::INNOCUOUS,
             Some(ext_data as *mut c_void),
             Some(x_crsql_next_db_version),
+            None,
+            None,
+            None,
+        )
+        .unwrap_or(ResultCode::ERROR);
+    if rc != ResultCode::OK {
+        unsafe { crsql_freeExtData(ext_data) };
+        return null_mut();
+    }
+
+    let rc = db
+        .create_function_v2(
+            "crsql_sha",
+            0,
+            sqlite::UTF8 | sqlite::INNOCUOUS | sqlite::DETERMINISTIC,
+            None,
+            Some(x_crsql_sha),
+            None,
+            None,
+            None,
+        )
+        .unwrap_or(ResultCode::ERROR);
+    if rc != ResultCode::OK {
+        unsafe { crsql_freeExtData(ext_data) };
+        return null_mut();
+    }
+
+    let rc = db
+        .create_function_v2(
+            "crsql_version",
+            0,
+            sqlite::UTF8 | sqlite::INNOCUOUS | sqlite::DETERMINISTIC,
+            None,
+            Some(x_crsql_version),
             None,
             None,
             None,
@@ -695,6 +730,25 @@ unsafe extern "C" fn x_crsql_next_db_version(
     }
 
     ctx.result_int64(ret);
+}
+
+/**
+ * The sha of the commit that this version of crsqlite was built from.
+ */
+unsafe extern "C" fn x_crsql_sha(
+    ctx: *mut sqlite::context,
+    argc: i32,
+    argv: *mut *mut sqlite::value,
+) {
+    ctx.result_text_static(sha::SHA);
+}
+
+unsafe extern "C" fn x_crsql_version(
+    ctx: *mut sqlite::context,
+    argc: i32,
+    argv: *mut *mut sqlite::value,
+) {
+    ctx.result_int64(consts::CRSQLITE_VERSION as i64);
 }
 
 unsafe extern "C" fn x_free_connection_ext_data(data: *mut c_void) {

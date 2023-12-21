@@ -147,23 +147,19 @@ fn maybe_update_db_inner(
         }
     }
 
-    if recorded_version < consts::CRSQLITE_VERSION && !is_blank_slate {
+    if recorded_version < consts::CRSQLITE_VERSION_0_15_0 && !is_blank_slate {
         // todo: return an error message to the user that their version is
         // not supported
-        let cstring = CString::new(format!("Opening a db created with cr-sqlite version {} is not supported. Upcoming release 0.15.0 is a breaking change.", recorded_version))?;
+        let cstring = CString::new(format!("Opening a db created with cr-sqlite version {recorded_version} is not supported. Upcoming release 0.15.0 is a breaking change."))?;
         unsafe {
             (*err_msg) = cstring.into_raw();
             return Err(ResultCode::ERROR);
         }
     }
 
-    // if recorded_version < consts::CRSQLITE_VERSION_0_13_0 {
-    //     update_to_0_13_0(db)?;
-    // }
-
-    // if recorded_version < consts::CRSQLITE_VERSION_0_15_0 {
-    //     update_to_0_15_0(db)?;
-    // }
+    if recorded_version < consts::CRSQLITE_VERSION_0_16_0 && !is_blank_slate {
+        update_to_0_16_0(db)?;
+    }
 
     // write the db version if we migrated to a new one or we are a blank slate db
     if recorded_version < consts::CRSQLITE_VERSION || is_blank_slate {
@@ -171,6 +167,31 @@ fn maybe_update_db_inner(
             db.prepare_v2("INSERT OR REPLACE INTO crsql_master VALUES ('crsqlite_version', ?)")?;
         stmt.bind_int(1, consts::CRSQLITE_VERSION)?;
         stmt.step()?;
+    }
+
+    Ok(ResultCode::OK)
+}
+
+fn update_to_0_16_0(db: *mut sqlite3) -> Result<ResultCode, ResultCode> {
+    let stmt = db.prepare_v2(
+        "SELECT tbl_name FROM sqlite_master WHERE type='table' AND tbl_name LIKE '%__crsql_clock'",
+    )?;
+
+    loop {
+        match stmt.step()? {
+            ResultCode::ROW => {
+                db.exec_safe(&format!(
+                    "UPDATE {tbl_name} SET site_id = 0 WHERE site_id IS NULL",
+                    tbl_name = stmt.column_text(0)?,
+                ))?;
+            }
+            ResultCode::DONE => {
+                break;
+            }
+            rc => {
+                return Err(rc);
+            }
+        }
     }
 
     Ok(ResultCode::OK)

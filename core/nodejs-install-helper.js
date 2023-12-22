@@ -21,7 +21,7 @@ if (process.env.CRSQLITE_NOPREBUILD) {
 } else {
   // todo: check msys?
   if (["win32", "cygwin"].includes(process.platform)) {
-    os = "windows";
+    os = "win";
   }
 
   // manual ovverides for testing
@@ -36,7 +36,7 @@ if (process.env.CRSQLITE_NOPREBUILD) {
     case "linux":
       ext = "so";
       break;
-    case "windows":
+    case "win":
       ext = "dll";
       break;
   }

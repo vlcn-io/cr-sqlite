@@ -54,7 +54,7 @@ use alter::crsql_compact_post_alter;
 use automigrate::*;
 use backfill::*;
 use c::{crsql_freeExtData, crsql_newExtData};
-use config::crsql_config_set;
+use config::{crsql_config_get, crsql_config_set};
 use core::ffi::{c_int, c_void, CStr};
 use create_crr::create_crr;
 use db_version::{crsql_fill_db_version_if_needed, crsql_next_db_version};
@@ -480,6 +480,22 @@ pub extern "C" fn sqlite3_crsqlcore_init(
             sqlite::UTF8,
             Some(ext_data as *mut c_void),
             Some(crsql_config_set),
+            None,
+            None,
+            None,
+        )
+        .unwrap_or(sqlite::ResultCode::ERROR);
+    if rc != ResultCode::OK {
+        return null_mut();
+    }
+
+    let rc = db
+        .create_function_v2(
+            "crsql_config_get",
+            1,
+            sqlite::UTF8,
+            Some(ext_data as *mut c_void),
+            Some(crsql_config_get),
             None,
             None,
             None,

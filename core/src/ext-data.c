@@ -1,5 +1,7 @@
 #include "ext-data.h"
 
+#include <stdio.h>
+
 #include "consts.h"
 
 void crsql_clear_stmt_cache(crsql_ExtData *pExtData);
@@ -52,14 +54,44 @@ crsql_ExtData *crsql_newExtData(sqlite3 *db, unsigned char *siteIdBuffer) {
   pExtData->updatedTableInfosThisTx = 0;
   crsql_init_table_info_vec(pExtData);
 
+  sqlite3_stmt *pStmt;
+
+  rc += sqlite3_prepare_v2(db,
+                           "SELECT ltrim(key, 'config.'), value FROM "
+                           "crsql_master WHERE key LIKE 'config.%';",
+                           -1, &pStmt, 0);
+
+  if (rc != SQLITE_OK) {
+    crsql_freeExtData(pExtData);
+    return 0;
+  }
+
+  // set defaults!
+  pExtData->tieBreakSameColValue = 0;
+
+  while (sqlite3_step(pStmt) == SQLITE_ROW) {
+    const unsigned char *name = sqlite3_column_text(pStmt, 1);
+    if (sqlite3_stricmp(name, "merge-equal-values")) {
+      if (sqlite3_column_type(pStmt, 2) == SQLITE_INTEGER) {
+        const int value = sqlite3_column_int(pStmt, 2);
+        pExtData->tieBreakSameColValue = value;
+      } else {
+        // broken setting...
+        crsql_freeExtData(pExtData);
+        return 0;
+      }
+    } else {
+      // unhandled config setting
+    }
+  }
+
+  sqlite3_finalize(pStmt);
+
   int pv = crsql_fetchPragmaDataVersion(db, pExtData);
   if (pv == -1 || rc != SQLITE_OK) {
     crsql_freeExtData(pExtData);
     return 0;
   }
-
-  // default to not tie-breaking
-  pExtData->tieBreakSameColValue = 0;
 
   return pExtData;
 }

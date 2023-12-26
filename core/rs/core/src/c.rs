@@ -67,7 +67,7 @@ pub struct crsql_ExtData {
     pub pSetSiteIdOrdinalStmt: *mut sqlite::stmt,
     pub pSelectSiteIdOrdinalStmt: *mut sqlite::stmt,
     pub pSelectClockTablesStmt: *mut sqlite::stmt,
-    pub tieBreakSameColValue: ::core::ffi::c_int,
+    pub mergeEqualValues: ::core::ffi::c_int,
 }
 
 #[repr(C)]
@@ -454,13 +454,13 @@ fn bindgen_test_layout_crsql_ExtData() {
         )
     );
     assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).tieBreakSameColValue) as usize - ptr as usize },
+        unsafe { ::std::ptr::addr_of!((*ptr).mergeEqualValues) as usize - ptr as usize },
         128usize,
         concat!(
             "Offset of field: ",
             stringify!(crsql_ExtData),
             "::",
-            stringify!(tieBreakSameColValue)
+            stringify!(mergeEqualValues)
         )
     );
 }

@@ -21,7 +21,7 @@ pub extern "C" fn crsql_config_set(
         MERGE_EQUAL_VALUES => {
             let value = args[1];
             let ext_data = ctx.user_data() as *mut crsql_ExtData;
-            unsafe { (*ext_data).tieBreakSameColValue = value.int() };
+            unsafe { (*ext_data).mergeEqualValues = value.int() };
             value
         }
         _ => {
@@ -74,7 +74,7 @@ pub extern "C" fn crsql_config_get(
     match name {
         MERGE_EQUAL_VALUES => {
             let ext_data = ctx.user_data() as *mut crsql_ExtData;
-            ctx.result_int(unsafe { (*ext_data).tieBreakSameColValue });
+            ctx.result_int(unsafe { (*ext_data).mergeEqualValues });
         }
         _ => {
             ctx.result_error("Unknown setting name");

@@ -214,7 +214,7 @@ pub extern "C" fn sqlite3_crsqlcore_init(
 
     let ext_data = unsafe { crsql_newExtData(db, site_id_buffer as *mut c_char) };
     if ext_data.is_null() {
-        sqlite::free(site_id_buffer as *mut c_void);
+        // no need to free the site id buffer here, this is cleaned up already.
         return null_mut();
     }
 
@@ -486,6 +486,7 @@ pub extern "C" fn sqlite3_crsqlcore_init(
         )
         .unwrap_or(sqlite::ResultCode::ERROR);
     if rc != ResultCode::OK {
+        unsafe { crsql_freeExtData(ext_data) };
         return null_mut();
     }
 
@@ -502,6 +503,7 @@ pub extern "C" fn sqlite3_crsqlcore_init(
         )
         .unwrap_or(sqlite::ResultCode::ERROR);
     if rc != ResultCode::OK {
+        unsafe { crsql_freeExtData(ext_data) };
         return null_mut();
     }
 

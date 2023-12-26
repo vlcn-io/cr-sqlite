@@ -1,6 +1,7 @@
 #include "ext-data.h"
 
 #include <stdio.h>
+#include <string.h>
 
 #include "consts.h"
 
@@ -10,6 +11,8 @@ void crsql_drop_table_info_vec(crsql_ExtData *pExtData);
 
 crsql_ExtData *crsql_newExtData(sqlite3 *db, unsigned char *siteIdBuffer) {
   crsql_ExtData *pExtData = sqlite3_malloc(sizeof *pExtData);
+
+  pExtData->siteId = siteIdBuffer;
 
   pExtData->pPragmaSchemaVersionStmt = 0;
   int rc = sqlite3_prepare_v3(db, "PRAGMA schema_version", -1,
@@ -47,7 +50,6 @@ crsql_ExtData *crsql_newExtData(sqlite3 *db, unsigned char *siteIdBuffer) {
   pExtData->pragmaSchemaVersion = -1;
   pExtData->pragmaDataVersion = -1;
   pExtData->pragmaSchemaVersionForTableInfos = -1;
-  pExtData->siteId = siteIdBuffer;
   pExtData->pDbVersionStmt = 0;
   pExtData->tableInfos = 0;
   pExtData->rowsImpacted = 0;
@@ -67,14 +69,16 @@ crsql_ExtData *crsql_newExtData(sqlite3 *db, unsigned char *siteIdBuffer) {
   }
 
   // set defaults!
-  pExtData->tieBreakSameColValue = 0;
+  pExtData->mergeEqualValues = 0;
 
   while (sqlite3_step(pStmt) == SQLITE_ROW) {
-    const unsigned char *name = sqlite3_column_text(pStmt, 1);
-    if (sqlite3_stricmp(name, "merge-equal-values")) {
-      if (sqlite3_column_type(pStmt, 2) == SQLITE_INTEGER) {
-        const int value = sqlite3_column_int(pStmt, 2);
-        pExtData->tieBreakSameColValue = value;
+    const unsigned char *name = sqlite3_column_text(pStmt, 0);
+    int colType = sqlite3_column_type(pStmt, 1);
+
+    if (strcmp("merge-equal-values", (char *)name) == 0) {
+      if (colType == SQLITE_INTEGER) {
+        const int value = sqlite3_column_int(pStmt, 1);
+        pExtData->mergeEqualValues = value;
       } else {
         // broken setting...
         crsql_freeExtData(pExtData);

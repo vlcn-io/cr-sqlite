@@ -494,7 +494,7 @@ pub extern "C" fn sqlite3_crsqlcore_init(
         .create_function_v2(
             "crsql_config_get",
             1,
-            sqlite::UTF8,
+            sqlite::UTF8 | sqlite::INNOCUOUS | sqlite::DETERMINISTIC,
             Some(ext_data as *mut c_void),
             Some(crsql_config_get),
             None,

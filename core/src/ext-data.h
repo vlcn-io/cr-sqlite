@@ -43,7 +43,7 @@ struct crsql_ExtData {
   sqlite3_stmt *pSelectSiteIdOrdinalStmt;
   sqlite3_stmt *pSelectClockTablesStmt;
 
-  int tieBreakSameColValue;
+  int mergeEqualValues;
 };
 
 crsql_ExtData *crsql_newExtData(sqlite3 *db, unsigned char *siteIdBuffer);

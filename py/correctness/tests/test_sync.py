@@ -399,6 +399,14 @@ def test_merge_same_w_tie_breaker():
     changes21 = db1.execute("SELECT \"table\", pk, cid, val, col_version, site_id FROM crsql_changes").fetchall()
 
     assert (changes12 == changes21)
+    # Test that we're stable / do not loop when we tie break equal values
+
+    sync_left_to_right(db1, db2, 0)
+    changes12_2 = db2.execute("SELECT \"table\", pk, cid, val, col_version, site_id FROM crsql_changes").fetchall()
+    sync_left_to_right(db2, db1, 0)
+    changes21_2 = db1.execute("SELECT \"table\", pk, cid, val, col_version, site_id FROM crsql_changes").fetchall()
+    assert (changes12_2 == changes21)
+    assert (changes12 == changes21_2)
 
 
 def test_merge_matching_clocks_lesser_value():

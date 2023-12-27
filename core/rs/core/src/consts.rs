@@ -13,6 +13,8 @@ pub const TBL_SCHEMA: &'static str = "crsql_master";
 // 00_05_01_01
 pub const CRSQLITE_VERSION: i32 = 16_01_00;
 pub const CRSQLITE_VERSION_STR: &'static str = "0.16.1";
+pub const CRSQLITE_VERSION_0_15_0: i32 = 15_00_00;
+
 pub const SITE_ID_LEN: i32 = 16;
 pub const ROWID_SLAB_SIZE: i64 = 10000000000000;
 // db version is a signed 64bit int since sqlite doesn't support saving and

@@ -147,7 +147,7 @@ fn maybe_update_db_inner(
         }
     }
 
-    if recorded_version < consts::CRSQLITE_VERSION && !is_blank_slate {
+    if recorded_version < consts::CRSQLITE_VERSION_0_15_0 && !is_blank_slate {
         // todo: return an error message to the user that their version is
         // not supported
         let cstring = CString::new(format!("Opening a db created with cr-sqlite version {} is not supported. Upcoming release 0.15.0 is a breaking change.", recorded_version))?;

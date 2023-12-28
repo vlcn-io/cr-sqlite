@@ -83,7 +83,6 @@ TARGET_TEST=$(prefix)/test
 TARGET_FUZZ=$(prefix)/fuzz
 TARGET_TEST_ASAN=$(prefix)/test-asan
 
-
 # js/browser/wa-sqlite/Makefile, deps/sqlite/GNUMakefile, core/binding.gyp, core/Makefile
 ext_files=src/crsqlite.c \
 	src/changes-vtab.c \
@@ -170,19 +169,23 @@ $(shell.c):
 $(sqlite3.c):
 	cd $(sqlite_src) && make sqlite3.c
 
-$(rs_lib_dbg_static_cpy): FORCE write_sha $(dbg_prefix)
+$(rs_lib_dbg_static_cpy): export CRSQLITE_COMMIT_SHA = $(shell git rev-parse HEAD)
+$(rs_lib_dbg_static_cpy): FORCE $(dbg_prefix)
 	cd ./rs/$(bundle) && cargo rustc $(RS_TARGET) --features static,omit_load_extension$(libsql_feature) $(rs_build_flags)
 	cp $(rs_lib_dbg_static) $(rs_lib_dbg_static_cpy)
 
-$(rs_lib_static_cpy): FORCE write_sha $(prefix)
+$(rs_lib_static_cpy): export CRSQLITE_COMMIT_SHA = $(shell git rev-parse HEAD)
+$(rs_lib_static_cpy): FORCE $(prefix)
 	cd ./rs/$(bundle) && cargo rustc $(RS_TARGET) --release --features static,omit_load_extension$(libsql_feature) $(rs_build_flags)
 	cp $(rs_lib_static) $(rs_lib_static_cpy)
 
-$(rs_lib_loadable_cpy): FORCE write_sha $(prefix)
+$(rs_lib_loadable_cpy): export CRSQLITE_COMMIT_SHA = $(shell git rev-parse HEAD)
+$(rs_lib_loadable_cpy): FORCE $(prefix)
 	cd ./rs/$(bundle) && cargo $(rs_ndk) build $(RS_TARGET) --release --features loadable_extension$(libsql_feature) $(rs_build_flags)
 	cp $(rs_lib_loadable) $(rs_lib_loadable_cpy)
 
-$(rs_lib_dbg_loadable_cpy): FORCE write_sha $(dbg_prefix)
+$(rs_lib_dbg_loadable_cpy): export CRSQLITE_COMMIT_SHA = $(shell git rev-parse HEAD)
+$(rs_lib_dbg_loadable_cpy): FORCE $(dbg_prefix)
 	cd ./rs/$(bundle) && cargo rustc $(RS_TARGET) --features loadable_extension$(libsql_feature) $(rs_build_flags)
 	cp $(rs_lib_dbg_loadable) $(rs_lib_dbg_loadable_cpy)
 
@@ -281,8 +284,3 @@ $(TARGET_FUZZ): $(prefix) $(TARGET_SQLITE3_EXTRA_C) src/fuzzer.cc $(ext_files)
 	ubsan analyzer fuzz asan static
 
 FORCE: ;
-
-write_sha:
-	@COMMIT_SHA=`git rev-parse HEAD` && \
-	sed -i.bak "s/\"[^\"]*\"/\"$$COMMIT_SHA\"/" ./rs/core/src/sha.rs && \
-	rm -f ./rs/core/src/sha.rs.bak

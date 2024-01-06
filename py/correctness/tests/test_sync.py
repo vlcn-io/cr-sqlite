@@ -398,6 +398,9 @@ def test_merge_same_w_tie_breaker():
     sync_left_to_right(db2, db1, 0)
     changes21 = db1.execute("SELECT \"table\", pk, cid, val, col_version, site_id FROM crsql_changes").fetchall()
 
+    pprint.pprint(db1.execute("SELECT db_version FROM crsql_changes").fetchall())
+    pprint.pprint(db2.execute("SELECT db_version FROM crsql_changes").fetchall())
+
     assert (changes12 == changes21)
     # Test that we're stable / do not loop when we tie break equal values
 
@@ -407,6 +410,9 @@ def test_merge_same_w_tie_breaker():
     changes21_2 = db1.execute("SELECT \"table\", pk, cid, val, col_version, site_id FROM crsql_changes").fetchall()
     assert (changes12_2 == changes21)
     assert (changes12 == changes21_2)
+
+    pprint.pprint(db1.execute("SELECT db_version FROM crsql_changes").fetchall())
+    pprint.pprint(db2.execute("SELECT db_version FROM crsql_changes").fetchall())
 
 
 def test_merge_matching_clocks_lesser_value():

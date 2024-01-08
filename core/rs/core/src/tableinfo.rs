@@ -45,6 +45,7 @@ pub struct TableInfo {
     set_winner_clock_stmt: RefCell<Option<ManagedStmt>>,
     local_cl_stmt: RefCell<Option<ManagedStmt>>,
     col_version_stmt: RefCell<Option<ManagedStmt>>,
+    col_site_id_stmt: RefCell<Option<ManagedStmt>>,
     merge_pk_only_insert_stmt: RefCell<Option<ManagedStmt>>,
     merge_delete_stmt: RefCell<Option<ManagedStmt>>,
     merge_delete_drop_clocks_stmt: RefCell<Option<ManagedStmt>>,
@@ -335,6 +336,21 @@ impl TableInfo {
             *self.col_version_stmt.try_borrow_mut()? = Some(ret);
         }
         Ok(self.col_version_stmt.try_borrow()?)
+    }
+
+    pub fn get_col_site_id_stmt(
+        &self,
+        db: *mut sqlite3,
+    ) -> Result<Ref<Option<ManagedStmt>>, ResultCode> {
+        if self.col_site_id_stmt.try_borrow()?.is_none() {
+            let sql = format!(
+              "SELECT site_id FROM crsql_site_id WHERE ordinal = (SELECT site_id FROM \"{table_name}__crsql_clock\" WHERE key = ? AND col_name = ?)",
+              table_name = crate::util::escape_ident(&self.tbl_name),
+            );
+            let ret = db.prepare_v3(&sql, sqlite::PREPARE_PERSISTENT)?;
+            *self.col_site_id_stmt.try_borrow_mut()? = Some(ret);
+        }
+        Ok(self.col_site_id_stmt.try_borrow()?)
     }
 
     pub fn get_merge_pk_only_insert_stmt(
@@ -871,6 +887,7 @@ pub fn pull_table_info(
         set_winner_clock_stmt: RefCell::new(None),
         local_cl_stmt: RefCell::new(None),
         col_version_stmt: RefCell::new(None),
+        col_site_id_stmt: RefCell::new(None),
 
         select_key_stmt: RefCell::new(None),
         insert_key_stmt: RefCell::new(None),

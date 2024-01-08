@@ -383,6 +383,7 @@ def test_merge_same():
 def test_merge_same_w_tie_breaker():
     db1 = create_basic_db()
     db2 = create_basic_db()
+    db3 = create_basic_db()
 
     db1.execute("INSERT INTO foo (a,b) VALUES (1,2);")
     db1.execute("SELECT crsql_config_set('merge-equal-values', 1);")
@@ -392,13 +393,47 @@ def test_merge_same_w_tie_breaker():
     db2.execute("SELECT crsql_config_set('merge-equal-values', 1);")
     db2.commit()
 
+    db3.execute("INSERT INTO foo (a,b) VALUES (1,2);")
+    db3.execute("SELECT crsql_config_set('merge-equal-values', 1);")
+    db3.commit()
+
     sync_left_to_right(db1, db2, 0)
-    changes12 = db2.execute("SELECT \"table\", pk, cid, val, col_version, site_id FROM crsql_changes").fetchall()
+    changes2 = db2.execute("SELECT \"table\", pk, cid, val, col_version, site_id, db_version FROM crsql_changes").fetchall()
     
     sync_left_to_right(db2, db1, 0)
-    changes21 = db1.execute("SELECT \"table\", pk, cid, val, col_version, site_id FROM crsql_changes").fetchall()
+    changes1 = db1.execute("SELECT \"table\", pk, cid, val, col_version, site_id, db_version FROM crsql_changes").fetchall()
 
-    assert (changes12 == changes21)
+    sync_left_to_right(db2, db3, 0)
+    changes3 = db3.execute("SELECT \"table\", pk, cid, val, col_version, site_id, db_version FROM crsql_changes").fetchall()
+
+    # check that everything by db_version is the same
+    assert (changes2[:-6] == changes1[:-6] == changes3[:-6])
+
+    # Test that we're stable / do not loop when we tie break equal values
+
+    sync_left_to_right(db2, db1, 0)
+    changes1_2 = db1.execute("SELECT \"table\", pk, cid, val, col_version, site_id, db_version FROM crsql_changes").fetchall()
+    sync_left_to_right(db3, db2, 0)
+    changes2_2 = db2.execute("SELECT \"table\", pk, cid, val, col_version, site_id, db_version FROM crsql_changes").fetchall()
+    sync_left_to_right(db1, db3, 0)
+    changes3_2 = db3.execute("SELECT \"table\", pk, cid, val, col_version, site_id, db_version FROM crsql_changes").fetchall()
+
+    # everything should stay the same, including db_version
+    assert (changes1 == changes1_2)
+    assert (changes2 == changes2_2)
+    assert (changes3 == changes3_2)
+
+    sync_left_to_right(db3, db1, 0)
+    changes1_2 = db1.execute("SELECT \"table\", pk, cid, val, col_version, site_id, db_version FROM crsql_changes").fetchall()
+    sync_left_to_right(db1, db2, 0)
+    changes2_2 = db2.execute("SELECT \"table\", pk, cid, val, col_version, site_id, db_version FROM crsql_changes").fetchall()
+    sync_left_to_right(db2, db3, 0)
+    changes3_2 = db3.execute("SELECT \"table\", pk, cid, val, col_version, site_id, db_version FROM crsql_changes").fetchall()
+
+    # everything should stay the same, including db_version
+    assert (changes1 == changes1_2)
+    assert (changes2 == changes2_2)
+    assert (changes3 == changes3_2)
 
 
 def test_merge_matching_clocks_lesser_value():

@@ -95,10 +95,45 @@ fn did_cid_win(
             reset_cached_stmt(col_val_stmt.stmt)?;
             if ret == 0 && unsafe { (*ext_data).mergeEqualValues == 1 } {
                 // values are the same (ret == 0) and the option to tie break on site_id is true
-                ret = unsafe {
-                    let my_site_id = core::slice::from_raw_parts((*ext_data).siteId, 16);
-                    insert_site_id.cmp(my_site_id) as c_int
-                };
+                let col_site_id_stmt_ref = tbl_info.get_col_site_id_stmt(db)?;
+                let col_site_id_stmt = col_site_id_stmt_ref.as_ref().ok_or(ResultCode::ERROR)?;
+
+                let bind_result = col_site_id_stmt.bind_int64(1, key);
+                if let Err(rc) = bind_result {
+                    reset_cached_stmt(col_site_id_stmt.stmt)?;
+                    return Err(rc);
+                }
+                if let Err(rc) = col_site_id_stmt.bind_text(2, col_name, sqlite::Destructor::STATIC)
+                {
+                    reset_cached_stmt(col_site_id_stmt.stmt)?;
+                    return Err(rc);
+                }
+
+                match col_site_id_stmt.step() {
+                    Ok(ResultCode::ROW) => {
+                        let local_site_id = col_site_id_stmt.column_blob(0)?;
+                        ret = insert_site_id.cmp(local_site_id) as c_int;
+
+                        // reset the stmt after, we're accessing a slice in-memory
+                        reset_cached_stmt(col_site_id_stmt.stmt)?;
+                    }
+                    Ok(ResultCode::DONE) => {
+                        reset_cached_stmt(col_site_id_stmt.stmt)?;
+                        let err = CString::new(format!(
+                            "could not find site_id for previous change, cr-sqlite clock table might be corrupt for tbl {}",
+                            insert_tbl
+                        ))?;
+                        unsafe { *errmsg = err.into_raw() };
+                        return Err(ResultCode::ERROR);
+                    }
+                    Ok(rc) | Err(rc) => {
+                        reset_cached_stmt(col_site_id_stmt.stmt)?;
+                        let err =
+                            CString::new("Bad return code when selecting local column site_id")?;
+                        unsafe { *errmsg = err.into_raw() };
+                        return Err(rc);
+                    }
+                }
             }
             return Ok(ret > 0);
         }

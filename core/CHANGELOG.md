@@ -1,5 +1,11 @@
 # @vlcn.io/crsqlite
 
+## 0.16.3
+
+### Patch Changes
+
+- fix windows breakage, fix wasm oom
+
 ## 0.16.1
 
 ### Patch Changes

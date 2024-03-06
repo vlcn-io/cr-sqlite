@@ -8,7 +8,6 @@ mod fractindex_view;
 mod util;
 
 use core::ffi::{c_char, c_int};
-use core::slice;
 pub use fractindex::*;
 use fractindex_view::fix_conflict_return_old_key;
 use sqlite::args;

@@ -16,7 +16,7 @@ Example applications using cr-sqlite to sync state.
 - Vite starter - [Example](https://vite-starter2.fly.dev/) | [Repository](https://github.com/vlcn-io/vite-starter)
 - TodoMVC - [Example](https://vlcn-live-examples.fly.dev/) | [Repository](https://github.com/vlcn-io/live-examples)
 - [Svelte Store](https://github.com/Azarattum/CRStore)
-- [Tutorials](https://vlcn.io/docs/networking/whole-crr-sync)
+- [Tutorials](https://vlcn.io/docs/cr-sqlite/networking/whole-crr-sync)
 - [WIP Local-First Presentation Editor](https://github.com/tantaman/strut)
 - Basic setup & sync via an [Observable Notebook](https://observablehq.com/@tantaman/cr-sqlite-basic-setup)
 

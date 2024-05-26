@@ -238,7 +238,7 @@ You'll need to install Rust.
 
 - Installing Rust: https://www.rust-lang.org/tools/install
 
-## [Run Time Loadable Extension](https://www.sqlite.org/loadext.htmla)
+## [Run Time Loadable Extension](https://www.sqlite.org/loadext.html)
 
 Instructions on building a native library that can be loaded into SQLite in non-wasm environments.
 

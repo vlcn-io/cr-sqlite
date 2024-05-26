@@ -232,7 +232,7 @@ This is much more akin to git and event sourcing but with the drawback being tha
 
 # Building
 
-For a table version, build against a [release tag](https://github.com/vlcn-io/cr-sqlite/releases) as main may not be 100% stable.
+For a stable version, build against a [release tag](https://github.com/vlcn-io/cr-sqlite/releases) as main may not be 100% stable.
 
 You'll need to install Rust.
 

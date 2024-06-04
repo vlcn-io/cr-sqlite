@@ -750,11 +750,6 @@ pub extern "C" fn crsql_ensure_table_infos_are_up_to_date(
     ext_data: *mut crsql_ExtData,
     err: *mut *mut c_char,
 ) -> c_int {
-    let already_updated = unsafe { (*ext_data).updatedTableInfosThisTx == 1 };
-    if already_updated {
-        return ResultCode::OK as c_int;
-    }
-
     let schema_changed =
         unsafe { crsql_fetchPragmaSchemaVersion(db, ext_data, TABLE_INFO_SCHEMA_VERSION) };
 
@@ -769,9 +764,6 @@ pub extern "C" fn crsql_ensure_table_infos_are_up_to_date(
             Ok(new_table_infos) => {
                 *table_infos = new_table_infos;
                 forget(table_infos);
-                unsafe {
-                    (*ext_data).updatedTableInfosThisTx = 1;
-                }
                 return ResultCode::OK as c_int;
             }
             Err(e) => {
@@ -782,9 +774,6 @@ pub extern "C" fn crsql_ensure_table_infos_are_up_to_date(
     }
 
     forget(table_infos);
-    unsafe {
-        (*ext_data).updatedTableInfosThisTx = 1;
-    }
     return ResultCode::OK as c_int;
 }
 

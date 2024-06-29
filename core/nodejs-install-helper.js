@@ -6,7 +6,7 @@
 import { join } from "path";
 import fs from "fs";
 import https from "https";
-import pkg from "./package.json" assert { type: "json" };
+import pkg from "./package.json" with { type: "json" };
 import { exec } from "child_process";
 let { version } = pkg;
 

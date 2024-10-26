@@ -16,6 +16,13 @@ Each `col_version` is currently incremented independently. We can instead set it
 
 This isn't guaranteed since the peer being merged into could be way ahead in db_version overall but have some records behind in db_version.
 
+# read perms
+
+- callback
+- gets invoked when returning from `crsql_changes`
+- can be manually invoke by user for manual sync queries. e.g., `AND crsql_rls('table', pks...)`? No need to do this ever?
+- partial sync is user query -> perm fail find -> crsql_changes (based on lowest db version found from prior perm failures)
+
 # pk-lookup
 
 - New table

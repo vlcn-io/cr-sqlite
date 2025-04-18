@@ -3,11 +3,15 @@ use core::ptr;
 use crate::alloc::string::ToString;
 use alloc::format;
 use alloc::string::String;
-use core::ffi::{c_char, c_int};
+use core::ffi::{c_char, c_int, c_void};
 use sqlite::ResultCode;
 use sqlite::StrRef;
 use sqlite::{sqlite3, Stmt};
 use sqlite_nostd as sqlite;
+
+use alloc::vec;
+use alloc::vec::Vec;
+use alloc::boxed::Box;
 
 use crate::c::crsql_ExtData;
 use crate::c::crsql_fetchPragmaDataVersion;
@@ -47,30 +51,91 @@ pub extern "C" fn crsql_next_db_version(
     }
 }
 
+#[no_mangle]
+pub extern "C" fn crsql_init_seen_db_versions(ext_data: *mut crsql_ExtData) {
+    let vec: Vec<i64> = vec![]; // Initialize with version 0 already included
+    unsafe { (*ext_data).seen_db_versions = Box::into_raw(Box::new(vec)) as *mut c_void }
+}
+
+#[no_mangle]
+pub extern "C" fn crsql_drop_seen_db_versions(ext_data: *mut crsql_ExtData) {
+    unsafe {
+        if !(*ext_data).seen_db_versions.is_null() {
+            let _ = Box::from_raw((*ext_data).seen_db_versions as *mut Vec<i64>);
+            (*ext_data).seen_db_versions = ptr::null_mut();
+        }
+    }
+}
+
 /**
  * Given this needs to do a pragma check, invoke it as little as possible.
  * TODO: We could optimize to only do a pragma check once per transaction.
  * Need to save some bit that states we checked the pragma already and reset on tx commit or rollback.
  */
-pub fn next_db_version(
+ pub fn next_db_version(
     db: *mut sqlite3,
     ext_data: *mut crsql_ExtData,
     merging_version: Option<i64>,
 ) -> Result<i64, String> {
     fill_db_version_if_needed(db, ext_data)?;
-
-    let mut ret = unsafe { (*ext_data).dbVersion + 1 };
+    
+    let mut ret;
+    
+    // Special case: if merging_version is Some(0), treat it as if it's None
+    // This handles the case when crsql_next_db_version() is called with no arguments
+    if let Some(0) = merging_version {
+        // Not merging, just increment normally
+        ret = unsafe { (*ext_data).dbVersion + 1 };
+    }
+    // If we're merging changes from another site with a non-zero version
+    else if let Some(merging_version) = merging_version {
+        // Use the merging version directly if it's higher than our current version
+        if merging_version > unsafe { (*ext_data).dbVersion } {
+            ret = merging_version;
+        } else {
+            // Otherwise, use our current pending version
+            ret = unsafe { (*ext_data).pendingDbVersion };
+            
+            // Check if we've seen this remote version before
+            unsafe {
+                if !(*ext_data).seen_db_versions.is_null() {
+                    let seen_versions = &mut *((*ext_data).seen_db_versions as *mut Vec<i64>);
+                    
+                    match seen_versions.binary_search(&merging_version) {
+                        Ok(_) => {
+                            // Version already seen, keep using current pendingDbVersion
+                        }
+                        Err(idx) => {
+                            // New version, track it and increment our version
+                            seen_versions.insert(idx, merging_version);
+                            
+                            // Only increment if we've already started a new version
+                            if ret > (*ext_data).dbVersion {
+                                ret += 1;
+                            } else {
+                                // Otherwise just use dbVersion + 1
+                                ret = (*ext_data).dbVersion + 1;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    } else {
+        // Not merging, just increment normally
+        ret = unsafe { (*ext_data).dbVersion + 1 };
+    }
+    
+    // Make sure we don't go backward from pendingDbVersion
     if ret < unsafe { (*ext_data).pendingDbVersion } {
         ret = unsafe { (*ext_data).pendingDbVersion };
     }
-    if let Some(merging_version) = merging_version {
-        if ret < merging_version {
-            ret = merging_version;
-        }
-    }
+    
+    // Update pending version
     unsafe {
         (*ext_data).pendingDbVersion = ret;
     }
+    
     Ok(ret)
 }
 

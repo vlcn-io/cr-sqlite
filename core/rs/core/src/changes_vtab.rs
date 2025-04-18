@@ -558,17 +558,53 @@ pub extern "C" fn crsql_changes_update(
     }
 }
 
-// If xBegin is not defined xCommit is not called.
 #[no_mangle]
-pub extern "C" fn crsql_changes_begin(_vtab: *mut sqlite::vtab) -> c_int {
+pub extern "C" fn crsql_changes_begin(vtab: *mut sqlite::vtab) -> c_int {
+    let tab = vtab.cast::<crsql_Changes_vtab>();
+    unsafe {
+        // Initialize the seen_db_versions vector if it doesn't exist yet
+        if (*(*tab).pExtData).seen_db_versions.is_null() {
+            let vec = Box::new(Vec::<i64>::new());
+            (*(*tab).pExtData).seen_db_versions = Box::into_raw(vec) as *mut ::core::ffi::c_void;
+        } else {
+            // Clear it at the start of a transaction
+            let seen_versions = &mut *((*(*tab).pExtData).seen_db_versions as *mut Vec<i64>);
+            seen_versions.clear();
+        }
+    }
     ResultCode::OK as c_int
 }
 
+// Update the existing commit callback to clear the vector
 #[no_mangle]
 pub extern "C" fn crsql_changes_commit(vtab: *mut sqlite::vtab) -> c_int {
     let tab = vtab.cast::<crsql_Changes_vtab>();
     unsafe {
         (*(*tab).pExtData).rowsImpacted = 0;
+        
+        // Clear the seen_db_versions vector
+        if !(*(*tab).pExtData).seen_db_versions.is_null() {
+            // Cast from *mut c_void to *mut Vec<i64>
+            let seen_versions = &mut *((*(*tab).pExtData).seen_db_versions as *mut Vec<i64>);
+            seen_versions.clear();
+        }
+    }
+    ResultCode::OK as c_int
+}
+
+// Add a rollback callback to handle aborted transactions
+#[no_mangle]
+pub extern "C" fn crsql_changes_rollback(vtab: *mut sqlite::vtab) -> c_int {
+    let tab = vtab.cast::<crsql_Changes_vtab>();
+    unsafe {
+        (*(*tab).pExtData).rowsImpacted = 0;
+        
+        // Clear the seen_db_versions vector
+        if !(*(*tab).pExtData).seen_db_versions.is_null() {
+            // Cast from *mut c_void to *mut Vec<i64>
+            let seen_versions = &mut *((*(*tab).pExtData).seen_db_versions as *mut Vec<i64>);
+            seen_versions.clear();
+        }
     }
     ResultCode::OK as c_int
 }

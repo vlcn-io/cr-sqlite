@@ -54,6 +54,7 @@ pub struct crsql_ExtData {
     pub pragmaDataVersion: ::core::ffi::c_int,
     pub dbVersion: sqlite::int64,
     pub pendingDbVersion: sqlite::int64,
+    pub seen_db_versions: *mut ::core::ffi::c_void,
     pub pragmaSchemaVersion: ::core::ffi::c_int,
     pub updatedTableInfosThisTx: ::core::ffi::c_int,
     pub pragmaSchemaVersionForTableInfos: ::core::ffi::c_int,

@@ -1,0 +1,118 @@
+ core/rs/core/src/c.rs          |  1 [32m+[m
+ core/rs/core/src/db_version.rs | 22 [32m+++++++++++++++++++++[m[31m-[m
+ core/src/ext-data.c            |  8 [32m++++++++[m
+ core/src/ext-data.h            |  5 [32m+++++[m
+ 4 files changed, 35 insertions(+), 1 deletion(-)
+
+[1mdiff --git a/core/rs/core/src/c.rs b/core/rs/core/src/c.rs[m
+[1mindex 333fbb37..d403207d 100644[m
+[1m--- a/core/rs/core/src/c.rs[m
+[1m+++ b/core/rs/core/src/c.rs[m
+[36m@@ -68,6 +68,7 @@[m [mpub struct crsql_ExtData {[m
+    pub pSelectSiteIdOrdinalStmt: *mut sqlite::stmt,[m
+    pub pSelectClockTablesStmt: *mut sqlite::stmt,[m
+    pub mergeEqualValues: ::core::ffi::c_int,[m
+    [32mpub seen_db_versions: *mut ::core::ffi::c_void[m
+}[m
+
+#[repr(C)][m
+[1mdiff --git a/core/rs/core/src/db_version.rs b/core/rs/core/src/db_version.rs[m
+[1mindex 2b614400..fbdd075a 100644[m
+[1m--- a/core/rs/core/src/db_version.rs[m
+[1m+++ b/core/rs/core/src/db_version.rs[m
+[36m@@ -3,12 +3,16 @@[m [muse core::ptr;[m
+use crate::alloc::string::ToString;[m
+use alloc::format;[m
+use alloc::string::String;[m
+use core::ffi::{c_char, [31mc_int};[m[32mc_int, c_void};[m
+use sqlite::ResultCode;[m
+use sqlite::StrRef;[m
+use sqlite::{sqlite3, Stmt};[m
+use sqlite_nostd as sqlite;[m
+
+[32muse alloc::vec;[m
+[32muse alloc::vec::Vec;[m
+[32muse alloc::boxed::Box;[m
+
+use crate::c::crsql_ExtData;[m
+use crate::c::crsql_fetchPragmaDataVersion;[m
+use crate::c::crsql_fetchPragmaSchemaVersion;[m
+[36m@@ -47,6 +51,22 @@[m [mpub extern "C" fn crsql_next_db_version([m
+    }[m
+}[m
+
+[32m#[no_mangle][m
+[32mpub extern "C" fn crsql_init_seen_db_versions(ext_data: *mut crsql_ExtData) {[m
+[32m    let vec: Vec<i64> = vec![];[m
+[32m    unsafe { (*ext_data).seen_db_versions = Box::into_raw(Box::new(vec)) as *mut c_void }[m
+[32m}[m
+
+[32m#[no_mangle][m
+[32mpub extern "C" fn crsql_drop_seen_db_versions(ext_data: *mut crsql_ExtData) {[m
+[32m    unsafe {[m
+[32m        if !(*ext_data).seen_db_versions.is_null() {[m
+[32m            let _ = Box::from_raw((*ext_data).seen_db_versions as *mut Vec<i64>);[m
+[32m            (*ext_data).seen_db_versions = ptr::null_mut();[m
+[32m        }[m
+[32m    }[m
+[32m}[m
+
+/**[m
+ * Given this needs to do a pragma check, invoke it as little as possible.[m
+ * TODO: We could optimize to only do a pragma check once per transaction.[m
+[1mdiff --git a/core/src/ext-data.c b/core/src/ext-data.c[m
+[1mindex f8715f4f..a3e3baac 100644[m
+[1m--- a/core/src/ext-data.c[m
+[1m+++ b/core/src/ext-data.c[m
+[36m@@ -54,7 +54,10 @@[m [mcrsql_ExtData *crsql_newExtData(sqlite3 *db, unsigned char *siteIdBuffer) {[m
+  pExtData->tableInfos = 0;[m
+  pExtData->rowsImpacted = 0;[m
+  pExtData->updatedTableInfosThisTx = 0;[m
+  [32mpExtData->seen_db_versions = 0;[m
+  crsql_init_table_info_vec(pExtData);[m
+  [32mcrsql_init_seen_db_versions(pExtData);[m 
+  
+
+  sqlite3_stmt *pStmt;[m
+
+[36m@@ -101,6 +104,10 @@[m [mcrsql_ExtData *crsql_newExtData(sqlite3 *db, unsigned char *siteIdBuffer) {[m
+}[m
+
+void crsql_freeExtData(crsql_ExtData *pExtData) {[m
+  [32m// if (pExtData->seen_db_versions != 0) {[m
+[32m  //   crsql_free_seen_db_versions(pExtData->seen_db_versions);[m
+[32m  //   pExtData->seen_db_versions = 0;[m
+[32m  // }[m
+  sqlite3_free(pExtData->siteId);[m
+  sqlite3_finalize(pExtData->pDbVersionStmt);[m
+  sqlite3_finalize(pExtData->pPragmaSchemaVersionStmt);[m
+[36m@@ -111,6 +118,7 @@[m [mvoid crsql_freeExtData(crsql_ExtData *pExtData) {[m
+  sqlite3_finalize(pExtData->pSelectSiteIdOrdinalStmt);[m
+  sqlite3_finalize(pExtData->pSelectClockTablesStmt);[m
+  crsql_clear_stmt_cache(pExtData);[m
+  [32mcrsql_drop_seen_db_versions(pExtData);[m
+  crsql_drop_table_info_vec(pExtData);[m
+  sqlite3_free(pExtData);[m
+}[m
+[1mdiff --git a/core/src/ext-data.h b/core/src/ext-data.h[m
+[1mindex c4ff801d..0b01c593 100644[m
+[1m--- a/core/src/ext-data.h[m
+[1m+++ b/core/src/ext-data.h[m
+[36m@@ -20,6 +20,9 @@[m [mstruct crsql_ExtData {[m
+  // the version that the db will be set to at the end of the transaction[m
+  // if that transaction were to commit at the time this value is checked.[m
+  sqlite3_int64 pendingDbVersion;[m
+  [32m// this is a pointer to a rust vec for tracking the database versions we[m
+[32m  // see when merging changes[m
+[32m  void *seen_db_versions;[m
+  int pragmaSchemaVersion;[m
+  int updatedTableInfosThisTx;[m
+
+[36m@@ -53,5 +56,7 @@[m [mint crsql_fetchPragmaSchemaVersion(sqlite3 *db, crsql_ExtData *pExtData,[m
+int crsql_fetchPragmaDataVersion(sqlite3 *db, crsql_ExtData *pExtData);[m
+int crsql_recreate_db_version_stmt(sqlite3 *db, crsql_ExtData *pExtData);[m
+void crsql_finalize(crsql_ExtData *pExtData);[m
+[32mvoid crsql_init_seen_db_versions(crsql_ExtData *pExtData);[m
+[32mvoid crsql_drop_seen_db_versions(crsql_ExtData *pExtData);[m
+
+#endif[m

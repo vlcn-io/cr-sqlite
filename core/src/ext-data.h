@@ -20,6 +20,9 @@ struct crsql_ExtData {
   // the version that the db will be set to at the end of the transaction
   // if that transaction were to commit at the time this value is checked.
   sqlite3_int64 pendingDbVersion;
+  // this is a pointer to a rust vec for tracking the database versions we
+  // see when merging changes
+  void *seen_db_versions;
   int pragmaSchemaVersion;
   int updatedTableInfosThisTx;
 
@@ -53,5 +56,7 @@ int crsql_fetchPragmaSchemaVersion(sqlite3 *db, crsql_ExtData *pExtData,
 int crsql_fetchPragmaDataVersion(sqlite3 *db, crsql_ExtData *pExtData);
 int crsql_recreate_db_version_stmt(sqlite3 *db, crsql_ExtData *pExtData);
 void crsql_finalize(crsql_ExtData *pExtData);
+void crsql_init_seen_db_versions(crsql_ExtData *pExtData);
+void crsql_drop_seen_db_versions(crsql_ExtData *pExtData);
 
 #endif

@@ -54,7 +54,10 @@ crsql_ExtData *crsql_newExtData(sqlite3 *db, unsigned char *siteIdBuffer) {
   pExtData->tableInfos = 0;
   pExtData->rowsImpacted = 0;
   pExtData->updatedTableInfosThisTx = 0;
+  pExtData->seen_db_versions = 0;
   crsql_init_table_info_vec(pExtData);
+  crsql_init_seen_db_versions(pExtData); 
+  
 
   sqlite3_stmt *pStmt;
 
@@ -101,6 +104,10 @@ crsql_ExtData *crsql_newExtData(sqlite3 *db, unsigned char *siteIdBuffer) {
 }
 
 void crsql_freeExtData(crsql_ExtData *pExtData) {
+  // if (pExtData->seen_db_versions != 0) {
+  //   crsql_free_seen_db_versions(pExtData->seen_db_versions);
+  //   pExtData->seen_db_versions = 0;
+  // }
   sqlite3_free(pExtData->siteId);
   sqlite3_finalize(pExtData->pDbVersionStmt);
   sqlite3_finalize(pExtData->pPragmaSchemaVersionStmt);
@@ -111,6 +118,7 @@ void crsql_freeExtData(crsql_ExtData *pExtData) {
   sqlite3_finalize(pExtData->pSelectSiteIdOrdinalStmt);
   sqlite3_finalize(pExtData->pSelectClockTablesStmt);
   crsql_clear_stmt_cache(pExtData);
+  crsql_drop_seen_db_versions(pExtData);
   crsql_drop_table_info_vec(pExtData);
   sqlite3_free(pExtData);
 }

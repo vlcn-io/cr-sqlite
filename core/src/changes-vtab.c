@@ -144,6 +144,7 @@ int crsql_changes_update(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
 // If xBegin is not defined xCommit is not called.
 int crsql_changes_begin(sqlite3_vtab *pVTab);
 int crsql_changes_commit(sqlite3_vtab *pVTab);
+int crsql_changes_rollback(sqlite3_vtab *pVTab);
 int crsql_changes_rowid(sqlite3_vtab_cursor *cur, sqlite_int64 *pRowid);
 int crsql_changes_column(
     sqlite3_vtab_cursor *cur, /* The cursor */
@@ -170,7 +171,7 @@ sqlite3_module crsql_changesModule = {
     /* xBegin      */ crsql_changes_begin,
     /* xSync       */ 0,
     /* xCommit     */ crsql_changes_commit,
-    /* xRollback   */ 0,
+    /* xRollback   */ crsql_changes_rollback,
     /* xFindMethod */ 0,
     /* xRename     */ 0,
     /* xSavepoint  */ 0,

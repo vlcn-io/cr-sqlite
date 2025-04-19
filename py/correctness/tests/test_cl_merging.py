@@ -90,6 +90,66 @@ def sync_left_to_right_single_vrsn(l, r, vrsn):
             "INSERT INTO crsql_changes VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", change)
     r.commit()
 
+def test_merge_db_version_increment():
+    c1 = make_simple_schema()
+    c2 = make_simple_schema()
+
+    # C1: has three inserts in the same transaction to foo
+    c1.execute("INSERT INTO foo VALUES (1, 1)")
+    c1.commit()
+    c1.execute("INSERT INTO foo VALUES (2, 2)")
+    c1.commit()
+    c1.execute("INSERT INTO foo VALUES (3, 3)")
+    c1.commit()
+
+    # C2: has five inserts, 2 in one transaction, 3 in another
+    c2.execute("INSERT INTO foo VALUES (4, 4)")
+    c2.execute("INSERT INTO foo VALUES (5, 5)")
+    c2.commit()
+    
+    c2.execute("INSERT INTO foo VALUES (6, 6)")
+    c2.execute("INSERT INTO foo VALUES (7, 7)")
+    c2.execute("INSERT INTO foo VALUES (8, 8)")
+    c2.commit()
+
+    # Sync c2 to c1
+    sync_left_to_right(c2, c1, 0)
+
+    # Get site IDs
+    c1_site_id = get_site_id(c1)
+    c2_site_id = get_site_id(c2)
+    
+    # Get all changes from c1 ordered by db_version and sequence
+    changes = c1.execute("SELECT * FROM crsql_changes ORDER BY db_version, seq").fetchall()
+    
+    # Expected pattern with exact values
+    expected_changes = [
+        ('foo', b'\x01\t\x01', 'b', 1, 1, 1, c1_site_id, 1, 0),
+        ('foo', b'\x01\t\x02', 'b', 2, 1, 2, c1_site_id, 1, 0),
+        ('foo', b'\x01\t\x03', 'b', 3, 1, 3, c1_site_id, 1, 0),
+        ('foo', b'\x01\t\x04', 'b', 4, 1, 4, c2_site_id, 1, 0),
+        ('foo', b'\x01\t\x05', 'b', 5, 1, 4, c2_site_id, 1, 1),
+        ('foo', b'\x01\t\x06', 'b', 6, 1, 5, c2_site_id, 1, 0),
+        ('foo', b'\x01\t\x07', 'b', 7, 1, 5, c2_site_id, 1, 1),
+        ('foo', b'\x01\t\x08', 'b', 8, 1, 5, c2_site_id, 1, 2)
+    ]
+    
+    # Assert the expected pattern
+    assert len(changes) == len(expected_changes), f"Expected {len(expected_changes)} changes, got {len(changes)}"
+    
+    # Print for debugging if needed
+    if changes != expected_changes:
+        print("Actual changes:")
+        for change in changes:
+            print(change)
+        print("\nExpected changes:")
+        for change in expected_changes:
+            print(change)
+    
+    assert changes == expected_changes
+    
+    close(c1)
+    close(c2)
 
 def test_larger_cl_wins_all():
     c1 = make_simple_schema()

@@ -81,16 +81,40 @@ fn automigrate_impl(
 
         let migrate_result = migrate_to(local_db, &mem_db);
 
-        if let Err(_) = migrate_result {
+        if let Err(rc) = migrate_result {
+            // NOTE: The error might originate from either mem_db or local_db,
+            // match with rc to retireve the correct errmsg
+            let local_db_errcode = local_db.errcode();
+            let mem_db_errcode = mem_db.errcode();
+
+            let (errcode, errmsg) = if rc == local_db_errcode {
+                (rc, local_db.errmsg()?)
+            } else if rc == mem_db_errcode {
+                (rc, mem_db.errmsg()?)
+            } else {
+                let errmsg = format!(
+					"unkonwn error: rc didn't match any connection's error code:\nrc: {}, local_db: {}, mem_db: {}",
+					rc,
+					local_db_errcode,
+					mem_db_errcode
+				);
+                (ResultCode::ERROR, errmsg)
+            };
+            ctx.result_error_code(errcode);
+            ctx.result_error(&errmsg);
+
             // NOTE: performing ROLLBACK TO automigrate_tables with RELEASE instead
             // of top level ROLLBACK so that this function can be run within a wrapping transaction
             // (top level ROLLBACK would clear any SAVEPOINTs defined outside if this function)
+            //
+            // NOTE: Performing ROLLBACK on 'local_db' has to happen after the error handling (above) to ensure
+            // errors are "copied" (for intents and purposes) to the calling connection's error message beforehand
+            // (as rolling back on 'local_db' clears the error info as well).
             local_db.exec_safe("ROLLBACK TO automigrate_tables")?;
             local_db.exec_safe("RELEASE automigrate_tables")?;
-            let mem_db_err_msg = mem_db.errmsg()?;
-            ctx.result_error(&mem_db_err_msg);
-            ctx.result_error_code(mem_db.errcode());
+
             cleanup(mem_db)?;
+
             return Err(ResultCode::OK);
         } else {
             cleanup(mem_db)?;

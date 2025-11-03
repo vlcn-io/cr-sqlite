@@ -82,7 +82,11 @@ fn automigrate_impl(
         let migrate_result = migrate_to(local_db, &mem_db);
 
         if let Err(_) = migrate_result {
-            local_db.exec_safe("ROLLBACK")?;
+            // NOTE: performing ROLLBACK TO automigrate_tables with RELEASE instead
+            // of top level ROLLBACK so that this function can be run within a wrapping transaction
+            // (top level ROLLBACK would clear any SAVEPOINTs defined outside if this function)
+            local_db.exec_safe("ROLLBACK TO automigrate_tables")?;
+            local_db.exec_safe("RELEASE automigrate_tables")?;
             let mem_db_err_msg = mem_db.errmsg()?;
             ctx.result_error(&mem_db_err_msg);
             ctx.result_error_code(mem_db.errcode());

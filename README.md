@@ -273,6 +273,102 @@ make sqlite3
 
 This will create a `sqlite3` binary at `dist/sqlite3`
 
+## Quick Start
+
+Build the CLI with cr-sqlite pre-loaded and start experimenting:
+
+```bash
+cd core
+make sqlite3
+./dist/sqlite3 mydb.db
+```
+
+Then in the SQLite shell:
+
+```sql
+-- create tables as normal, but primary keys must be NOT NULL
+CREATE TABLE users (id INTEGER PRIMARY KEY NOT NULL, name TEXT);
+
+-- upgrade the table to a conflict-free replicated relation
+SELECT crsql_as_crr('users');
+
+-- interact with tables as normal
+INSERT INTO users VALUES (1, 'Alice');
+INSERT INTO users VALUES (2, 'Bob');
+
+-- see tracked changes (used for syncing between peers)
+SELECT * FROM crsql_changes;
+
+-- clean up before closing the connection
+SELECT crsql_finalize();
+```
+
+Alternatively, load the extension into an existing SQLite session or from application code:
+
+**sqlite3 CLI:**
+```sql
+.load path/to/crsqlite
+```
+
+**Python:**
+```python
+import sqlite3
+conn = sqlite3.connect(':memory:')
+conn.enable_load_extension(True)
+conn.load_extension('path/to/crsqlite')
+```
+
+> **Important:** Primary keys must be `NOT NULL`. A bare `INTEGER PRIMARY KEY` without `NOT NULL` will be rejected by `crsql_as_crr`.
+
+### Merging Two Databases
+
+The core feature of cr-sqlite is merging independent writes from different databases. Here's a complete example using two SQLite files:
+
+```bash
+# create two databases representing two peers
+./dist/sqlite3 peer1.db <<'EOF'
+CREATE TABLE todos (id INTEGER PRIMARY KEY NOT NULL, title TEXT, complete INTEGER);
+SELECT crsql_as_crr('todos');
+INSERT INTO todos VALUES (1, 'Buy milk', 0);
+INSERT INTO todos VALUES (2, 'Walk the dog', 0);
+SELECT crsql_finalize();
+EOF
+
+./dist/sqlite3 peer2.db <<'EOF'
+CREATE TABLE todos (id INTEGER PRIMARY KEY NOT NULL, title TEXT, complete INTEGER);
+SELECT crsql_as_crr('todos');
+INSERT INTO todos VALUES (3, 'Write docs', 0);
+-- peer2 also has item 1, but marks it complete
+INSERT INTO todos VALUES (1, 'Buy milk', 1);
+SELECT crsql_finalize();
+EOF
+```
+
+Now merge peer2's changes into peer1 by extracting changesets and applying them:
+
+```bash
+./dist/sqlite3 <<'EOF'
+-- open both databases
+ATTACH 'peer1.db' AS peer1;
+ATTACH 'peer2.db' AS peer2;
+
+-- apply peer2's changes into peer1
+INSERT INTO peer1.crsql_changes
+  SELECT "table", "pk", "cid", "val", "col_version", "db_version", "site_id", "cl", "seq"
+  FROM peer2.crsql_changes;
+
+-- check the result — peer1 now has all rows, and item 1 is marked complete
+SELECT * FROM peer1.todos ORDER BY id;
+-- 1|Buy milk|1      <- conflict resolved: peer2's update wins (later write)
+-- 2|Walk the dog|0  <- from peer1
+-- 3|Write docs|0    <- from peer2
+
+SELECT crsql_finalize();
+EOF
+```
+
+Both peers' writes are merged automatically — new rows appear from each side, and the conflicting update to item 1 is resolved via last-write-wins.
+
 ## Tests
 
 core:

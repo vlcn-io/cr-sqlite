@@ -66,6 +66,17 @@ pub fn next_db_version(
     if let Some(merging_version) = merging_version {
         if ret < merging_version {
             ret = merging_version;
+        } else if ret > merging_version {
+            // if merging_version has never been seen before
+            // in this current transaction against `crsql_changes`
+            // we need to bump ret
+            // We can accomplish this by:
+            // 1. Installing a `xBegin` callback on `crsql_changes` which indicates we are writing there
+            // 2. Install `xCommit` and `xRollback` callbacks on `crsql_changes` indicating we are done writing there
+            // 3. Adding a Vec of `db_versions` to extData
+            // 4. Binary search this vec for the current merging_version
+            // 5. If not there, add it and bump ret.
+            // 6. If there, do nothing.
         }
     }
     unsafe {

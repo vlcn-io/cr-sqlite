@@ -69,6 +69,7 @@ fn create_impl(
     create_clset_storage(db, &vtab_args, err)?;
     let schema = vtab_args.database_name;
     let table = base_name_from_virtual_name(vtab_args.table_name);
+
     create_crr(db, schema, table, false, true, err)
 }
 

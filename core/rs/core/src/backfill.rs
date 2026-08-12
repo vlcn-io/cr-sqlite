@@ -184,7 +184,7 @@ fn backfill_missing_columns(
     is_commit_alter: bool,
 ) -> Result<ResultCode, ResultCode> {
     for non_pk_col in non_pk_cols {
-        fill_column(db, table, pk_cols, &non_pk_col, is_commit_alter)?;
+        fill_column(db, table, pk_cols, non_pk_col, is_commit_alter)?;
     }
 
     Ok(ResultCode::OK)

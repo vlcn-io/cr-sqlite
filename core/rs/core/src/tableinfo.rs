@@ -880,7 +880,7 @@ pub fn pull_table_info(
     let (mut pks, non_pks): (Vec<_>, Vec<_>) = column_infos.into_iter().partition(|x| x.pk > 0);
     pks.sort_by_key(|x| x.pk);
 
-    return Ok(TableInfo {
+    Ok(TableInfo {
         tbl_name: table.to_string(),
         pks,
         non_pks,
@@ -903,7 +903,7 @@ pub fn pull_table_info(
         mark_locally_created_stmt: RefCell::new(None),
         mark_locally_updated_stmt: RefCell::new(None),
         maybe_mark_locally_reinserted_stmt: RefCell::new(None),
-    });
+    })
 }
 
 pub fn is_table_compatible(

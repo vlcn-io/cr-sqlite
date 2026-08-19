@@ -18,10 +18,6 @@ jobs:
             library_name: crsqlite.so
             artifact_name: crsqlite.zip
             asset_name: crsqlite-linux-x86_64.zip
-          - os: macos-latest
-            library_name: crsqlite.dylib
-            artifact_name: crsqlite.zip
-            asset_name: crsqlite-darwin-x86_64.zip
 
     steps:
       - uses: actions/checkout@v3
@@ -48,6 +44,45 @@ jobs:
           tag: ${{ github.ref }}
 
   # we can probably collapse all these into the prebuild job
+  prebuild-macos-x86_64:
+    name: Prebuild for macos x86_64
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            library_name: crsqlite.dylib
+            artifact_name: crsqlite.zip
+            asset_name: crsqlite-darwin-x86_64.zip
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+
+      - name: Rust Nightly
+        run: |
+          rustup toolchain install nightly-2023-10-05
+          rustup target add x86_64-apple-darwin --toolchain nightly-2023-10-05
+
+      # macos-latest runners are arm64, so the target has to be explicit or the
+      # build silently produces an arm64 dylib under an x86_64 name.
+      - name: Build MacOS x86_64 dylib
+        run: |
+          cd core
+          export CI_MAYBE_TARGET="x86_64-apple-darwin" && make loadable
+          lipo -info dist/${{ matrix.library_name }}
+          lipo -info dist/${{ matrix.library_name }} | grep -q 'x86_64'
+          cd dist; zip crsqlite.zip ${{ matrix.library_name }}
+
+      - name: Upload macos dylib to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: core/dist/${{ matrix.artifact_name }}
+          asset_name: ${{ matrix.asset_name }}
+          tag: ${{ github.ref }}
+
   prebuild-macos-arm:
     name: Prebuild for macos arm
     runs-on: ${{ matrix.os }}
@@ -73,6 +108,8 @@ jobs:
         run: |
           cd core
           export CI_MAYBE_TARGET="aarch64-apple-darwin" && make loadable
+          lipo -info dist/${{ matrix.library_name }}
+          lipo -info dist/${{ matrix.library_name }} | grep -q 'arm64'
           cd dist; zip crsqlite.zip ${{ matrix.library_name }}
 
       - name: Upload macos dylib to release

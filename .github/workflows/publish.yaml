@@ -14,7 +14,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             library_name: crsqlite.so
             artifact_name: crsqlite.zip
             asset_name: crsqlite-linux-x86_64.zip
@@ -102,7 +102,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             library_name: crsqlite.so
             artifact_name: crsqlite.zip
             asset_name: crsqlite-linux-aarch64.zip
@@ -142,7 +142,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             library_name: crsqlite.dll
             artifact_name: crsqlite.zip
             asset_name: crsqlite-win-x86_64.zip
@@ -215,7 +215,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             library_name: crsqlite.dll
             artifact_name: crsqlite.zip
             asset_name: crsqlite-win-i686.zip
@@ -256,17 +256,17 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             rust_target: aarch64-linux-android
             library_name: crsqlite.so
             artifact_name: crsqlite.zip
             asset_name: crsqlite-aarch64-linux-android.zip
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             rust_target: armv7-linux-androideabi
             library_name: crsqlite.so
             artifact_name: crsqlite.zip
             asset_name: crsqlite-armv7-linux-androideabi.zip
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             rust_target: x86_64-linux-android
             library_name: crsqlite.so
             artifact_name: crsqlite.zip

@@ -618,7 +618,7 @@ unsafe extern "C" fn x_crsql_begin_alter(
     let (_schema_name, table_name) = if argc == 2 {
         (args[0].text(), args[1].text())
     } else {
-        ("main", args[0].text())
+        ("main\0", args[0].text())
     };
 
     let db = ctx.db_handle();
@@ -653,7 +653,7 @@ unsafe extern "C" fn x_crsql_commit_alter(
     let (schema_name, table_name) = if argc == 2 {
         (args[0].text(), args[1].text())
     } else {
-        ("main", args[0].text())
+        ("main\0", args[0].text())
     };
 
     let ext_data = ctx.user_data() as *mut c::crsql_ExtData;

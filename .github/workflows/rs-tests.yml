@@ -8,7 +8,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
           # - os: windows-2022 # Windows is complete nonsense. If someone wants to figure out how to make tests run there go ahead.
           - os: macos-latest
     steps:

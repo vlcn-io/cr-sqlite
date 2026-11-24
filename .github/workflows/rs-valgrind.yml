@@ -8,7 +8,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
     steps:
       - uses: actions/checkout@v3
         with:
